@@ -20,8 +20,6 @@ import {
   Title,
 } from "./AuthStyles";
 
-// Import necessary hooks from react-query and react-hook-form
-
 export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const [signIn, setSignIn] = useState(true);
   const [email, setEmail] = useState("");

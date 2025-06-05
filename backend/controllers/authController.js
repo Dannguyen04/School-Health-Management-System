@@ -35,7 +35,6 @@ const register = async (req, res) => {
   try {
     const { name, email, password, role } = req.body;
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res
@@ -43,19 +42,16 @@ const register = async (req, res) => {
         .json({ success: false, error: "Email already exists" });
     }
 
-    // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Create new user
     const user = await User.create({
       name,
       email,
       password: hashedPassword,
-      role: role || "user", // Default role is user if not specified
+      role: role || "user",
     });
 
-    // Generate JWT token
     const token = jwt.sign(
       { _id: user._id, role: user.role },
       process.env.JWT_KEY,
