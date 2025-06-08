@@ -10,7 +10,13 @@ dotenv.config();
 const app = express();
 const prisma = new PrismaClient();
 
-app.use(cors());
+app.use(
+    cors({
+        origin: "http://localhost:5173",
+        credentials: true,
+    })
+);
+
 app.use(express.json());
 app.use(
     session({
@@ -47,13 +53,15 @@ const handleLogin = async (req, res) => {
             { expiresIn: "24h" }
         );
 
-        res.json({
-            message: "Login successful",
+        return res.status(200).json({
+            success: true,
+            message: "success",
             token,
             user: {
                 id: user.id,
                 email: user.email,
                 name: user.name,
+                role: user.role,
             },
         });
     } catch (error) {
