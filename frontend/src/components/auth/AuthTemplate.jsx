@@ -3,7 +3,7 @@ import axios from "axios";
 import cn from "classnames";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../../context/authContext";
+import { useAuth } from "../../context/authContext";
 import { Input } from "../Input";
 import {
   Form,

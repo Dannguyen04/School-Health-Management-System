@@ -68,4 +68,8 @@ const register = async (req, res) => {
   }
 };
 
-export { login, register };
+const verify = (req, res) => {
+  return res.status(200).json({ success: true, user: req.user });
+};
+
+export { login, register, verify };
