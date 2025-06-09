@@ -1,3 +1,4 @@
+import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { Button, Modal } from "antd";
 import axios from "axios";
 import cn from "classnames";
@@ -6,18 +7,17 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { Input } from "../Input";
 import {
-    Form,
-    FormContainer,
-    GhostButton,
-    Overlay,
-    OverlayContainer,
-    OverlayPanel,
-    Paragraph,
-    SignInContainer,
-    SignUpContainer,
-    SocialButton,
-    SocialContainer,
-    Title,
+  Form,
+  FormContainer,
+  GhostButton,
+  Overlay,
+  OverlayContainer,
+  OverlayPanel,
+  Paragraph,
+  SignInContainer,
+  SignUpContainer,
+  Title,
+
 } from "./AuthStyles";
 
 export const AuthTemplate = ({ isOpen, onCloseModal }) => {
@@ -29,6 +29,20 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
     const { login } = useAuth();
     const navigate = useNavigate();
 
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(
+        "http://localhost:5000/api/auth/login",
+        { email, password }
+      );
+      if (response.data.success) {
+        login(response.data.user);
+        localStorage.setItem("token", response.data.token);
+        if (response.data.user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/user");
     const handleLogin = async (e) => {
         e.preventDefault();
         try {
@@ -72,6 +86,151 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         }
     };
 
+  const handleSuccess = async (response) => {
+    try {
+      console.log("Google login response:", response);
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/google-login",
+        {
+          credential: response.credential,
+        }
+      );
+
+      console.log("Backend response:", res.data);
+
+      if (res.data.success) {
+        login(res.data.user);
+        localStorage.setItem("token", res.data.token);
+        if (res.data.user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/user");
+        }
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
+      setError(
+        error.response?.data?.error ||
+          error.message ||
+          "Google login failed. Please try again."
+      );
+    }
+  };
+
+  const handleError = (error) => {
+    console.error("Google login error:", error);
+    setError("Google login failed. Please try again.");
+  };
+
+  return (
+    <Modal
+      open={isOpen}
+      onCancel={onCloseModal}
+      footer={null}
+      centered
+      className="custom-modal"
+      destroyOnHidden
+      width={1200}
+      styles={{
+        body: {
+          height: 580,
+        },
+      }}
+    >
+      <FormContainer
+        className={cn({ "signin-active": signIn, "signup-active": !signIn })}
+      >
+        <SignInContainer className="sign-in-container">
+          {error && (
+            <div
+              style={{
+                color: "red",
+                marginBottom: "10px",
+                textAlign: "center",
+              }}
+            >
+              {error}
+            </div>
+          )}
+          <Form onSubmit={handleLogin}>
+            <Title>Sign in</Title>
+            <Input
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email"
+              required
+            />
+            <Input
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              type="password"
+              required
+            />
+            <Paragraph>Forgot your password?</Paragraph>
+            <Button
+              htmlType="submit"
+              style={{
+                borderRadius: "20px",
+                border: "1px solid #ff4b2b",
+                backgroundColor: "#ff4b2b",
+                color: "#fff",
+                fontSize: "15px",
+                fontWeight: "bold",
+                padding: "24px 47px",
+                letterSpacing: "1px",
+                transition: "transform 80ms ease-in",
+                marginTop: "10px",
+                textTransform: "uppercase",
+              }}
+            >
+              Sign in
+            </Button>
+            <Paragraph>or use your account</Paragraph>
+
+            <GoogleOAuthProvider clientId="576568259129-taaehj1ll63so5u0eiqg6qaoria61d86.apps.googleusercontent.com">
+              <GoogleLogin
+                onSuccess={handleSuccess}
+                onError={handleError}
+                useOneTap
+              />
+            </GoogleOAuthProvider>
+          </Form>
+        </SignInContainer>
+        <SignUpContainer className="sign-up-container">
+          <Form onSubmit={handleRegister}>
+            <Title>Create Account</Title>
+            <Paragraph>or use your email for registration</Paragraph>
+            <Input
+              placeholder="Enter your name"
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <Input
+              placeholder="Enter your email"
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <Input
+              placeholder="Enter your password"
+              type="password"
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+            <Button
+              htmlType="submit"
+              style={{
+                borderRadius: "20px",
+                border: "1px solid #ff4b2b",
+                backgroundColor: "#ff4b2b",
+                color: "#fff",
+                fontSize: "15px",
+                fontWeight: "bold",
+                padding: "24px 47px",
+                letterSpacing: "1px",
+                transition: "transform 80ms ease-in",
+                marginTop: "10px",
+                textTransform: "uppercase",
+              }}
+=======
     return (
         <Modal
             open={isOpen}
