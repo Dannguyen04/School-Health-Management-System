@@ -1,3 +1,4 @@
+import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { Button, Modal } from "antd";
 import axios from "axios";
 import cn from "classnames";
@@ -15,8 +16,6 @@ import {
   Paragraph,
   SignInContainer,
   SignUpContainer,
-  SocialButton,
-  SocialContainer,
   Title,
 } from "./AuthStyles";
 
@@ -42,7 +41,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         if (response.data.user.role === "admin") {
           navigate("/admin");
         } else {
-          navigate("/");
+          navigate("/user");
         }
       }
     } catch (error) {
@@ -75,6 +74,42 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
     }
   };
 
+  const handleSuccess = async (response) => {
+    try {
+      console.log("Google login response:", response);
+      const res = await axios.post(
+        "http://localhost:5000/api/auth/google-login",
+        {
+          credential: response.credential,
+        }
+      );
+
+      console.log("Backend response:", res.data);
+
+      if (res.data.success) {
+        login(res.data.user);
+        localStorage.setItem("token", res.data.token);
+        if (res.data.user.role === "admin") {
+          navigate("/admin");
+        } else {
+          navigate("/user");
+        }
+      }
+    } catch (error) {
+      console.error("Google login error:", error);
+      setError(
+        error.response?.data?.error ||
+          error.message ||
+          "Google login failed. Please try again."
+      );
+    }
+  };
+
+  const handleError = (error) => {
+    console.error("Google login error:", error);
+    setError("Google login failed. Please try again.");
+  };
+
   return (
     <Modal
       open={isOpen}
@@ -94,21 +129,19 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         className={cn({ "signin-active": signIn, "signup-active": !signIn })}
       >
         <SignInContainer className="sign-in-container">
-          {error && <p className="text-red-500">{error}</p>}
+          {error && (
+            <div
+              style={{
+                color: "red",
+                marginBottom: "10px",
+                textAlign: "center",
+              }}
+            >
+              {error}
+            </div>
+          )}
           <Form onSubmit={handleLogin}>
             <Title>Sign in</Title>
-            <SocialContainer>
-              <SocialButton>
-                <i className="fa-brands fa-facebook-f"></i>{" "}
-              </SocialButton>
-              <SocialButton>
-                <i className="fab fa-google-plus-g"></i>
-              </SocialButton>
-              <SocialButton>
-                <i className="fab fa-linkedin-in"></i>
-              </SocialButton>
-            </SocialContainer>
-            <Paragraph>or use your account</Paragraph>
             <Input
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Enter your email"
@@ -139,22 +172,20 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
             >
               Sign in
             </Button>
+            <Paragraph>or use your account</Paragraph>
+
+            <GoogleOAuthProvider clientId="576568259129-taaehj1ll63so5u0eiqg6qaoria61d86.apps.googleusercontent.com">
+              <GoogleLogin
+                onSuccess={handleSuccess}
+                onError={handleError}
+                useOneTap
+              />
+            </GoogleOAuthProvider>
           </Form>
         </SignInContainer>
         <SignUpContainer className="sign-up-container">
           <Form onSubmit={handleRegister}>
             <Title>Create Account</Title>
-            <SocialContainer>
-              <SocialButton>
-                <i className="fa-brands fa-facebook-f"></i>
-              </SocialButton>
-              <SocialButton>
-                <i className="fab fa-google-plus-g"></i>
-              </SocialButton>
-              <SocialButton>
-                <i className="fab fa-linkedin-in"></i>
-              </SocialButton>
-            </SocialContainer>
             <Paragraph>or use your email for registration</Paragraph>
             <Input
               placeholder="Enter your name"
