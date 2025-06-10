@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
 import cors from "cors";
 import dotenv from "dotenv";
+import validator from "validator";
 
 dotenv.config();
 
@@ -28,8 +29,7 @@ const handleRegister = async (req, res) => {
             });
         }
 
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegex.test(email)) {
+        if (!validator.isEmail(email)) {
             return res.status(400).json({
                 success: false,
                 error: "Invalid email format",
@@ -43,7 +43,7 @@ const handleRegister = async (req, res) => {
             });
         }
 
-        let findUser = await prisma.User.findUnique({
+        let findUser = await prisma.users.findUnique({
             where: {
                 email: email,
             },
@@ -55,30 +55,56 @@ const handleRegister = async (req, res) => {
                 error: "User already exists",
             });
 
-        const user = await prisma.User.create({
-            data: {
-                fullName: name,
-                email: email,
-                password: password,
-            },
+        // Create user and parent in transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // Create user with PARENT role (default)
+            const user = await tx.users.create({
+                data: {
+                    fullName: name.trim(),
+                    email: email.toLowerCase(),
+                    password: password,
+                    role: "PARENT",
+                },
+            });
+
+            // Create parent profile
+            const parent = await tx.parent.create({
+                data: {
+                    userId: user.id,
+                },
+            });
+
+            return { user, parent };
         });
 
+        // Generate JWT token
         const token = jwt.sign(
-            { userId: user.id, email: user.email },
+            {
+                userId: result.user.id,
+                email: result.user.email,
+                role: result.user.role,
+            },
             process.env.JWT_SECRET,
             { expiresIn: "24h" }
         );
 
-        res.status(200).json({
-            success: true,
-            message: "Sign up succesfully",
-            user: {
-                userId: user.id,
-                userName: user.fullName,
-                userEmail: user.email,
-            },
-            token: token,
-        });
+        return res
+            .header("auth-token", token)
+            .status(201)
+            .json({
+                success: true,
+                message: "Registered successfully",
+                token,
+                user: {
+                    id: result.user.id,
+                    email: result.user.email,
+                    fullName: result.user.fullName,
+                    role: result.user.role,
+                },
+                parent: {
+                    id: result.parent.id,
+                },
+            });
     } catch (error) {
         console.log(error);
         res.status(500).json({ error: "Server error" });

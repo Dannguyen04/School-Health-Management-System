@@ -6,6 +6,12 @@ import {
   verify,
 } from "../controllers/authController.js";
 import authMiddleware from "../middleware/authMiddleware.js";
+import { handleLogin, handleLogout } from "../controllers/Login.js";
+import {
+    verifyUser,
+    authenticateToken,
+} from "../middleware/authenticateToken.js";
+import { handleRegister } from "../controllers/Register.js";
 
 const router = express.Router();
 
