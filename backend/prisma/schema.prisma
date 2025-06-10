@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,11 +10,533 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+// Enum definitions
+enum UserRole {
+  STUDENT
+  PARENT
+  SCHOOL_NURSE
+  MANAGER
+  ADMIN
+}
+
+enum MedicalEventType {
+  ACCIDENT
+  FEVER
+  FALL
+  EPIDEMIC
+  ALLERGY_REACTION
+  CHRONIC_DISEASE_EPISODE
+  OTHER
+}
+
+enum MedicalEventStatus {
+  PENDING
+  IN_PROGRESS
+  RESOLVED
+  REFERRED
+}
+
+enum VaccinationStatus {
+  SCHEDULED
+  COMPLETED
+  POSTPONED
+  CANCELLED
+}
+
+enum MedicalCheckStatus {
+  SCHEDULED
+  COMPLETED
+  RESCHEDULED
+  CANCELLED
+}
+
+enum MedicationStatus {
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  ACTIVE
+  EXPIRED
+}
+
+enum NotificationStatus {
+  SENT
+  DELIVERED
+  READ
+  EXPIRED
+}
+
+// Main Models
+model users {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   fullName  String   
   password  String
   email     String   @unique
-  role      String   @default("parent")
+  role      UserRole @default(PARENT)
+  phone     String?
+  address   String?
+  avatar    String?
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations based on role
+  studentProfile    Student?
+  parentProfile     Parent?
+  nurseProfile      SchoolNurse?
+  managerProfile    Manager?
+  adminProfile      Admin?
+
+  // Common relations
+  createdPosts      Post[]
+  createdEvents     MedicalEvent[] @relation("EventCreator")
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+
+  @@map("users")
+}
+
+model Student {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String   @unique @db.ObjectId
+  studentCode     String   @unique
+  dateOfBirth     DateTime
+  gender          String
+  class           String
+  grade           String
+  bloodType       String?
+  emergencyContact String
+  emergencyPhone   String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  parents         StudentParent[]
+  healthProfile   HealthProfile?
+  medicalEvents   MedicalEvent[]
+  vaccinations    Vaccination[]
+  medicalChecks   MedicalCheck[]
+  medications     StudentMedication[]
+
+  @@map("students")
+}
+
+model Parent {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @unique @db.ObjectId
+  occupation  String?
+  workplace   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  children    StudentParent[]
+  medications StudentMedication[]
+
+  @@map("parents")
+}
+
+model SchoolNurse {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @unique @db.ObjectId
+  licenseNumber String   @unique
+  specialization String?
+  experience    Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user          users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Relations
+  handledEvents MedicalEvent[]
+  vaccinations  Vaccination[]
+  medicalChecks MedicalCheck[]
+
+  @@map("school_nurses")
+}
+
+model Manager {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @unique @db.ObjectId
+  department  String?
+  position    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("managers")
+}
+
+model Admin {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @unique @db.ObjectId
+  permissions String[] // Array of permission strings
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admins")
+}
+
+// Junction table for Student-Parent relationship
+model StudentParent {
+  id        String @id @default(auto()) @map("_id") @db.ObjectId
+  studentId String @db.ObjectId
+  parentId  String @db.ObjectId
+  
+  relationship String // "father", "mother", "guardian", etc.
+  isPrimary    Boolean @default(false)
+  
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parent    Parent  @relation(fields: [parentId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, parentId])
+  @@map("student_parents")
+}
+
+// Health Profile
+model HealthProfile {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentId         String   @unique @db.ObjectId
+  allergies         String[] // Array of allergy descriptions
+  chronicDiseases   String[] // Array of chronic diseases
+  medications       String[] // Current medications
+  treatmentHistory  String?  // Medical treatment history
+  vision            String?  // Vision status
+  hearing           String?  // Hearing status
+  height            Float?   // Height in cm
+  weight            Float?   // Weight in kg
+  notes             String?  // Additional health notes
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  student           Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@map("health_profiles")
+}
+
+// Medical Events
+model MedicalEvent {
+  id          String             @id @default(auto()) @map("_id") @db.ObjectId
+  studentId   String             @db.ObjectId
+  nurseId     String?            @db.ObjectId
+  createdById String             @db.ObjectId
+  
+  title       String
+  description String
+  type        MedicalEventType
+  status      MedicalEventStatus @default(PENDING)
+  severity    String             // "low", "medium", "high", "critical"
+  location    String?            // Where the event occurred
+  symptoms    String[]           // Array of symptoms  
+  treatment   String?            // Treatment provided
+  outcome     String?            // Final outcome
+  
+  occurredAt  DateTime
+  resolvedAt  DateTime?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  student     Student     @relation(fields: [studentId], references: [id])
+  nurse       SchoolNurse? @relation(fields: [nurseId], references: [id])
+  createdBy   users        @relation("EventCreator", fields: [createdById], references: [id])
+  
+  // Relations
+  medicationsUsed MedicalEventMedication[]
+  documents       MedicalDocument[]
+
+  @@map("medical_events")
+}
+
+// Medications Management
+model Medication {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  name          String
+  description   String?
+  dosage        String
+  unit          String   // "tablet", "ml", "mg", etc.
+  manufacturer  String?
+  expiryDate    DateTime?
+  stockQuantity Int      @default(0)
+  minStockLevel Int      @default(10)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // Relations
+  studentMedications     StudentMedication[]
+  medicalEventMedications MedicalEventMedication[]
+  stockMovements         StockMovement[]
+
+  @@map("medications")
+}
+
+model StudentMedication {
+  id           String           @id @default(auto()) @map("_id") @db.ObjectId
+  studentId    String           @db.ObjectId
+  parentId     String           @db.ObjectId
+  medicationId String           @db.ObjectId
+  
+  dosage       String
+  frequency    String           // "daily", "twice daily", "as needed", etc.
+  duration     String?          // How long to take
+  instructions String?          // Special instructions
+  status       MedicationStatus @default(PENDING_APPROVAL)
+  
+  startDate    DateTime
+  endDate      DateTime?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  student      Student    @relation(fields: [studentId], references: [id])
+  parent       Parent     @relation(fields: [parentId], references: [id])
+  medication   Medication @relation(fields: [medicationId], references: [id])
+
+  @@map("student_medications")
+}
+
+model MedicalEventMedication {
+  id              String @id @default(auto()) @map("_id") @db.ObjectId
+  medicalEventId  String @db.ObjectId
+  medicationId    String @db.ObjectId
+  
+  quantityUsed    Int
+  dosageGiven     String
+  administeredAt  DateTime
+  notes           String?
+
+  medicalEvent    MedicalEvent @relation(fields: [medicalEventId], references: [id])
+  medication      Medication   @relation(fields: [medicationId], references: [id])
+
+  @@map("medical_event_medications")
+}
+
+// Stock Management
+model StockMovement {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  medicationId String   @db.ObjectId
+  
+  type         String   // "in", "out", "expired", "damaged"
+  quantity     Int
+  reason       String?
+  reference    String?  // Reference to purchase order, usage record, etc.
+  
+  createdAt    DateTime @default(now())
+
+  medication   Medication @relation(fields: [medicationId], references: [id])
+
+  @@map("stock_movements")
+}
+
+// Vaccination Management
+model VaccinationCampaign {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  description  String?
+  vaccineName  String
+  targetGrades String[] // Array of grades like ["1", "2", "3"]
+  scheduledDate DateTime
+  deadline     DateTime
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  vaccinations Vaccination[]
+  notifications Notification[]
+
+  @@map("vaccination_campaigns")
+}
+
+model Vaccination {
+  id           String            @id @default(auto()) @map("_id") @db.ObjectId
+  studentId    String            @db.ObjectId
+  campaignId   String            @db.ObjectId
+  nurseId      String?           @db.ObjectId
+  
+  status       VaccinationStatus @default(SCHEDULED)
+  scheduledDate DateTime
+  administeredDate DateTime?
+  dose         String?           // "first", "second", "booster"
+  batch        String?           // Vaccine batch number
+  sideEffects  String?           // Any side effects observed
+  notes        String?
+  
+  parentConsent Boolean          @default(false)
+  consentDate   DateTime?
+  
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  student      Student             @relation(fields: [studentId], references: [id])
+  campaign     VaccinationCampaign @relation(fields: [campaignId], references: [id])
+  nurse        SchoolNurse?        @relation(fields: [nurseId], references: [id])
+
+  @@map("vaccinations")
+}
+
+// Medical Check Management
+model MedicalCheckCampaign {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  name         String
+  description  String?
+  checkTypes   String[] // Array of check types like ["vision", "hearing", "dental"]
+  targetGrades String[] // Array of grades
+  scheduledDate DateTime
+  deadline     DateTime
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  medicalChecks MedicalCheck[]
+  notifications Notification[]
+
+  @@map("medical_check_campaigns")
+}
+
+model MedicalCheck {
+  id           String            @id @default(auto()) @map("_id") @db.ObjectId
+  studentId    String            @db.ObjectId
+  campaignId   String            @db.ObjectId
+  nurseId      String?           @db.ObjectId
+  
+  status       MedicalCheckStatus @default(SCHEDULED)
+  scheduledDate DateTime
+  completedDate DateTime?
+  
+  // Check results
+  visionResult   String? // "normal", "needs_glasses", "refer_specialist"
+  hearingResult  String? // "normal", "impaired", "refer_specialist"
+  dentalResult   String? // "good", "needs_treatment", "refer_dentist"
+  heightWeight   Json?   // {height: 120, weight: 25}
+  generalHealth  String? // Overall health assessment
+  
+  recommendations String? // Recommendations for parents
+  requiresFollowUp Boolean @default(false)
+  followUpDate    DateTime?
+  notes           String?
+  
+  parentNotified  Boolean @default(false)
+  parentResponse  String? // Parent's response to results
+  
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  student         Student              @relation(fields: [studentId], references: [id])
+  campaign        MedicalCheckCampaign @relation(fields: [campaignId], references: [id])
+  nurse           SchoolNurse?         @relation(fields: [nurseId], references: [id])
+
+  @@map("medical_checks")
+}
+
+// Document Management
+model MedicalDocument {
+  id              String  @id @default(auto()) @map("_id") @db.ObjectId
+  medicalEventId  String? @db.ObjectId
+  
+  title           String
+  description     String?
+  fileName        String
+  filePath        String
+  fileSize        Int
+  mimeType        String
+  
+  createdAt       DateTime @default(now())
+
+  medicalEvent    MedicalEvent? @relation(fields: [medicalEventId], references: [id])
+
+  @@map("medical_documents")
+}
+
+// Blog & Content Management
+model Post {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  authorId    String   @db.ObjectId
+  
+  title       String
+  content     String
+  excerpt     String?
+  coverImage  String?
+  category    String?  // "health_tips", "school_news", "experience_sharing"
+  tags        String[] // Array of tags
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  author      users @relation(fields: [authorId], references: [id])
+
+  @@map("posts")
+}
+
+// Notification System
+model Notification {
+  id                    String             @id @default(auto()) @map("_id") @db.ObjectId
+  userId                String             @db.ObjectId
+  vaccinationCampaignId String?            @db.ObjectId
+  medicalCheckCampaignId String?           @db.ObjectId
+  
+  title                 String
+  message               String
+  type                  String             // "vaccination", "medical_check", "medication", "general"
+  status                NotificationStatus @default(SENT)
+  
+  scheduledAt           DateTime?
+  sentAt                DateTime?
+  readAt                DateTime?
+  
+  createdAt             DateTime           @default(now())
+
+  user                  users                    @relation(fields: [userId], references: [id])
+  vaccinationCampaign   VaccinationCampaign?    @relation(fields: [vaccinationCampaignId], references: [id])
+  medicalCheckCampaign  MedicalCheckCampaign?   @relation(fields: [medicalCheckCampaignId], references: [id])
+
+  @@map("notifications")
+}
+
+// Audit Log
+model AuditLog {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String   @db.ObjectId
+  
+  action      String   // "create", "update", "delete", "login", "logout"
+  resource    String   // "student", "medication", "medical_event", etc.
+  resourceId  String?  // ID of the affected resource
+  details     Json?    // Additional details about the action
+  ipAddress   String?
+  userAgent   String?
+  
+  createdAt   DateTime @default(now())
+
+  user        users @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// School Information
+model SchoolInfo {
+  id          String @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  address     String
+  phone       String?
+  email       String?
+  website     String?
+  logo        String?
+  description String?
+  
+  // Health department info
+  healthDeptHead String?
+  healthDeptPhone String?
+  healthDeptEmail String?
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("school_info")
 }
