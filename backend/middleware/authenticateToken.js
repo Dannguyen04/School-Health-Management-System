@@ -25,7 +25,6 @@ const authenticateToken = async (req, res, next) => {
         // Verify JWT
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Optionally verify user exists in database (for learning purposes)
         const user = await prisma.User.findUnique({
             where: { id: decoded.userId },
             select: {
