@@ -1,27 +1,24 @@
-import { Search as SearchIcon } from "@mui/icons-material";
+import { SearchOutlined } from "@ant-design/icons";
 import {
-  Box,
   Button,
   Card,
-  CardContent,
-  CardMedia,
-  Chip,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Grid,
-  InputAdornment,
-  TextField,
+  Col,
+  Input,
+  Modal,
+  Row,
+  Space,
+  Tag,
   Typography,
-} from "@mui/material";
+} from "antd";
 import React, { useState } from "react";
+
+const { Title, Text, Paragraph } = Typography;
+const { Meta } = Card;
 
 const Blog = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedArticle, setSelectedArticle] = useState(null);
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
 
   // Mock data - replace with actual API data
   const articles = [
@@ -60,13 +57,13 @@ const Blog = () => {
     },
   ];
 
-  const handleOpenDialog = (article) => {
+  const handleOpenModal = (article) => {
     setSelectedArticle(article);
-    setOpenDialog(true);
+    setOpenModal(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
+  const handleCloseModal = () => {
+    setOpenModal(false);
     setSelectedArticle(null);
   };
 
@@ -75,122 +72,101 @@ const Blog = () => {
   );
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Blog sức khỏe
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
+    <div style={{ padding: "24px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={2}>Blog sức khỏe</Title>
+        <Text type="secondary">
           Cập nhật thông tin và kiến thức về sức khỏe
-        </Typography>
-      </Box>
+        </Text>
+      </div>
 
-      <Box sx={{ mb: 4 }}>
-        <TextField
-          fullWidth
+      <div style={{ marginBottom: 24 }}>
+        <Input
           placeholder="Tìm kiếm bài viết..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
+          prefix={<SearchOutlined />}
+          size="large"
         />
-      </Box>
+      </div>
 
-      <Grid container spacing={3}>
+      <Row gutter={[24, 24]}>
         {filteredArticles.map((article) => (
-          <Grid item xs={12} md={6} key={article.id}>
-            <Card>
-              <CardMedia
-                component="img"
-                height="200"
-                image={article.image}
-                alt={article.title}
-              />
-              <CardContent>
-                <Box sx={{ mb: 2 }}>
-                  <Chip
-                    label={article.category}
-                    color="primary"
-                    size="small"
-                    sx={{ mr: 1 }}
-                  />
-                  <Chip label={article.date} variant="outlined" size="small" />
-                </Box>
-                <Typography variant="h5" component="h2" gutterBottom>
-                  {article.title}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color="text.secondary"
-                  sx={{ mb: 2 }}
-                >
-                  {article.summary}
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => handleOpenDialog(article)}
-                >
+          <Col xs={24} md={12} key={article.id}>
+            <Card
+              hoverable
+              cover={
+                <img
+                  alt={article.title}
+                  src={article.image}
+                  style={{ height: 200, objectFit: "cover" }}
+                />
+              }
+              actions={[
+                <Button type="primary" onClick={() => handleOpenModal(article)}>
                   Đọc thêm
-                </Button>
-              </CardContent>
+                </Button>,
+              ]}
+            >
+              <Space
+                direction="vertical"
+                size="small"
+                style={{ width: "100%" }}
+              >
+                <Space>
+                  <Tag color="blue">{article.category}</Tag>
+                  <Tag>{article.date}</Tag>
+                </Space>
+                <Title level={4} style={{ margin: 0 }}>
+                  {article.title}
+                </Title>
+                <Text type="secondary">{article.summary}</Text>
+              </Space>
             </Card>
-          </Grid>
+          </Col>
         ))}
-      </Grid>
+      </Row>
 
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        maxWidth="md"
-        fullWidth
+      <Modal
+        title={
+          <div>
+            <Title level={4} style={{ margin: 0 }}>
+              {selectedArticle?.title}
+            </Title>
+            <Space style={{ marginTop: 8 }}>
+              <Tag color="blue">{selectedArticle?.category}</Tag>
+              <Tag>{selectedArticle?.date}</Tag>
+            </Space>
+          </div>
+        }
+        open={openModal}
+        onCancel={handleCloseModal}
+        footer={[
+          <Button key="close" onClick={handleCloseModal}>
+            Đóng
+          </Button>,
+        ]}
+        width={800}
       >
         {selectedArticle && (
-          <>
-            <DialogTitle>
-              <Typography variant="h5">{selectedArticle.title}</Typography>
-              <Box sx={{ mt: 1 }}>
-                <Chip
-                  label={selectedArticle.category}
-                  color="primary"
-                  size="small"
-                  sx={{ mr: 1 }}
-                />
-                <Chip
-                  label={selectedArticle.date}
-                  variant="outlined"
-                  size="small"
-                />
-              </Box>
-            </DialogTitle>
-            <DialogContent>
-              <Box sx={{ mt: 2 }}>
-                <img
-                  src={selectedArticle.image}
-                  alt={selectedArticle.title}
-                  style={{
-                    width: "100%",
-                    height: "auto",
-                    marginBottom: "20px",
-                  }}
-                />
-                <Typography variant="body1" style={{ whiteSpace: "pre-line" }}>
-                  {selectedArticle.content}
-                </Typography>
-              </Box>
-            </DialogContent>
-            <DialogActions>
-              <Button onClick={handleCloseDialog}>Đóng</Button>
-            </DialogActions>
-          </>
+          <div>
+            <img
+              src={selectedArticle.image}
+              alt={selectedArticle.title}
+              style={{
+                width: "100%",
+                height: "auto",
+                marginBottom: 20,
+                borderRadius: 8,
+              }}
+            />
+            <Paragraph style={{ whiteSpace: "pre-line" }}>
+              {selectedArticle.content}
+            </Paragraph>
+          </div>
         )}
-      </Dialog>
-    </Container>
+      </Modal>
+    </div>
   );
 };
 

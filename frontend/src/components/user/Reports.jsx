@@ -1,16 +1,5 @@
-import {
-  Box,
-  Card,
-  CardContent,
-  Container,
-  FormControl,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Paper,
-  Select,
-  Typography,
-} from "@mui/material";
+import { ArrowDownOutlined, ArrowUpOutlined } from "@ant-design/icons";
+import { Card, Col, Row, Select, Statistic, Typography } from "antd";
 import React, { useState } from "react";
 import {
   Bar,
@@ -25,6 +14,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+
+const { Title, Text } = Typography;
+const { Option } = Select;
 
 const Reports = () => {
   const [timeRange, setTimeRange] = useState("month");
@@ -79,61 +71,59 @@ const Reports = () => {
   ];
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Báo cáo và thống kê
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
+    <div style={{ padding: "24px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={2}>Báo cáo và thống kê</Title>
+        <Text type="secondary">
           Theo dõi và phân tích dữ liệu sức khỏe học sinh
-        </Typography>
-      </Box>
+        </Text>
+      </div>
 
-      <Grid container spacing={3}>
+      <Row gutter={[24, 24]}>
         {summaryData.map((item) => (
-          <Grid item xs={12} sm={6} md={3} key={item.title}>
+          <Col xs={24} sm={12} md={6} key={item.title}>
             <Card>
-              <CardContent>
-                <Typography color="textSecondary" gutterBottom>
-                  {item.title}
-                </Typography>
-                <Typography variant="h4" component="div">
-                  {item.value}
-                </Typography>
-                <Typography
-                  variant="body2"
-                  color={item.trend === "up" ? "success.main" : "error.main"}
-                >
-                  {item.change} so với tháng trước
-                </Typography>
-              </CardContent>
+              <Statistic
+                title={item.title}
+                value={item.value}
+                valueStyle={{ fontSize: "24px" }}
+                suffix={
+                  <span
+                    style={{
+                      fontSize: "14px",
+                      color: item.trend === "up" ? "#52c41a" : "#ff4d4f",
+                    }}
+                  >
+                    {item.change} so với tháng trước
+                    {item.trend === "up" ? (
+                      <ArrowUpOutlined />
+                    ) : (
+                      <ArrowDownOutlined />
+                    )}
+                  </span>
+                }
+              />
             </Card>
-          </Grid>
+          </Col>
         ))}
-      </Grid>
+      </Row>
 
-      <Box sx={{ mt: 4, mb: 2 }}>
-        <FormControl sx={{ minWidth: 200 }}>
-          <InputLabel>Thời gian</InputLabel>
-          <Select
-            value={timeRange}
-            label="Thời gian"
-            onChange={(e) => setTimeRange(e.target.value)}
-          >
-            <MenuItem value="week">Tuần này</MenuItem>
-            <MenuItem value="month">Tháng này</MenuItem>
-            <MenuItem value="quarter">Quý này</MenuItem>
-            <MenuItem value="year">Năm nay</MenuItem>
-          </Select>
-        </FormControl>
-      </Box>
+      <div style={{ margin: "24px 0" }}>
+        <Select
+          value={timeRange}
+          onChange={setTimeRange}
+          style={{ width: 200 }}
+        >
+          <Option value="week">Tuần này</Option>
+          <Option value="month">Tháng này</Option>
+          <Option value="quarter">Quý này</Option>
+          <Option value="year">Năm nay</Option>
+        </Select>
+      </div>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Tiến độ tiêm chủng
-            </Typography>
+      <Row gutter={[24, 24]}>
+        <Col xs={24} md={16}>
+          <Card title="Tiến độ tiêm chủng">
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={vaccinationData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -145,14 +135,11 @@ const Reports = () => {
                 <Bar dataKey="pending" name="Chờ tiêm" fill="#82ca9d" />
               </BarChart>
             </ResponsiveContainer>
-          </Paper>
-        </Grid>
+          </Card>
+        </Col>
 
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Tình trạng sức khỏe
-            </Typography>
+        <Col xs={24} md={8}>
+          <Card title="Tình trạng sức khỏe">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -177,14 +164,11 @@ const Reports = () => {
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-          </Paper>
-        </Grid>
+          </Card>
+        </Col>
 
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" gutterBottom>
-              Sự kiện y tế
-            </Typography>
+        <Col xs={24}>
+          <Card title="Sự kiện y tế">
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
@@ -209,10 +193,10 @@ const Reports = () => {
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-          </Paper>
-        </Grid>
-      </Grid>
-    </Container>
+          </Card>
+        </Col>
+      </Row>
+    </div>
   );
 };
 

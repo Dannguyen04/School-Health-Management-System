@@ -32,7 +32,7 @@ const App = () => {
           path="/admin"
           element={
             <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["admin"]}>
+              <RoleBaseRoutes requiredRole={["ADMIN"]}>
                 <Admin />
               </RoleBaseRoutes>
             </PrivateRoutes>
@@ -49,7 +49,7 @@ const App = () => {
           path="/user"
           element={
             <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["user"]}>
+              <RoleBaseRoutes requiredRole={["PARENT"]}>
                 <User />
               </RoleBaseRoutes>
             </PrivateRoutes>

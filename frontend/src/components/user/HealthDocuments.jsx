@@ -1,35 +1,30 @@
 import {
-  Delete as DeleteIcon,
-  Search as SearchIcon,
-  UploadFile as UploadFileIcon,
-  Visibility as VisibilityIcon,
-} from "@mui/icons-material";
+  DeleteOutlined,
+  EyeOutlined,
+  SearchOutlined,
+  UploadOutlined,
+} from "@ant-design/icons";
 import {
-  Box,
   Button,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Grid,
-  IconButton,
-  InputAdornment,
-  Paper,
+  Card,
+  Col,
+  Input,
+  Modal,
+  Row,
+  Space,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
   Typography,
-} from "@mui/material";
+  Upload,
+  message,
+} from "antd";
 import React, { useState } from "react";
+
+const { Title, Text } = Typography;
+const { TextArea } = Input;
 
 const HealthDocuments = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [openUploadDialog, setOpenUploadDialog] = useState(false);
+  const [openUploadModal, setOpenUploadModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [fileDescription, setFileDescription] = useState("");
   const [documents, setDocuments] = useState([
@@ -38,7 +33,7 @@ const HealthDocuments = () => {
       name: "Hồ sơ sức khỏe học sinh - Nguyễn Văn A",
       type: "Hồ sơ khám sức khỏe",
       date: "2023-10-26",
-      fileUrl: "https://www.africau.edu/images/default/sample.pdf", // Placeholder for a file URL
+      fileUrl: "https://www.africau.edu/images/default/sample.pdf",
     },
     {
       id: 2,
@@ -53,35 +48,38 @@ const HealthDocuments = () => {
     setSearchQuery(event.target.value);
   };
 
-  const handleOpenUploadDialog = () => {
-    setOpenUploadDialog(true);
+  const handleOpenUploadModal = () => {
+    setOpenUploadModal(true);
   };
 
-  const handleCloseUploadDialog = () => {
-    setOpenUploadDialog(false);
+  const handleCloseUploadModal = () => {
+    setOpenUploadModal(false);
     setSelectedFile(null);
     setFileDescription("");
   };
 
-  const handleFileChange = (event) => {
-    setSelectedFile(event.target.files[0]);
+  const handleFileChange = (info) => {
+    if (info.file.status === "done") {
+      setSelectedFile(info.file.originFileObj);
+      message.success(`${info.file.name} đã được chọn`);
+    }
   };
 
   const handleUploadSubmit = () => {
     if (selectedFile) {
-      // Here you would typically handle the file upload to a server
       console.log("Uploading file:", selectedFile.name);
       console.log("Description:", fileDescription);
 
       const newDocument = {
         id: documents.length + 1,
         name: selectedFile.name,
-        type: "Khác", // Or determine type based on file extension
+        type: "Khác",
         date: new Date().toISOString().slice(0, 10),
-        fileUrl: URL.createObjectURL(selectedFile), // Create a temporary URL for preview
+        fileUrl: URL.createObjectURL(selectedFile),
       };
       setDocuments([...documents, newDocument]);
-      handleCloseUploadDialog();
+      handleCloseUploadModal();
+      message.success("Tài liệu đã được tải lên thành công");
     }
   };
 
@@ -91,6 +89,7 @@ const HealthDocuments = () => {
 
   const handleDeleteDocument = (id) => {
     setDocuments(documents.filter((doc) => doc.id !== id));
+    message.success("Tài liệu đã được xóa");
   };
 
   const filteredDocuments = documents.filter(
@@ -99,121 +98,109 @@ const HealthDocuments = () => {
       doc.type.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Quản lý Tài liệu Sức khỏe
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Xem và quản lý các tài liệu liên quan đến sức khỏe của học sinh.
-        </Typography>
-      </Box>
+  const columns = [
+    {
+      title: "Tên tài liệu",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "Loại",
+      dataIndex: "type",
+      key: "type",
+    },
+    {
+      title: "Ngày tải lên",
+      dataIndex: "date",
+      key: "date",
+    },
+    {
+      title: "Hành động",
+      key: "action",
+      align: "right",
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDocument(record.fileUrl)}
+          />
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteDocument(record.id)}
+          />
+        </Space>
+      ),
+    },
+  ];
 
-      <Grid container spacing={3} alignItems="center" sx={{ mb: 4 }}>
-        <Grid item xs={12} md={8}>
-          <TextField
-            fullWidth
+  return (
+    <div style={{ padding: "24px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={2}>Quản lý Tài liệu Sức khỏe</Title>
+        <Text type="secondary">
+          Xem và quản lý các tài liệu liên quan đến sức khỏe của học sinh.
+        </Text>
+      </div>
+
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        <Col xs={24} md={16}>
+          <Input
             placeholder="Tìm kiếm tài liệu..."
             value={searchQuery}
             onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
+            prefix={<SearchOutlined />}
+            size="large"
           />
-        </Grid>
-        <Grid item xs={12} md={4}>
+        </Col>
+        <Col xs={24} md={8}>
           <Button
-            variant="contained"
-            color="primary"
-            startIcon={<UploadFileIcon />}
-            fullWidth
-            onClick={handleOpenUploadDialog}
+            type="primary"
+            icon={<UploadOutlined />}
+            onClick={handleOpenUploadModal}
+            block
           >
             Tải lên Tài liệu mới
           </Button>
-        </Grid>
-      </Grid>
+        </Col>
+      </Row>
 
-      <Paper sx={{ width: "100%", overflow: "hidden" }}>
-        <TableContainer sx={{ maxHeight: 600 }}>
-          <Table stickyHeader aria-label="health documents table">
-            <TableHead>
-              <TableRow>
-                <TableCell>Tên tài liệu</TableCell>
-                <TableCell>Loại</TableCell>
-                <TableCell>Ngày tải lên</TableCell>
-                <TableCell align="right">Hành động</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {filteredDocuments.map((document) => (
-                <TableRow hover key={document.id}>
-                  <TableCell>{document.name}</TableCell>
-                  <TableCell>{document.type}</TableCell>
-                  <TableCell>{document.date}</TableCell>
-                  <TableCell align="right">
-                    <IconButton
-                      color="primary"
-                      onClick={() => handleViewDocument(document.fileUrl)}
-                    >
-                      <VisibilityIcon />
-                    </IconButton>
-                    <IconButton
-                      color="secondary"
-                      onClick={() => handleDeleteDocument(document.id)}
-                    >
-                      <DeleteIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Paper>
+      <Card>
+        <Table
+          columns={columns}
+          dataSource={filteredDocuments}
+          rowKey="id"
+          scroll={{ y: 600 }}
+        />
+      </Card>
 
-      <Dialog
-        open={openUploadDialog}
-        onClose={handleCloseUploadDialog}
-        maxWidth="sm"
-        fullWidth
+      <Modal
+        title="Tải lên Tài liệu mới"
+        open={openUploadModal}
+        onCancel={handleCloseUploadModal}
+        onOk={handleUploadSubmit}
+        okText="Tải lên"
+        cancelText="Hủy"
       >
-        <DialogTitle>Tải lên Tài liệu mới</DialogTitle>
-        <DialogContent>
-          <Box component="form" noValidate sx={{ mt: 2 }}>
-            <Button
-              variant="outlined"
-              component="label"
-              fullWidth
-              sx={{ mb: 2 }}
-            >
-              {selectedFile ? selectedFile.name : "Chọn tệp để tải lên"}
-              <input type="file" hidden onChange={handleFileChange} />
-            </Button>
-            <TextField
-              label="Mô tả tài liệu"
-              fullWidth
-              multiline
-              rows={4}
-              value={fileDescription}
-              onChange={(e) => setFileDescription(e.target.value)}
-              variant="outlined"
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseUploadDialog}>Hủy</Button>
-          <Button onClick={handleUploadSubmit} variant="contained">
-            Tải lên
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+        <Space direction="vertical" style={{ width: "100%" }} size="large">
+          <Upload
+            beforeUpload={() => false}
+            onChange={handleFileChange}
+            maxCount={1}
+          >
+            <Button icon={<UploadOutlined />}>Chọn tệp để tải lên</Button>
+          </Upload>
+          <TextArea
+            placeholder="Mô tả tài liệu"
+            value={fileDescription}
+            onChange={(e) => setFileDescription(e.target.value)}
+            rows={4}
+          />
+        </Space>
+      </Modal>
+    </div>
   );
 };
 

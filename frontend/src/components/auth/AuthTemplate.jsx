@@ -24,12 +24,13 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [error, setError] = useState(null);
+  const [errors, setErrors] = useState({});
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
+    setErrors({});
     try {
       const response = await axios.post("http://localhost:5000/auth/login", {
         email,
@@ -38,19 +39,27 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       if (response.data.success) {
         login(response.data.user);
         localStorage.setItem("token", response.data.token);
-        navigate(response.data.user.role === "admin" ? "/admin" : "/user");
+        navigate(response.data.user.role === "ADMIN" ? "/admin" : "/user");
       }
     } catch (error) {
-      if (error.response && !error.response.data.success) {
-        setError(error.response.data.error);
+      if (error.response && error.response.data && error.response.data.error) {
+        if (
+          error.response.data.error.includes("Invalid credentials") ||
+          error.response.data.error.includes("Email and password are required")
+        ) {
+          setErrors({ email: error.response.data.error });
+        } else {
+          setErrors({ general: error.response.data.error });
+        }
       } else {
-        setError("Server Error");
+        setErrors({ general: "An unexpected error occurred during login." });
       }
     }
   };
 
   const handleRegister = async (e) => {
     e.preventDefault();
+    setErrors({});
     try {
       const response = await axios.post("http://localhost:5000/auth/register", {
         name,
@@ -64,10 +73,30 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         navigate("/");
       }
     } catch (error) {
-      if (error.response && !error.response.data.success) {
-        setError(error.response.data.error);
+      if (error.response && error.response.data && error.response.data.error) {
+        const backendError = error.response.data.error;
+        if (backendError.includes("Password must be at least 8 characters")) {
+          setErrors({ password: backendError });
+        } else if (
+          backendError.includes("email") ||
+          backendError.includes("User already exists")
+        ) {
+          setErrors({ email: backendError });
+        } else if (
+          backendError.includes("Name, email and password are required")
+        ) {
+          setErrors({
+            name: backendError,
+            email: backendError,
+            password: backendError,
+          });
+        } else {
+          setErrors({ general: backendError });
+        }
       } else {
-        setError("Server Error");
+        setErrors({
+          general: "An unexpected error occurred during registration.",
+        });
       }
     }
   };
@@ -84,21 +113,22 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       if (res.data.success) {
         login(res.data.user);
         localStorage.setItem("token", res.data.token);
-        navigate(res.data.user.role === "admin" ? "/admin" : "/user");
+        navigate(res.data.user.role === "ADMIN" ? "/admin" : "/user");
       }
     } catch (error) {
       console.error("Google login error:", error);
-      setError(
-        error.response?.data?.error ||
+      setErrors({
+        general:
+          error.response?.data?.error ||
           error.message ||
-          "Google login failed. Please try again."
-      );
+          "Google login failed. Please try again.",
+      });
     }
   };
 
   const handleGoogleError = (error) => {
     console.error("Google login error:", error);
-    setError("Google login failed. Please try again.");
+    setErrors({ general: "Google login failed. Please try again." });
   };
 
   return (
@@ -123,7 +153,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         })}
       >
         <SignInContainer className="sign-in-container">
-          {error && (
+          {errors.general && (
             <div
               style={{
                 color: "red",
@@ -131,7 +161,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
                 textAlign: "center",
               }}
             >
-              {error}
+              {errors.general}
             </div>
           )}
           <Form onSubmit={handleLogin}>
@@ -141,12 +171,44 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
               placeholder="Enter your email"
               required
             />
+            {errors.email && (
+              <p
+                style={{
+                  color: "#D8000C",
+                  backgroundColor: "#FFD2D2",
+                  border: "1px solid #D8000C",
+                  padding: "5px 10px",
+                  borderRadius: "3px",
+                  fontSize: "13px",
+                  marginTop: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {errors.email}
+              </p>
+            )}
             <Input
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Enter your password"
               type="password"
               required
             />
+            {errors.password && (
+              <p
+                style={{
+                  color: "#D8000C",
+                  backgroundColor: "#FFD2D2",
+                  border: "1px solid #D8000C",
+                  padding: "5px 10px",
+                  borderRadius: "3px",
+                  fontSize: "13px",
+                  marginTop: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {errors.password}
+              </p>
+            )}
             <Paragraph>Forgot your password?</Paragraph>
             <Button
               htmlType="submit"
@@ -178,6 +240,17 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         </SignInContainer>
 
         <SignUpContainer className="sign-up-container">
+          {errors.general && (
+            <div
+              style={{
+                color: "red",
+                marginBottom: "10px",
+                textAlign: "center",
+              }}
+            >
+              {errors.general}
+            </div>
+          )}
           <Form onSubmit={handleRegister}>
             <Title>Create Account</Title>
             <Input
@@ -185,17 +258,65 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
               onChange={(e) => setName(e.target.value)}
               required
             />
+            {errors.name && (
+              <p
+                style={{
+                  color: "#D8000C",
+                  backgroundColor: "#FFD2D2",
+                  border: "1px solid #D8000C",
+                  padding: "5px 10px",
+                  borderRadius: "3px",
+                  fontSize: "13px",
+                  marginTop: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {errors.name}
+              </p>
+            )}
             <Input
               placeholder="Enter your email"
               onChange={(e) => setEmail(e.target.value)}
               required
             />
+            {errors.email && (
+              <p
+                style={{
+                  color: "#D8000C",
+                  backgroundColor: "#FFD2D2",
+                  border: "1px solid #D8000C",
+                  padding: "5px 10px",
+                  borderRadius: "3px",
+                  fontSize: "13px",
+                  marginTop: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {errors.email}
+              </p>
+            )}
             <Input
               placeholder="Enter your password"
               type="password"
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            {errors.password && (
+              <p
+                style={{
+                  color: "#D8000C",
+                  backgroundColor: "#FFD2D2",
+                  border: "1px solid #D8000C",
+                  padding: "5px 10px",
+                  borderRadius: "3px",
+                  fontSize: "13px",
+                  marginTop: "5px",
+                  fontWeight: "bold",
+                }}
+              >
+                {errors.password}
+              </p>
+            )}
             <Button
               htmlType="submit"
               style={{
@@ -245,7 +366,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
               <GhostButton
                 onClick={() => {
                   setSignIn(!signIn);
-                  setError(null);
+                  setErrors({});
                 }}
                 className="!mt-20"
               >
