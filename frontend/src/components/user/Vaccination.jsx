@@ -1,41 +1,25 @@
 import {
-  Box,
   Button,
-  Chip,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Paper,
+  Card,
+  DatePicker,
+  Form,
+  Input,
+  Modal,
   Select,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
+  Tag,
   Typography,
-} from "@mui/material";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+} from "antd";
 import React, { useState } from "react";
 
+const { Title, Text } = Typography;
+const { TextArea } = Input;
+const { Option } = Select;
+
 const Vaccination = () => {
-  const [openDialog, setOpenDialog] = useState(false);
+  const [form] = Form.useForm();
+  const [openModal, setOpenModal] = useState(false);
   const [selectedVaccine, setSelectedVaccine] = useState(null);
-  const [vaccinationData, setVaccinationData] = useState({
-    vaccineName: "",
-    date: null,
-    status: "",
-    notes: "",
-  });
 
   // Mock data - replace with actual API data
   const vaccinations = [
@@ -57,35 +41,37 @@ const Vaccination = () => {
     },
   ];
 
-  const handleOpenDialog = (vaccine = null) => {
+  const handleOpenModal = (vaccine = null) => {
     if (vaccine) {
       setSelectedVaccine(vaccine);
-      setVaccinationData({
+      form.setFieldsValue({
         vaccineName: vaccine.vaccineName,
-        date: new Date(vaccine.date),
+        date: vaccine.date,
         status: vaccine.status,
         notes: vaccine.notes,
       });
     } else {
       setSelectedVaccine(null);
-      setVaccinationData({
-        vaccineName: "",
-        date: null,
-        status: "",
-        notes: "",
-      });
+      form.resetFields();
     }
-    setOpenDialog(true);
+    setOpenModal(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
+  const handleCloseModal = () => {
+    setOpenModal(false);
     setSelectedVaccine(null);
+    form.resetFields();
   };
 
-  const handleSubmit = () => {
-    // Add API call here to save/update vaccination data
-    handleCloseDialog();
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      console.log(values);
+      // Add API call here to save/update vaccination data
+      handleCloseModal();
+    } catch (error) {
+      console.error("Validation failed:", error);
+    }
   };
 
   const getStatusColor = (status) => {
@@ -101,149 +87,107 @@ const Vaccination = () => {
     }
   };
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Quản lý tiêm chủng
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Theo dõi và quản lý lịch tiêm chủng của học sinh
-        </Typography>
-      </Box>
+  const columns = [
+    {
+      title: "Tên vaccine",
+      dataIndex: "vaccineName",
+      key: "vaccineName",
+    },
+    {
+      title: "Ngày tiêm",
+      dataIndex: "date",
+      key: "date",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => <Tag color={getStatusColor(status)}>{status}</Tag>,
+    },
+    {
+      title: "Ngày tiêm tiếp theo",
+      dataIndex: "nextDose",
+      key: "nextDose",
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "notes",
+      key: "notes",
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      render: (_, record) => (
+        <Button type="link" onClick={() => handleOpenModal(record)}>
+          Chỉnh sửa
+        </Button>
+      ),
+    },
+  ];
 
-      <Box sx={{ mb: 3, display: "flex", justifyContent: "flex-end" }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOpenDialog()}
-        >
+  return (
+    <div style={{ padding: "24px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={2}>Quản lý tiêm chủng</Title>
+        <Text type="secondary">
+          Theo dõi và quản lý lịch tiêm chủng của học sinh
+        </Text>
+      </div>
+
+      <div style={{ marginBottom: 16, textAlign: "right" }}>
+        <Button type="primary" onClick={() => handleOpenModal()}>
           Thêm mới
         </Button>
-      </Box>
+      </div>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Tên vaccine</TableCell>
-              <TableCell>Ngày tiêm</TableCell>
-              <TableCell>Trạng thái</TableCell>
-              <TableCell>Ngày tiêm tiếp theo</TableCell>
-              <TableCell>Ghi chú</TableCell>
-              <TableCell>Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {vaccinations.map((vaccine) => (
-              <TableRow key={vaccine.id}>
-                <TableCell>{vaccine.vaccineName}</TableCell>
-                <TableCell>{vaccine.date}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={vaccine.status}
-                    color={getStatusColor(vaccine.status)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{vaccine.nextDose}</TableCell>
-                <TableCell>{vaccine.notes}</TableCell>
-                <TableCell>
-                  <Button
-                    size="small"
-                    onClick={() => handleOpenDialog(vaccine)}
-                  >
-                    Chỉnh sửa
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Card>
+        <Table columns={columns} dataSource={vaccinations} rowKey="id" />
+      </Card>
 
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {selectedVaccine
+      <Modal
+        title={
+          selectedVaccine
             ? "Chỉnh sửa thông tin tiêm chủng"
-            : "Thêm mới tiêm chủng"}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Tên vaccine"
-                value={vaccinationData.vaccineName}
-                onChange={(e) =>
-                  setVaccinationData({
-                    ...vaccinationData,
-                    vaccineName: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Ngày tiêm"
-                  value={vaccinationData.date}
-                  onChange={(date) =>
-                    setVaccinationData({ ...vaccinationData, date })
-                  }
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  value={vaccinationData.status}
-                  label="Trạng thái"
-                  onChange={(e) =>
-                    setVaccinationData({
-                      ...vaccinationData,
-                      status: e.target.value,
-                    })
-                  }
-                >
-                  <MenuItem value="Đã tiêm">Đã tiêm</MenuItem>
-                  <MenuItem value="Chờ tiêm">Chờ tiêm</MenuItem>
-                  <MenuItem value="Đã hủy">Đã hủy</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Ghi chú"
-                multiline
-                rows={3}
-                value={vaccinationData.notes}
-                onChange={(e) =>
-                  setVaccinationData({
-                    ...vaccinationData,
-                    notes: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Hủy</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            {selectedVaccine ? "Cập nhật" : "Thêm mới"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+            : "Thêm mới tiêm chủng"
+        }
+        open={openModal}
+        onCancel={handleCloseModal}
+        onOk={handleSubmit}
+        okText={selectedVaccine ? "Cập nhật" : "Thêm mới"}
+        cancelText="Hủy"
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="vaccineName"
+            label="Tên vaccine"
+            rules={[{ required: true, message: "Vui lòng nhập tên vaccine" }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item
+            name="date"
+            label="Ngày tiêm"
+            rules={[{ required: true, message: "Vui lòng chọn ngày tiêm" }]}
+          >
+            <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item
+            name="status"
+            label="Trạng thái"
+            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+          >
+            <Select>
+              <Option value="Đã tiêm">Đã tiêm</Option>
+              <Option value="Chờ tiêm">Chờ tiêm</Option>
+              <Option value="Đã hủy">Đã hủy</Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="notes" label="Ghi chú">
+            <TextArea rows={3} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </div>
   );
 };
 

@@ -1,44 +1,36 @@
 import {
-  Description,
-  LocalHospital,
-  MedicalServices,
-  Vaccines,
-} from "@mui/icons-material";
-import {
-  Box,
-  Button,
-  Card,
-  CardActions,
-  CardContent,
-  Container,
-  Grid,
-  Paper,
-  Typography,
-} from "@mui/material";
+  ExperimentOutlined,
+  FileTextOutlined,
+  HeartOutlined,
+  MedicineBoxOutlined,
+} from "@ant-design/icons";
+import { Button, Card, Col, Layout, Row, Typography } from "antd";
 import React from "react";
 import { useNavigate } from "react-router-dom";
+
+const { Title, Text, Paragraph } = Typography;
+const { Content } = Layout;
 
 const QuickLinkCard = ({ title, description, icon, path }) => {
   const navigate = useNavigate();
 
   return (
-    <Card sx={{ height: "100%" }}>
-      <CardContent>
-        <Box sx={{ display: "flex", alignItems: "center", mb: 2 }}>
-          {icon}
-          <Typography variant="h6" component="div" sx={{ ml: 1 }}>
-            {title}
-          </Typography>
-        </Box>
-        <Typography variant="body2" color="text.secondary">
-          {description}
-        </Typography>
-      </CardContent>
-      <CardActions>
-        <Button size="small" onClick={() => navigate(path)}>
+    <Card
+      hoverable
+      style={{ height: "100%" }}
+      actions={[
+        <Button type="link" onClick={() => navigate(path)}>
           Xem chi tiết
-        </Button>
-      </CardActions>
+        </Button>,
+      ]}
+    >
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
+        {icon}
+        <Title level={5} style={{ margin: "0 0 0 8px" }}>
+          {title}
+        </Title>
+      </div>
+      <Paragraph type="secondary">{description}</Paragraph>
     </Card>
   );
 };
@@ -48,70 +40,60 @@ const Dashboard = () => {
     {
       title: "Hồ sơ sức khỏe",
       description: "Cập nhật và xem thông tin sức khỏe của học sinh",
-      icon: <MedicalServices color="primary" />,
+      icon: <MedicineBoxOutlined style={{ fontSize: 24, color: "#1890ff" }} />,
       path: "/user/health-profile",
     },
     {
       title: "Tiêm chủng",
       description: "Quản lý lịch tiêm chủng và theo dõi tình trạng",
-      icon: <Vaccines color="primary" />,
+      icon: <ExperimentOutlined style={{ fontSize: 24, color: "#1890ff" }} />,
       path: "/user/vaccination",
     },
     {
       title: "Tài liệu sức khỏe",
       description: "Truy cập các tài liệu và hướng dẫn về sức khỏe",
-      icon: <Description color="primary" />,
+      icon: <FileTextOutlined style={{ fontSize: 24, color: "#1890ff" }} />,
       path: "/user/health-documents",
     },
     {
       title: "Sự kiện y tế",
       description: "Xem và báo cáo các sự kiện y tế trong trường",
-      icon: <LocalHospital color="primary" />,
+      icon: <HeartOutlined style={{ fontSize: 24, color: "#1890ff" }} />,
       path: "/user/medical-events",
     },
   ];
 
   return (
-    <Container maxWidth="xl">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Chào mừng đến với Hệ thống Y tế Trường học
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
+    <Content style={{ padding: "24px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={2}>Chào mừng đến với Hệ thống Y tế Trường học</Title>
+        <Text type="secondary">
           Quản lý và theo dõi sức khỏe học sinh một cách hiệu quả
-        </Typography>
-      </Box>
+        </Text>
+      </div>
 
-      <Grid container spacing={3}>
+      <Row gutter={[24, 24]}>
         {quickLinks.map((link) => (
-          <Grid item xs={12} sm={6} md={3} key={link.title}>
+          <Col xs={24} sm={12} md={6} key={link.title}>
             <QuickLinkCard {...link} />
-          </Grid>
+          </Col>
         ))}
-      </Grid>
+      </Row>
 
-      <Box sx={{ mt: 4 }}>
-        <Paper sx={{ p: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Thông tin nhanh
-          </Typography>
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <Typography variant="subtitle1" gutterBottom>
-                Lịch kiểm tra sức khỏe sắp tới
-              </Typography>
-              {/* Add calendar or upcoming events component here */}
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <Typography variant="subtitle1" gutterBottom>
-                Thông báo mới nhất
-              </Typography>
-              {/* Add notifications component here */}
-            </Grid>
-          </Grid>
-        </Paper>
-      </Box>
-    </Container>
+      <Card style={{ marginTop: 24 }}>
+        <Title level={4}>Thông tin nhanh</Title>
+        <Row gutter={24}>
+          <Col xs={24} md={12}>
+            <Title level={5}>Lịch kiểm tra sức khỏe sắp tới</Title>
+            {/* Add calendar or upcoming events component here */}
+          </Col>
+          <Col xs={24} md={12}>
+            <Title level={5}>Thông báo mới nhất</Title>
+            {/* Add notifications component here */}
+          </Col>
+        </Row>
+      </Card>
+    </Content>
   );
 };
 
