@@ -39,7 +39,11 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       if (response.data.success) {
         login(response.data.user);
         localStorage.setItem("token", response.data.token);
-        navigate(response.data.user.role === "ADMIN" ? "/admin" : "/user");
+        if (response.data.user.role === "ADMIN") {
+          navigate("/admin");
+        } else if (response.data.user.role === "SCHOOL_NURSE") {
+          navigate("/nurse");
+        } else navigate("/user");
       }
     } catch (error) {
       if (error.response && error.response.data && error.response.data.error) {
