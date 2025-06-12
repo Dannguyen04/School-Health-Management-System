@@ -31,34 +31,36 @@ const handleLogin = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Normalize email
+    const normalizedEmail = email.trim().toLowerCase();
+
     // Basic input validation
-    if (!email || !password) {
+    if (!normalizedEmail || !password) {
       return res.status(400).json({
         success: false,
         error: "Email and password are required",
       });
     }
 
-    // Check email nhe
-    if (!validator.isEmail(email)) {
+    if (!validator.isEmail(normalizedEmail)) {
       return res.status(400).json({
         success: false,
         error: "Invalid email format",
       });
     }
 
-    // Find user by email from request body
+    // Find user by normalized email
     const user = await prisma.users.findUnique({
       where: {
-        email: email,
+        email: normalizedEmail,
       },
     });
 
     if (!user || user.password !== password) {
       console.error(
         !user
-          ? `User not found: ${email}`
-          : `Invalid password for user: ${email}`
+          ? `User not found: ${normalizedEmail}`
+          : `Invalid password for user: ${normalizedEmail}`
       );
       return res
         .status(401)

@@ -102,8 +102,8 @@ model Student {
   studentCode     String   @unique
   dateOfBirth     DateTime
   gender          String
-  class           String
   grade           String
+  class           String
   bloodType       String?
   emergencyContact String
   emergencyPhone   String
