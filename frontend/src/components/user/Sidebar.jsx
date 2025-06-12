@@ -1,57 +1,52 @@
 import {
-  Article as ArticleIcon,
-  Assessment as AssessmentIcon,
-  Dashboard as DashboardIcon,
-  Description as DescriptionIcon,
-  LocalHospital as LocalHospitalIcon,
-  MedicalServices as MedicalServicesIcon,
-  Medication as MedicationIcon,
-  Person as PersonIcon,
-  Vaccines as VaccinesIcon,
-} from "@mui/icons-material";
-import {
-  Box,
-  Divider,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-} from "@mui/material";
+  BarChartOutlined,
+  DashboardOutlined,
+  ExperimentOutlined,
+  FileOutlined,
+  FileTextOutlined,
+  HeartOutlined,
+  MedicineBoxOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import { Layout, Menu } from "antd";
 import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-const drawerWidth = 240;
+const { Sider } = Layout;
 
 const menuItems = [
-  { text: "Dashboard", icon: <DashboardIcon />, path: "/user" },
+  { key: "/user", icon: <DashboardOutlined />, label: "Dashboard" },
   {
-    text: "Hồ sơ sức khỏe",
-    icon: <PersonIcon />,
-    path: "/user/health-profile",
-  },
-  { text: "Tiêm chủng", icon: <VaccinesIcon />, path: "/user/vaccination" },
-  {
-    text: "Kiểm tra y tế",
-    icon: <MedicalServicesIcon />,
-    path: "/user/medical-checkup",
-  },
-  { text: "Báo cáo", icon: <AssessmentIcon />, path: "/user/reports" },
-  { text: "Blog", icon: <ArticleIcon />, path: "/user/blog" },
-  {
-    text: "Tài liệu sức khỏe",
-    icon: <DescriptionIcon />,
-    path: "/user/health-documents",
+    key: "/user/health-profile",
+    icon: <UserOutlined />,
+    label: "Hồ sơ sức khỏe",
   },
   {
-    text: "Sự kiện y tế",
-    icon: <LocalHospitalIcon />,
-    path: "/user/medical-events",
+    key: "/user/vaccination",
+    icon: <ExperimentOutlined />,
+    label: "Tiêm chủng",
   },
   {
-    text: "Quản lý thuốc",
-    icon: <MedicationIcon />,
-    path: "/user/medicine-management",
+    key: "/user/medical-checkup",
+    icon: <MedicineBoxOutlined />,
+    label: "Kiểm tra y tế",
+  },
+  { key: "/user/reports", icon: <BarChartOutlined />, label: "Báo cáo" },
+  { key: "/user/blog", icon: <FileTextOutlined />, label: "Blog" },
+  {
+    key: "/user/health-documents",
+    icon: <FileOutlined />,
+    label: "Tài liệu sức khỏe",
+  },
+  {
+    key: "/user/medical-events",
+    icon: <HeartOutlined />,
+    label: "Sự kiện y tế",
+  },
+  {
+    key: "/user/medicine-management",
+    icon: <MedicineBoxOutlined />,
+    label: "Quản lý Thuốc",
   },
 ];
 
@@ -60,52 +55,24 @@ const Sidebar = () => {
   const location = useLocation();
 
   return (
-    <Drawer
-      variant="permanent"
-      sx={{
-        width: drawerWidth,
-        flexShrink: 0,
-        "& .MuiDrawer-paper": {
-          width: drawerWidth,
-          boxSizing: "border-box",
-          mt: 8,
-        },
+    <Sider
+      width={240}
+      style={{
+        position: "fixed",
+        height: "100vh",
+        left: 0,
+        top: 64, // Adjust this value based on your header height
+        overflow: "auto",
       }}
     >
-      <Box sx={{ overflow: "auto" }}>
-        <List>
-          {menuItems.map((item) => (
-            <ListItem
-              button
-              key={item.text}
-              onClick={() => navigate(item.path)}
-              selected={location.pathname === item.path}
-              sx={{
-                "&.Mui-selected": {
-                  backgroundColor: "primary.light",
-                  "&:hover": {
-                    backgroundColor: "primary.light",
-                  },
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  color:
-                    location.pathname === item.path
-                      ? "primary.main"
-                      : "inherit",
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItem>
-          ))}
-        </List>
-        <Divider />
-      </Box>
-    </Drawer>
+      <Menu
+        mode="inline"
+        selectedKeys={[location.pathname]}
+        items={menuItems}
+        onClick={({ key }) => navigate(key)}
+        style={{ height: "100%" }}
+      />
+    </Sider>
   );
 };
 

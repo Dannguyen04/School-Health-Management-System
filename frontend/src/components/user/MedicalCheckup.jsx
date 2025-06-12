@@ -1,34 +1,27 @@
 import {
-  Box,
   Button,
-  Chip,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Paper,
+  Card,
+  Col,
+  DatePicker,
+  Input,
+  Modal,
+  Row,
   Select,
+  Space,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
+  Tag,
   Typography,
-} from "@mui/material";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+  message,
+} from "antd";
+import dayjs from "dayjs";
 import React, { useState } from "react";
 
+const { Title, Text } = Typography;
+const { Option } = Select;
+const { TextArea } = Input;
+
 const MedicalCheckup = () => {
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
   const [selectedCheckup, setSelectedCheckup] = useState(null);
   const [checkupData, setCheckupData] = useState({
     type: "",
@@ -58,12 +51,12 @@ const MedicalCheckup = () => {
     },
   ];
 
-  const handleOpenDialog = (checkup = null) => {
+  const handleOpenModal = (checkup = null) => {
     if (checkup) {
       setSelectedCheckup(checkup);
       setCheckupData({
         type: checkup.type,
-        date: new Date(checkup.date),
+        date: checkup.date ? dayjs(checkup.date) : null,
         status: checkup.status,
         results: checkup.results,
         notes: checkup.notes,
@@ -78,199 +71,165 @@ const MedicalCheckup = () => {
         notes: "",
       });
     }
-    setOpenDialog(true);
+    setOpenModal(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
+  const handleCloseModal = () => {
+    setOpenModal(false);
     setSelectedCheckup(null);
+    setCheckupData({
+      type: "",
+      date: null,
+      status: "",
+      results: "",
+      notes: "",
+    });
   };
 
   const handleSubmit = () => {
     // Add API call here to save/update checkup data
-    handleCloseDialog();
+    console.log("Submitting checkup data:", checkupData);
+    message.success("Thông tin kiểm tra đã được lưu thành công");
+    handleCloseModal();
   };
 
-  const getStatusColor = (status) => {
+  const getStatusTagColor = (status) => {
     switch (status) {
       case "Hoàn thành":
-        return "success";
+        return "green";
       case "Đã lên lịch":
-        return "warning";
+        return "orange";
       case "Đã hủy":
-        return "error";
+        return "red";
       default:
         return "default";
     }
   };
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Kiểm tra y tế
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Quản lý và theo dõi lịch kiểm tra sức khỏe
-        </Typography>
-      </Box>
-
-      <Box sx={{ mb: 3, display: "flex", justifyContent: "flex-end" }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOpenDialog()}
-        >
-          Thêm mới
-        </Button>
-      </Box>
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Loại kiểm tra</TableCell>
-              <TableCell>Ngày kiểm tra</TableCell>
-              <TableCell>Trạng thái</TableCell>
-              <TableCell>Kết quả</TableCell>
-              <TableCell>Ghi chú</TableCell>
-              <TableCell>Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {checkups.map((checkup) => (
-              <TableRow key={checkup.id}>
-                <TableCell>{checkup.type}</TableCell>
-                <TableCell>{checkup.date}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={checkup.status}
-                    color={getStatusColor(checkup.status)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{checkup.results}</TableCell>
-                <TableCell>{checkup.notes}</TableCell>
-                <TableCell>
-                  <Button
-                    size="small"
-                    onClick={() => handleOpenDialog(checkup)}
-                  >
-                    Chỉnh sửa
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {selectedCheckup
-            ? "Chỉnh sửa thông tin kiểm tra"
-            : "Thêm mới kiểm tra"}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Loại kiểm tra</InputLabel>
-                <Select
-                  value={checkupData.type}
-                  label="Loại kiểm tra"
-                  onChange={(e) =>
-                    setCheckupData({
-                      ...checkupData,
-                      type: e.target.value,
-                    })
-                  }
-                >
-                  <MenuItem value="Kiểm tra sức khỏe định kỳ">
-                    Kiểm tra sức khỏe định kỳ
-                  </MenuItem>
-                  <MenuItem value="Kiểm tra thị lực">Kiểm tra thị lực</MenuItem>
-                  <MenuItem value="Kiểm tra thính lực">
-                    Kiểm tra thính lực
-                  </MenuItem>
-                  <MenuItem value="Kiểm tra răng miệng">
-                    Kiểm tra răng miệng
-                  </MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Ngày kiểm tra"
-                  value={checkupData.date}
-                  onChange={(date) => setCheckupData({ ...checkupData, date })}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  value={checkupData.status}
-                  label="Trạng thái"
-                  onChange={(e) =>
-                    setCheckupData({
-                      ...checkupData,
-                      status: e.target.value,
-                    })
-                  }
-                >
-                  <MenuItem value="Hoàn thành">Hoàn thành</MenuItem>
-                  <MenuItem value="Đã lên lịch">Đã lên lịch</MenuItem>
-                  <MenuItem value="Đã hủy">Đã hủy</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Kết quả"
-                value={checkupData.results}
-                onChange={(e) =>
-                  setCheckupData({
-                    ...checkupData,
-                    results: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Ghi chú"
-                multiline
-                rows={3}
-                value={checkupData.notes}
-                onChange={(e) =>
-                  setCheckupData({
-                    ...checkupData,
-                    notes: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Hủy</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            {selectedCheckup ? "Cập nhật" : "Thêm mới"}
+  const columns = [
+    {
+      title: "Loại kiểm tra",
+      dataIndex: "type",
+      key: "type",
+    },
+    {
+      title: "Ngày kiểm tra",
+      dataIndex: "date",
+      key: "date",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => <Tag color={getStatusTagColor(status)}>{status}</Tag>,
+    },
+    {
+      title: "Kết quả",
+      dataIndex: "results",
+      key: "results",
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "notes",
+      key: "notes",
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      align: "right",
+      render: (_, record) => (
+        <Space>
+          <Button type="link" onClick={() => handleOpenModal(record)}>
+            Chỉnh sửa
           </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: "24px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={2}>Kiểm tra y tế</Title>
+        <Text type="secondary">Quản lý và theo dõi lịch kiểm tra sức khỏe</Text>
+      </div>
+
+      <Row justify="end" style={{ marginBottom: 24 }}>
+        <Col>
+          <Button type="primary" onClick={() => handleOpenModal()}>
+            Thêm mới
+          </Button>
+        </Col>
+      </Row>
+
+      <Card>
+        <Table columns={columns} dataSource={checkups} rowKey="id" />
+      </Card>
+
+      <Modal
+        title={
+          selectedCheckup ? "Chỉnh sửa thông tin kiểm tra" : "Thêm mới kiểm tra"
+        }
+        open={openModal}
+        onCancel={handleCloseModal}
+        onOk={handleSubmit}
+        okText="Lưu"
+        cancelText="Hủy"
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <Select
+            placeholder="Loại kiểm tra"
+            value={checkupData.type || undefined}
+            onChange={(value) =>
+              setCheckupData({ ...checkupData, type: value })
+            }
+            style={{ width: "100%" }}
+          >
+            <Option value="Kiểm tra sức khỏe định kỳ">
+              Kiểm tra sức khỏe định kỳ
+            </Option>
+            <Option value="Kiểm tra thị lực">Kiểm tra thị lực</Option>
+            <Option value="Kiểm tra thính lực">Kiểm tra thính lực</Option>
+            <Option value="Kiểm tra răng miệng">Kiểm tra răng miệng</Option>
+            <Option value="Khác">Khác</Option>
+          </Select>
+          <DatePicker
+            placeholder="Ngày kiểm tra"
+            value={checkupData.date}
+            onChange={(date) => setCheckupData({ ...checkupData, date: date })}
+            style={{ width: "100%" }}
+          />
+          <Select
+            placeholder="Trạng thái"
+            value={checkupData.status || undefined}
+            onChange={(value) =>
+              setCheckupData({ ...checkupData, status: value })
+            }
+            style={{ width: "100%" }}
+          >
+            <Option value="Hoàn thành">Hoàn thành</Option>
+            <Option value="Đã lên lịch">Đã lên lịch</Option>
+            <Option value="Đã hủy">Đã hủy</Option>
+          </Select>
+          <TextArea
+            placeholder="Kết quả"
+            value={checkupData.results}
+            onChange={(e) =>
+              setCheckupData({ ...checkupData, results: e.target.value })
+            }
+            rows={4}
+          />
+          <TextArea
+            placeholder="Ghi chú"
+            value={checkupData.notes}
+            onChange={(e) =>
+              setCheckupData({ ...checkupData, notes: e.target.value })
+            }
+            rows={4}
+          />
+        </Space>
+      </Modal>
+    </div>
   );
 };
 

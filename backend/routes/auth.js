@@ -1,11 +1,8 @@
 import express from "express";
 
 import { handleLogin, handleLogout } from "../controllers/Login.js";
-import {
-    verifyUser,
-    authenticateToken,
-} from "../middleware/authenticateToken.js";
 import { handleRegister } from "../controllers/Register.js";
+import { authenticateToken } from "../middleware/authenticateToken.js";
 
 const router = express.Router();
 
