@@ -1,18 +1,16 @@
+// controllers/UserController.js
 const prisma = require("../prisma");
-const bcrypt = require("bcrypt");
 
 exports.createUser = async (req, res) => {
     try {
         const { fullName, email, password, role, phone, address, avatar } =
             req.body;
 
-        const hashedPassword = await bcrypt.hash(password, 10);
-
         const user = await prisma.users.create({
             data: {
                 fullName,
                 email,
-                password: hashedPassword,
+                password,
                 role,
                 phone,
                 address,
