@@ -1,11 +1,18 @@
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
+import ConsentForms from "./components/admin/ConsentForms";
 import AdminDashboard from "./components/admin/Dashboard";
-import AdminMedicalEvents from "./components/admin/MedicalEvents";
-import MedicalSupplies from "./components/admin/MedicalSupplies";
-import AdminReports from "./components/admin/Reports";
+import MedicationInfo from "./components/admin/MedicationInfo";
 import StudentManagement from "./components/admin/StudentManagement";
-import VaccinationManagement from "./components/admin/VaccinationManagement";
+import UserManagement from "./components/admin/UserManagement";
+import Campaigns from "./components/nurse/Campaigns";
+import ConfirmedMedicines from "./components/nurse/ConfirmedMedicines";
+import Dashboard from "./components/nurse/Dashboard";
+import HealthCheckups from "./components/nurse/HealthCheckups";
+import MedicalInventory from "./components/nurse/MedicalInventory";
+import Reports from "./components/nurse/Reports";
+import StudentTreatment from "./components/nurse/StudentTreatment";
+import Vaccination from "./components/nurse/Vaccination";
 import UserBlog from "./components/user/Blog";
 import UserDashboard from "./components/user/Dashboard";
 import UserHealthDocuments from "./components/user/HealthDocuments";
@@ -15,8 +22,8 @@ import UserMedicalEvents from "./components/user/MedicalEvents";
 import UserMedicineManagement from "./components/user/MedicineManagement";
 import UserReports from "./components/user/Reports";
 import UserVaccination from "./components/user/Vaccination";
-import Admin from "./layouts/Admin";
-import Nurse from "./layouts/Nurse";
+import { default as AdminLayout } from "./layouts/Admin";
+import NurseLayout from "./layouts/Nurse";
 import User from "./layouts/User";
 import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
@@ -32,36 +39,44 @@ const App = () => {
         <Route path="/" element={<Homepage />} />
         <Route path="/auth" element={<AuthPage />} />
 
-        {/* Admin Routes */}
-        <Route
-          path="/admin"
-          element={
-            <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["ADMIN"]}>
-                <Admin />
-              </RoleBaseRoutes>
-            </PrivateRoutes>
-          }
-        >
-          <Route index element={<AdminDashboard />} />
-          <Route path="students" element={<StudentManagement />} />
-          <Route path="medical-events" element={<AdminMedicalEvents />} />
-          <Route path="vaccinations" element={<VaccinationManagement />} />
-          <Route path="reports" element={<AdminReports />} />
-          <Route path="medical-supplies" element={<MedicalSupplies />} />
-        </Route>
-
         {/* Nurse Routes */}
         <Route
           path="/nurse"
           element={
             <PrivateRoutes>
               <RoleBaseRoutes requiredRole={["SCHOOL_NURSE"]}>
-                <Nurse />
+                <NurseLayout />
               </RoleBaseRoutes>
             </PrivateRoutes>
           }
-        ></Route>
+        >
+          <Route index element={<Dashboard />} />
+          <Route path="campaigns" element={<Campaigns />} />
+          <Route path="medical-inventory" element={<MedicalInventory />} />
+          <Route path="student-treatment" element={<StudentTreatment />} />
+          <Route path="vaccination" element={<Vaccination />} />
+          <Route path="health-checkups" element={<HealthCheckups />} />
+          <Route path="confirmed-medicines" element={<ConfirmedMedicines />} />
+          <Route path="reports" element={<Reports />} />
+        </Route>
+
+        {/* Admin Routes */}
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoutes>
+              <RoleBaseRoutes requiredRole={["ADMIN"]}>
+                <AdminLayout />
+              </RoleBaseRoutes>
+            </PrivateRoutes>
+          }
+        >
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<UserManagement />} />
+          <Route path="students" element={<StudentManagement />} />
+          <Route path="consent-forms" element={<ConsentForms />} />
+          <Route path="medication-info" element={<MedicationInfo />} />
+        </Route>
 
         {/* User Routes */}
         <Route

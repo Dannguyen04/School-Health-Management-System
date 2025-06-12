@@ -1,86 +1,52 @@
-import { BellOutlined } from "@ant-design/icons";
-import { Button, Input, Layout, Space } from "antd";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Layout, theme } from "antd";
+import { Outlet } from "react-router-dom";
+import SidebarMenu from "../components/nurse/SidebarMenu";
+import Headers from "../components/shared/Header";
 
-const { Header, Content } = Layout;
-const { Search } = Input;
+const { Content, Sider } = Layout;
 
-const Nurse = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  const menuItems = [
-    {
-      key: "/nurse",
-      label: "Tổng quan",
-      icon: "📊",
-    },
-    {
-      key: "/nurse/medical-campaigns",
-      label: "💉 Quản lý Chiến dịch Y tế",
-    },
-    {
-      key: "/nurse/medical-records",
-      label: "🧾 Hồ sơ Y tế",
-    },
-    {
-      key: "/nurse/medicine-management",
-      label: "💊 Quản lý Thuốc",
-    },
-    {
-      key: "/nurse/parent-tasks",
-      label: "📤 Tác vụ với Phụ huynh",
-    },
-    {
-      key: "/nurse/notifications",
-      label: "🔔 Thông báo",
-    },
-  ];
+const NurseLayout = () => {
+  const {
+    token: { colorBgContainer, borderRadiusLG },
+  } = theme.useToken();
 
   return (
-    <Layout className="min-h-screen">
-      <Header className="bg-white shadow-md">
-        <div className="flex justify-between items-center">
-          <h1 className="text-xl font-bold">Dashboard Y Tế Học Đường</h1>
-          <Space>
-            <Search placeholder="Tìm kiếm..." className="w-64" />
-            <Button type="primary" icon={<BellOutlined />}>
-              Thông báo
-            </Button>
-          </Space>
-        </div>
-      </Header>
-
-      <Content className="p-6">
-        <div className="flex gap-4">
-          <div className="w-64 bg-white p-4 rounded-lg shadow">
-            <nav className="space-y-2">
-              {menuItems.map((item) => (
-                <button
-                  key={item.key}
-                  onClick={() => navigate(item.key)}
-                  className={`w-full text-left px-4 py-2 rounded-lg transition-colors ${
-                    location.pathname === item.key
-                      ? "bg-blue-50 text-blue-600"
-                      : "hover:bg-gray-50"
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    {item.icon && <span>{item.icon}</span>}
-                    {item.label}
-                  </span>
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          <div className="flex-1 bg-white p-6 rounded-lg shadow">
+    <Layout style={{ minHeight: "100vh", height: "100vh" }}>
+      <Sider
+        breakpoint="lg"
+        collapsedWidth="0"
+        style={{
+          height: "100vh",
+          position: "fixed",
+          left: 0,
+          top: 0,
+          bottom: 0,
+        }}
+      >
+        <SidebarMenu />
+      </Sider>
+      <Layout style={{ marginLeft: 200, height: "100%" }}>
+        <Headers />
+        <Content
+          style={{ margin: "24px 16px", padding: "0 24px", height: "100%" }}
+        >
+          <div
+            style={{
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              padding: 24,
+              background: colorBgContainer,
+              borderRadius: borderRadiusLG,
+              flex: 1,
+            }}
+          >
             <Outlet />
           </div>
-        </div>
-      </Content>
+        </Content>
+      </Layout>
     </Layout>
   );
 };
 
-export default Nurse;
+export default NurseLayout;
