@@ -26,10 +26,11 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(express.json());
 
-const findParents = async (parentName) => {
-    const parents = await prisma.parents.findFirst({
+const findParents = async (parentName, tx = prisma) => {
+    // FIX: use tx.parent (singular) and correct relation to user (not users)
+    const parent = await tx.parent.findFirst({
         where: {
-            users: {
+            user: {
                 fullName: {
                     contains: parentName,
                 },
@@ -38,11 +39,11 @@ const findParents = async (parentName) => {
             },
         },
         include: {
-            users: true,
+            user: true,
         },
     });
 
-    return parents;
+    return parent;
 };
 
 const assignParent = async (
@@ -52,7 +53,7 @@ const assignParent = async (
     isPrimary = false,
     tx
 ) => {
-    const parent = await findParents(parentName);
+    const parent = await findParents(parentName, tx); // pass tx for transaction safety
     if (!parent) {
         return { success: false, error: "Parent not found" };
     }
@@ -158,7 +159,7 @@ const addStudent = async (req, res) => {
         const [existingUser, existingStudent] = await Promise.all([
             prisma.users.findUnique({ where: { email } }),
             studentCode
-                ? prisma.students.findUnique({ where: { studentCode } })
+                ? prisma.student.findUnique({ where: { studentCode } }) // FIX: use prisma.student (singular)
                 : null,
         ]);
         if (existingUser) {
@@ -205,17 +206,18 @@ const addStudent = async (req, res) => {
                     fullName,
                     email,
                     phone,
-                    password: hashedPassword,
+                    password: password,
                     role: "STUDENT",
                     isActive: true,
                 },
             });
 
             // Create student profile
-            const student = await tx.students.create({
+            const student = await tx.student.create({
+                // FIX: use tx.student (singular)
                 data: {
                     userId: user.id,
-                    studentCode: studentCode || generateStudentCode(),
+                    studentCode: studentCode,
                     dateOfBirth: dob,
                     gender,
                     grade: grade.toString(),

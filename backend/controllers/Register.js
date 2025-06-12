@@ -22,17 +22,14 @@ const handleRegister = async (req, res) => {
     try {
         const { name, email, password } = req.body;
 
-        // Normalize email
-        const normalizedEmail = email.trim().toLowerCase();
-
-        if (!name || !normalizedEmail || !password) {
+        if (!name || !email || !password) {
             return res.status(400).json({
                 success: false,
                 error: "Name, email and password are required",
             });
         }
 
-        if (!validator.isEmail(normalizedEmail)) {
+        if (!validator.isEmail(email)) {
             return res.status(400).json({
                 success: false,
                 error: "Invalid email format",
@@ -48,7 +45,7 @@ const handleRegister = async (req, res) => {
 
         let findUser = await prisma.users.findUnique({
             where: {
-                email: normalizedEmail,
+                email: email,
             },
         });
 
@@ -58,68 +55,56 @@ const handleRegister = async (req, res) => {
                 error: "User already exists",
             });
 
-        try {
-            // Create user and parent in transaction
-            const result = await prisma.$transaction(async (tx) => {
-                // Create user with PARENT role (default)
-                const user = await tx.users.create({
-                    data: {
-                        fullName: name.trim(),
-                        email: normalizedEmail,
-                        password: password,
-                        role: "PARENT",
-                    },
-                });
-
-                // Create parent profile
-                const parent = await tx.parent.create({
-                    data: {
-                        userId: user.id,
-                    },
-                });
-
-                return { user, parent };
+        // Create user and parent in transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // Create user with PARENT role (default)
+            const user = await tx.users.create({
+                data: {
+                    fullName: name.trim(),
+                    email: email.toLowerCase(),
+                    password: password,
+                    role: "PARENT",
+                },
             });
 
-            // Generate JWT token
-            const token = jwt.sign(
-                {
-                    userId: result.user.id,
+            // Create parent profile
+            const parent = await tx.parent.create({
+                data: {
+                    userId: user.id,
+                },
+            });
+
+            return { user, parent };
+        });
+
+        // Generate JWT token
+        const token = jwt.sign(
+            {
+                userId: result.user.id,
+                email: result.user.email,
+                role: result.user.role,
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: "24h" }
+        );
+
+        return res
+            .header("auth-token", token)
+            .status(201)
+            .json({
+                success: true,
+                message: "Registered successfully",
+                token,
+                user: {
+                    id: result.user.id,
                     email: result.user.email,
+                    fullName: result.user.fullName,
                     role: result.user.role,
                 },
-                process.env.JWT_SECRET,
-                { expiresIn: "24h" }
-            );
-
-            return res
-                .header("auth-token", token)
-                .status(201)
-                .json({
-                    success: true,
-                    message: "Registered successfully",
-                    token,
-                    user: {
-                        id: result.user.id,
-                        email: result.user.email,
-                        fullName: result.user.fullName,
-                        role: result.user.role,
-                    },
-                    parent: {
-                        id: result.parent.id,
-                    },
-                });
-        } catch (error) {
-            // Handle unique constraint error (race condition)
-            if (error.code === 'P2002' && error.meta && error.meta.target && error.meta.target.includes('email')) {
-                return res.status(400).json({
-                    success: false,
-                    error: "User already exists",
-                });
-            }
-            console.log(error);
-            res.status(500).json({ error: "Server error" });
-        }
+                parent: {
+                    id: result.parent.id,
+                },
+            });
     } catch (error) {
         console.log(error);
         res.status(500).json({ error: "Server error" });
