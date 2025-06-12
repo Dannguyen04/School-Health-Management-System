@@ -214,7 +214,6 @@ const addStudent = async (req, res) => {
 
             // Create student profile
             const student = await tx.student.create({
-                // FIX: use tx.student (singular)
                 data: {
                     userId: user.id,
                     studentCode: studentCode,
