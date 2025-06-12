@@ -23,54 +23,75 @@ import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
 
 const App = () => {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Homepage />} />
-        <Route path="/auth" element={<AuthPage />} />
-        <Route
-          path="/admin"
-          element={
-            <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["admin"]}>
-                <Admin />
-              </RoleBaseRoutes>
-            </PrivateRoutes>
-          }
-        >
-          <Route index element={<AdminDashboard />} />
-          <Route path="students" element={<StudentManagement />} />
-          <Route path="medical-events" element={<AdminMedicalEvents />} />
-          <Route path="vaccinations" element={<VaccinationManagement />} />
-          <Route path="reports" element={<AdminReports />} />
-          <Route path="medical-supplies" element={<MedicalSupplies />} />
-        </Route>
-        <Route
-          path="/user"
-          element={
-            <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["user"]}>
-                <User />
-              </RoleBaseRoutes>
-            </PrivateRoutes>
-          }
-        >
-          <Route index element={<UserDashboard />} />
-          <Route path="health-profile" element={<UserHealthProfile />} />
-          <Route path="vaccination" element={<UserVaccination />} />
-          <Route path="medical-checkup" element={<UserMedicalCheckup />} />
-          <Route path="reports" element={<UserReports />} />
-          <Route path="blog" element={<UserBlog />} />
-          <Route path="medical-events" element={<UserMedicalEvents />} />
-          <Route path="health-documents" element={<UserHealthDocuments />} />
-          <Route
-            path="medicine-management"
-            element={<UserMedicineManagement />}
-          />
-        </Route>
-      </Routes>
-    </Router>
-  );
+    return (
+        <Router>
+            <Routes>
+                <Route path="/" element={<Homepage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route
+                    path="/admin"
+                    element={
+                        <PrivateRoutes>
+                            <RoleBaseRoutes requiredRole={["admin"]}>
+                                <Admin />
+                            </RoleBaseRoutes>
+                        </PrivateRoutes>
+                    }
+                >
+                    <Route index element={<AdminDashboard />} />
+                    <Route path="students" element={<StudentManagement />} />
+                    <Route
+                        path="medical-events"
+                        element={<AdminMedicalEvents />}
+                    />
+                    <Route
+                        path="vaccinations"
+                        element={<VaccinationManagement />}
+                    />
+                    <Route path="reports" element={<AdminReports />} />
+                    <Route
+                        path="medical-supplies"
+                        element={<MedicalSupplies />}
+                    />
+                </Route>
+                <Route
+                    path="/user"
+                    element={
+                        <PrivateRoutes>
+                            <RoleBaseRoutes requiredRole={["user"]}>
+                                <User />
+                            </RoleBaseRoutes>
+                        </PrivateRoutes>
+                    }
+                >
+                    <Route index element={<UserDashboard />} />
+                    <Route
+                        path="health-profile"
+                        element={<UserHealthProfile />}
+                    />
+                    <Route path="vaccination" element={<UserVaccination />} />
+                    <Route
+                        path="medical-checkup"
+                        element={<UserMedicalCheckup />}
+                    />
+                    <Route path="reports" element={<UserReports />} />
+                    <Route path="blog" element={<UserBlog />} />
+                    <Route
+                        path="medical-events"
+                        element={<UserMedicalEvents />}
+                    />
+                    <Route
+                        path="health-documents"
+                        element={<UserHealthDocuments />}
+                    />
+                    <Route
+                        path="medicine-management"
+                        element={<UserMedicineManagement />}
+                    />
+                </Route>
+            </Routes>
+        </Router>
+    );
 };
 
 export default App;
