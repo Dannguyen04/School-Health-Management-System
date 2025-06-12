@@ -1,7 +1,7 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   Button,
-  Card,
+  DatePicker,
   Form,
   Input,
   Modal,
@@ -9,26 +9,51 @@ import {
   Space,
   Table,
   Tag,
+  message,
 } from "antd";
-import React, { useState } from "react";
+import dayjs from "dayjs";
+import { useState } from "react";
 
 const { Option } = Select;
 
 const StudentManagement = () => {
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
-  const [editingRecord, setEditingRecord] = useState(null);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
+
+  // Mock data - replace with real data from API
+  const [students, setStudents] = useState([
+    {
+      id: 1,
+      studentCode: "STU001",
+      name: "John Doe",
+      email: "john@example.com",
+      dateOfBirth: "2010-05-15",
+      gender: "MALE",
+      class: "10A",
+      grade: "10",
+      bloodType: "A+",
+      emergencyContact: "Jane Doe",
+      emergencyPhone: "1234567890",
+      status: "active",
+    },
+  ]);
 
   const columns = [
     {
-      title: "Student ID",
-      dataIndex: "id",
-      key: "id",
+      title: "Student Code",
+      dataIndex: "studentCode",
+      key: "studentCode",
     },
     {
-      title: "Full Name",
+      title: "Name",
       dataIndex: "name",
       key: "name",
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
     },
     {
       title: "Class",
@@ -36,64 +61,32 @@ const StudentManagement = () => {
       key: "class",
     },
     {
-      title: "Allergies",
-      dataIndex: "allergies",
-      key: "allergies",
-      render: (allergies) => (
-        <>
-          {allergies.map((allergy) => (
-            <Tag color="red" key={allergy}>
-              {allergy}
-            </Tag>
-          ))}
-        </>
+      title: "Grade",
+      dataIndex: "grade",
+      key: "grade",
+    },
+    {
+      title: "Status",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => (
+        <Tag color={status === "active" ? "green" : "red"}>
+          {status.toUpperCase()}
+        </Tag>
       ),
-    },
-    {
-      title: "Chronic Diseases",
-      dataIndex: "chronicDiseases",
-      key: "chronicDiseases",
-      render: (diseases) => (
-        <>
-          {diseases.map((disease) => (
-            <Tag color="orange" key={disease}>
-              {disease}
-            </Tag>
-          ))}
-        </>
-      ),
-    },
-    {
-      title: "Vision",
-      dataIndex: "vision",
-      key: "vision",
-    },
-    {
-      title: "Hearing",
-      dataIndex: "hearing",
-      key: "hearing",
-    },
-    {
-      title: "Tiền sử điều trị",
-      dataIndex: "treatmentHistory",
-      key: "treatmentHistory",
     },
     {
       title: "Actions",
-      key: "action",
+      key: "actions",
       render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="primary"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          >
+        <Space>
+          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
             Edit
           </Button>
           <Button
             danger
             icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
+            onClick={() => handleDelete(record.id)}
           >
             Delete
           </Button>
@@ -102,126 +95,202 @@ const StudentManagement = () => {
     },
   ];
 
-  const data = [
-    {
-      key: "1",
-      id: "HS001",
-      name: "Nguyen Van A",
-      class: "10A1",
-      allergies: ["Penicillin", "Peanut"],
-      chronicDiseases: ["Asthma"],
-      vision: "10/10",
-      hearing: "Normal",
-      treatmentHistory: "Đã điều trị hen năm 2022",
-    },
-    // Add more sample data as needed
-  ];
-
   const handleAdd = () => {
-    setEditingRecord(null);
+    setEditingStudent(null);
     form.resetFields();
     setIsModalVisible(true);
   };
 
-  const handleEdit = (record) => {
-    setEditingRecord(record);
-    form.setFieldsValue(record);
+  const handleEdit = (student) => {
+    setEditingStudent(student);
+    form.setFieldsValue({
+      ...student,
+      dateOfBirth: dayjs(student.dateOfBirth),
+    });
     setIsModalVisible(true);
   };
 
-  const handleDelete = (record) => {
-    // Implement delete functionality
-    console.log("Delete record:", record);
-  };
-
-  const handleModalOk = () => {
-    form.validateFields().then((values) => {
-      console.log("Form values:", values);
-      setIsModalVisible(false);
+  const handleDelete = (studentId) => {
+    Modal.confirm({
+      title: "Are you sure you want to delete this student?",
+      content: "This action cannot be undone.",
+      okText: "Yes",
+      okType: "danger",
+      cancelText: "No",
+      onOk: () => {
+        setStudents(students.filter((student) => student.id !== studentId));
+        message.success("Student deleted successfully");
+      },
     });
   };
 
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      const formattedValues = {
+        ...values,
+        dateOfBirth: values.dateOfBirth.toISOString(),
+        role: "STUDENT", // Default role for students
+      };
+
+      if (editingStudent) {
+        // Update existing student
+        setStudents(
+          students.map((student) =>
+            student.id === editingStudent.id
+              ? { ...student, ...formattedValues }
+              : student
+          )
+        );
+        message.success("Student updated successfully");
+      } else {
+        // Add new student
+        const newStudent = {
+          id: students.length + 1,
+          ...formattedValues,
+          status: "active",
+        };
+        setStudents([...students, newStudent]);
+        message.success("Student added successfully");
+      }
+      setIsModalVisible(false);
+    } catch (error) {
+      console.error("Validation failed:", error);
+    }
+  };
+
   return (
-    <div>
-      <Card
-        title="Student Records Management"
-        extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Add Student
-          </Button>
-        }
-      >
-        <Table columns={columns} dataSource={data} />
-      </Card>
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Student Management</h1>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+          Add Student
+        </Button>
+      </div>
+
+      <Table
+        columns={columns}
+        dataSource={students}
+        rowKey="id"
+        pagination={{ pageSize: 10 }}
+      />
 
       <Modal
-        title={editingRecord ? "Edit Student Information" : "Add New Student"}
+        title={editingStudent ? "Edit Student" : "Add Student"}
         open={isModalVisible}
-        onOk={handleModalOk}
+        onOk={handleSubmit}
         onCancel={() => setIsModalVisible(false)}
+        okText={editingStudent ? "Update" : "Add"}
         width={800}
       >
         <Form form={form} layout="vertical">
-          <Form.Item
-            name="id"
-            label="Student ID"
-            rules={[{ required: true, message: "Please enter student ID" }]}
-          >
-            <Input />
-          </Form.Item>
+          <div className="grid grid-cols-2 gap-4">
+            <Form.Item
+              name="studentCode"
+              label="Student Code"
+              rules={[
+                { required: true, message: "Please input the student code!" },
+              ]}
+            >
+              <Input />
+            </Form.Item>
 
-          <Form.Item
-            name="name"
-            label="Full Name"
-            rules={[{ required: true, message: "Please enter full name" }]}
-          >
-            <Input />
-          </Form.Item>
+            <Form.Item
+              name="name"
+              label="Name"
+              rules={[{ required: true, message: "Please input the name!" }]}
+            >
+              <Input />
+            </Form.Item>
 
-          <Form.Item
-            name="class"
-            label="Class"
-            rules={[{ required: true, message: "Please select class" }]}
-          >
-            <Select>
-              <Option value="10A1">10A1</Option>
-              <Option value="10A2">10A2</Option>
-              <Option value="11A1">11A1</Option>
-              <Option value="11A2">11A2</Option>
-            </Select>
-          </Form.Item>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[
+                { required: true, message: "Please input the email!" },
+                { type: "email", message: "Please enter a valid email!" },
+              ]}
+            >
+              <Input />
+            </Form.Item>
 
-          <Form.Item name="allergies" label="Allergies">
-            <Select mode="tags" placeholder="Enter allergies">
-              <Option value="Penicillin">Penicillin</Option>
-              <Option value="Peanut">Peanut</Option>
-              <Option value="Seafood">Seafood</Option>
-            </Select>
-          </Form.Item>
+            <Form.Item
+              name="dateOfBirth"
+              label="Date of Birth"
+              rules={[
+                { required: true, message: "Please select date of birth!" },
+              ]}
+            >
+              <DatePicker className="w-full" />
+            </Form.Item>
 
-          <Form.Item name="chronicDiseases" label="Chronic Diseases">
-            <Select mode="tags" placeholder="Enter chronic diseases">
-              <Option value="Asthma">Asthma</Option>
-              <Option value="Diabetes">Diabetes</Option>
-              <Option value="Hypertension">Hypertension</Option>
-            </Select>
-          </Form.Item>
+            <Form.Item
+              name="gender"
+              label="Gender"
+              rules={[{ required: true, message: "Please select gender!" }]}
+            >
+              <Select>
+                <Option value="MALE">Male</Option>
+                <Option value="FEMALE">Female</Option>
+                <Option value="OTHER">Other</Option>
+              </Select>
+            </Form.Item>
 
-          <Form.Item name="vision" label="Vision">
-            <Input />
-          </Form.Item>
+            <Form.Item
+              name="class"
+              label="Class"
+              rules={[{ required: true, message: "Please input the class!" }]}
+            >
+              <Input />
+            </Form.Item>
 
-          <Form.Item name="hearing" label="Hearing">
-            <Select>
-              <Option value="Normal">Normal</Option>
-              <Option value="Mild hearing loss">Mild hearing loss</Option>
-              <Option value="Severe hearing loss">Severe hearing loss</Option>
-            </Select>
-          </Form.Item>
+            <Form.Item
+              name="grade"
+              label="Grade"
+              rules={[{ required: true, message: "Please input the grade!" }]}
+            >
+              <Input />
+            </Form.Item>
 
-          <Form.Item name="treatmentHistory" label="Tiền sử điều trị">
-            <Input.TextArea rows={2} />
-          </Form.Item>
+            <Form.Item name="bloodType" label="Blood Type">
+              <Select allowClear>
+                <Option value="A+">A+</Option>
+                <Option value="A-">A-</Option>
+                <Option value="B+">B+</Option>
+                <Option value="B-">B-</Option>
+                <Option value="AB+">AB+</Option>
+                <Option value="AB-">AB-</Option>
+                <Option value="O+">O+</Option>
+                <Option value="O-">O-</Option>
+              </Select>
+            </Form.Item>
+
+            <Form.Item
+              name="emergencyContact"
+              label="Emergency Contact Name"
+              rules={[
+                {
+                  required: true,
+                  message: "Please input emergency contact name!",
+                },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+
+            <Form.Item
+              name="emergencyPhone"
+              label="Emergency Contact Phone"
+              rules={[
+                {
+                  required: true,
+                  message: "Please input emergency contact phone!",
+                },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+          </div>
         </Form>
       </Modal>
     </div>
