@@ -16,11 +16,14 @@ import UserMedicineManagement from "./components/user/MedicineManagement";
 import UserReports from "./components/user/Reports";
 import UserVaccination from "./components/user/Vaccination";
 import Admin from "./layouts/Admin";
+import Nurse from "./layouts/Nurse";
 import User from "./layouts/User";
 import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
+
+// Import Nurse components
 
 const App = () => {
   return (
@@ -28,11 +31,13 @@ const App = () => {
       <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/auth" element={<AuthPage />} />
+
+        {/* Admin Routes */}
         <Route
           path="/admin"
           element={
             <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["admin"]}>
+              <RoleBaseRoutes requiredRole={["ADMIN"]}>
                 <Admin />
               </RoleBaseRoutes>
             </PrivateRoutes>
@@ -45,11 +50,25 @@ const App = () => {
           <Route path="reports" element={<AdminReports />} />
           <Route path="medical-supplies" element={<MedicalSupplies />} />
         </Route>
+
+        {/* Nurse Routes */}
+        <Route
+          path="/nurse"
+          element={
+            <PrivateRoutes>
+              <RoleBaseRoutes requiredRole={["SCHOOL_NURSE"]}>
+                <Nurse />
+              </RoleBaseRoutes>
+            </PrivateRoutes>
+          }
+        ></Route>
+
+        {/* User Routes */}
         <Route
           path="/user"
           element={
             <PrivateRoutes>
-              <RoleBaseRoutes requiredRole={["user"]}>
+              <RoleBaseRoutes requiredRole={["PARENT"]}>
                 <User />
               </RoleBaseRoutes>
             </PrivateRoutes>

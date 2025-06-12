@@ -1,41 +1,38 @@
-import { Search as SearchIcon } from "@mui/icons-material";
 import {
-  Box,
+  DeleteOutlined,
+  EditOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
+import {
   Button,
-  Chip,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
-  Grid,
-  InputAdornment,
-  InputLabel,
-  MenuItem,
-  Paper,
+  Card,
+  Col,
+  DatePicker,
+  Input,
+  InputNumber,
+  Modal,
+  Row,
   Select,
+  Space,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
+  Tag,
   Typography,
-} from "@mui/material";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+  message,
+} from "antd";
+import dayjs from "dayjs";
 import React, { useState } from "react";
 
+const { Title, Text } = Typography;
+const { Option } = Select;
+const { TextArea } = Input;
+
 const MedicineManagement = () => {
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [medicineData, setMedicineData] = useState({
     name: "",
-    quantity: "",
+    quantity: null,
     unit: "",
     expiryDate: null,
     supplier: "",
@@ -70,14 +67,14 @@ const MedicineManagement = () => {
     },
   ];
 
-  const handleOpenDialog = (medicine = null) => {
+  const handleOpenModal = (medicine = null) => {
     if (medicine) {
       setSelectedMedicine(medicine);
       setMedicineData({
         name: medicine.name,
         quantity: medicine.quantity,
         unit: medicine.unit,
-        expiryDate: new Date(medicine.expiryDate),
+        expiryDate: medicine.expiryDate ? dayjs(medicine.expiryDate) : null,
         supplier: medicine.supplier,
         category: medicine.category,
         status: medicine.status,
@@ -87,7 +84,7 @@ const MedicineManagement = () => {
       setSelectedMedicine(null);
       setMedicineData({
         name: "",
-        quantity: "",
+        quantity: null,
         unit: "",
         expiryDate: null,
         supplier: "",
@@ -96,27 +93,44 @@ const MedicineManagement = () => {
         notes: "",
       });
     }
-    setOpenDialog(true);
+    setOpenModal(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
+  const handleCloseModal = () => {
+    setOpenModal(false);
     setSelectedMedicine(null);
+    setMedicineData({
+      name: "",
+      quantity: null,
+      unit: "",
+      expiryDate: null,
+      supplier: "",
+      category: "",
+      status: "",
+      notes: "",
+    });
   };
 
   const handleSubmit = () => {
     // Add API call here to save/update medicine data
-    handleCloseDialog();
+    console.log("Submitting medicine data:", medicineData);
+    message.success("Thông tin thuốc đã được lưu thành công");
+    handleCloseModal();
   };
 
-  const getStatusColor = (status) => {
+  const handleDeleteMedicine = (id) => {
+    message.success(`Xóa thuốc ${id}`);
+    // Add API call to delete medicine
+  };
+
+  const getStatusTagColor = (status) => {
     switch (status) {
       case "Còn hàng":
-        return "success";
+        return "green";
       case "Sắp hết":
-        return "warning";
+        return "orange";
       case "Hết hàng":
-        return "error";
+        return "red";
       default:
         return "default";
     }
@@ -126,235 +140,191 @@ const MedicineManagement = () => {
     medicine.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Quản lý thuốc và vật tư y tế
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Theo dõi và quản lý kho thuốc và vật tư y tế
-        </Typography>
-      </Box>
+  const columns = [
+    {
+      title: "Tên thuốc",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "quantity",
+      key: "quantity",
+    },
+    {
+      title: "Đơn vị",
+      dataIndex: "unit",
+      key: "unit",
+    },
+    {
+      title: "Hạn sử dụng",
+      dataIndex: "expiryDate",
+      key: "expiryDate",
+    },
+    {
+      title: "Nhà cung cấp",
+      dataIndex: "supplier",
+      key: "supplier",
+    },
+    {
+      title: "Danh mục",
+      dataIndex: "category",
+      key: "category",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => <Tag color={getStatusTagColor(status)}>{status}</Tag>,
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "notes",
+      key: "notes",
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      align: "right",
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="link"
+            icon={<EditOutlined />}
+            onClick={() => handleOpenModal(record)}
+          >
+            Chỉnh sửa
+          </Button>
+          <Button
+            type="link"
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteMedicine(record.id)}
+          >
+            Xóa
+          </Button>
+        </Space>
+      ),
+    },
+  ];
 
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={6}>
-          <TextField
-            fullWidth
+  return (
+    <div style={{ padding: "24px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={2}>Quản lý thuốc và vật tư y tế</Title>
+        <Text type="secondary">
+          Theo dõi và quản lý kho thuốc và vật tư y tế
+        </Text>
+      </div>
+
+      <Row gutter={[24, 24]} style={{ marginBottom: 24 }}>
+        <Col xs={24} md={12}>
+          <Input
             placeholder="Tìm kiếm thuốc..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon />
-                </InputAdornment>
-              ),
-            }}
+            prefix={<SearchOutlined />}
+            size="large"
           />
-        </Grid>
-        <Grid
-          item
-          xs={12}
-          md={6}
-          sx={{ display: "flex", justifyContent: "flex-end" }}
-        >
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={() => handleOpenDialog()}
-          >
+        </Col>
+        <Col xs={24} md={12} style={{ textAlign: "right" }}>
+          <Button type="primary" size="large" onClick={() => handleOpenModal()}>
             Thêm mới
           </Button>
-        </Grid>
-      </Grid>
+        </Col>
+      </Row>
 
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Tên thuốc</TableCell>
-              <TableCell>Số lượng</TableCell>
-              <TableCell>Đơn vị</TableCell>
-              <TableCell>Hạn sử dụng</TableCell>
-              <TableCell>Nhà cung cấp</TableCell>
-              <TableCell>Danh mục</TableCell>
-              <TableCell>Trạng thái</TableCell>
-              <TableCell>Ghi chú</TableCell>
-              <TableCell>Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredMedicines.map((medicine) => (
-              <TableRow key={medicine.id}>
-                <TableCell>{medicine.name}</TableCell>
-                <TableCell>{medicine.quantity}</TableCell>
-                <TableCell>{medicine.unit}</TableCell>
-                <TableCell>{medicine.expiryDate}</TableCell>
-                <TableCell>{medicine.supplier}</TableCell>
-                <TableCell>{medicine.category}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={medicine.status}
-                    color={getStatusColor(medicine.status)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{medicine.notes}</TableCell>
-                <TableCell>
-                  <Button
-                    size="small"
-                    onClick={() => handleOpenDialog(medicine)}
-                  >
-                    Chỉnh sửa
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <Card>
+        <Table columns={columns} dataSource={filteredMedicines} rowKey="id" />
+      </Card>
 
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
+      <Modal
+        title={
+          selectedMedicine ? "Chỉnh sửa thông tin thuốc" : "Thêm thuốc mới"
+        }
+        open={openModal}
+        onCancel={handleCloseModal}
+        onOk={handleSubmit}
+        okText="Lưu"
+        cancelText="Hủy"
       >
-        <DialogTitle>
-          {selectedMedicine ? "Chỉnh sửa thông tin thuốc" : "Thêm thuốc mới"}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Tên thuốc"
-                value={medicineData.name}
-                onChange={(e) =>
-                  setMedicineData({
-                    ...medicineData,
-                    name: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Số lượng"
-                type="number"
-                value={medicineData.quantity}
-                onChange={(e) =>
-                  setMedicineData({
-                    ...medicineData,
-                    quantity: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Đơn vị"
-                value={medicineData.unit}
-                onChange={(e) =>
-                  setMedicineData({
-                    ...medicineData,
-                    unit: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Hạn sử dụng"
-                  value={medicineData.expiryDate}
-                  onChange={(date) =>
-                    setMedicineData({ ...medicineData, expiryDate: date })
-                  }
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Nhà cung cấp"
-                value={medicineData.supplier}
-                onChange={(e) =>
-                  setMedicineData({
-                    ...medicineData,
-                    supplier: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Danh mục</InputLabel>
-                <Select
-                  value={medicineData.category}
-                  label="Danh mục"
-                  onChange={(e) =>
-                    setMedicineData({
-                      ...medicineData,
-                      category: e.target.value,
-                    })
-                  }
-                >
-                  <MenuItem value="Thuốc giảm đau">Thuốc giảm đau</MenuItem>
-                  <MenuItem value="Vitamin">Vitamin</MenuItem>
-                  <MenuItem value="Thuốc kháng sinh">Thuốc kháng sinh</MenuItem>
-                  <MenuItem value="Vật tư y tế">Vật tư y tế</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  value={medicineData.status}
-                  label="Trạng thái"
-                  onChange={(e) =>
-                    setMedicineData({
-                      ...medicineData,
-                      status: e.target.value,
-                    })
-                  }
-                >
-                  <MenuItem value="Còn hàng">Còn hàng</MenuItem>
-                  <MenuItem value="Sắp hết">Sắp hết</MenuItem>
-                  <MenuItem value="Hết hàng">Hết hàng</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Ghi chú"
-                multiline
-                rows={3}
-                value={medicineData.notes}
-                onChange={(e) =>
-                  setMedicineData({
-                    ...medicineData,
-                    notes: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Hủy</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            {selectedMedicine ? "Cập nhật" : "Thêm mới"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <Input
+            placeholder="Tên thuốc"
+            value={medicineData.name}
+            onChange={(e) =>
+              setMedicineData({ ...medicineData, name: e.target.value })
+            }
+          />
+          <InputNumber
+            placeholder="Số lượng"
+            value={medicineData.quantity}
+            onChange={(value) =>
+              setMedicineData({ ...medicineData, quantity: value })
+            }
+            style={{ width: "100%" }}
+          />
+          <Input
+            placeholder="Đơn vị"
+            value={medicineData.unit}
+            onChange={(e) =>
+              setMedicineData({ ...medicineData, unit: e.target.value })
+            }
+          />
+          <DatePicker
+            placeholder="Hạn sử dụng"
+            value={medicineData.expiryDate}
+            onChange={(date) =>
+              setMedicineData({
+                ...medicineData,
+                expiryDate: date,
+              })
+            }
+            style={{ width: "100%" }}
+          />
+          <Input
+            placeholder="Nhà cung cấp"
+            value={medicineData.supplier}
+            onChange={(e) =>
+              setMedicineData({ ...medicineData, supplier: e.target.value })
+            }
+          />
+          <Select
+            placeholder="Danh mục"
+            value={medicineData.category || undefined}
+            onChange={(value) =>
+              setMedicineData({ ...medicineData, category: value })
+            }
+            style={{ width: "100%" }}
+          >
+            <Option value="Thuốc giảm đau">Thuốc giảm đau</Option>
+            <Option value="Vitamin">Vitamin</Option>
+            <Option value="Kháng sinh">Kháng sinh</Option>
+            <Option value="Khác">Khác</Option>
+          </Select>
+          <Select
+            placeholder="Trạng thái"
+            value={medicineData.status || undefined}
+            onChange={(value) =>
+              setMedicineData({ ...medicineData, status: value })
+            }
+            style={{ width: "100%" }}
+          >
+            <Option value="Còn hàng">Còn hàng</Option>
+            <Option value="Sắp hết">Sắp hết</Option>
+            <Option value="Hết hàng">Hết hàng</Option>
+          </Select>
+          <TextArea
+            placeholder="Ghi chú"
+            value={medicineData.notes}
+            onChange={(e) =>
+              setMedicineData({ ...medicineData, notes: e.target.value })
+            }
+            rows={4}
+          />
+        </Space>
+      </Modal>
+    </div>
   );
 };
 

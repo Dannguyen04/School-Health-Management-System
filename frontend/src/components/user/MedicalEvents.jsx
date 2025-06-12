@@ -1,34 +1,27 @@
 import {
-  Box,
   Button,
-  Chip,
-  Container,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FormControl,
-  Grid,
-  InputLabel,
-  MenuItem,
-  Paper,
+  Card,
+  Col,
+  DatePicker,
+  Input,
+  Modal,
+  Row,
   Select,
+  Space,
   Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TextField,
+  Tag,
   Typography,
-} from "@mui/material";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+  message,
+} from "antd";
+import dayjs from "dayjs";
 import React, { useState } from "react";
 
+const { Title, Text } = Typography;
+const { Option } = Select;
+const { TextArea } = Input;
+
 const MedicalEvents = () => {
-  const [openDialog, setOpenDialog] = useState(false);
+  const [openModal, setOpenModal] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [eventData, setEventData] = useState({
     type: "",
@@ -61,12 +54,12 @@ const MedicalEvents = () => {
     },
   ];
 
-  const handleOpenDialog = (event = null) => {
+  const handleOpenModal = (event = null) => {
     if (event) {
       setSelectedEvent(event);
       setEventData({
         type: event.type,
-        date: new Date(event.date),
+        date: event.date ? new Date(event.date) : null, // Convert string to Date object
         severity: event.severity,
         description: event.description,
         action: event.action,
@@ -83,233 +76,197 @@ const MedicalEvents = () => {
         status: "",
       });
     }
-    setOpenDialog(true);
+    setOpenModal(true);
   };
 
-  const handleCloseDialog = () => {
-    setOpenDialog(false);
+  const handleCloseModal = () => {
+    setOpenModal(false);
     setSelectedEvent(null);
+    setEventData({
+      type: "",
+      date: null,
+      severity: "",
+      description: "",
+      action: "",
+      status: "",
+    });
   };
 
   const handleSubmit = () => {
     // Add API call here to save/update event data
-    handleCloseDialog();
+    console.log("Submitting event data:", eventData);
+    message.success("Sự kiện đã được lưu thành công");
+    handleCloseModal();
   };
 
-  const getSeverityColor = (severity) => {
+  const getSeverityTagColor = (severity) => {
     switch (severity) {
       case "Nhẹ":
-        return "success";
+        return "green";
       case "Trung bình":
-        return "warning";
+        return "orange";
       case "Nặng":
-        return "error";
+        return "red";
       default:
         return "default";
     }
   };
 
-  const getStatusColor = (status) => {
+  const getStatusTagColor = (status) => {
     switch (status) {
       case "Đã xử lý":
-        return "success";
+        return "green";
       case "Đang theo dõi":
-        return "warning";
+        return "orange";
       case "Cần can thiệp":
-        return "error";
+        return "red";
       default:
         return "default";
     }
   };
 
-  return (
-    <Container maxWidth="lg">
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Sự kiện y tế
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Quản lý và theo dõi các sự kiện y tế trong trường học
-        </Typography>
-      </Box>
-
-      <Box sx={{ mb: 3, display: "flex", justifyContent: "flex-end" }}>
-        <Button
-          variant="contained"
-          color="primary"
-          onClick={() => handleOpenDialog()}
-        >
-          Báo cáo sự kiện
-        </Button>
-      </Box>
-
-      <TableContainer component={Paper}>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Loại sự kiện</TableCell>
-              <TableCell>Ngày xảy ra</TableCell>
-              <TableCell>Mức độ</TableCell>
-              <TableCell>Mô tả</TableCell>
-              <TableCell>Hành động</TableCell>
-              <TableCell>Trạng thái</TableCell>
-              <TableCell>Thao tác</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {events.map((event) => (
-              <TableRow key={event.id}>
-                <TableCell>{event.type}</TableCell>
-                <TableCell>{event.date}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={event.severity}
-                    color={getSeverityColor(event.severity)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>{event.description}</TableCell>
-                <TableCell>{event.action}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={event.status}
-                    color={getStatusColor(event.status)}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Button size="small" onClick={() => handleOpenDialog(event)}>
-                    Chỉnh sửa
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-
-      <Dialog
-        open={openDialog}
-        onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>
-          {selectedEvent
-            ? "Chỉnh sửa sự kiện y tế"
-            : "Báo cáo sự kiện y tế mới"}
-        </DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Loại sự kiện</InputLabel>
-                <Select
-                  value={eventData.type}
-                  label="Loại sự kiện"
-                  onChange={(e) =>
-                    setEventData({
-                      ...eventData,
-                      type: e.target.value,
-                    })
-                  }
-                >
-                  <MenuItem value="Tai nạn">Tai nạn</MenuItem>
-                  <MenuItem value="Sốt">Sốt</MenuItem>
-                  <MenuItem value="Dị ứng">Dị ứng</MenuItem>
-                  <MenuItem value="Chấn thương">Chấn thương</MenuItem>
-                  <MenuItem value="Khác">Khác</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Ngày xảy ra"
-                  value={eventData.date}
-                  onChange={(date) => setEventData({ ...eventData, date })}
-                  renderInput={(params) => <TextField {...params} fullWidth />}
-                />
-              </LocalizationProvider>
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Mức độ</InputLabel>
-                <Select
-                  value={eventData.severity}
-                  label="Mức độ"
-                  onChange={(e) =>
-                    setEventData({
-                      ...eventData,
-                      severity: e.target.value,
-                    })
-                  }
-                >
-                  <MenuItem value="Nhẹ">Nhẹ</MenuItem>
-                  <MenuItem value="Trung bình">Trung bình</MenuItem>
-                  <MenuItem value="Nặng">Nặng</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Mô tả"
-                multiline
-                rows={3}
-                value={eventData.description}
-                onChange={(e) =>
-                  setEventData({
-                    ...eventData,
-                    description: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Hành động đã thực hiện"
-                multiline
-                rows={2}
-                value={eventData.action}
-                onChange={(e) =>
-                  setEventData({
-                    ...eventData,
-                    action: e.target.value,
-                  })
-                }
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Trạng thái</InputLabel>
-                <Select
-                  value={eventData.status}
-                  label="Trạng thái"
-                  onChange={(e) =>
-                    setEventData({
-                      ...eventData,
-                      status: e.target.value,
-                    })
-                  }
-                >
-                  <MenuItem value="Đã xử lý">Đã xử lý</MenuItem>
-                  <MenuItem value="Đang theo dõi">Đang theo dõi</MenuItem>
-                  <MenuItem value="Cần can thiệp">Cần can thiệp</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Hủy</Button>
-          <Button onClick={handleSubmit} variant="contained" color="primary">
-            {selectedEvent ? "Cập nhật" : "Báo cáo"}
+  const columns = [
+    {
+      title: "Loại sự kiện",
+      dataIndex: "type",
+      key: "type",
+    },
+    {
+      title: "Ngày xảy ra",
+      dataIndex: "date",
+      key: "date",
+    },
+    {
+      title: "Mức độ",
+      dataIndex: "severity",
+      key: "severity",
+      render: (severity) => (
+        <Tag color={getSeverityTagColor(severity)}>{severity}</Tag>
+      ),
+    },
+    {
+      title: "Mô tả",
+      dataIndex: "description",
+      key: "description",
+    },
+    {
+      title: "Hành động",
+      dataIndex: "action",
+      key: "action",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => <Tag color={getStatusTagColor(status)}>{status}</Tag>,
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      align: "right",
+      render: (_, record) => (
+        <Space>
+          <Button type="link" onClick={() => handleOpenModal(record)}>
+            Chỉnh sửa
           </Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ padding: "24px" }}>
+      <div style={{ marginBottom: 24 }}>
+        <Title level={2}>Sự kiện y tế</Title>
+        <Text type="secondary">
+          Quản lý và theo dõi các sự kiện y tế trong trường học
+        </Text>
+      </div>
+
+      <Row justify="end" style={{ marginBottom: 24 }}>
+        <Col>
+          <Button type="primary" onClick={() => handleOpenModal()}>
+            Báo cáo sự kiện
+          </Button>
+        </Col>
+      </Row>
+
+      <Card>
+        <Table columns={columns} dataSource={events} rowKey="id" />
+      </Card>
+
+      <Modal
+        title={
+          selectedEvent ? "Chỉnh sửa sự kiện y tế" : "Báo cáo sự kiện y tế mới"
+        }
+        open={openModal}
+        onCancel={handleCloseModal}
+        onOk={handleSubmit}
+        okText="Lưu"
+        cancelText="Hủy"
+      >
+        <Space direction="vertical" style={{ width: "100%" }} size="middle">
+          <Select
+            placeholder="Loại sự kiện"
+            value={eventData.type || undefined} // Ant Design Select needs undefined for no selection
+            onChange={(value) => setEventData({ ...eventData, type: value })}
+            style={{ width: "100%" }}
+          >
+            <Option value="Tai nạn">Tai nạn</Option>
+            <Option value="Sốt">Sốt</Option>
+            <Option value="Dị ứng">Dị ứng</Option>
+            <Option value="Chấn thương">Chấn thương</Option>
+            <Option value="Khác">Khác</Option>
+          </Select>
+          <DatePicker
+            placeholder="Ngày xảy ra"
+            value={eventData.date ? dayjs(eventData.date) : null} // Use dayjs for DatePicker
+            onChange={(date) =>
+              setEventData({ ...eventData, date: date ? date.toDate() : null })
+            }
+            style={{ width: "100%" }}
+          />
+          <Select
+            placeholder="Mức độ"
+            value={eventData.severity || undefined}
+            onChange={(value) =>
+              setEventData({ ...eventData, severity: value })
+            }
+            style={{ width: "100%" }}
+          >
+            <Option value="Nhẹ">Nhẹ</Option>
+            <Option value="Trung bình">Trung bình</Option>
+            <Option value="Nặng">Nặng</Option>
+          </Select>
+          <TextArea
+            placeholder="Mô tả"
+            value={eventData.description}
+            onChange={(e) =>
+              setEventData({ ...eventData, description: e.target.value })
+            }
+            rows={4}
+          />
+          <TextArea
+            placeholder="Hành động"
+            value={eventData.action}
+            onChange={(e) =>
+              setEventData({ ...eventData, action: e.target.value })
+            }
+            rows={4}
+          />
+          <Select
+            placeholder="Trạng thái"
+            value={eventData.status || undefined}
+            onChange={(value) => setEventData({ ...eventData, status: value })}
+            style={{ width: "100%" }}
+          >
+            <Option value="Đã xử lý">Đã xử lý</Option>
+            <Option value="Đang theo dõi">Đang theo dõi</Option>
+            <Option value="Cần can thiệp">Cần can thiệp</Option>
+          </Select>
+        </Space>
+      </Modal>
+    </div>
   );
 };
 

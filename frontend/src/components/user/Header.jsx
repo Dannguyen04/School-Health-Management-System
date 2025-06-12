@@ -1,88 +1,55 @@
-import { Menu as MenuIcon, Notifications } from "@mui/icons-material";
-import {
-  AppBar,
-  Avatar,
-  Box,
-  IconButton,
-  Menu,
-  MenuItem,
-  Toolbar,
-  Typography,
-} from "@mui/material";
-import React, { useState } from "react";
+import { BellOutlined, MenuOutlined, UserOutlined } from "@ant-design/icons";
+import { Avatar, Button, Dropdown, Layout, Space } from "antd";
+import React from "react";
 import { useNavigate } from "react-router-dom";
+
+const { Header: AntHeader } = Layout;
 
 const Header = () => {
   const navigate = useNavigate();
-  const [anchorEl, setAnchorEl] = useState(null);
-
-  const handleMenu = (event) => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleClose = () => {
-    setAnchorEl(null);
-  };
 
   const handleLogout = () => {
     // Add logout logic here
-    handleClose();
     navigate("/auth");
   };
 
+  const userMenuItems = [
+    {
+      key: "profile",
+      label: "Profile",
+      onClick: () => navigate("/user/profile"),
+    },
+    {
+      key: "logout",
+      label: "Logout",
+      onClick: handleLogout,
+    },
+  ];
+
   return (
-    <AppBar
-      position="fixed"
-      sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
+    <AntHeader
+      style={{
+        position: "fixed",
+        zIndex: 1000,
+        width: "100%",
+        display: "flex",
+        alignItems: "center",
+        padding: "0 24px",
+        background: "#fff",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+      }}
     >
-      <Toolbar>
-        <IconButton
-          color="inherit"
-          aria-label="open drawer"
-          edge="start"
-          sx={{ mr: 2 }}
-        >
-          <MenuIcon />
-        </IconButton>
-        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          School Health System
-        </Typography>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-          <IconButton color="inherit">
-            <Notifications />
-          </IconButton>
-          <IconButton
-            onClick={handleMenu}
-            size="small"
-            sx={{ ml: 2 }}
-            aria-controls="menu-appbar"
-            aria-haspopup="true"
-          >
-            <Avatar sx={{ width: 32, height: 32 }}>U</Avatar>
-          </IconButton>
-          <Menu
-            id="menu-appbar"
-            anchorEl={anchorEl}
-            anchorOrigin={{
-              vertical: "bottom",
-              horizontal: "right",
-            }}
-            keepMounted
-            transformOrigin={{
-              vertical: "top",
-              horizontal: "right",
-            }}
-            open={Boolean(anchorEl)}
-            onClose={handleClose}
-          >
-            <MenuItem onClick={() => navigate("/user/profile")}>
-              Profile
-            </MenuItem>
-            <MenuItem onClick={handleLogout}>Logout</MenuItem>
-          </Menu>
-        </Box>
-      </Toolbar>
-    </AppBar>
+      <Button type="text" icon={<MenuOutlined />} style={{ marginRight: 16 }} />
+      <div style={{ flex: 1, fontSize: 18, fontWeight: "bold" }}>
+        School Health System
+      </div>
+      <Space size="middle">
+        <Button type="text" icon={<BellOutlined />} style={{ fontSize: 16 }} />
+        <Dropdown menu={{ items: userMenuItems }} placement="bottomRight" arrow>
+          <Avatar style={{ cursor: "pointer" }} icon={<UserOutlined />} />
+        </Dropdown>
+      </Space>
+    </AntHeader>
   );
 };
 
