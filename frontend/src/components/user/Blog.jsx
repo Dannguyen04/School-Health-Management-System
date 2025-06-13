@@ -10,7 +10,7 @@ import {
   Tag,
   Typography,
 } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 
 const { Title, Text, Paragraph } = Typography;
 const { Meta } = Card;
@@ -74,7 +74,7 @@ const Blog = () => {
   return (
     <div style={{ padding: "24px" }}>
       <div style={{ marginBottom: 24 }}>
-        <Title level={2}>Blog sức khỏe</Title>
+        <Title level={2}>Tài liệu sức khỏe</Title>
         <Text type="secondary">
           Cập nhật thông tin và kiến thức về sức khỏe
         </Text>

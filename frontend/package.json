@@ -27,6 +27,7 @@
     "autoprefixer": "^10.4.21",
     "axios": "^1.9.0",
     "date-fns": "^4.1.0",
+    "formik": "^2.4.6",
     "google-auth-library": "^9.15.1",
     "postcss": "^8.5.4",
     "react": "^19.1.0",
@@ -36,7 +37,8 @@
     "react-toastify": "^11.0.5",
     "recharts": "^2.15.3",
     "styled-components": "^6.1.18",
-    "tailwindcss": "^4.1.8"
+    "tailwindcss": "^4.1.8",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

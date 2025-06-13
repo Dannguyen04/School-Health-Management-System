@@ -5,7 +5,6 @@ import {
   MedicineBoxOutlined,
 } from "@ant-design/icons";
 import { Button, Card, Col, Layout, Row, Typography } from "antd";
-import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const { Title, Text, Paragraph } = Typography;
@@ -47,19 +46,19 @@ const Dashboard = () => {
       title: "Tiêm chủng",
       description: "Quản lý lịch tiêm chủng và theo dõi tình trạng",
       icon: <ExperimentOutlined style={{ fontSize: 24, color: "#1890ff" }} />,
-      path: "/user/vaccination",
+      path: "/user/vaccination-schedule",
     },
     {
       title: "Tài liệu sức khỏe",
       description: "Truy cập các tài liệu và hướng dẫn về sức khỏe",
       icon: <FileTextOutlined style={{ fontSize: 24, color: "#1890ff" }} />,
-      path: "/user/health-documents",
+      path: "/user/blog",
     },
     {
-      title: "Sự kiện y tế",
-      description: "Xem và báo cáo các sự kiện y tế trong trường",
+      title: "Gửi thuốc",
+      description: "Gửi thuốc cho học sinh",
       icon: <HeartOutlined style={{ fontSize: 24, color: "#1890ff" }} />,
-      path: "/user/medical-events",
+      path: "/user/medicine-info",
     },
   ];
 
