@@ -29,12 +29,11 @@ import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
 
 const App = () => {
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Homepage />} />
-        <Route path="/auth" element={<AuthPage />} />
-
+    return (
+        <Router>
+            <Routes>
+                <Route path="/" element={<Homepage />} />
+                <Route path="/auth" element={<AuthPage />} />
         {/* Nurse Routes */}
         <Route
           path="/nurse"
