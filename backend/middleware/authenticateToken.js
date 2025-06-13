@@ -8,13 +8,22 @@ const prisma = new PrismaClient();
 if (!process.env.JWT_SECRET) {
     console.error("JWT_SECRET is not defined in environment variables");
     process.exit(1);
+    console.error("JWT_SECRET is not defined in environment variables");
+    process.exit(1);
 }
 
 // Middleware to authenticate JWT and attach user data
 const authenticateToken = async (req, res, next) => {
     const authHeader = req.headers["authorization"];
     const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
+    const authHeader = req.headers["authorization"];
+    const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
 
+    if (!token) {
+        return res
+            .status(401)
+            .json({ success: false, error: "Access token required" });
+    }
     if (!token) {
         return res
             .status(401)
@@ -24,23 +33,40 @@ const authenticateToken = async (req, res, next) => {
     try {
         // Verify JWT
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        try {
+            // Verify JWT
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const user = await prisma.users.findUnique({
-            where: { id: decoded.userId },
-            select: {
-                id: true,
-                email: true,
-                fullName: true, // Use fullName instead of name
-                role: true,
-            },
-        });
+            const user = await prisma.users.findUnique({
+                where: { id: decoded.userId },
+                select: {
+                    id: true,
+                    email: true,
+                    fullName: true, // Use fullName instead of name
+                    role: true,
+                },
+            });
 
-        if (!user) {
+            if (!user) {
+                return res
+                    .status(401)
+                    .json({ success: false, error: "User not found" });
+            }
+            if (!user) {
+                return res
+                    .status(401)
+                    .json({ success: false, error: "User not found" });
+            }
+
+            // Attach user data to request
+            req.user = { ...decoded, ...user }; // Combine decoded token and DB data
+            next();
+        } catch (error) {
+            console.error("Authentication error:", error);
             return res
-                .status(401)
-                .json({ success: false, error: "User not found" });
+                .status(403)
+                .json({ success: false, error: "Invalid or expired token" });
         }
-
         // Attach user data to request
         req.user = { ...decoded, ...user }; // Combine decoded token and DB data
         next();
@@ -60,7 +86,22 @@ const verifyRole = (requiredRoles) => (req, res, next) => {
             .status(401)
             .json({ success: false, error: "User not authenticated" });
     }
+    // Ensure user is authenticated
+    if (!req.user) {
+        return res
+            .status(401)
+            .json({ success: false, error: "User not authenticated" });
+    }
 
+    // Check if user has required role
+    if (!req.user.role || !requiredRoles.includes(req.user.role)) {
+        return res.status(403).json({
+            success: false,
+            error: "Insufficient permissions",
+            required: requiredRoles,
+            current: req.user.role,
+        });
+    }
     // Check if user has required role
     if (!req.user.role || !requiredRoles.includes(req.user.role)) {
         return res.status(403).json({
@@ -72,6 +113,7 @@ const verifyRole = (requiredRoles) => (req, res, next) => {
     }
 
     next();
+    next();
 };
 
 // Specific role-based middleware
@@ -80,6 +122,9 @@ const verifyUser = verifyRole(["ADMIN", "USER", "PARENTS", "SCHOOL-NURSE"]);
 
 // Cleanup Prisma on shutdown
 process.on("SIGTERM", async () => {
+    console.log("Shutting down middleware...");
+    await prisma.$disconnect();
+    process.exit(0);
     console.log("Shutting down middleware...");
     await prisma.$disconnect();
     process.exit(0);
