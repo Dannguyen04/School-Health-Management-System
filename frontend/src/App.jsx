@@ -103,29 +103,18 @@ const App = () => {
                     }
                 >
                     <Route index element={<UserDashboard />} />
+                    <Route path="health-profile" element={<HealthProfile />} />
                     <Route
-                        path="health-profile"
-                        element={<UserHealthProfile />}
+                        path="vaccination"
+                        element={<VaccinationSchedule />}
                     />
-                    <Route path="vaccination" element={<UserVaccination />} />
                     <Route
                         path="medical-checkup"
-                        element={<UserMedicalCheckup />}
+                        element={<HealthCheckupResults />}
                     />
-                    <Route path="reports" element={<UserReports />} />
-                    <Route path="blog" element={<UserBlog />} />
-                    <Route
-                        path="medical-events"
-                        element={<UserMedicalEvents />}
-                    />
-                    <Route
-                        path="health-documents"
-                        element={<UserHealthDocuments />}
-                    />
-                    <Route
-                        path="medicine-management"
-                        element={<UserMedicineManagement />}
-                    />
+                    <Route path="reports" element={<Reports />} />
+                    <Route path="blog" element={<Blog />} />
+                    <Route path="medicine-info" element={<MedicineInfo />} />
                 </Route>
             </Routes>
         </Router>
