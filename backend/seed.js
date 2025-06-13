@@ -124,7 +124,7 @@ async function seed() {
 
         for (const userData of users) {
             // Check if user already exists
-            const existingUser = await prisma.users.findUnique({
+            const existingUser = await prisma.user.findUnique({
                 where: { email: userData.email },
             });
 
@@ -135,48 +135,14 @@ async function seed() {
                 continue;
             }
 
-            // If studentProfile exists, check for duplicate studentCode
-            if (
-                userData.studentProfile &&
-                userData.studentProfile.create &&
-                userData.studentProfile.create.studentCode
-            ) {
-                const existingStudent = await prisma.student.findUnique({
-                    where: {
-                        studentCode: userData.studentProfile.create.studentCode,
-                    },
-                });
-                if (existingStudent) {
-                    console.log(
-                        `Student with code ${userData.studentProfile.create.studentCode} already exists, skipping user ${userData.email}...`
-                    );
-                    continue;
-                }
-            }
-
             // Create user and associated profile
-            try {
-                const user = await prisma.users.create({
-                    data: userData,
-                });
-                console.log(
-                    `Created user: ${user.fullName} (${user.email}) with role ${user.role}`
-                );
-            } catch (error) {
-                if (error.code === "P2002") {
-                    console.log(
-                        `Unique constraint error for user ${userData.email}, skipping...`
-                    );
-                    continue;
-                } else {
-                    // Print full error stack for debugging
-                    console.error(
-                        `Unexpected error for user ${userData.email}:`,
-                        error
-                    );
-                    continue;
-                }
-            }
+            const user = await prisma.user.create({
+                data: userData,
+            });
+
+            console.log(
+                `Created user: ${user.fullName} (${user.email}) with role ${user.role}`
+            );
         }
 
         console.log("Seeding completed successfully!");
@@ -184,8 +150,6 @@ async function seed() {
         console.error("Seeding error:", error);
     } finally {
         await prisma.$disconnect();
-        // Always exit with code 0, even if errors occurred
-        process.exit(0);
     }
 }
 

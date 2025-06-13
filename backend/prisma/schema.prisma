@@ -91,7 +91,6 @@ model users {
   createdEvents     MedicalEvent[] @relation("EventCreator")
   notifications     Notification[]
   auditLogs         AuditLog[]
-  createdCampaigns  VaccinationCampaign[] @relation("CreatedCampaigns")
 
   @@map("users")
 }
@@ -102,8 +101,8 @@ model Student {
   studentCode     String   @unique
   dateOfBirth     DateTime
   gender          String
-  grade           String
   class           String
+  grade           String
   bloodType       String?
   emergencyContact String
   emergencyPhone   String
@@ -349,8 +348,7 @@ model VaccinationCampaign {
   // Relations
   vaccinations Vaccination[]
   notifications Notification[]
-  createdBy       users           @relation("CreatedCampaigns", fields: [createdById], references: [id])
-  createdById     String          @db.ObjectId
+
   @@map("vaccination_campaigns")
 }
 
