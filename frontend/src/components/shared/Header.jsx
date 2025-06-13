@@ -35,9 +35,22 @@ const Headers = () => {
     }
   };
 
+  const handleProfileClick = () => {
+    // Navigate to profile based on user role
+    if (user?.role === "ADMIN") {
+      navigate("/admin/profile");
+    } else if (user?.role === "SCHOOL_NURSE") {
+      navigate("/nurse/profile");
+    }
+  };
+
   const userMenu = (
     <Menu>
-      <Menu.Item key="profile" icon={<UserOutlined />}>
+      <Menu.Item
+        key="profile"
+        icon={<UserOutlined />}
+        onClick={handleProfileClick}
+      >
         Profile
       </Menu.Item>
       <Menu.Divider />

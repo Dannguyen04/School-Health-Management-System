@@ -1,6 +1,5 @@
 import { BellOutlined, MenuOutlined, UserOutlined } from "@ant-design/icons";
 import { Avatar, Button, Dropdown, Layout, Space } from "antd";
-import React from "react";
 import { useNavigate } from "react-router-dom";
 
 const { Header: AntHeader } = Layout;
@@ -9,7 +8,6 @@ const Header = () => {
   const navigate = useNavigate();
 
   const handleLogout = () => {
-    // Add logout logic here
     navigate("/auth");
   };
 

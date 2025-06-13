@@ -10,7 +10,7 @@ import {
   Table,
   Tag,
 } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 
 const { Option } = Select;
 
