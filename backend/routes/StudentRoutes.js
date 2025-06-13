@@ -1,5 +1,5 @@
 import express from "express";
-import { addStudent } from "../controllers/AdminController.js";
+import { addStudent, getAllStudent } from "../controllers/AdminController.js";
 import {
     authenticateToken,
     verifyAdmin,
@@ -7,6 +7,8 @@ import {
 
 const router = express.Router();
 
-router.post("/add", authenticateToken, verifyAdmin, addStudent);
+router.post("/", authenticateToken, verifyAdmin, addStudent);
+
+router.get("/", authenticateToken, verifyAdmin, getAllStudent);
 
 export default router;

@@ -119,10 +119,10 @@ const addStudent = async (req, res) => {
 
             // Student fields
             studentCode,
-            dateOfBirth, // Sửa từ dateOfbirth
+            dateOfBirth,
             gender,
             grade,
-            class: studentClass, // Rename class thành studentClass
+            class: studentClass,
             emergencyContact,
             emergencyPhone,
 
@@ -260,10 +260,64 @@ const addStudent = async (req, res) => {
     }
 };
 
+//get all user
+const getAllUsers = async (req, res) => {
+    try {
+        const users = await prisma.users.findMany({
+            where: {
+                role: {
+                    not: "STUDENT",
+                },
+            },
+            include: {
+                parentProfile: true,
+                nurseProfile: true,
+                managerProfile: true,
+                adminProfile: true,
+            },
+        });
+
+        if (!users || users.length === 0) {
+            console.log("No staff in the system");
+            return res.status(404).json({ message: "No staff in the system" });
+        }
+
+        res.status(200).json({ success: true, data: users });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+//getAllStudent
+const getAllStudent = async (req, res) => {
+    try {
+        const students = await prisma.users.findMany({
+            where: {
+                role: "STUDENT",
+            },
+            include: {
+                studentProfile: true,
+            },
+        });
+
+        if (!students || students.length === 0) {
+            return res
+                .status(404)
+                .json({ success: false, error: "No student in the system" });
+        }
+
+        res.status(200).json({ success: true, data: students });
+    } catch (error) {
+        console.log(error.message);
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 process.on("SIGTERM", async () => {
     console.log("Shutting down AdminController...");
     await prisma.$disconnect();
     process.exit(0);
 });
 
-export { addStudent };
+export { addStudent, getAllStudent, getAllUsers };
