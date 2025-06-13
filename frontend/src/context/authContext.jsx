@@ -20,6 +20,7 @@ const AuthContext = ({ children }) => {
             }
           );
           if (response.data.success) {
+            console.log("User data from API:", response.data.user);
             setUser(response.data.user);
           }
         } else {
@@ -38,6 +39,7 @@ const AuthContext = ({ children }) => {
   }, []);
 
   const login = (user) => {
+    console.log("User data on login:", user);
     setUser(user);
   };
 
