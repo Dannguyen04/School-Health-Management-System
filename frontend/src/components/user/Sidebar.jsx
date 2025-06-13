@@ -1,52 +1,45 @@
 import {
-  BarChartOutlined,
-  DashboardOutlined,
-  ExperimentOutlined,
-  FileOutlined,
+  CheckSquareOutlined,
   FileTextOutlined,
-  HeartOutlined,
   MedicineBoxOutlined,
-  UserOutlined,
+  ProfileOutlined,
+  ScheduleOutlined,
 } from "@ant-design/icons";
 import { Layout, Menu } from "antd";
-import React from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 const { Sider } = Layout;
 
 const menuItems = [
-  { key: "/user", icon: <DashboardOutlined />, label: "Dashboard" },
+  {
+    key: "/user",
+    icon: <ScheduleOutlined />,
+    label: "Dashboard",
+  },
+  {
+    key: "/user/vaccination-schedule",
+    icon: <ScheduleOutlined />,
+    label: "Lịch tiêm & khám",
+  },
+  {
+    key: "/user/health-checkup-results",
+    icon: <FileTextOutlined />,
+    label: "Kết quả khám sức khỏe",
+  },
+  {
+    key: "/user/consent-forms",
+    icon: <CheckSquareOutlined />,
+    label: "Form đồng ý",
+  },
   {
     key: "/user/health-profile",
-    icon: <UserOutlined />,
+    icon: <ProfileOutlined />,
     label: "Hồ sơ sức khỏe",
   },
   {
-    key: "/user/vaccination",
-    icon: <ExperimentOutlined />,
-    label: "Tiêm chủng",
-  },
-  {
-    key: "/user/medical-checkup",
+    key: "/user/medicine-info",
     icon: <MedicineBoxOutlined />,
-    label: "Kiểm tra y tế",
-  },
-  { key: "/user/reports", icon: <BarChartOutlined />, label: "Báo cáo" },
-  { key: "/user/blog", icon: <FileTextOutlined />, label: "Blog" },
-  {
-    key: "/user/health-documents",
-    icon: <FileOutlined />,
-    label: "Tài liệu sức khỏe",
-  },
-  {
-    key: "/user/medical-events",
-    icon: <HeartOutlined />,
-    label: "Sự kiện y tế",
-  },
-  {
-    key: "/user/medicine-management",
-    icon: <MedicineBoxOutlined />,
-    label: "Quản lý Thuốc",
+    label: "Gửi thuốc",
   },
 ];
 
@@ -61,7 +54,7 @@ const Sidebar = () => {
         position: "fixed",
         height: "100vh",
         left: 0,
-        top: 64, // Adjust this value based on your header height
+        top: 64,
         overflow: "auto",
       }}
     >

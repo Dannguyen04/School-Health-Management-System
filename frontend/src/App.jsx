@@ -13,15 +13,13 @@ import MedicalInventory from "./components/nurse/MedicalInventory";
 import Reports from "./components/nurse/Reports";
 import StudentTreatment from "./components/nurse/StudentTreatment";
 import Vaccination from "./components/nurse/Vaccination";
-import UserBlog from "./components/user/Blog";
+import UserProfile from "./components/shared/UserProfile";
+import Blog from "./components/user/Blog";
 import UserDashboard from "./components/user/Dashboard";
-import UserHealthDocuments from "./components/user/HealthDocuments";
-import UserHealthProfile from "./components/user/HealthProfile";
-import UserMedicalCheckup from "./components/user/MedicalCheckup";
-import UserMedicalEvents from "./components/user/MedicalEvents";
-import UserMedicineManagement from "./components/user/MedicineManagement";
-import UserReports from "./components/user/Reports";
-import UserVaccination from "./components/user/Vaccination";
+import HealthCheckupResults from "./components/user/HealthCheckupResults";
+import HealthProfile from "./components/user/HealthProfile";
+import MedicineInfo from "./components/user/MedicineInfo";
+import VaccinationSchedule from "./components/user/VaccinationSchedule";
 import { default as AdminLayout } from "./layouts/Admin";
 import NurseLayout from "./layouts/Nurse";
 import User from "./layouts/User";
@@ -29,7 +27,6 @@ import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
-import NurseDashboard from "./components/nurse/Dashboard";
 
 // Import Nurse components
 
@@ -51,7 +48,7 @@ const App = () => {
                         </PrivateRoutes>
                     }
                 >
-                    <Route index element={<NurseDashboard />} />
+                    <Route index element={<Dashboard />} />
                     <Route path="campaigns" element={<Campaigns />} />
                     <Route
                         path="medical-inventory"

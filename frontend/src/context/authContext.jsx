@@ -33,14 +33,34 @@ const AuthContext = ({ children }) => {
             } finally {
                 setLoading(false);
             }
+<<<<<<< HEAD
         };
         verifyUser();
     }, []);
 
     const login = (user) => {
         setUser(user);
+=======
+          );
+          if (response.data.success) {
+            console.log("User data from API:", response.data.user);
+            setUser(response.data.user);
+          }
+        } else {
+          setUser(null);
+          setLoading(false);
+        }
+      } catch (error) {
+        if (error.response && !error.response.data.error) {
+          setUser(null);
+        }
+      } finally {
+        setLoading(false);
+      }
+>>>>>>> 69bc75453fcd44c308ee53bfba21c106d9cf3307
     };
 
+<<<<<<< HEAD
     const logout = () => {
         setUser(null);
         localStorage.removeItem("token");
@@ -50,6 +70,22 @@ const AuthContext = ({ children }) => {
             {children}
         </userContext.Provider>
     );
+=======
+  const login = (user) => {
+    console.log("User data on login:", user);
+    setUser(user);
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem("token");
+  };
+  return (
+    <userContext.Provider value={{ user, login, logout, loading }}>
+      {children}
+    </userContext.Provider>
+  );
+>>>>>>> 69bc75453fcd44c308ee53bfba21c106d9cf3307
 };
 
 export const useAuth = () => useContext(userContext);
