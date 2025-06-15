@@ -25,14 +25,15 @@ const authenticateToken = async (req, res, next) => {
         // Verify JWT
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const user = await prisma.User.findUnique({
+        const user = await prisma.users.findUnique({
             where: { id: decoded.userId },
-            select: {
-                id: true,
-                email: true,
-                name: true,
-                role: true,
-            },
+            include: {
+                parentProfile: true,
+                studentProfile: true,
+                nurseProfile: true,
+                managerProfile: true,
+                adminProfile: true
+            }
         });
 
         if (!user) {
@@ -42,7 +43,7 @@ const authenticateToken = async (req, res, next) => {
         }
 
         // Attach user data to request
-        req.user = { ...decoded, ...user }; // Combine decoded token and DB data
+        req.user = user;
         next();
     } catch (error) {
         console.error("Authentication error:", error);
