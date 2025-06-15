@@ -27,12 +27,7 @@ const authenticateToken = async (req, res, next) => {
 
         const user = await prisma.users.findUnique({
             where: { id: decoded.userId },
-            select: {
-                id: true,
-                email: true,
-                fullName: true, // Use fullName instead of name
-                role: true,
-            },
+            // Use either select or include, not both
             include: {
                 parentProfile: true,
                 studentProfile: true,

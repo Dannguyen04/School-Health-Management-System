@@ -1,5 +1,10 @@
 import express from "express";
-import { addStudent, getAllStudent } from "../controllers/AdminController.js";
+import {
+    addStudent,
+    deleteUser,
+    getAllStudents,
+    updateStudent,
+} from "../controllers/AdminController.js";
 import {
     authenticateToken,
     verifyAdmin,
@@ -9,6 +14,9 @@ const router = express.Router();
 
 router.post("/", authenticateToken, verifyAdmin, addStudent);
 
-router.get("/", authenticateToken, verifyAdmin, getAllStudent);
+router.get("/", authenticateToken, verifyAdmin, getAllStudents);
 
+router.put("/:id", authenticateToken, verifyAdmin, updateStudent);
+
+router.delete("/:id", authenticateToken, verifyAdmin, deleteUser);
 export default router;
