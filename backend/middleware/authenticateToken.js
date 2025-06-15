@@ -27,13 +27,14 @@ const authenticateToken = async (req, res, next) => {
 
         const user = await prisma.users.findUnique({
             where: { id: decoded.userId },
+            // Use either select or include, not both
             include: {
                 parentProfile: true,
                 studentProfile: true,
                 nurseProfile: true,
                 managerProfile: true,
-                adminProfile: true
-            }
+                adminProfile: true,
+            },
         });
 
         if (!user) {
@@ -77,7 +78,7 @@ const verifyRole = (requiredRoles) => (req, res, next) => {
 
 // Specific role-based middleware
 const verifyAdmin = verifyRole(["ADMIN"]);
-const verifyUser = verifyRole(["ADMIN", "PARENT"]);
+const verifyUser = verifyRole(["ADMIN", "USER", "PARENTS", "SCHOOL-NURSE"]);
 
 // Cleanup Prisma on shutdown
 process.on("SIGTERM", async () => {
