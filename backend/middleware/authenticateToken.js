@@ -33,6 +33,13 @@ const authenticateToken = async (req, res, next) => {
                 fullName: true, // Use fullName instead of name
                 role: true,
             },
+            include: {
+                parentProfile: true,
+                studentProfile: true,
+                nurseProfile: true,
+                managerProfile: true,
+                adminProfile: true,
+            },
         });
 
         if (!user) {
@@ -42,7 +49,7 @@ const authenticateToken = async (req, res, next) => {
         }
 
         // Attach user data to request
-        req.user = { ...decoded, ...user }; // Combine decoded token and DB data
+        req.user = user;
         next();
     } catch (error) {
         console.error("Authentication error:", error);
