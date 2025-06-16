@@ -11,14 +11,8 @@ const AuthContext = ({ children }) => {
       try {
         const token = localStorage.getItem("token");
         if (token) {
-          const response = await axios.get(
-            "http://localhost:5000/api/auth/verify",
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
+          axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+          const response = await axios.get("http://localhost:5000/auth/verify");
           if (response.data.success) {
             console.log("User data from API:", response.data.user);
             setUser(response.data.user);
@@ -38,14 +32,17 @@ const AuthContext = ({ children }) => {
     verifyUser();
   }, []);
 
-  const login = (user) => {
+  const login = (user, token) => {
     console.log("User data on login:", user);
     setUser(user);
+    localStorage.setItem("token", token);
+    axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
   };
 
   const logout = () => {
     setUser(null);
     localStorage.removeItem("token");
+    delete axios.defaults.headers.common["Authorization"];
   };
   return (
     <userContext.Provider value={{ user, login, logout, loading }}>

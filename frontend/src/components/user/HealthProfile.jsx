@@ -1,22 +1,22 @@
-import { EditOutlined, UploadOutlined } from "@ant-design/icons";
+import { EditOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
   Card,
   Col,
-  DatePicker,
   Descriptions,
   Form,
   Input,
+  message,
   Modal,
   Row,
   Select,
+  Spin,
   Typography,
-  Upload,
-  message,
 } from "antd";
+import axios from "axios";
 import { Formik } from "formik";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import * as Yup from "yup";
 
 const { Title, Text } = Typography;
@@ -24,60 +24,141 @@ const { TextArea } = Input;
 
 const validationSchema = Yup.object().shape({
   allergies: Yup.string().required("Vui lòng nhập thông tin dị ứng"),
-  medicalConditions: Yup.string().required("Vui lòng nhập thông tin bệnh nền"),
+  chronicDiseases: Yup.string().required("Vui lòng nhập thông tin bệnh nền"),
   medications: Yup.string().required("Vui lòng nhập thông tin thuốc đang dùng"),
-  bloodType: Yup.string().required("Vui lòng chọn nhóm máu"),
-  emergencyContact: Yup.string().required(
-    "Vui lòng nhập số điện thoại liên hệ khẩn cấp"
-  ),
+  treatmentHistory: Yup.string(),
+  vision: Yup.string(),
+  hearing: Yup.string(),
+  height: Yup.number().nullable(),
+  weight: Yup.number().nullable(),
+  notes: Yup.string(),
 });
 
 const HealthProfile = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [children, setChildren] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [healthProfile, setHealthProfile] = useState(null);
 
-  // Mock data - replace with actual API data
-  const healthProfile = {
-    allergies: "Không có",
-    medicalConditions: "Không có",
-    medications: "Không có",
-    bloodType: "A+",
-    emergencyContact: "0123456789",
-    vision: "10/10",
-    hearing: "Bình thường",
-    specialNeeds: "Không có",
-    lastCheckup: "2024-03-15",
-    nextCheckup: "2024-09-15",
-    medicalFiles: [
-      {
-        name: "Kết quả khám sức khỏe.pdf",
-        url: "#",
-      },
-    ],
+  useEffect(() => {
+    fetchChildren();
+  }, []);
+
+  const fetchChildren = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get("/api/parents/children");
+      setChildren(response.data.data);
+      if (response.data.data.length > 0) {
+        setSelectedStudent(response.data.data[0].studentId);
+      }
+    } catch (error) {
+      message.error(
+        error.response?.data?.error || "Không thể tải danh sách học sinh"
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const initialValues = {
-    allergies: healthProfile.allergies,
-    medicalConditions: healthProfile.medicalConditions,
-    medications: healthProfile.medications,
-    bloodType: healthProfile.bloodType,
-    emergencyContact: healthProfile.emergencyContact,
-    medicalFiles: healthProfile.medicalFiles,
+  useEffect(() => {
+    if (selectedStudent) {
+      fetchHealthProfile();
+    }
+  }, [selectedStudent]);
+
+  const fetchHealthProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await axios.get(
+        `/api/parents/health-profile/${selectedStudent}`
+      );
+      setHealthProfile(response.data.data.healthProfile);
+    } catch (error) {
+      message.error(
+        error.response?.data?.error || "Không thể tải hồ sơ sức khỏe"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStudentChange = (studentId) => {
+    setSelectedStudent(studentId);
   };
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
-      // Implement API call here
-      console.log("Form values:", values);
+      const transformedValues = {
+        ...values,
+        allergies: values.allergies
+          .split(",")
+          .map((item) => item.trim())
+          .filter((item) => item !== ""),
+        chronicDiseases: values.chronicDiseases
+          .split(",")
+          .map((item) => item.trim())
+          .filter((item) => item !== ""),
+        medications: values.medications
+          .split(",")
+          .map((item) => item.trim())
+          .filter((item) => item !== ""),
+        treatmentHistory:
+          values.treatmentHistory === "" ? null : values.treatmentHistory,
+        vision: values.vision === "" ? null : values.vision,
+        hearing: values.hearing === "" ? null : values.hearing,
+        height:
+          values.height === null || values.height === ""
+            ? null
+            : parseFloat(values.height),
+        weight:
+          values.weight === null || values.weight === ""
+            ? null
+            : parseFloat(values.weight),
+        notes: values.notes === "" ? null : values.notes,
+      };
+
+      const response = await axios.put(
+        `/api/parents/health-profile/${selectedStudent}`,
+        transformedValues
+      );
+      console.log("Health profile upserted successfully:", response.data);
       message.success("Cập nhật hồ sơ sức khỏe thành công");
       setIsEditModalVisible(false);
       setShowSuccess(true);
+      fetchHealthProfile(); // Refresh health profile after update
     } catch (error) {
-      message.error("Có lỗi xảy ra khi cập nhật hồ sơ");
+      console.error("Error updating health profile:", error);
+      message.error(
+        error.response?.data?.error || "Có lỗi xảy ra khi cập nhật hồ sơ"
+      );
     } finally {
       setSubmitting(false);
     }
   };
+
+  // Helper function to get initial values for the form
+  const getInitialValues = () => ({
+    allergies: healthProfile?.allergies?.join(", ") || "",
+    chronicDiseases: healthProfile?.chronicDiseases?.join(", ") || "",
+    medications: healthProfile?.medications?.join(", ") || "",
+    treatmentHistory: healthProfile?.treatmentHistory || "",
+    vision: healthProfile?.vision || "",
+    hearing: healthProfile?.hearing || "",
+    height: healthProfile?.height || null,
+    weight: healthProfile?.weight || null,
+    notes: healthProfile?.notes || "",
+  });
+
+  if (loading) {
+    return (
+      <div style={{ padding: "24px", textAlign: "center" }}>
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div style={{ padding: "24px" }}>
@@ -93,13 +174,32 @@ const HealthProfile = () => {
           <Title level={2}>Hồ sơ sức khỏe</Title>
           <Text type="secondary">Thông tin sức khỏe của học sinh</Text>
         </div>
-        <Button
-          type="primary"
-          icon={<EditOutlined />}
-          onClick={() => setIsEditModalVisible(true)}
-        >
-          Cập nhật thông tin
-        </Button>
+        <div style={{ display: "flex", gap: "16px" }}>
+          {children && children.length > 0 ? (
+            <Select
+              style={{ width: 200 }}
+              value={selectedStudent}
+              onChange={handleStudentChange}
+              placeholder="Chọn học sinh"
+            >
+              {children.map((child) => (
+                <Select.Option key={child.studentId} value={child.studentId}>
+                  {child.fullName} - {child.studentCode}
+                </Select.Option>
+              ))}
+            </Select>
+          ) : (
+            <Text type="secondary">Không có học sinh nào</Text>
+          )}
+          <Button
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() => setIsEditModalVisible(true)}
+            disabled={!selectedStudent}
+          >
+            Cập nhật thông tin
+          </Button>
+        </div>
       </div>
 
       {showSuccess && (
@@ -111,67 +211,54 @@ const HealthProfile = () => {
         />
       )}
 
-      <Card>
-        <Descriptions title="Thông tin cơ bản" bordered>
-          <Descriptions.Item label="Dị ứng" span={3}>
-            {healthProfile.allergies}
-          </Descriptions.Item>
-          <Descriptions.Item label="Bệnh nền" span={3}>
-            {healthProfile.medicalConditions}
-          </Descriptions.Item>
-          <Descriptions.Item label="Thị lực">
-            {healthProfile.vision}
-          </Descriptions.Item>
-          <Descriptions.Item label="Thính lực">
-            {healthProfile.hearing}
-          </Descriptions.Item>
-          <Descriptions.Item label="Nhóm máu">
-            {healthProfile.bloodType}
-          </Descriptions.Item>
-        </Descriptions>
+      {healthProfile ? (
+        <Card>
+          <Descriptions title="Thông tin cơ bản" bordered>
+            <Descriptions.Item label="Dị ứng" span={3}>
+              {healthProfile.allergies}
+            </Descriptions.Item>
+            <Descriptions.Item label="Bệnh nền" span={3}>
+              {healthProfile.chronicDiseases}
+            </Descriptions.Item>
+            <Descriptions.Item label="Thị lực">
+              {healthProfile.vision}
+            </Descriptions.Item>
+            <Descriptions.Item label="Thính lực">
+              {healthProfile.hearing}
+            </Descriptions.Item>
+            <Descriptions.Item label="Chiều cao">
+              {healthProfile.height} cm
+            </Descriptions.Item>
+            <Descriptions.Item label="Cân nặng">
+              {healthProfile.weight} kg
+            </Descriptions.Item>
+          </Descriptions>
 
-        <Descriptions
-          title="Thông tin liên hệ khẩn cấp"
-          bordered
-          style={{ marginTop: 24 }}
-        >
-          <Descriptions.Item label="Số điện thoại liên hệ khẩn cấp">
-            {healthProfile.emergencyContact}
-          </Descriptions.Item>
-        </Descriptions>
-
-        <Descriptions
-          title="Thông tin bổ sung"
-          bordered
-          style={{ marginTop: 24 }}
-        >
-          <Descriptions.Item label="Thuốc đang dùng" span={3}>
-            {healthProfile.medications}
-          </Descriptions.Item>
-          <Descriptions.Item label="Nhu cầu đặc biệt" span={3}>
-            {healthProfile.specialNeeds}
-          </Descriptions.Item>
-          <Descriptions.Item label="Lần kiểm tra gần nhất">
-            {healthProfile.lastCheckup}
-          </Descriptions.Item>
-          <Descriptions.Item label="Lần kiểm tra tiếp theo">
-            {healthProfile.nextCheckup}
-          </Descriptions.Item>
-        </Descriptions>
-
-        <div style={{ marginTop: 24 }}>
-          <Title level={4}>Tài liệu y tế</Title>
-          <ul>
-            {healthProfile.medicalFiles.map((file, index) => (
-              <li key={index}>
-                <a href={file.url} target="_blank" rel="noopener noreferrer">
-                  {file.name}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </Card>
+          <Descriptions
+            title="Thông tin bổ sung"
+            bordered
+            style={{ marginTop: 24 }}
+          >
+            <Descriptions.Item label="Thuốc đang dùng" span={3}>
+              {healthProfile.medications}
+            </Descriptions.Item>
+            <Descriptions.Item label="Lịch sử điều trị" span={3}>
+              {healthProfile.treatmentHistory}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ghi chú" span={3}>
+              {healthProfile.notes}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      ) : (
+        <Card>
+          <div style={{ textAlign: "center", padding: "24px" }}>
+            <Text type="secondary">
+              Vui lòng chọn học sinh để xem hồ sơ sức khỏe
+            </Text>
+          </div>
+        </Card>
+      )}
 
       <Modal
         title="Cập nhật hồ sơ sức khỏe"
@@ -181,9 +268,10 @@ const HealthProfile = () => {
         width={800}
       >
         <Formik
-          initialValues={initialValues}
+          initialValues={getInitialValues()}
           validationSchema={validationSchema}
           onSubmit={handleSubmit}
+          enableReinitialize={true}
         >
           {({
             values,
@@ -193,7 +281,6 @@ const HealthProfile = () => {
             handleBlur,
             handleSubmit,
             isSubmitting,
-            setFieldValue,
           }) => (
             <Form layout="vertical" onFinish={handleSubmit}>
               <Title level={4}>Thông tin cơ bản</Title>
@@ -220,17 +307,17 @@ const HealthProfile = () => {
                   <Form.Item
                     label="Bệnh nền"
                     validateStatus={
-                      touched.medicalConditions && errors.medicalConditions
+                      touched.chronicDiseases && errors.chronicDiseases
                         ? "error"
                         : ""
                     }
-                    help={touched.medicalConditions && errors.medicalConditions}
+                    help={touched.chronicDiseases && errors.chronicDiseases}
                   >
                     <TextArea
-                      name="medicalConditions"
+                      name="chronicDiseases"
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      value={values.medicalConditions}
+                      value={values.chronicDiseases}
                       placeholder="Nhập thông tin bệnh nền (nếu có)"
                       rows={4}
                     />
@@ -238,62 +325,43 @@ const HealthProfile = () => {
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item name="vision" label="Thị lực">
-                    <Input />
+                    <Input
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      value={values.vision}
+                      placeholder="Nhập thị lực"
+                    />
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
                   <Form.Item name="hearing" label="Thính lực">
-                    <Input />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Nhóm máu"
-                    validateStatus={
-                      touched.bloodType && errors.bloodType ? "error" : ""
-                    }
-                    help={touched.bloodType && errors.bloodType}
-                  >
-                    <Select
-                      name="bloodType"
-                      onChange={(value) => setFieldValue("bloodType", value)}
-                      onBlur={handleBlur}
-                      value={values.bloodType}
-                      placeholder="Chọn nhóm máu"
-                    >
-                      <Select.Option value="A+">A+</Select.Option>
-                      <Select.Option value="A-">A-</Select.Option>
-                      <Select.Option value="B+">B+</Select.Option>
-                      <Select.Option value="B-">B-</Select.Option>
-                      <Select.Option value="AB+">AB+</Select.Option>
-                      <Select.Option value="AB-">AB-</Select.Option>
-                      <Select.Option value="O+">O+</Select.Option>
-                      <Select.Option value="O-">O-</Select.Option>
-                    </Select>
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Title level={4} style={{ marginTop: 24 }}>
-                Thông tin liên hệ khẩn cấp
-              </Title>
-              <Row gutter={24}>
-                <Col xs={24} md={12}>
-                  <Form.Item
-                    label="Số điện thoại liên hệ khẩn cấp"
-                    validateStatus={
-                      touched.emergencyContact && errors.emergencyContact
-                        ? "error"
-                        : ""
-                    }
-                    help={touched.emergencyContact && errors.emergencyContact}
-                  >
                     <Input
-                      name="emergencyContact"
                       onChange={handleChange}
                       onBlur={handleBlur}
-                      value={values.emergencyContact}
-                      placeholder="Nhập số điện thoại"
+                      value={values.hearing}
+                      placeholder="Nhập thính lực"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="height" label="Chiều cao (cm)">
+                    <Input
+                      type="number"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      value={values.height}
+                      placeholder="Nhập chiều cao"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col xs={24} md={12}>
+                  <Form.Item name="weight" label="Cân nặng (kg)">
+                    <Input
+                      type="number"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      value={values.weight}
+                      placeholder="Nhập cân nặng"
                     />
                   </Form.Item>
                 </Col>
@@ -322,33 +390,30 @@ const HealthProfile = () => {
                   </Form.Item>
                 </Col>
                 <Col xs={24} md={12}>
-                  <Form.Item name="specialNeeds" label="Nhu cầu đặc biệt">
-                    <TextArea rows={2} />
+                  <Form.Item name="treatmentHistory" label="Lịch sử điều trị">
+                    <TextArea
+                      name="treatmentHistory"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      value={values.treatmentHistory}
+                      placeholder="Nhập lịch sử điều trị (nếu có)"
+                      rows={4}
+                    />
                   </Form.Item>
                 </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item name="lastCheckup" label="Lần kiểm tra gần nhất">
-                    <DatePicker style={{ width: "100%" }} />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item name="nextCheckup" label="Lần kiểm tra tiếp theo">
-                    <DatePicker style={{ width: "100%" }} />
+                <Col xs={24} md={24}>
+                  <Form.Item name="notes" label="Ghi chú">
+                    <TextArea
+                      name="notes"
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      value={values.notes}
+                      placeholder="Thêm ghi chú (nếu có)"
+                      rows={4}
+                    />
                   </Form.Item>
                 </Col>
               </Row>
-
-              <Form.Item label="Tài liệu y tế">
-                <Upload
-                  multiple
-                  beforeUpload={() => false}
-                  onChange={({ fileList }) =>
-                    setFieldValue("medicalFiles", fileList)
-                  }
-                >
-                  <Button icon={<UploadOutlined />}>Tải lên tài liệu</Button>
-                </Upload>
-              </Form.Item>
 
               <Form.Item>
                 <div

@@ -27,13 +27,21 @@ import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
+// Import manager components
+import AlertsAndEvents from "./components/manager/AlertsAndEvents";
+import ManagerDashboard from "./components/manager/Dashboard";
+import HealthCheckupCampaigns from "./components/manager/HealthCheckupCampaigns";
+import HealthReports from "./components/manager/HealthReports";
+import StudentList from "./components/manager/StudentList";
+import VaccinationCampaigns from "./components/manager/VaccinationCampaigns";
+import ManagerLayout from "./layouts/Manager";
 
 const App = () => {
-    return (
-        <Router>
-            <Routes>
-                <Route path="/" element={<Homepage />} />
-                <Route path="/auth" element={<AuthPage />} />
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Homepage />} />
+        <Route path="/auth" element={<AuthPage />} />
         {/* Nurse Routes */}
         <Route
           path="/nurse"
@@ -72,6 +80,32 @@ const App = () => {
           <Route path="students" element={<StudentManagement />} />
           <Route path="consent-forms" element={<ConsentForms />} />
           <Route path="medication-info" element={<MedicationInfo />} />
+          <Route path="profile" element={<UserProfile />} />
+        </Route>
+
+        {/* Manager Routes */}
+        <Route
+          path="/manager"
+          element={
+            <PrivateRoutes>
+              <RoleBaseRoutes requiredRole={["MANAGER"]}>
+                <ManagerLayout />
+              </RoleBaseRoutes>
+            </PrivateRoutes>
+          }
+        >
+          <Route index element={<ManagerDashboard />} />
+          <Route path="students" element={<StudentList />} />
+          <Route path="health-reports" element={<HealthReports />} />
+          <Route
+            path="vaccination-campaigns"
+            element={<VaccinationCampaigns />}
+          />
+          <Route
+            path="health-checkup-campaigns"
+            element={<HealthCheckupCampaigns />}
+          />
+          <Route path="alerts-events" element={<AlertsAndEvents />} />
           <Route path="profile" element={<UserProfile />} />
         </Route>
 

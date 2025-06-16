@@ -37,13 +37,17 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         password,
       });
       if (response.data.success) {
-        login(response.data.user);
-        localStorage.setItem("token", response.data.token);
-        if (response.data.user.role === "ADMIN") {
+        const { user, token } = response.data;
+        login(user, token);
+        if (user.role === "ADMIN") {
           navigate("/admin");
-        } else if (response.data.user.role === "SCHOOL_NURSE") {
+        } else if (user.role === "SCHOOL_NURSE") {
           navigate("/nurse");
-        } else navigate("/user");
+        } else if (user.role === "MANAGER") {
+          navigate("/manager");
+        } else {
+          navigate("/user");
+        }
       }
     } catch (error) {
       if (error.response && error.response.data && error.response.data.error) {
@@ -72,8 +76,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       });
       if (response.data.success) {
         const { user, token } = response.data;
-        login(user);
-        localStorage.setItem("token", token);
+        login(user, token);
         navigate("/");
       }
     } catch (error) {
@@ -115,9 +118,9 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       console.log("Backend response:", res.data);
 
       if (res.data.success) {
-        login(res.data.user);
-        localStorage.setItem("token", res.data.token);
-        navigate(res.data.user.role === "ADMIN" ? "/admin" : "/user");
+        const { user, token } = res.data;
+        login(user, token);
+        navigate(user.role === "ADMIN" ? "/admin" : "/user");
       }
     } catch (error) {
       console.error("Google login error:", error);

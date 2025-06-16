@@ -12,7 +12,6 @@ import {
   Dropdown,
   Input,
   Layout,
-  Menu,
   Space,
   message,
 } from "antd";
@@ -41,96 +40,71 @@ const Headers = () => {
       navigate("/admin/profile");
     } else if (user?.role === "SCHOOL_NURSE") {
       navigate("/nurse/profile");
+    } else if (user?.role === "MANAGER") {
+      navigate("/manager/profile");
+    } else if (user?.role === "PARENT") {
+      navigate("/user/profile");
     }
   };
 
-  const userMenu = (
-    <Menu>
-      <Menu.Item
-        key="profile"
-        icon={<UserOutlined />}
-        onClick={handleProfileClick}
-      >
-        Profile
-      </Menu.Item>
-      <Menu.Divider />
-      <Menu.Item key="logout" icon={<LogoutOutlined />} onClick={handleLogout}>
-        Logout
-      </Menu.Item>
-    </Menu>
-  );
+  const menuItems = [
+    {
+      key: "profile",
+      icon: <UserOutlined />,
+      label: "Profile",
+      onClick: handleProfileClick,
+    },
+    {
+      key: "logout",
+      icon: <LogoutOutlined />,
+      label: "Logout",
+      onClick: handleLogout,
+    },
+  ];
+
   return (
     <Header
       style={{
+        padding: "0 24px",
+        background: "#fff",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 24px",
-        background: "#fff",
-        borderBottom: "1px solid #f0f0f0",
-        height: 72,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+      <div className="flex items-center">
         <Button
           type="text"
-          icon={<MenuOutlined style={{ fontSize: 20 }} />}
-          style={{
-            width: 40,
-            height: 40,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+          icon={<MenuOutlined />}
+          className="mr-4"
+          onClick={() => {
+            // Handle menu toggle
           }}
         />
         <Input
-          prefix={<SearchOutlined style={{ color: "#7b8191" }} />}
-          placeholder="Search or type command..."
-          style={{
-            maxWidth: 420,
-            height: 48,
-            borderRadius: 12,
-            backgroundColor: "#f5f6fa",
-          }}
-          suffix={
-            <span
-              style={{
-                background: "#fff",
-                borderRadius: 8,
-                padding: "2px 10px",
-                fontSize: 14,
-                color: "#7b8191",
-                border: "1px solid #e0e0e0",
-              }}
-            >
-              ⌘ K
-            </span>
-          }
+          prefix={<SearchOutlined />}
+          placeholder="Search..."
+          style={{ width: 300 }}
         />
       </div>
-      <Space size={24}>
-        <Badge dot offset={[-2, 2]}>
+
+      <div className="flex items-center space-x-4">
+        <Badge>
           <Button
             type="text"
-            icon={<BellOutlined style={{ fontSize: 20 }} />}
-            style={{
-              width: 48,
-              height: 48,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            icon={<BellOutlined />}
+            className="flex items-center justify-center"
           />
         </Badge>
-        <Space size={12}>
-          <Dropdown overlay={userMenu} trigger={["click"]}>
-            <div className="flex items-center cursor-pointer">
-              <Avatar icon={<UserOutlined />} />
-              <span className="ml-2">{user?.fullName || "Admin"}</span>
-            </div>
-          </Dropdown>
-        </Space>
-      </Space>
+
+        <Dropdown menu={{ items: menuItems }} placement="bottomRight" arrow>
+          <Space className="cursor-pointer">
+            <Avatar icon={<UserOutlined />} />
+            <span>{user?.fullName || "User"}</span>
+          </Space>
+        </Dropdown>
+      </div>
     </Header>
   );
 };

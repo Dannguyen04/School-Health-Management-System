@@ -1,103 +1,110 @@
-import { Calendar, Card, Select, Tag, Typography } from "antd";
-import { useState } from "react";
+import { CalendarOutlined, HistoryOutlined } from "@ant-design/icons";
+import { Card, Spin, Table, Tabs } from "antd";
+import { useEffect, useState } from "react";
 
-const { Title } = Typography;
+const { TabPane } = Tabs;
+
+const dummyData = [
+  {
+    key: "1",
+    date: "2025-06-15",
+    type: "Vaccination",
+    description: "COVID-19 Booster",
+    status: "Scheduled",
+  },
+  {
+    key: "2",
+    date: "2025-05-01",
+    type: "Checkup",
+    description: "Annual Health Checkup",
+    status: "Completed",
+  },
+];
+
+const columns = [
+  {
+    title: "Ngày",
+    dataIndex: "date",
+    key: "date",
+  },
+  {
+    title: "Loại",
+    dataIndex: "type",
+    key: "type",
+  },
+  {
+    title: "Mô tả",
+    dataIndex: "description",
+    key: "description",
+  },
+  {
+    title: "Trạng thái",
+    dataIndex: "status",
+    key: "status",
+    render: (text) => (
+      <span
+        className={`px-2 py-1 rounded text-white ${
+          text === "Scheduled" ? "bg-blue-500" : "bg-green-500"
+        }`}
+      >
+        {text === "Scheduled" ? "Sắp diễn ra" : "Hoàn tất"}
+      </span>
+    ),
+  },
+];
 
 const VaccinationSchedule = () => {
-  const [selectedChild, setSelectedChild] = useState("child1");
+  const [loading, setLoading] = useState(true);
+  const [records, setRecords] = useState([]);
 
-  // Mock data - replace with actual API data
-  const children = [
-    { value: "child1", label: "Nguyễn Văn A" },
-    { value: "child2", label: "Nguyễn Văn B" },
-  ];
-
-  const events = [
-    {
-      date: "2024-03-15",
-      type: "vaccination",
-      name: "Vaccine 5 trong 1",
-      status: "completed",
-    },
-    {
-      date: "2024-03-20",
-      type: "checkup",
-      name: "Khám sức khỏe định kỳ",
-      status: "upcoming",
-    },
-    {
-      date: "2024-03-25",
-      type: "vaccination",
-      name: "Vaccine cúm",
-      status: "pending",
-    },
-  ];
-
-  const getStatusTag = (status) => {
-    const statusConfig = {
-      completed: { color: "success", text: "✅ Hoàn tất" },
-      upcoming: { color: "processing", text: "🕒 Sắp tới" },
-      pending: { color: "warning", text: "❌ Chưa xác nhận" },
-    };
-
-    const config = statusConfig[status];
-    return <Tag color={config.color}>{config.text}</Tag>;
-  };
-
-  const dateCellRender = (date) => {
-    const formattedDate = date.format("YYYY-MM-DD");
-    const dayEvents = events.filter((event) => event.date === formattedDate);
-
-    return (
-      <ul className="events">
-        {dayEvents.map((event, index) => (
-          <li key={index}>
-            <div className="flex items-center gap-2">
-              <span>{event.name}</span>
-              {getStatusTag(event.status)}
-            </div>
-          </li>
-        ))}
-      </ul>
-    );
-  };
+  useEffect(() => {
+    setTimeout(() => {
+      setRecords(dummyData);
+      setLoading(false);
+    }, 1000);
+  }, []);
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <Title level={2}>Lịch tiêm & khám</Title>
-        <Select
-          style={{ width: 200 }}
-          value={selectedChild}
-          onChange={setSelectedChild}
-          options={children}
-        />
-      </div>
-
-      <Card>
-        <Calendar
-          dateCellRender={dateCellRender}
-          mode="month"
-          className="vaccination-calendar"
-        />
-      </Card>
-
-      <style jsx>{`
-        .events {
-          margin: 0;
-          padding: 0;
-          list-style: none;
-        }
-        .events li {
-          margin: 4px 0;
-          font-size: 12px;
-        }
-        .vaccination-calendar :global(.ant-picker-calendar-date-content) {
-          height: auto;
-          min-height: 80px;
-        }
-      `}</style>
-    </div>
+    <Card className="m-4 p-4 rounded-2xl shadow-md">
+      <Tabs defaultActiveKey="1">
+        <TabPane
+          tab={
+            <span>
+              <CalendarOutlined /> Lịch sắp tới
+            </span>
+          }
+          key="1"
+        >
+          {loading ? (
+            <Spin />
+          ) : (
+            <Table
+              dataSource={records.filter((r) => r.status === "Scheduled")}
+              columns={columns}
+              pagination={false}
+            />
+          )}
+        </TabPane>
+        <TabPane
+          tab={
+            <span>
+              <HistoryOutlined /> Lịch sử
+            </span>
+          }
+          key="2"
+        >
+          {loading ? (
+            <Spin />
+          ) : (
+            <Table
+              dataSource={records.filter((r) => r.status === "Completed")}
+              columns={columns}
+              pagination={false}
+            />
+          )}
+        </TabPane>
+      </Tabs>
+    </Card>
   );
 };
 
