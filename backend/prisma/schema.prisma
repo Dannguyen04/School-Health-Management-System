@@ -501,7 +501,7 @@ model Notification {
 // Audit Log
 model AuditLog {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String   @db.ObjectId
+  userId      String?   @db.ObjectId
   
   action      String   // "create", "update", "delete", "login", "logout"
   resource    String   // "student", "medication", "medical_event", etc.
@@ -512,7 +512,7 @@ model AuditLog {
   
   createdAt   DateTime @default(now())
 
-  user        users @relation(fields: [userId], references: [id])
+  user        users? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
 }

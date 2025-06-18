@@ -9,6 +9,7 @@ import {
     getAllUsers,
     addRole,
     deleteUser,
+    updateRole,
 } from "../controllers/AdminController.js";
 
 const router = express.Router();
@@ -19,10 +20,12 @@ router.post("/admin", authenticateToken, verifyAdmin);
 // Mount các route con liên quan đến student
 router.use("/students", authenticateToken, verifyAdmin, studentRoutes);
 
-router.post("/users/addRole", authenticateToken, verifyAdmin, addRole);
+router.post("/users/", authenticateToken, verifyAdmin, addRole);
 
 router.get("/users/getAllUsers", authenticateToken, verifyAdmin, getAllUsers);
 
 router.delete("/users/:id", authenticateToken, verifyAdmin, deleteUser);
+
+router.put("/users/:id", authenticateToken, verifyAdmin, updateRole);
 
 export default router;

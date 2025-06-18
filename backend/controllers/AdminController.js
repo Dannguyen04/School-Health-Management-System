@@ -107,7 +107,7 @@ const assignParentToStudent = async (
     try {
         const parent = await findParentByName(parentName, tx);
         if (!parent) {
-            return { success: false, error: "Parent not found" };
+            return { success: false, error: "Không tìm thấy phụ huynh" };
         }
 
         const existingRelationship = await tx.studentParent.findFirst({
@@ -117,7 +117,7 @@ const assignParentToStudent = async (
         if (existingRelationship) {
             return {
                 success: false,
-                error: "Parent already assigned to this student",
+                error: "Phụ huynh đã được gán cho học sinh này",
             };
         }
 
@@ -159,7 +159,7 @@ const assignParentToStudent = async (
 
         return {
             success: true,
-            message: `Assigned parent ${parent.user.fullName} to student ${studentParent.student.user.fullName}`,
+            message: `Đã gán phụ huynh ${parent.user.fullName} cho học sinh ${studentParent.student.user.fullName}`,
             data: {
                 studentName: studentParent.student.user.fullName,
                 parentName: studentParent.parent.user.fullName,
@@ -170,8 +170,18 @@ const assignParentToStudent = async (
             },
         };
     } catch (error) {
-        throw new Error(`Error assigning parent to student: ${error.message}`);
+        throw new Error(`Lỗi khi gán phụ huynh cho học sinh: ${error.message}`);
     }
+};
+
+// Auto-generate student code in the format STU0001, STU0002, ...
+const generateStudentCode = async () => {
+    // Count all students in the DB
+    const count = await prisma.student.count();
+    // Next student number (1-based)
+    const nextNumber = count + 1;
+    // Pad with leading zeros to 4 digits
+    return `STU${nextNumber.toString().padStart(4, "0")}`;
 };
 
 const createAuditLog = async (
@@ -204,7 +214,6 @@ const addStudent = async (req, res) => {
             email,
             phone,
             password,
-            studentCode,
             dateOfBirth,
             gender,
             grade,
@@ -220,7 +229,6 @@ const addStudent = async (req, res) => {
             "email",
             "phone",
             "password",
-            "studentCode",
             "dateOfBirth",
             "gender",
             "grade",
@@ -236,42 +244,42 @@ const addStudent = async (req, res) => {
         if (missingFields.length > 0) {
             return res.status(422).json({
                 success: false,
-                error: `Missing required fields: ${missingFields.join(", ")}`,
+                error: `Thiếu trường bắt buộc: ${missingFields.join(", ")}`,
             });
         }
 
         if (!validateEmail(email)) {
             return res.status(422).json({
                 success: false,
-                error: "Invalid email format",
+                error: "Email không hợp lệ",
             });
         }
 
         if (!validatePassword(password)) {
             return res.status(422).json({
                 success: false,
-                error: "Password must be at least 8 characters",
+                error: "Mật khẩu phải có ít nhất 8 ký tự",
             });
         }
 
         if (!validateDateOfBirth(dateOfBirth)) {
             return res.status(422).json({
                 success: false,
-                error: "Invalid date of birth",
+                error: "Ngày sinh không hợp lệ",
             });
         }
 
         if (!validateGrade(grade)) {
             return res.status(422).json({
                 success: false,
-                error: "Grade must be between 1 and 5",
+                error: "Khối lớp phải từ 1 đến 5",
             });
         }
 
         if (!VALID_GENDERS.includes(gender.toUpperCase())) {
             return res.status(422).json({
                 success: false,
-                error: `Gender must be one of: ${VALID_GENDERS.join(", ")}`,
+                error: `Giới tính phải là: ${VALID_GENDERS.join(", ")}`,
             });
         }
 
@@ -285,14 +293,14 @@ const addStudent = async (req, res) => {
         if (existingUser) {
             return res.status(422).json({
                 success: false,
-                error: `Email already exists for user ${existingUser.fullName}`,
+                error: `Email đã tồn tại cho người dùng ${existingUser.fullName}`,
             });
         }
 
         if (existingStudent) {
             return res.status(422).json({
                 success: false,
-                error: "Student code already exists",
+                error: "Mã học sinh đã tồn tại",
             });
         }
 
@@ -311,7 +319,7 @@ const addStudent = async (req, res) => {
             const student = await tx.student.create({
                 data: {
                     userId: user.id,
-                    studentCode: studentCode.trim(),
+                    studentCode: generateStudentCode(),
                     dateOfBirth: new Date(dateOfBirth),
                     gender: gender.toUpperCase(),
                     grade: grade.toString(),
@@ -356,7 +364,7 @@ const addStudent = async (req, res) => {
 
         return res.status(201).json({
             success: true,
-            message: "Student created and parent assigned successfully",
+            message: "Tạo học sinh và gán phụ huynh thành công",
             data: {
                 id: result.student.id,
                 fullName: result.user.fullName,
@@ -366,10 +374,10 @@ const addStudent = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Error creating student:", error);
+        console.error("Lỗi khi tạo học sinh:", error);
         res.status(500).json({
             success: false,
-            error: error.message || "Internal server error",
+            error: error.message || "Lỗi máy chủ nội bộ",
         });
     }
 };
@@ -381,21 +389,21 @@ const addRole = async (req, res) => {
         if (!name || !email || !password || !role) {
             return res.status(422).json({
                 success: false,
-                error: "Missing required fields",
+                error: "Thiếu trường bắt buộc",
             });
         }
 
         if (!validateEmail(email)) {
             return res.status(422).json({
                 success: false,
-                error: "Invalid email format",
+                error: "Email không hợp lệ",
             });
         }
 
         if (!validatePassword(password)) {
             return res.status(422).json({
                 success: false,
-                error: "Password must be at least 8 characters",
+                error: "Mật khẩu phải có ít nhất 8 ký tự",
             });
         }
 
@@ -403,7 +411,7 @@ const addRole = async (req, res) => {
         if (!VALID_ROLES.includes(normalizedRole)) {
             return res.status(422).json({
                 success: false,
-                error: `Invalid role. Must be one of: ${VALID_ROLES.join(
+                error: `Vai trò không hợp lệ. Phải là một trong: ${VALID_ROLES.join(
                     ", "
                 )}`,
             });
@@ -413,7 +421,7 @@ const addRole = async (req, res) => {
         if (existingUser) {
             return res.status(422).json({
                 success: false,
-                error: "Email already exists",
+                error: "Email đã tồn tại",
             });
         }
 
@@ -452,7 +460,7 @@ const addRole = async (req, res) => {
 
         res.status(201).json({
             success: true,
-            message: `${normalizedRole.toLowerCase()} created successfully`,
+            message: `${normalizedRole.toLowerCase()} tạo thành công`,
             data: {
                 id: user.id,
                 fullName: user.fullName,
@@ -462,18 +470,18 @@ const addRole = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Error creating role:", error);
+        console.error("Lỗi khi tạo vai trò:", error);
 
         if (error.code === "P2002") {
             return res.status(422).json({
                 success: false,
-                error: "Duplicate value for unique field",
+                error: "Trùng giá trị cho trường duy nhất",
             });
         }
 
         res.status(500).json({
             success: false,
-            error: "Internal server error",
+            error: "Lỗi máy chủ nội bộ",
         });
     }
 };
@@ -496,8 +504,10 @@ const getAllUsers = async (req, res) => {
         });
 
         if (!users || users.length === 0) {
-            console.log("No staff in the system");
-            return res.status(404).json({ message: "No staff in the system" });
+            console.log("Không có nhân viên nào trong hệ thống");
+            return res
+                .status(404)
+                .json({ message: "Không có nhân viên nào trong hệ thống" });
         }
 
         res.status(200).json({ success: true, data: users });
@@ -520,9 +530,10 @@ const getAllStudents = async (req, res) => {
         });
 
         if (!students || students.length === 0) {
-            return res
-                .status(404)
-                .json({ success: false, error: "No student in the system" });
+            return res.status(404).json({
+                success: false,
+                error: "Không có học sinh nào trong hệ thống",
+            });
         }
 
         res.status(200).json({ success: true, data: students });
@@ -540,39 +551,35 @@ const updateRole = async (req, res) => {
         if (!email || !fullName || !role) {
             return res.status(400).json({
                 success: false,
-                error: "Email, full name, and role are required",
+                error: "Email, họ tên và vai trò là bắt buộc",
             });
         }
-
         if (password && !validatePassword(password)) {
             return res.status(422).json({
                 success: false,
-                error: "Password must be at least 8 characters if provided",
+                error: "Mật khẩu phải có ít nhất 8 ký tự nếu cung cấp",
             });
         }
-
         if (!validateEmail(email)) {
             return res.status(422).json({
                 success: false,
-                error: "Invalid email format",
+                error: "Email không hợp lệ",
             });
         }
-
         const normalizedRole = normalizeRole(role);
         if (!VALID_ROLES.includes(normalizedRole)) {
             return res.status(422).json({
                 success: false,
-                error: `Invalid role. Must be one of: ${VALID_ROLES.join(
+                error: `Vai trò không hợp lệ. Phải là một trong: ${VALID_ROLES.join(
                     ", "
                 )}`,
             });
         }
-
         const existingUser = await findUserByEmail(email);
         if (existingUser && existingUser.id !== id) {
             return res.status(400).json({
                 success: false,
-                error: "Email is already in use",
+                error: "Email đã được sử dụng",
             });
         }
 
@@ -591,6 +598,7 @@ const updateRole = async (req, res) => {
                 throw new Error("User not found");
             }
 
+            // If role is changing, delete old profile and create new one
             if (currentUser.role !== normalizedRole) {
                 const oldTableName = roleToTable[currentUser.role];
                 if (
@@ -651,22 +659,20 @@ const updateRole = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "User updated successfully",
+            message: "Cập nhật người dùng thành công",
             data: updatedUser,
         });
     } catch (error) {
-        console.error("Error updating user:", error);
-
+        console.error("Lỗi khi cập nhật người dùng:", error);
         if (error.code === "P2025") {
             return res.status(404).json({
                 success: false,
-                error: "User or profile not found",
+                error: "Không tìm thấy người dùng hoặc hồ sơ",
             });
         }
-
         res.status(500).json({
             success: false,
-            error: "Internal server error",
+            error: "Lỗi máy chủ nội bộ",
         });
     }
 };
@@ -706,35 +712,35 @@ const updateStudent = async (req, res) => {
         if (missingFields.length > 0) {
             return res.status(422).json({
                 success: false,
-                error: `Missing required fields: ${missingFields.join(", ")}`,
+                error: `Thiếu trường bắt buộc: ${missingFields.join(", ")}`,
             });
         }
 
         if (!validateEmail(email)) {
             return res.status(422).json({
                 success: false,
-                error: "Invalid email format",
+                error: "Email không hợp lệ",
             });
         }
 
         if (!validateDateOfBirth(dateOfBirth)) {
             return res.status(422).json({
                 success: false,
-                error: "Invalid date of birth",
+                error: "Ngày sinh không hợp lệ",
             });
         }
 
         if (!validateGrade(grade)) {
             return res.status(422).json({
                 success: false,
-                error: "Grade must be between 1 and 5",
+                error: "Khối lớp phải từ 1 đến 5",
             });
         }
 
         if (!VALID_GENDERS.includes(gender.toUpperCase())) {
             return res.status(422).json({
                 success: false,
-                error: `Gender must be one of: ${VALID_GENDERS.join(", ")}`,
+                error: `Giới tính phải là: ${VALID_GENDERS.join(", ")}`,
             });
         }
 
@@ -746,21 +752,21 @@ const updateStudent = async (req, res) => {
         if (!user) {
             return res.status(404).json({
                 success: false,
-                error: "User not found",
+                error: "Không tìm thấy người dùng",
             });
         }
 
         if (user.role !== "STUDENT") {
             return res.status(400).json({
                 success: false,
-                error: "User is not a student",
+                error: "Người dùng không phải là học sinh",
             });
         }
 
         if (!user.studentProfile) {
             return res.status(404).json({
                 success: false,
-                error: "Student profile not found",
+                error: "Không tìm thấy hồ sơ học sinh",
             });
         }
 
@@ -768,7 +774,7 @@ const updateStudent = async (req, res) => {
         if (existingEmailUser && existingEmailUser.id !== id) {
             return res.status(400).json({
                 success: false,
-                error: "Email is already registered by another user",
+                error: "Email đã được đăng ký bởi người dùng khác",
             });
         }
 
@@ -778,7 +784,7 @@ const updateStudent = async (req, res) => {
         if (existingStudent && existingStudent.userId !== id) {
             return res.status(400).json({
                 success: false,
-                error: "Student code is already in use",
+                error: "Mã học sinh đã được sử dụng",
             });
         }
 
@@ -849,22 +855,20 @@ const updateStudent = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: "Student updated successfully",
+            message: "Cập nhật học sinh thành công",
             data: updatedUser,
         });
     } catch (error) {
-        console.error("Error updating student:", error);
-
+        console.error("Lỗi khi cập nhật học sinh:", error);
         if (error.code === "P2002") {
             return res.status(422).json({
                 success: false,
-                error: "Unique constraint violation (duplicate value)",
+                error: "Vi phạm ràng buộc duy nhất (giá trị trùng lặp)",
             });
         }
-
         return res.status(500).json({
             success: false,
-            error: "Internal server error",
+            error: "Lỗi máy chủ nội bộ",
         });
     }
 };
@@ -887,7 +891,7 @@ const deleteUser = async (req, res) => {
         if (!user) {
             return res.status(404).json({
                 success: false,
-                error: "User not found",
+                error: "Không tìm thấy người dùng",
             });
         }
 
@@ -897,13 +901,8 @@ const deleteUser = async (req, res) => {
                 await tx[tableName].delete({ where: { userId: id } });
             }
 
-            await tx.users.update({
-                where: { id },
-                data: {
-                    isActive: false,
-                    email: `${user.email}_deleted_${Date.now()}`,
-                    updatedAt: new Date(),
-                },
+            await tx.users.delete({
+                where: { id: id },
             });
 
             await createAuditLog(
@@ -919,13 +918,13 @@ const deleteUser = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "User deleted successfully",
+            message: "Xóa người dùng thành công",
         });
     } catch (error) {
-        console.error("Error deleting user:", error);
+        console.error("Lỗi khi xóa người dùng:", error);
         res.status(500).json({
             success: false,
-            error: "Internal server error",
+            error: "Lỗi máy chủ nội bộ",
         });
     }
 };
