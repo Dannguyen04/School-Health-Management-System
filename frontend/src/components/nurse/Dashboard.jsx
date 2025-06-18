@@ -34,6 +34,7 @@ const { Option } = Select;
 
 const NurseDashboard = () => {
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [stats, setStats] = useState({
         totalStudents: 0,
         totalMedicalEvents: 0,
@@ -46,26 +47,96 @@ const NurseDashboard = () => {
     const [updateModalVisible, setUpdateModalVisible] = useState(false);
     const [form] = Form.useForm();
 
+    // Get auth token from localStorage
+    const getAuthToken = () => {
+        return localStorage.getItem("token");
+    };
+
+    // Login function to get token
+    const login = async () => {
+        try {
+            const response = await axios.post(
+                "http://localhost:5000/auth/login",
+                {
+                    email: "nurse@school.com", // Replace with actual nurse email
+                    password: "password123", // Replace with actual password
+                }
+            );
+
+            if (response.data.success) {
+                localStorage.setItem("token", response.data.token);
+                return response.data.token;
+            }
+        } catch (error) {
+            console.error("Login failed:", error);
+            throw error;
+        }
+    };
+
+    // Configure axios with auth header
+    const getApiInstance = () => {
+        const token = getAuthToken();
+        return axios.create({
+            baseURL: "http://localhost:5000",
+            headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+            },
+        });
+    };
+
     // Fetch dashboard data
     const fetchDashboardData = async () => {
         try {
             setLoading(true);
+            setError(null);
+
+            let token = getAuthToken();
+            if (!token) {
+                // Try to login if no token
+                try {
+                    token = await login();
+                } catch (loginError) {
+                    setError("Authentication failed. Please login first.");
+                    message.error("Authentication failed. Please login first.");
+                    return;
+                }
+            }
+
+            const api = getApiInstance();
+
             const [statsRes, eventsRes, vaccinationsRes] = await Promise.all([
-                axios.get("http://localhost:5000/nurse/dashboard/stats"),
-                axios.get(
-                    "http://localhost:5000/nurse/dashboard/recent-events"
-                ),
-                axios.get(
-                    "http://localhost:5000/nurse/dashboard/upcoming-vaccinations"
-                ),
+                api.get("/nurse/dashboard/stats"),
+                api.get("/nurse/dashboard/recent-events"),
+                api.get("/nurse/dashboard/upcoming-vaccinations"),
             ]);
 
-            setStats(statsRes.data.data);
-            setRecentEvents(eventsRes.data.data);
-            setUpcomingVaccinations(vaccinationsRes.data.data);
+            if (statsRes.data.success) {
+                setStats(statsRes.data.data);
+            }
+
+            if (eventsRes.data.success) {
+                setRecentEvents(eventsRes.data.data);
+            }
+
+            if (vaccinationsRes.data.success) {
+                setUpcomingVaccinations(vaccinationsRes.data.data);
+            }
         } catch (error) {
             console.error("Error fetching dashboard data:", error);
-            message.error("Không thể tải dữ liệu dashboard");
+            if (error.response?.status === 401) {
+                // Token expired or invalid, try to login again
+                localStorage.removeItem("token");
+                setError("Session expired. Please login again.");
+                message.error("Session expired. Please login again.");
+            } else {
+                setError(
+                    error.response?.data?.error ||
+                        error.message ||
+                        "Không thể tải dữ liệu dashboard"
+                );
+                message.error("Không thể tải dữ liệu dashboard");
+            }
         } finally {
             setLoading(false);
         }
@@ -78,13 +149,19 @@ const NurseDashboard = () => {
     // Handle event status update
     const handleUpdateEvent = async (values) => {
         try {
-            await axios.patch(
-                `http://localhost:5000/nurse/medical-events/${selectedEvent.id}/status`,
+            const api = getApiInstance();
+            const response = await api.patch(
+                `/nurse/medical-events/${selectedEvent.id}/status`,
                 values
             );
-            message.success("Cập nhật trạng thái thành công");
-            setUpdateModalVisible(false);
-            fetchDashboardData(); // Refresh data
+
+            if (response.data.success) {
+                message.success("Cập nhật trạng thái thành công");
+                setUpdateModalVisible(false);
+                fetchDashboardData(); // Refresh data
+            } else {
+                message.error("Cập nhật thất bại");
+            }
         } catch (error) {
             console.error("Error updating event:", error);
             message.error("Không thể cập nhật trạng thái");
@@ -101,9 +178,11 @@ const NurseDashboard = () => {
         };
         return (
             <span
-                className={`px-2 py-1 rounded-full text-xs ${colors[severity]}`}
+                className={`px-2 py-1 rounded-full text-xs ${
+                    colors[severity] || colors.medium
+                }`}
             >
-                {severity.toUpperCase()}
+                {severity?.toUpperCase() || "UNKNOWN"}
             </span>
         );
     };
@@ -118,9 +197,11 @@ const NurseDashboard = () => {
         };
         return (
             <span
-                className={`px-2 py-1 rounded-full text-xs ${colors[status]}`}
+                className={`px-2 py-1 rounded-full text-xs ${
+                    colors[status] || colors.PENDING
+                }`}
             >
-                {status.replace("_", " ")}
+                {status?.replace("_", " ") || "UNKNOWN"}
             </span>
         );
     };
@@ -129,6 +210,24 @@ const NurseDashboard = () => {
         return (
             <div className="flex justify-center items-center h-64">
                 <Spin size="large" />
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <Alert
+                    message="Lỗi tải dữ liệu"
+                    description={error}
+                    type="error"
+                    showIcon
+                    action={
+                        <Button size="small" onClick={fetchDashboardData}>
+                            Thử lại
+                        </Button>
+                    }
+                />
             </div>
         );
     }
@@ -194,36 +293,42 @@ const NurseDashboard = () => {
                     }
                 >
                     <div className="space-y-4">
-                        {recentEvents.map((event) => (
-                            <div
-                                key={event.id}
-                                className="p-4 bg-white rounded-lg border hover:shadow-md transition-shadow cursor-pointer"
-                                onClick={() => {
-                                    setSelectedEvent(event);
-                                    setUpdateModalVisible(true);
-                                }}
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-medium text-gray-900">
-                                        {event.title}
-                                    </h3>
-                                    {renderSeverityBadge(event.severity)}
+                        {recentEvents.length > 0 ? (
+                            recentEvents.map((event) => (
+                                <div
+                                    key={event.id}
+                                    className="p-4 bg-white rounded-lg border hover:shadow-md transition-shadow cursor-pointer"
+                                    onClick={() => {
+                                        setSelectedEvent(event);
+                                        setUpdateModalVisible(true);
+                                    }}
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-medium text-gray-900">
+                                            {event.title}
+                                        </h3>
+                                        {renderSeverityBadge(event.severity)}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
+                                        <span>{event.studentName}</span>
+                                        <span>•</span>
+                                        <span>Lớp {event.studentClass}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm text-gray-500">
+                                            {dayjs(event.occurredAt).format(
+                                                "HH:mm DD/MM/YYYY"
+                                            )}
+                                        </span>
+                                        {renderStatusBadge(event.status)}
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                                    <span>{event.studentName}</span>
-                                    <span>•</span>
-                                    <span>Lớp {event.studentClass}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-500">
-                                        {dayjs(event.occurredAt).format(
-                                            "HH:mm DD/MM/YYYY"
-                                        )}
-                                    </span>
-                                    {renderStatusBadge(event.status)}
-                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center text-gray-500 py-8">
+                                Không có sự cố y tế gần đây
                             </div>
-                        ))}
+                        )}
                     </div>
                 </Card>
 
@@ -239,28 +344,36 @@ const NurseDashboard = () => {
                     }
                 >
                     <div className="space-y-4">
-                        {upcomingVaccinations.map((vaccination) => (
-                            <div
-                                key={vaccination.id}
-                                className="p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <h3 className="font-medium text-gray-900">
-                                        {vaccination.campaignName}
-                                    </h3>
-                                    <span className="text-sm text-blue-600">
-                                        {dayjs(
-                                            vaccination.scheduledDate
-                                        ).format("DD/MM/YYYY")}
-                                    </span>
+                        {upcomingVaccinations.length > 0 ? (
+                            upcomingVaccinations.map((vaccination) => (
+                                <div
+                                    key={vaccination.id}
+                                    className="p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <h3 className="font-medium text-gray-900">
+                                            {vaccination.campaignName}
+                                        </h3>
+                                        <span className="text-sm text-blue-600">
+                                            {dayjs(
+                                                vaccination.scheduledDate
+                                            ).format("DD/MM/YYYY")}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-gray-600">
+                                        <span>
+                                            Lớp {vaccination.studentClass}
+                                        </span>
+                                        <span>•</span>
+                                        <span>{vaccination.status}</span>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-2 text-sm text-gray-600">
-                                    <span>Lớp {vaccination.studentClass}</span>
-                                    <span>•</span>
-                                    <span>{vaccination.status}</span>
-                                </div>
+                            ))
+                        ) : (
+                            <div className="text-center text-gray-500 py-8">
+                                Không có lịch tiêm chủng sắp tới
                             </div>
-                        ))}
+                        )}
                     </div>
                 </Card>
             </div>
