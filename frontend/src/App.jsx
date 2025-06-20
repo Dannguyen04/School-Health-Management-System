@@ -21,7 +21,6 @@ import StudentTreatment from "./components/nurse/StudentTreatment";
 import Vaccination from "./components/nurse/Vaccination";
 import UserProfile from "./components/shared/UserProfile";
 import Blog from "./components/user/Blog";
-import UserDashboard from "./components/user/Dashboard";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
 import MedicineInfo from "./components/user/MedicineInfo";
@@ -119,7 +118,7 @@ const App = () => {
             </PrivateRoutes>
           }
         >
-          <Route index element={<UserDashboard />} />
+          {/* <Route index element={<UserDashboard />} /> */}
           <Route
             path="vaccination-schedule"
             element={<VaccinationSchedule />}
