@@ -37,6 +37,7 @@ enum MedicalEventStatus {
 }
 
 enum VaccinationStatus {
+  UNSCHEDULED
   SCHEDULED
   COMPLETED
   POSTPONED
@@ -64,6 +65,18 @@ enum NotificationStatus {
   READ
   EXPIRED
 }
+
+enum VaccineRequirement {
+  REQUIRED
+  OPTIONAL
+}
+
+enum DoseType {
+  FIRST     // Liều đầu tiên
+  SECOND    // Liều thứ hai
+  BOOSTER   // Liều nhắc lại (liều tăng cường)
+}
+
 
 // Main Models
 model users {
@@ -115,7 +128,6 @@ model Student {
   parents         StudentParent[]
   healthProfile   HealthProfile?
   medicalEvents   MedicalEvent[]
-  vaccinations    Vaccination[]
   medicalChecks   MedicalCheck[]
   medications     StudentMedication[]
 
@@ -151,7 +163,6 @@ model SchoolNurse {
   
   // Relations
   handledEvents MedicalEvent[]
-  vaccinations  Vaccination[]
   medicalChecks MedicalCheck[]
 
   @@map("school_nurses")
@@ -344,35 +355,27 @@ model VaccinationCampaign {
   updatedAt    DateTime @updatedAt
 
   // Relations
-  vaccinations Vaccination[]
   notifications Notification[]
 
   @@map("vaccination_campaigns")
 }
 
 model Vaccination {
-  id           String            @id @default(auto()) @map("_id") @db.ObjectId
-  studentId    String            @db.ObjectId
-  campaignId   String            @db.ObjectId
-  nurseId      String?           @db.ObjectId
-  
-  status       VaccinationStatus @default(SCHEDULED)
-  scheduledDate DateTime
+  id          String            @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  requirement VaccineRequirement
+  expiredDate DateTime
+  status       VaccinationStatus @default(UNSCHEDULED)
   administeredDate DateTime?
-  dose         String?           // "first", "second", "booster"
-  batch        String?           // Vaccine batch number
+  dose         DoseType?           // "first", "second", "booster" (total dose you need)
   sideEffects  String?           // Any side effects observed
-  notes        String?
+  notes        String? 
   
-  parentConsent Boolean          @default(false)
+  parentConsent Boolean?          @default(false)
   consentDate   DateTime?
   
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
-
-  student      Student             @relation(fields: [studentId], references: [id])
-  campaign     VaccinationCampaign @relation(fields: [campaignId], references: [id])
-  nurse        SchoolNurse?        @relation(fields: [nurseId], references: [id])
 
   @@map("vaccinations")
 }

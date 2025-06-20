@@ -10,6 +10,7 @@ import {
     addRole,
     deleteUser,
     updateRole,
+    filterUsers,
 } from "../controllers/AdminController.js";
 
 const router = express.Router();
@@ -27,5 +28,7 @@ router.get("/users/getAllUsers", authenticateToken, verifyAdmin, getAllUsers);
 router.delete("/users/:id", authenticateToken, verifyAdmin, deleteUser);
 
 router.put("/users/:id", authenticateToken, verifyAdmin, updateRole);
+
+router.get("/users/filter", authenticateToken, verifyAdmin, filterUsers);
 
 export default router;
