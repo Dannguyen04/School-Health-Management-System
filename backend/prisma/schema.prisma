@@ -142,7 +142,6 @@ model Parent {
 model SchoolNurse {
   id            String   @id @default(auto()) @map("_id") @db.ObjectId
   userId        String   @unique @db.ObjectId
-  licenseNumber String   @unique
   specialization String?
   experience    Int?
   createdAt     DateTime @default(now())
@@ -174,7 +173,6 @@ model Manager {
 model Admin {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   userId      String   @unique @db.ObjectId
-  permissions String[] // Array of permission strings
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -503,7 +501,7 @@ model Notification {
 // Audit Log
 model AuditLog {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String   @db.ObjectId
+  userId      String?   @db.ObjectId
   
   action      String   // "create", "update", "delete", "login", "logout"
   resource    String   // "student", "medication", "medical_event", etc.
@@ -514,7 +512,7 @@ model AuditLog {
   
   createdAt   DateTime @default(now())
 
-  user        users @relation(fields: [userId], references: [id])
+  user        users? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("audit_logs")
 }
