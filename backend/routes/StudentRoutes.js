@@ -4,6 +4,7 @@ import {
     deleteUser,
     getAllStudents,
     updateStudent,
+    filterStudents,
 } from "../controllers/AdminController.js";
 import {
     authenticateToken,
@@ -19,4 +20,6 @@ router.get("/", authenticateToken, verifyAdmin, getAllStudents);
 router.put("/:id", authenticateToken, verifyAdmin, updateStudent);
 
 router.delete("/:id", authenticateToken, verifyAdmin, deleteUser);
+
+router.get("/filter", authenticateToken, verifyAdmin, filterStudents);
 export default router;
