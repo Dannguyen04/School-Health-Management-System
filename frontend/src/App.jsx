@@ -21,6 +21,7 @@ import StudentTreatment from "./components/nurse/StudentTreatment";
 import Vaccination from "./components/nurse/Vaccination";
 import UserProfile from "./components/shared/UserProfile";
 import Blog from "./components/user/Blog";
+import UserConsentForms from "./components/user/ConsentForms";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
 import MedicineInfo from "./components/user/MedicineInfo";
@@ -127,7 +128,7 @@ const App = () => {
             path="health-checkup-results"
             element={<HealthCheckupResults />}
           />
-          <Route path="consent-forms" element={<ConsentForms />} />
+          <Route path="consent-forms" element={<UserConsentForms />} />
           <Route path="health-profile" element={<HealthProfile />} />
           <Route path="medicine-info" element={<MedicineInfo />} />
           <Route path="blog" element={<Blog />} />

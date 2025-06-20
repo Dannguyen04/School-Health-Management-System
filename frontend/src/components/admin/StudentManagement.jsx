@@ -78,7 +78,7 @@ const StudentManagement = () => {
         return;
       }
 
-      const response = await axios.get("/api/admin/students/all", {
+      const response = await axios.get("/api/admin/students", {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -181,6 +181,7 @@ const StudentManagement = () => {
   const handleEdit = (student) => {
     setEditingStudent(student);
     form.setFieldsValue({
+      studentCode: student.studentCode,
       name: student.name,
       email: student.email,
       dateOfBirth: dayjs(student.dateOfBirth),
@@ -196,19 +197,34 @@ const StudentManagement = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const formattedValues = {
-        fullName: values.name,
-        email: values.email,
-        phone: values.emergencyPhone,
-        password: "defaultPassword123",
-        dateOfBirth: values.dateOfBirth.toISOString(),
-        gender: values.gender,
-        grade: parseInt(values.grade),
-        class: values.class,
-        emergencyContact: values.emergencyContact,
-        emergencyPhone: values.emergencyPhone,
-        parentName: values.parentName,
-      };
+      const formattedValues = editingStudent
+        ? {
+            studentCode: values.studentCode,
+            fullName: values.name,
+            email: values.email,
+            phone: values.emergencyPhone,
+            password: "defaultPassword123",
+            dateOfBirth: values.dateOfBirth.toISOString(),
+            gender: values.gender,
+            grade: parseInt(values.grade),
+            class: values.class,
+            emergencyContact: values.emergencyContact,
+            emergencyPhone: values.emergencyPhone,
+            parentName: values.parentName,
+          }
+        : {
+            fullName: values.name,
+            email: values.email,
+            phone: values.emergencyPhone,
+            password: "defaultPassword123",
+            dateOfBirth: values.dateOfBirth.toISOString(),
+            gender: values.gender,
+            grade: parseInt(values.grade),
+            class: values.class,
+            emergencyContact: values.emergencyContact,
+            emergencyPhone: values.emergencyPhone,
+            parentName: values.parentName,
+          };
 
       if (editingStudent) {
         // Update student
@@ -225,6 +241,7 @@ const StudentManagement = () => {
           }
 
           const updateValues = {
+            studentCode: values.studentCode,
             fullName: values.name,
             email: values.email,
             phone: values.emergencyPhone,
@@ -268,15 +285,11 @@ const StudentManagement = () => {
             return;
           }
 
-          await axios.post(
-            "http://localhost:5000/api/admin/students",
-            formattedValues,
-            {
-              headers: {
-                Authorization: `Bearer ${authToken}`,
-              },
-            }
-          );
+          await axios.post("/api/admin/students", formattedValues, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
 
           message.success("Thêm học sinh thành công");
           fetchStudents(); // Refresh data after adding a new student
@@ -418,6 +431,17 @@ const StudentManagement = () => {
       >
         <Spin spinning={loading}>
           <Form form={form} layout="vertical">
+            {editingStudent && (
+              <Form.Item
+                name="studentCode"
+                label="Mã học sinh"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã học sinh!" },
+                ]}
+              >
+                <Input disabled />
+              </Form.Item>
+            )}
             <Form.Item
               name="name"
               label="Họ và tên"

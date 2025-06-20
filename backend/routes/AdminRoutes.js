@@ -2,15 +2,15 @@ import express from "express";
 import studentRoutes from "./StudentRoutes.js";
 
 import {
-    authenticateToken,
-    verifyAdmin,
-} from "../middleware/authenticateToken.js";
-import {
-    getAllUsers,
-    addRole,
-    deleteUser,
-    updateRole,
+  addRole,
+  deleteUser,
+  getAllUsers,
+  updateRole,
 } from "../controllers/AdminController.js";
+import {
+  authenticateToken,
+  verifyAdmin,
+} from "../middleware/authenticateToken.js";
 
 const router = express.Router();
 

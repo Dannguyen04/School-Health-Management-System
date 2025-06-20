@@ -1,8 +1,7 @@
 import cors from "cors";
 import express from "express";
-import authRouter from "./routes/auth.js";
 import AdminRoutes from "./routes/AdminRoutes.js";
-import StudentRoutes from "./routes/StudentRoutes.js";
+import authRouter from "./routes/auth.js";
 import NurseRoutes from "./routes/NurseRoutes.js";
 // import parentRouter from "./routes/ParentRoutes.js";
 
@@ -16,5 +15,5 @@ app.use("/nurse", NurseRoutes);
 // app.use("/parent", parentRouter);
 
 app.listen(process.env.PORT, () => {
-    console.log(`Server is Running on PORT ${process.env.PORT}`);
+  console.log(`Server is Running on PORT ${process.env.PORT}`);
 });

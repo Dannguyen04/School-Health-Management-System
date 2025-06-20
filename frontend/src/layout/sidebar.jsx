@@ -21,7 +21,7 @@ export const Sidebar = forwardRef(({ collapsed, navbarLinks }, ref) => {
         <img src={logoLight} alt="Logoipsum" />
         {!collapsed && (
           <p className="text-lg font-medium text-slate-900 transition-colors">
-            Logoipsum
+            Phần Mềm Quản Lý
           </p>
         )}
       </div>

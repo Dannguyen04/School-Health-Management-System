@@ -260,7 +260,7 @@ const UserManagement = () => {
           message.success("Cập nhật người dùng thành công");
         } else {
           // Add new user
-          await axios.post("/api/admin/users/addRole", formattedValues, {
+          await axios.post("/api/admin/users", formattedValues, {
             headers: {
               Authorization: `Bearer ${authToken}`,
             },
