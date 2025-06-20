@@ -65,46 +65,68 @@ const VaccinationSchedule = () => {
   }, []);
 
   return (
-    <Card className="m-4 p-4 rounded-2xl shadow-md">
-      <Tabs defaultActiveKey="1">
-        <TabPane
-          tab={
-            <span>
-              <CalendarOutlined /> Lịch sắp tới
-            </span>
-          }
-          key="1"
+    <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
+      <div className="w-full max-w-3xl">
+        <Card
+          className="rounded-3xl shadow-lg border-0 mt-12"
+          style={{
+            background: "#fff",
+            borderRadius: "1.5rem",
+            boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
+            padding: "2rem",
+            marginTop: "3rem",
+          }}
         >
-          {loading ? (
-            <Spin />
-          ) : (
-            <Table
-              dataSource={records.filter((r) => r.status === "Scheduled")}
-              columns={columns}
-              pagination={false}
-            />
-          )}
-        </TabPane>
-        <TabPane
-          tab={
-            <span>
-              <HistoryOutlined /> Lịch sử
-            </span>
-          }
-          key="2"
-        >
-          {loading ? (
-            <Spin />
-          ) : (
-            <Table
-              dataSource={records.filter((r) => r.status === "Completed")}
-              columns={columns}
-              pagination={false}
-            />
-          )}
-        </TabPane>
-      </Tabs>
-    </Card>
+          <h2 className="text-2xl font-bold text-[#36ae9a] mb-6 text-center">
+            Lịch tiêm & khám của học sinh
+          </h2>
+          <Tabs defaultActiveKey="1" centered>
+            <TabPane
+              tab={
+                <span>
+                  <CalendarOutlined /> Lịch sắp tới
+                </span>
+              }
+              key="1"
+            >
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Spin />
+                </div>
+              ) : (
+                <Table
+                  dataSource={records.filter((r) => r.status === "Scheduled")}
+                  columns={columns}
+                  pagination={false}
+                  className="rounded-xl"
+                />
+              )}
+            </TabPane>
+            <TabPane
+              tab={
+                <span>
+                  <HistoryOutlined /> Lịch sử
+                </span>
+              }
+              key="2"
+            >
+              {loading ? (
+                <div className="flex justify-center py-8">
+                  <Spin />
+                </div>
+              ) : (
+                <Table
+                  dataSource={records.filter((r) => r.status === "Completed")}
+                  columns={columns}
+                  pagination={false}
+                  className="rounded-xl"
+                />
+              )}
+            </TabPane>
+          </Tabs>
+        </Card>
+      </div>
+    </div>
   );
 };
 

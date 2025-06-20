@@ -15,34 +15,31 @@ const Homepage = () => {
         <div className="flex-1 flex items-start justify-center bg-white">
           <div className="w-full max-w-xl px-6 md:px-12 py-10 flex flex-col items-start">
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 text-left leading-tight">
-              Welcome to
-              <br />
-              School Health
-              <br />
-              Management System
+              Hệ Thống Quản Lý
+              <br />Y Tế Trường Học
             </h1>
             <p className="text-gray-700 text-left md:text-lg mb-8 max-w-md">
-              Streamline school health management by organizing student medical
-              records, tracking health check-ups, and managing doctor and nurse
-              schedules. Seamlessly monitor student health status, vaccination
-              records, and chronic conditions.
+              Tối ưu hóa quản lý y tế trường học bằng cách tổ chức hồ sơ y tế
+              học sinh, theo dõi khám sức khỏe, và quản lý lịch trình của bác sĩ
+              và y tá. Giám sát liền mạch tình trạng sức khỏe học sinh, hồ sơ
+              tiêm chủng, và các bệnh mãn tính.
             </p>
             <div className="w-full flex justify-center mb-4">
               <Link to="/auth">
                 <button className="py-3 px-8 rounded-md bg-purple-600 hover:bg-purple-800 text-white font-bold text-lg transition-colors">
-                  LOGIN
+                  ĐĂNG NHẬP
                 </button>
               </Link>
             </div>
             <div className="w-full text-center mt-2">
               <span className="text-gray-700 text-base">
-                Don't have an account?{" "}
+                Chưa có tài khoản?{" "}
               </span>
               <Link
                 to="/auth"
                 className="text-purple-700 font-semibold hover:underline"
               >
-                Sign up
+                Đăng ký
               </Link>
             </div>
           </div>

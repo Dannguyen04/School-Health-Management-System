@@ -24,17 +24,17 @@ const MedicalInventory = () => {
 
   const columns = [
     {
-      title: "Item Name",
+      title: "Tên vật tư",
       dataIndex: "name",
       key: "name",
     },
     {
-      title: "Category",
+      title: "Danh mục",
       dataIndex: "category",
       key: "category",
     },
     {
-      title: "Quantity",
+      title: "Số lượng",
       dataIndex: "quantity",
       key: "quantity",
       render: (text, record) => (
@@ -44,18 +44,18 @@ const MedicalInventory = () => {
       ),
     },
     {
-      title: "Minimum Stock",
+      title: "Tồn kho tối thiểu",
       dataIndex: "minStock",
       key: "minStock",
       render: (text, record) => `${text} ${record.unit}`,
     },
     {
-      title: "Expiry Date",
+      title: "Hạn sử dụng",
       dataIndex: "expiryDate",
       key: "expiryDate",
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "actions",
       render: (_, record) => (
         <Space>
@@ -78,11 +78,11 @@ const MedicalInventory = () => {
 
   const handleDelete = (record) => {
     Modal.confirm({
-      title: "Are you sure you want to delete this item?",
-      content: `This will permanently delete ${record.name} from inventory.`,
-      okText: "Yes",
+      title: "Bạn có chắc chắn muốn xóa vật tư này?",
+      content: `Việc này sẽ xóa vĩnh viễn ${record.name} khỏi kho.`,
+      okText: "Có",
       okType: "danger",
-      cancelText: "No",
+      cancelText: "Không",
       onOk() {
         console.log("Delete item:", record);
       },
@@ -105,7 +105,7 @@ const MedicalInventory = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Medical Inventory</h1>
+        <h1 className="text-2xl font-bold">Quản lý kho y tế</h1>
         <Button
           type="primary"
           icon={<PlusOutlined />}
@@ -115,14 +115,14 @@ const MedicalInventory = () => {
             setIsModalVisible(true);
           }}
         >
-          Add Item
+          Thêm vật tư
         </Button>
       </div>
 
       {lowStockItems.length > 0 && (
         <Alert
-          message="Low Stock Alert"
-          description={`${lowStockItems.length} items are running low on stock`}
+          message="Cảnh báo tồn kho thấp"
+          description={`${lowStockItems.length} vật tư đang ở mức tồn kho thấp`}
           type="warning"
           showIcon
         />
@@ -133,7 +133,7 @@ const MedicalInventory = () => {
       </Card>
 
       <Modal
-        title={editingItem ? "Edit Item" : "Add New Item"}
+        title={editingItem ? "Sửa vật tư" : "Thêm vật tư mới"}
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => {
@@ -146,58 +146,62 @@ const MedicalInventory = () => {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="Item Name"
-            rules={[{ required: true, message: "Please enter item name" }]}
+            label="Tên vật tư"
+            rules={[{ required: true, message: "Vui lòng nhập tên vật tư" }]}
           >
             <Input />
           </Form.Item>
 
           <Form.Item
             name="category"
-            label="Category"
-            rules={[{ required: true, message: "Please select category" }]}
+            label="Danh mục"
+            rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
           >
             <Select>
-              <Select.Option value="Pain Relief">Pain Relief</Select.Option>
-              <Select.Option value="First Aid">First Aid</Select.Option>
-              <Select.Option value="Antibiotics">Antibiotics</Select.Option>
-              <Select.Option value="Supplies">Supplies</Select.Option>
+              <Select.Option value="Thuốc giảm đau">
+                Thuốc giảm đau
+              </Select.Option>
+              <Select.Option value="Sơ cứu">Sơ cứu</Select.Option>
+              <Select.Option value="Kháng sinh">Kháng sinh</Select.Option>
+              <Select.Option value="Vật tư y tế">Vật tư y tế</Select.Option>
             </Select>
           </Form.Item>
 
           <Form.Item
             name="quantity"
-            label="Quantity"
-            rules={[{ required: true, message: "Please enter quantity" }]}
+            label="Số lượng"
+            rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
           >
             <InputNumber min={0} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item
             name="unit"
-            label="Unit"
-            rules={[{ required: true, message: "Please enter unit" }]}
+            label="Đơn vị"
+            rules={[{ required: true, message: "Vui lòng chọn đơn vị" }]}
           >
             <Select>
-              <Select.Option value="tablets">Tablets</Select.Option>
-              <Select.Option value="bottles">Bottles</Select.Option>
-              <Select.Option value="pieces">Pieces</Select.Option>
-              <Select.Option value="boxes">Boxes</Select.Option>
+              <Select.Option value="viên">Viên</Select.Option>
+              <Select.Option value="chai">Chai</Select.Option>
+              <Select.Option value="cái">Cái</Select.Option>
+              <Select.Option value="hộp">Hộp</Select.Option>
             </Select>
           </Form.Item>
 
           <Form.Item
             name="minStock"
-            label="Minimum Stock"
-            rules={[{ required: true, message: "Please enter minimum stock" }]}
+            label="Tồn kho tối thiểu"
+            rules={[
+              { required: true, message: "Vui lòng nhập tồn kho tối thiểu" },
+            ]}
           >
             <InputNumber min={0} style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item
             name="expiryDate"
-            label="Expiry Date"
-            rules={[{ required: true, message: "Please select expiry date" }]}
+            label="Hạn sử dụng"
+            rules={[{ required: true, message: "Vui lòng chọn hạn sử dụng" }]}
           >
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>

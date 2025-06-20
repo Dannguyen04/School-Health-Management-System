@@ -16,18 +16,18 @@ const Dashboard = () => {
 
   const columns = [
     {
-      title: "Item Name",
+      title: "Tên vật tư",
       dataIndex: "name",
       key: "name",
     },
     {
-      title: "Current Stock",
+      title: "Tồn kho hiện tại",
       dataIndex: "quantity",
       key: "quantity",
       render: (text, record) => `${text} ${record.unit}`,
     },
     {
-      title: "Minimum Stock",
+      title: "Tồn kho tối thiểu",
       dataIndex: "minStock",
       key: "minStock",
       render: (text, record) => `${text} ${record.unit}`,
@@ -36,14 +36,14 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">Bảng điều khiển</h1>
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Total Students"
+              title="Tổng số học sinh"
               value={dashboardStats.totalStudents}
               prefix={<TeamOutlined />}
             />
@@ -52,7 +52,7 @@ const Dashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Vaccinated Students"
+              title="Học sinh đã tiêm chủng"
               value={dashboardStats.vaccinatedStudents}
               prefix={<MedicineBoxOutlined />}
             />
@@ -61,7 +61,7 @@ const Dashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Health Checkups"
+              title="Khám sức khỏe"
               value={dashboardStats.healthCheckups}
               prefix={<CalendarOutlined />}
             />
@@ -70,7 +70,7 @@ const Dashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Today's Appointments"
+              title="Lịch hẹn hôm nay"
               value={dashboardStats.todayAppointments}
               prefix={<CalendarOutlined />}
             />
@@ -81,8 +81,8 @@ const Dashboard = () => {
       {/* Alerts Section */}
       {lowStockItems.length > 0 && (
         <Alert
-          message="Low Stock Alert"
-          description={`${lowStockItems.length} items are running low on stock`}
+          message="Cảnh báo tồn kho thấp"
+          description={`${lowStockItems.length} vật tư đang ở mức tồn kho thấp`}
           type="warning"
           showIcon
           icon={<AlertOutlined />}
@@ -91,7 +91,7 @@ const Dashboard = () => {
 
       {/* Low Stock Items Table */}
       {lowStockItems.length > 0 && (
-        <Card title="Low Stock Items" className="mt-4">
+        <Card title="Vật tư tồn kho thấp" className="mt-4">
           <Table
             dataSource={lowStockItems}
             columns={columns}
@@ -102,9 +102,9 @@ const Dashboard = () => {
       )}
 
       {/* Pending Medications */}
-      <Card title="Pending Medications" className="mt-4">
+      <Card title="Thuốc đang chờ" className="mt-4">
         <Statistic
-          title="Students Requiring Medication"
+          title="Học sinh cần uống thuốc"
           value={dashboardStats.pendingMedications}
           prefix={<MedicineBoxOutlined />}
         />

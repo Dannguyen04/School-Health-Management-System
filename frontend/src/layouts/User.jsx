@@ -1,52 +1,55 @@
-import { Layout } from "antd";
-import { Outlet } from "react-router-dom";
-import AppHeader from "../components/user/Header";
-import AppSidebar from "../components/user/Sidebar";
-
-const { Sider, Content, Header } = Layout;
+import { useEffect } from "react";
+import { Outlet, useLocation } from "react-router-dom";
+import About from "../components/parent/About";
+import Blogs from "../components/parent/Blogs";
+import Doctors from "../components/parent/Doctors";
+import Footer from "../components/parent/Footer";
+import Home from "../components/parent/Home";
+import Navbar from "../components/parent/Navbar";
+import Services from "../components/parent/Services";
 
 const User = () => {
+  const location = useLocation();
+  const isLandingPage = location.pathname === "/user";
+
+  useEffect(() => {
+    if (isLandingPage && location.state?.scrollTo) {
+      setTimeout(() => {
+        document
+          .getElementById(location.state.scrollTo)
+          ?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [isLandingPage, location]);
+
   return (
-    <Layout style={{ minHeight: "100vh" }}>
-      <Header
-        style={{
-          padding: 0,
-          background: "#fff",
-          height: 64,
-          position: "fixed",
-          zIndex: 1,
-          width: "100%",
-        }}
-      >
-        <AppHeader />
-      </Header>
-      <Layout>
-        <Sider
-          width={240}
-          style={{
-            overflow: "auto",
-            height: "100vh",
-            position: "fixed",
-            left: 0,
-            top: 64,
-            bottom: 0,
-          }}
-        >
-          <AppSidebar />
-        </Sider>
-        <Content
-          style={{
-            marginLeft: 240, // Match sidebar width
-            marginTop: 64, // Match header height
-            padding: 24,
-            minHeight: "calc(100vh - 64px)", // Adjust for header height
-            background: "#f5f5f5",
-          }}
-        >
+    <div>
+      <Navbar />
+      <main>
+        {isLandingPage ? (
+          <>
+            <div id="home">
+              <Home />
+            </div>
+            <div id="about">
+              <About />
+            </div>
+            <div id="services">
+              <Services />
+            </div>
+            <div id="doctors">
+              <Doctors />
+            </div>
+            <div id="blog">
+              <Blogs />
+            </div>
+          </>
+        ) : (
           <Outlet />
-        </Content>
-      </Layout>
-    </Layout>
+        )}
+      </main>
+      <Footer />
+    </div>
   );
 };
 

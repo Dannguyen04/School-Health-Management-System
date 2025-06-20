@@ -55,12 +55,14 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
           error.response.data.error.includes("Invalid credentials") ||
           error.response.data.error.includes("Email and password are required")
         ) {
-          setErrors({ email: error.response.data.error });
+          setErrors({ email: "Thông tin đăng nhập không hợp lệ" });
         } else {
           setErrors({ general: error.response.data.error });
         }
       } else {
-        setErrors({ general: "An unexpected error occurred during login." });
+        setErrors({
+          general: "Đã xảy ra lỗi không mong muốn trong quá trình đăng nhập.",
+        });
       }
     }
   };
@@ -83,26 +85,26 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       if (error.response && error.response.data && error.response.data.error) {
         const backendError = error.response.data.error;
         if (backendError.includes("Password must be at least 8 characters")) {
-          setErrors({ password: backendError });
+          setErrors({ password: "Mật khẩu phải có ít nhất 8 ký tự" });
         } else if (
           backendError.includes("email") ||
           backendError.includes("User already exists")
         ) {
-          setErrors({ email: backendError });
+          setErrors({ email: "Email đã tồn tại trong hệ thống" });
         } else if (
           backendError.includes("Name, email and password are required")
         ) {
           setErrors({
-            name: backendError,
-            email: backendError,
-            password: backendError,
+            name: "Vui lòng nhập đầy đủ thông tin",
+            email: "Vui lòng nhập đầy đủ thông tin",
+            password: "Vui lòng nhập đầy đủ thông tin",
           });
         } else {
           setErrors({ general: backendError });
         }
       } else {
         setErrors({
-          general: "An unexpected error occurred during registration.",
+          general: "Đã xảy ra lỗi không mong muốn trong quá trình đăng ký.",
         });
       }
     }
@@ -128,14 +130,14 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         general:
           error.response?.data?.error ||
           error.message ||
-          "Google login failed. Please try again.",
+          "Đăng nhập bằng Google thất bại. Vui lòng thử lại.",
       });
     }
   };
 
   const handleGoogleError = (error) => {
     console.error("Google login error:", error);
-    setErrors({ general: "Google login failed. Please try again." });
+    setErrors({ general: "Đăng nhập bằng Google thất bại. Vui lòng thử lại." });
   };
 
   return (
@@ -172,10 +174,10 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
             </div>
           )}
           <Form onSubmit={handleLogin}>
-            <Title>Sign in</Title>
+            <Title>Đăng nhập</Title>
             <Input
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="Enter your email"
+              placeholder="Nhập email của bạn"
               required
             />
             {errors.email && (
@@ -196,7 +198,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
             )}
             <Input
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder="Nhập mật khẩu của bạn"
               type="password"
               required
             />
@@ -216,7 +218,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
                 {errors.password}
               </p>
             )}
-            <Paragraph>Forgot your password?</Paragraph>
+            <Paragraph>Quên mật khẩu?</Paragraph>
             <Button
               htmlType="submit"
               style={{
@@ -233,9 +235,9 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
                 textTransform: "uppercase",
               }}
             >
-              Sign in
+              Đăng nhập
             </Button>
-            <Paragraph>or use your account</Paragraph>
+            <Paragraph>hoặc sử dụng tài khoản của bạn</Paragraph>
             <GoogleOAuthProvider clientId="576568259129-taaehj1ll63so5u0eiqg6qaoria61d86.apps.googleusercontent.com">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
@@ -259,9 +261,9 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
             </div>
           )}
           <Form onSubmit={handleRegister}>
-            <Title>Create Account</Title>
+            <Title>Tạo tài khoản</Title>
             <Input
-              placeholder="Enter your name"
+              placeholder="Nhập tên của bạn"
               onChange={(e) => setName(e.target.value)}
               required
             />
@@ -282,7 +284,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
               </p>
             )}
             <Input
-              placeholder="Enter your email"
+              placeholder="Nhập email của bạn"
               onChange={(e) => setEmail(e.target.value)}
               required
             />
@@ -303,7 +305,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
               </p>
             )}
             <Input
-              placeholder="Enter your password"
+              placeholder="Nhập mật khẩu của bạn"
               type="password"
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -340,9 +342,9 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
                 textTransform: "uppercase",
               }}
             >
-              Sign Up
+              Đăng ký
             </Button>
-            <Paragraph>or use your email for registration</Paragraph>
+            <Paragraph>hoặc sử dụng email để đăng ký</Paragraph>
             <GoogleOAuthProvider clientId="576568259129-taaehj1ll63so5u0eiqg6qaoria61d86.apps.googleusercontent.com">
               <GoogleLogin
                 onSuccess={handleGoogleSuccess}
@@ -356,17 +358,17 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         <OverlayContainer className="overlay-container">
           <Overlay className="overlay">
             <OverlayPanel className="overlay-panel">
-              <Title>{signIn ? "Hello, Friend!" : "Welcome Back!"}</Title>
+              <Title>{signIn ? "Xin chào!" : "Chào mừng trở lại!"}</Title>
               <Paragraph>
                 {signIn ? (
                   <>
-                    Enter your personal details and start <br /> your journey
-                    with us
+                    Nhập thông tin cá nhân của bạn và bắt đầu <br /> hành trình
+                    với chúng tôi
                   </>
                 ) : (
                   <>
-                    To keep connected with us, please log in <br /> with your
-                    personal info
+                    Để kết nối với chúng tôi, vui lòng đăng nhập <br /> bằng
+                    thông tin cá nhân của bạn
                   </>
                 )}
               </Paragraph>
@@ -377,7 +379,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
                 }}
                 className="!mt-20"
               >
-                {signIn ? "Sign Up" : "Sign In"}
+                {signIn ? "Đăng ký" : "Đăng nhập"}
               </GhostButton>
             </OverlayPanel>
           </Overlay>

@@ -2,7 +2,9 @@ import {
   AlertOutlined,
   CalendarOutlined,
   CheckCircleOutlined,
+  FileTextOutlined,
   PlusOutlined,
+  TeamOutlined,
   UserOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
@@ -10,7 +12,79 @@ import { Button, Card, Col, Row, Statistic, Table } from "antd";
 import React from "react";
 
 const Dashboard = () => {
-  // Mock data for demonstration
+  // Mock data
+  const dashboardData = {
+    totalStudents: 1200,
+    vaccinatedStudents: 980,
+    healthCheckups: 850,
+    incidents: 5,
+    gradeStats: [
+      {
+        grade: "Lớp 1",
+        totalStudents: 200,
+        vaccinated: 180,
+        healthCheckups: 190,
+        medications: 15,
+      },
+      {
+        grade: "Lớp 2",
+        totalStudents: 220,
+        vaccinated: 200,
+        healthCheckups: 210,
+        medications: 18,
+      },
+      {
+        grade: "Lớp 3",
+        totalStudents: 210,
+        vaccinated: 190,
+        healthCheckups: 200,
+        medications: 12,
+      },
+      {
+        grade: "Lớp 4",
+        totalStudents: 230,
+        vaccinated: 210,
+        healthCheckups: 220,
+        medications: 20,
+      },
+      {
+        grade: "Lớp 5",
+        totalStudents: 240,
+        vaccinated: 220,
+        healthCheckups: 230,
+        medications: 25,
+      },
+    ],
+  };
+
+  const columns = [
+    {
+      title: "Lớp",
+      dataIndex: "grade",
+      key: "grade",
+    },
+    {
+      title: "Tổng số học sinh",
+      dataIndex: "totalStudents",
+      key: "totalStudents",
+    },
+    {
+      title: "Đã tiêm chủng",
+      dataIndex: "vaccinated",
+      key: "vaccinated",
+    },
+    {
+      title: "Khám sức khỏe",
+      dataIndex: "healthCheckups",
+      key: "healthCheckups",
+    },
+    {
+      title: "Thuốc",
+      dataIndex: "medications",
+      key: "medications",
+    },
+  ];
+
   const healthStats = [
     { title: "Total Students", value: 1200, icon: <UserOutlined /> },
     { title: "Vaccinated", value: 980, icon: <CheckCircleOutlined /> },
@@ -75,6 +149,90 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Bảng điều khiển</h1>
+
+      <Row gutter={16}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Tổng số học sinh"
+              value={dashboardData.totalStudents}
+              prefix={<TeamOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Đã tiêm chủng"
+              value={dashboardData.vaccinatedStudents}
+              prefix={<CheckCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Khám sức khỏe"
+              value={dashboardData.healthCheckups}
+              prefix={<FileTextOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Sự cố"
+              value={dashboardData.incidents}
+              prefix={<AlertOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card title="Thống kê theo lớp">
+        <Table
+          dataSource={dashboardData.gradeStats}
+          columns={columns}
+          rowKey="grade"
+          pagination={false}
+        />
+      </Card>
+
+      <Row gutter={16}>
+        <Col xs={24} lg={12}>
+          <Card title="Tiêm chủng tháng">
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              Biểu đồ tiêm chủng tháng
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card title="Khám sức khỏe tháng">
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              Biểu đồ khám sức khỏe tháng
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
+      <Row gutter={16}>
+        <Col xs={24} lg={12}>
+          <Card title="Thuốc tháng">
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              Biểu đồ thuốc tháng
+            </div>
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card title="Sự cố tháng">
+            <div className="h-64 flex items-center justify-center text-gray-500">
+              Biểu đồ sự cố tháng
+            </div>
+          </Card>
+        </Col>
+      </Row>
+
       {/* Health Status Overview */}
       <Row gutter={[16, 16]}>
         {healthStats.map((stat, index) => (

@@ -21,27 +21,27 @@ const Reports = () => {
 
   const columns = [
     {
-      title: "Grade",
+      title: "Lớp",
       dataIndex: "grade",
       key: "grade",
     },
     {
-      title: "Total Students",
+      title: "Tổng số học sinh",
       dataIndex: "totalStudents",
       key: "totalStudents",
     },
     {
-      title: "Vaccinated",
+      title: "Đã tiêm chủng",
       dataIndex: "vaccinated",
       key: "vaccinated",
     },
     {
-      title: "Health Checkups",
+      title: "Khám sức khỏe",
       dataIndex: "healthCheckups",
       key: "healthCheckups",
     },
     {
-      title: "Medications",
+      title: "Thuốc",
       dataIndex: "medications",
       key: "medications",
     },
@@ -58,19 +58,19 @@ const Reports = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Reports & Statistics</h1>
+        <h1 className="text-2xl font-bold">Báo cáo & Thống kê</h1>
         <Space>
           <Button
             icon={<DownloadOutlined />}
             onClick={() => handleExport("pdf")}
           >
-            Export PDF
+            Xuất PDF
           </Button>
           <Button
             icon={<DownloadOutlined />}
             onClick={() => handleExport("excel")}
           >
-            Export Excel
+            Xuất Excel
           </Button>
         </Space>
       </div>
@@ -79,7 +79,7 @@ const Reports = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Monthly Vaccinations"
+              title="Tiêm chủng tháng"
               value={reports.monthlyStats.vaccinations}
             />
           </Card>
@@ -87,7 +87,7 @@ const Reports = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Monthly Health Checkups"
+              title="Khám sức khỏe tháng"
               value={reports.monthlyStats.healthCheckups}
             />
           </Card>
@@ -95,7 +95,7 @@ const Reports = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Monthly Medications"
+              title="Thuốc tháng"
               value={reports.monthlyStats.medications}
             />
           </Card>
@@ -103,7 +103,7 @@ const Reports = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Monthly Incidents"
+              title="Sự cố tháng"
               value={reports.monthlyStats.incidents}
             />
           </Card>
@@ -114,29 +114,29 @@ const Reports = () => {
         <Form form={searchForm} onFinish={handleSearch} layout="vertical">
           <Row gutter={16}>
             <Col xs={24} sm={8}>
-              <Form.Item name="dateRange" label="Date Range">
+              <Form.Item name="dateRange" label="Khoảng thời gian">
                 <RangePicker style={{ width: "100%" }} />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="grade" label="Grade">
-                <Select placeholder="Select grade">
-                  <Select.Option value="all">All Grades</Select.Option>
-                  <Select.Option value="Grade 1">Grade 1</Select.Option>
-                  <Select.Option value="Grade 2">Grade 2</Select.Option>
-                  <Select.Option value="Grade 3">Grade 3</Select.Option>
-                  <Select.Option value="Grade 4">Grade 4</Select.Option>
-                  <Select.Option value="Grade 5">Grade 5</Select.Option>
+              <Form.Item name="grade" label="Lớp">
+                <Select placeholder="Chọn lớp">
+                  <Select.Option value="all">Tất cả các lớp</Select.Option>
+                  <Select.Option value="Lớp 1">Lớp 1</Select.Option>
+                  <Select.Option value="Lớp 2">Lớp 2</Select.Option>
+                  <Select.Option value="Lớp 3">Lớp 3</Select.Option>
+                  <Select.Option value="Lớp 4">Lớp 4</Select.Option>
+                  <Select.Option value="Lớp 5">Lớp 5</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="reportType" label="Report Type">
-                <Select placeholder="Select report type">
-                  <Select.Option value="all">All Reports</Select.Option>
-                  <Select.Option value="vaccination">Vaccination</Select.Option>
-                  <Select.Option value="health">Health Checkup</Select.Option>
-                  <Select.Option value="medication">Medication</Select.Option>
+              <Form.Item name="reportType" label="Loại báo cáo">
+                <Select placeholder="Chọn loại báo cáo">
+                  <Select.Option value="all">Tất cả báo cáo</Select.Option>
+                  <Select.Option value="vaccination">Tiêm chủng</Select.Option>
+                  <Select.Option value="health">Khám sức khỏe</Select.Option>
+                  <Select.Option value="medication">Thuốc</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -148,14 +148,14 @@ const Reports = () => {
                 icon={<SearchOutlined />}
                 htmlType="submit"
               >
-                Generate Report
+                Tạo báo cáo
               </Button>
             </Col>
           </Row>
         </Form>
       </Card>
 
-      <Card title="Class-wise Statistics">
+      <Card title="Thống kê theo lớp">
         <Table
           dataSource={reports.classStats}
           columns={columns}

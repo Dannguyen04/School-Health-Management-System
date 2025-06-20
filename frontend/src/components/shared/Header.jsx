@@ -51,13 +51,13 @@ const Headers = () => {
     {
       key: "profile",
       icon: <UserOutlined />,
-      label: "Profile",
+      label: "Hồ sơ",
       onClick: handleProfileClick,
     },
     {
       key: "logout",
       icon: <LogoutOutlined />,
-      label: "Logout",
+      label: "Đăng xuất",
       onClick: handleLogout,
     },
   ];
@@ -84,7 +84,7 @@ const Headers = () => {
         />
         <Input
           prefix={<SearchOutlined />}
-          placeholder="Search..."
+          placeholder="Tìm kiếm..."
           style={{ width: 300 }}
         />
       </div>

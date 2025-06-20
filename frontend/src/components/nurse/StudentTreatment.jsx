@@ -23,52 +23,52 @@ const StudentTreatment = () => {
 
   const columns = [
     {
-      title: "Student ID",
+      title: "Mã học sinh",
       dataIndex: "studentId",
       key: "studentId",
     },
     {
-      title: "Student Name",
+      title: "Tên học sinh",
       dataIndex: "studentName",
       key: "studentName",
     },
     {
-      title: "Grade",
+      title: "Lớp",
       dataIndex: "grade",
       key: "grade",
     },
     {
-      title: "Medication",
+      title: "Thuốc",
       dataIndex: "medication",
       key: "medication",
     },
     {
-      title: "Dosage",
+      title: "Liều lượng",
       dataIndex: "dosage",
       key: "dosage",
     },
     {
-      title: "Frequency",
+      title: "Tần suất",
       dataIndex: "frequency",
       key: "frequency",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <Tag color={status === "active" ? "green" : "red"}>
-          {status === "active" ? "Active" : "Completed"}
+          {status === "active" ? "Đang điều trị" : "Đã hoàn thành"}
         </Tag>
       ),
     },
     {
-      title: "Last Given",
+      title: "Lần uống cuối",
       dataIndex: "lastGiven",
       key: "lastGiven",
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "actions",
       render: (_, record) => (
         <Space>
@@ -77,9 +77,9 @@ const StudentTreatment = () => {
             icon={<CheckOutlined />}
             onClick={() => handleGiveMedication(record)}
           >
-            Give
+            Cho uống
           </Button>
-          <Button onClick={() => handleViewDetails(record)}>Details</Button>
+          <Button onClick={() => handleViewDetails(record)}>Chi tiết</Button>
         </Space>
       ),
     },
@@ -92,29 +92,29 @@ const StudentTreatment = () => {
 
   const handleViewDetails = (record) => {
     Modal.info({
-      title: "Treatment Details",
+      title: "Chi tiết điều trị",
       content: (
         <div className="space-y-4">
           <p>
-            <strong>Student:</strong> {record.studentName}
+            <strong>Học sinh:</strong> {record.studentName}
           </p>
           <p>
-            <strong>Medication:</strong> {record.medication}
+            <strong>Thuốc:</strong> {record.medication}
           </p>
           <p>
-            <strong>Dosage:</strong> {record.dosage}
+            <strong>Liều lượng:</strong> {record.dosage}
           </p>
           <p>
-            <strong>Frequency:</strong> {record.frequency}
+            <strong>Tần suất:</strong> {record.frequency}
           </p>
           <p>
-            <strong>Start Date:</strong> {record.startDate}
+            <strong>Ngày bắt đầu:</strong> {record.startDate}
           </p>
           <p>
-            <strong>End Date:</strong> {record.endDate}
+            <strong>Ngày kết thúc:</strong> {record.endDate}
           </p>
           <p>
-            <strong>Last Given:</strong> {record.lastGiven}
+            <strong>Lần uống cuối:</strong> {record.lastGiven}
           </p>
         </div>
       ),
@@ -133,7 +133,7 @@ const StudentTreatment = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Student Treatment</h1>
+        <h1 className="text-2xl font-bold">Điều trị học sinh</h1>
         <Button
           type="primary"
           icon={<ClockCircleOutlined />}
@@ -141,7 +141,7 @@ const StudentTreatment = () => {
             // Handle view history
           }}
         >
-          View History
+          Xem lịch sử
         </Button>
       </div>
 
@@ -150,7 +150,7 @@ const StudentTreatment = () => {
       </Card>
 
       <Modal
-        title="Give Medication"
+        title="Cho uống thuốc"
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => {
@@ -165,24 +165,27 @@ const StudentTreatment = () => {
             name="given"
             valuePropName="checked"
             rules={[
-              { required: true, message: "Please confirm medication given" },
+              {
+                required: true,
+                message: "Vui lòng xác nhận đã cho học sinh uống thuốc",
+              },
             ]}
           >
-            <Checkbox>Medication given to student</Checkbox>
+            <Checkbox>Đã cho học sinh uống thuốc</Checkbox>
           </Form.Item>
 
-          <Form.Item name="notes" label="Notes">
-            <TextArea
-              rows={4}
-              placeholder="Any additional notes or observations"
-            />
+          <Form.Item name="notes" label="Ghi chú">
+            <TextArea rows={4} placeholder="Ghi chú hoặc quan sát thêm" />
           </Form.Item>
 
           <Form.Item
             name="nextDose"
-            label="Next Dose Time"
+            label="Thời gian uống tiếp theo"
             rules={[
-              { required: true, message: "Please select next dose time" },
+              {
+                required: true,
+                message: "Vui lòng chọn thời gian uống tiếp theo",
+              },
             ]}
           >
             <DatePicker showTime style={{ width: "100%" }} />

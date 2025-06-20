@@ -30,52 +30,52 @@ const ConfirmedMedicines = () => {
 
   const columns = [
     {
-      title: "Student ID",
+      title: "Mã học sinh",
       dataIndex: "studentId",
       key: "studentId",
     },
     {
-      title: "Student Name",
+      title: "Tên học sinh",
       dataIndex: "studentName",
       key: "studentName",
     },
     {
-      title: "Grade",
+      title: "Lớp",
       dataIndex: "grade",
       key: "grade",
     },
     {
-      title: "Medicine",
+      title: "Thuốc",
       dataIndex: "medicineName",
       key: "medicineName",
     },
     {
-      title: "Dosage",
+      title: "Liều lượng",
       dataIndex: "dosage",
       key: "dosage",
     },
     {
-      title: "Frequency",
+      title: "Tần suất",
       dataIndex: "frequency",
       key: "frequency",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <Tag color={status === "active" ? "green" : "red"}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
+          {status === "active" ? "Đang điều trị" : "Đã hoàn thành"}
         </Tag>
       ),
     },
     {
-      title: "Last Confirmed",
+      title: "Lần xác nhận cuối",
       dataIndex: "lastConfirmed",
       key: "lastConfirmed",
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "actions",
       render: (_, record) => (
         <Space>
@@ -84,13 +84,13 @@ const ConfirmedMedicines = () => {
             icon={<CheckOutlined />}
             onClick={() => handleConfirm(record)}
           >
-            Confirm
+            Xác nhận
           </Button>
           <Button
             icon={<FileTextOutlined />}
             onClick={() => handleViewDetails(record)}
           >
-            Details
+            Chi tiết
           </Button>
         </Space>
       ),
@@ -104,32 +104,32 @@ const ConfirmedMedicines = () => {
 
   const handleViewDetails = (record) => {
     Modal.info({
-      title: "Medicine Details",
+      title: "Chi tiết thuốc",
       content: (
         <div className="space-y-4">
           <p>
-            <strong>Student:</strong> {record.studentName}
+            <strong>Học sinh:</strong> {record.studentName}
           </p>
           <p>
-            <strong>Medicine:</strong> {record.medicineName}
+            <strong>Thuốc:</strong> {record.medicineName}
           </p>
           <p>
-            <strong>Dosage:</strong> {record.dosage}
+            <strong>Liều lượng:</strong> {record.dosage}
           </p>
           <p>
-            <strong>Frequency:</strong> {record.frequency}
+            <strong>Tần suất:</strong> {record.frequency}
           </p>
           <p>
-            <strong>Start Date:</strong> {record.startDate}
+            <strong>Ngày bắt đầu:</strong> {record.startDate}
           </p>
           <p>
-            <strong>End Date:</strong> {record.endDate}
+            <strong>Ngày kết thúc:</strong> {record.endDate}
           </p>
           <p>
-            <strong>Prescribed By:</strong> {record.prescribedBy}
+            <strong>Kê bởi:</strong> {record.prescribedBy}
           </p>
           <p>
-            <strong>Last Confirmed:</strong> {record.lastConfirmed}
+            <strong>Lần xác nhận cuối:</strong> {record.lastConfirmed}
           </p>
         </div>
       ),
@@ -152,33 +152,33 @@ const ConfirmedMedicines = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Confirmed Medicines</h1>
+        <h1 className="text-2xl font-bold">Thuốc đã xác nhận</h1>
       </div>
 
       <Card>
         <Form form={searchForm} onFinish={handleSearch} layout="vertical">
           <Row gutter={16}>
             <Col xs={24} sm={8}>
-              <Form.Item name="studentId" label="Student ID">
-                <Input placeholder="Enter student ID" />
+              <Form.Item name="studentId" label="Mã học sinh">
+                <Input placeholder="Nhập mã học sinh" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="grade" label="Grade">
-                <Select placeholder="Select grade">
-                  <Select.Option value="Grade 1">Grade 1</Select.Option>
-                  <Select.Option value="Grade 2">Grade 2</Select.Option>
-                  <Select.Option value="Grade 3">Grade 3</Select.Option>
-                  <Select.Option value="Grade 4">Grade 4</Select.Option>
-                  <Select.Option value="Grade 5">Grade 5</Select.Option>
+              <Form.Item name="grade" label="Lớp">
+                <Select placeholder="Chọn lớp">
+                  <Select.Option value="Lớp 1">Lớp 1</Select.Option>
+                  <Select.Option value="Lớp 2">Lớp 2</Select.Option>
+                  <Select.Option value="Lớp 3">Lớp 3</Select.Option>
+                  <Select.Option value="Lớp 4">Lớp 4</Select.Option>
+                  <Select.Option value="Lớp 5">Lớp 5</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="status" label="Status">
-                <Select placeholder="Select status">
-                  <Select.Option value="active">Active</Select.Option>
-                  <Select.Option value="completed">Completed</Select.Option>
+              <Form.Item name="status" label="Trạng thái">
+                <Select placeholder="Chọn trạng thái">
+                  <Select.Option value="active">Đang điều trị</Select.Option>
+                  <Select.Option value="completed">Đã hoàn thành</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -190,7 +190,7 @@ const ConfirmedMedicines = () => {
                 icon={<SearchOutlined />}
                 htmlType="submit"
               >
-                Search
+                Tìm kiếm
               </Button>
             </Col>
           </Row>
@@ -202,7 +202,7 @@ const ConfirmedMedicines = () => {
       </Card>
 
       <Modal
-        title="Confirm Medication"
+        title="Xác nhận thuốc"
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => {
@@ -215,19 +215,14 @@ const ConfirmedMedicines = () => {
         <Form form={confirmationForm} layout="vertical">
           <Form.Item
             name="confirmationDate"
-            label="Confirmation Date"
-            rules={[
-              { required: true, message: "Please select confirmation date" },
-            ]}
+            label="Ngày xác nhận"
+            rules={[{ required: true, message: "Vui lòng chọn ngày xác nhận" }]}
           >
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
 
-          <Form.Item name="notes" label="Notes">
-            <TextArea
-              rows={4}
-              placeholder="Any additional notes or observations"
-            />
+          <Form.Item name="notes" label="Ghi chú">
+            <TextArea rows={4} placeholder="Ghi chú hoặc quan sát thêm" />
           </Form.Item>
         </Form>
       </Modal>

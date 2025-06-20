@@ -21,22 +21,22 @@ const StudentManagement = () => {
 
   const columns = [
     {
-      title: "Student ID",
+      title: "Mã học sinh",
       dataIndex: "id",
       key: "id",
     },
     {
-      title: "Full Name",
+      title: "Họ và tên",
       dataIndex: "name",
       key: "name",
     },
     {
-      title: "Class",
+      title: "Lớp",
       dataIndex: "class",
       key: "class",
     },
     {
-      title: "Allergies",
+      title: "Dị ứng",
       dataIndex: "allergies",
       key: "allergies",
       render: (allergies) => (
@@ -50,7 +50,7 @@ const StudentManagement = () => {
       ),
     },
     {
-      title: "Chronic Diseases",
+      title: "Bệnh mãn tính",
       dataIndex: "chronicDiseases",
       key: "chronicDiseases",
       render: (diseases) => (
@@ -64,12 +64,12 @@ const StudentManagement = () => {
       ),
     },
     {
-      title: "Vision",
+      title: "Thị lực",
       dataIndex: "vision",
       key: "vision",
     },
     {
-      title: "Hearing",
+      title: "Thính lực",
       dataIndex: "hearing",
       key: "hearing",
     },
@@ -79,7 +79,7 @@ const StudentManagement = () => {
       key: "treatmentHistory",
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "action",
       render: (_, record) => (
         <Space size="middle">
@@ -88,14 +88,14 @@ const StudentManagement = () => {
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
           >
-            Edit
+            Sửa
           </Button>
           <Button
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record)}
           >
-            Delete
+            Xóa
           </Button>
         </Space>
       ),
@@ -106,12 +106,12 @@ const StudentManagement = () => {
     {
       key: "1",
       id: "HS001",
-      name: "Nguyen Van A",
+      name: "Nguyễn Văn A",
       class: "10A1",
-      allergies: ["Penicillin", "Peanut"],
-      chronicDiseases: ["Asthma"],
+      allergies: ["Penicillin", "Đậu phộng"],
+      chronicDiseases: ["Hen suyễn"],
       vision: "10/10",
-      hearing: "Normal",
+      hearing: "Bình thường",
       treatmentHistory: "Đã điều trị hen năm 2022",
     },
     // Add more sample data as needed
@@ -144,10 +144,10 @@ const StudentManagement = () => {
   return (
     <div>
       <Card
-        title="Student Records Management"
+        title="Quản lý hồ sơ học sinh"
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Add Student
+            Thêm học sinh
           </Button>
         }
       >
@@ -155,7 +155,7 @@ const StudentManagement = () => {
       </Card>
 
       <Modal
-        title={editingRecord ? "Edit Student Information" : "Add New Student"}
+        title={editingRecord ? "Sửa thông tin học sinh" : "Thêm học sinh mới"}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={() => setIsModalVisible(false)}
@@ -164,24 +164,24 @@ const StudentManagement = () => {
         <Form form={form} layout="vertical">
           <Form.Item
             name="id"
-            label="Student ID"
-            rules={[{ required: true, message: "Please enter student ID" }]}
+            label="Mã học sinh"
+            rules={[{ required: true, message: "Vui lòng nhập mã học sinh" }]}
           >
             <Input />
           </Form.Item>
 
           <Form.Item
             name="name"
-            label="Full Name"
-            rules={[{ required: true, message: "Please enter full name" }]}
+            label="Họ và tên"
+            rules={[{ required: true, message: "Vui lòng nhập họ và tên" }]}
           >
             <Input />
           </Form.Item>
 
           <Form.Item
             name="class"
-            label="Class"
-            rules={[{ required: true, message: "Please select class" }]}
+            label="Lớp"
+            rules={[{ required: true, message: "Vui lòng chọn lớp" }]}
           >
             <Select>
               <Option value="10A1">10A1</Option>
@@ -191,31 +191,31 @@ const StudentManagement = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item name="allergies" label="Allergies">
-            <Select mode="tags" placeholder="Enter allergies">
+          <Form.Item name="allergies" label="Dị ứng">
+            <Select mode="tags" placeholder="Nhập các dị ứng">
               <Option value="Penicillin">Penicillin</Option>
-              <Option value="Peanut">Peanut</Option>
-              <Option value="Seafood">Seafood</Option>
+              <Option value="Đậu phộng">Đậu phộng</Option>
+              <Option value="Hải sản">Hải sản</Option>
             </Select>
           </Form.Item>
 
-          <Form.Item name="chronicDiseases" label="Chronic Diseases">
-            <Select mode="tags" placeholder="Enter chronic diseases">
-              <Option value="Asthma">Asthma</Option>
-              <Option value="Diabetes">Diabetes</Option>
-              <Option value="Hypertension">Hypertension</Option>
+          <Form.Item name="chronicDiseases" label="Bệnh mãn tính">
+            <Select mode="tags" placeholder="Nhập các bệnh mãn tính">
+              <Option value="Hen suyễn">Hen suyễn</Option>
+              <Option value="Tiểu đường">Tiểu đường</Option>
+              <Option value="Cao huyết áp">Cao huyết áp</Option>
             </Select>
           </Form.Item>
 
-          <Form.Item name="vision" label="Vision">
+          <Form.Item name="vision" label="Thị lực">
             <Input />
           </Form.Item>
 
-          <Form.Item name="hearing" label="Hearing">
+          <Form.Item name="hearing" label="Thính lực">
             <Select>
-              <Option value="Normal">Normal</Option>
-              <Option value="Mild hearing loss">Mild hearing loss</Option>
-              <Option value="Severe hearing loss">Severe hearing loss</Option>
+              <Option value="Bình thường">Bình thường</Option>
+              <Option value="Giảm thính lực nhẹ">Giảm thính lực nhẹ</Option>
+              <Option value="Giảm thính lực nặng">Giảm thính lực nặng</Option>
             </Select>
           </Form.Item>
 

@@ -1,11 +1,18 @@
-import { NotificationOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import {
   Button,
   Card,
+  Col,
   DatePicker,
   Form,
   Input,
   Modal,
+  Row,
   Select,
   Space,
   Table,
@@ -13,193 +20,304 @@ import {
 } from "antd";
 import React, { useState } from "react";
 
-const { Option } = Select;
 const { TextArea } = Input;
 
 const HealthCheckupCampaigns = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [form] = Form.useForm();
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [searchForm] = Form.useForm();
+  const [campaignForm] = Form.useForm();
 
-  // Mock data for demonstration
-  const campaigns = [
+  // Mock data
+  const healthCheckupCampaigns = [
     {
       id: 1,
-      name: "Annual Physical Exam 2024",
-      startDate: "2024-04-01",
-      endDate: "2024-04-30",
-      targetGroup: "All Students",
-      checkupType: "Comprehensive",
-      status: "Upcoming",
-      participants: 500,
+      name: "Khám sức khỏe đầu năm học 2024",
+      type: "Khám tổng quát",
+      startDate: "2024-03-01",
+      endDate: "2024-03-15",
+      status: "completed",
+      studentCount: 1200,
+      description:
+        "Khám sức khỏe tổng quát cho toàn bộ học sinh đầu năm học mới",
     },
     {
       id: 2,
-      name: "Dental Checkup",
-      startDate: "2024-03-15",
-      endDate: "2024-03-20",
-      targetGroup: "Class 1-5",
-      checkupType: "Dental",
-      status: "Ongoing",
-      participants: 200,
+      name: "Khám mắt định kỳ",
+      type: "Khám mắt",
+      startDate: "2024-03-20",
+      endDate: "2024-03-25",
+      status: "in_progress",
+      studentCount: 800,
+      description: "Kiểm tra thị lực và các vấn đề về mắt cho học sinh",
+    },
+    {
+      id: 3,
+      name: "Khám răng miệng",
+      type: "Khám răng",
+      startDate: "2024-04-01",
+      endDate: "2024-04-05",
+      status: "pending",
+      studentCount: 1000,
+      description:
+        "Kiểm tra sức khỏe răng miệng và hướng dẫn vệ sinh răng miệng",
+    },
+    {
+      id: 4,
+      name: "Khám sức khỏe học sinh lớp 1",
+      type: "Khám tổng quát",
+      startDate: "2024-04-10",
+      endDate: "2024-04-12",
+      status: "pending",
+      studentCount: 200,
+      description: "Khám sức khỏe chi tiết cho học sinh lớp 1",
+    },
+    {
+      id: 5,
+      name: "Khám mắt cho học sinh cận thị",
+      type: "Khám mắt",
+      startDate: "2024-04-15",
+      endDate: "2024-04-16",
+      status: "pending",
+      studentCount: 150,
+      description:
+        "Kiểm tra và cập nhật độ cận cho học sinh đã được chẩn đoán cận thị",
     },
   ];
 
   const columns = [
     {
-      title: "Campaign Name",
+      title: "Tên chiến dịch",
       dataIndex: "name",
       key: "name",
     },
     {
-      title: "Date Range",
-      key: "dateRange",
-      render: (_, record) => (
-        <span>
-          {record.startDate} - {record.endDate}
-        </span>
-      ),
+      title: "Loại khám",
+      dataIndex: "type",
+      key: "type",
     },
     {
-      title: "Target Group",
-      dataIndex: "targetGroup",
-      key: "targetGroup",
+      title: "Ngày bắt đầu",
+      dataIndex: "startDate",
+      key: "startDate",
     },
     {
-      title: "Checkup Type",
-      dataIndex: "checkupType",
-      key: "checkupType",
+      title: "Ngày kết thúc",
+      dataIndex: "endDate",
+      key: "endDate",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <Tag
           color={
-            status === "Upcoming"
-              ? "blue"
-              : status === "Ongoing"
+            status === "completed"
               ? "green"
-              : "default"
+              : status === "in_progress"
+              ? "blue"
+              : "orange"
           }
         >
-          {status}
+          {status === "completed"
+            ? "Hoàn thành"
+            : status === "in_progress"
+            ? "Đang diễn ra"
+            : "Chưa bắt đầu"}
         </Tag>
       ),
     },
     {
-      title: "Participants",
-      dataIndex: "participants",
-      key: "participants",
+      title: "Số học sinh",
+      dataIndex: "studentCount",
+      key: "studentCount",
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button type="link">View Details</Button>
-          <Button type="link">Edit</Button>
+          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
+            Sửa
+          </Button>
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDelete(record)}
+          >
+            Xóa
+          </Button>
         </Space>
       ),
     },
   ];
 
-  const handleCreateCampaign = (values) => {
-    console.log("Form values:", values);
-    setIsModalVisible(false);
-    form.resetFields();
+  const handleEdit = (record) => {
+    setSelectedCampaign(record);
+    campaignForm.setFieldsValue(record);
+    setIsModalVisible(true);
+  };
+
+  const handleDelete = (record) => {
+    Modal.confirm({
+      title: "Xóa chiến dịch",
+      content: `Bạn có chắc chắn muốn xóa chiến dịch ${record.name}?`,
+      okText: "Xóa",
+      okType: "danger",
+      cancelText: "Hủy",
+      onOk() {
+        console.log("Delete campaign:", record);
+      },
+    });
+  };
+
+  const handleSearch = (values) => {
+    console.log("Search values:", values);
+  };
+
+  const handleSubmit = () => {
+    campaignForm.validateFields().then((values) => {
+      console.log("Campaign data:", values);
+      setIsModalVisible(false);
+      campaignForm.resetFields();
+      setSelectedCampaign(null);
+    });
   };
 
   return (
-    <div className="space-y-4">
-      <Card
-        title="Health Checkup Campaigns"
-        extra={
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setIsModalVisible(true)}
-          >
-            Create New Campaign
-          </Button>
-        }
-      >
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Chiến dịch khám sức khỏe</h1>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setIsModalVisible(true)}
+        >
+          Thêm chiến dịch
+        </Button>
+      </div>
+
+      <Card>
+        <Form form={searchForm} onFinish={handleSearch} layout="vertical">
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item name="name" label="Tên chiến dịch">
+                <Input placeholder="Nhập tên chiến dịch" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="type" label="Loại khám">
+                <Select placeholder="Chọn loại khám">
+                  <Select.Option value="Khám tổng quát">
+                    Khám tổng quát
+                  </Select.Option>
+                  <Select.Option value="Khám mắt">Khám mắt</Select.Option>
+                  <Select.Option value="Khám răng">Khám răng</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="status" label="Trạng thái">
+                <Select placeholder="Chọn trạng thái">
+                  <Select.Option value="completed">Hoàn thành</Select.Option>
+                  <Select.Option value="in_progress">
+                    Đang diễn ra
+                  </Select.Option>
+                  <Select.Option value="pending">Chưa bắt đầu</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24} className="text-right">
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                htmlType="submit"
+              >
+                Tìm kiếm
+              </Button>
+            </Col>
+          </Row>
+        </Form>
+      </Card>
+
+      <Card>
         <Table
+          dataSource={healthCheckupCampaigns}
           columns={columns}
-          dataSource={campaigns}
           rowKey="id"
-          pagination={{ pageSize: 10 }}
         />
       </Card>
 
       <Modal
-        title="Create New Health Checkup Campaign"
+        title={
+          selectedCampaign
+            ? "Sửa chiến dịch khám sức khỏe"
+            : "Thêm chiến dịch khám sức khỏe"
+        }
         open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
+        onOk={handleSubmit}
+        onCancel={() => {
+          setIsModalVisible(false);
+          campaignForm.resetFields();
+          setSelectedCampaign(null);
+        }}
         width={600}
       >
-        <Form form={form} layout="vertical" onFinish={handleCreateCampaign}>
+        <Form form={campaignForm} layout="vertical">
           <Form.Item
             name="name"
-            label="Campaign Name"
-            rules={[{ required: true, message: "Please enter campaign name" }]}
+            label="Tên chiến dịch"
+            rules={[
+              { required: true, message: "Vui lòng nhập tên chiến dịch" },
+            ]}
           >
-            <Input placeholder="Enter campaign name" />
+            <Input />
           </Form.Item>
 
           <Form.Item
-            name="dateRange"
-            label="Campaign Period"
-            rules={[{ required: true, message: "Please select date range" }]}
+            name="type"
+            label="Loại khám"
+            rules={[{ required: true, message: "Vui lòng chọn loại khám" }]}
           >
-            <DatePicker.RangePicker style={{ width: "100%" }} />
-          </Form.Item>
-
-          <Form.Item
-            name="targetGroup"
-            label="Target Group"
-            rules={[{ required: true, message: "Please select target group" }]}
-          >
-            <Select placeholder="Select target group">
-              <Option value="All Students">All Students</Option>
-              <Option value="Class 1-5">Class 1-5</Option>
-              <Option value="Class 6-9">Class 6-9</Option>
-              <Option value="Class 10-12">Class 10-12</Option>
+            <Select>
+              <Select.Option value="Khám tổng quát">
+                Khám tổng quát
+              </Select.Option>
+              <Select.Option value="Khám mắt">Khám mắt</Select.Option>
+              <Select.Option value="Khám răng">Khám răng</Select.Option>
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="checkupType"
-            label="Checkup Type"
-            rules={[{ required: true, message: "Please select checkup type" }]}
-          >
-            <Select placeholder="Select checkup type">
-              <Option value="Comprehensive">Comprehensive Health Check</Option>
-              <Option value="Dental">Dental Checkup</Option>
-              <Option value="Vision">Vision Check</Option>
-              <Option value="Hearing">Hearing Test</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item name="notification" label="Parent Notification">
-            <TextArea
-              placeholder="Enter notification message for parents"
-              rows={4}
-            />
-          </Form.Item>
-
-          <Form.Item>
-            <Space>
-              <Button
-                type="primary"
-                htmlType="submit"
-                icon={<NotificationOutlined />}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="startDate"
+                label="Ngày bắt đầu"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày bắt đầu" },
+                ]}
               >
-                Create & Notify
-              </Button>
-              <Button onClick={() => setIsModalVisible(false)}>Cancel</Button>
-            </Space>
+                <DatePicker style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="endDate"
+                label="Ngày kết thúc"
+                rules={[
+                  { required: true, message: "Vui lòng chọn ngày kết thúc" },
+                ]}
+              >
+                <DatePicker style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="description" label="Mô tả">
+            <TextArea rows={4} />
           </Form.Item>
         </Form>
       </Modal>

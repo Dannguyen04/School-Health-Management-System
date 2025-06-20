@@ -5,6 +5,12 @@ import AdminDashboard from "./components/admin/Dashboard";
 import MedicationInfo from "./components/admin/MedicationInfo";
 import StudentManagement from "./components/admin/StudentManagement";
 import UserManagement from "./components/admin/UserManagement";
+import AlertsAndEvents from "./components/manager/AlertsAndEvents";
+import ManagerDashboard from "./components/manager/Dashboard";
+import HealthCheckupCampaigns from "./components/manager/HealthCheckupCampaigns";
+import HealthReports from "./components/manager/HealthReports";
+import StudentList from "./components/manager/StudentList";
+import VaccinationCampaigns from "./components/manager/VaccinationCampaigns";
 import Campaigns from "./components/nurse/Campaigns";
 import ConfirmedMedicines from "./components/nurse/ConfirmedMedicines";
 import Dashboard from "./components/nurse/Dashboard";
@@ -20,21 +26,14 @@ import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
 import MedicineInfo from "./components/user/MedicineInfo";
 import VaccinationSchedule from "./components/user/VaccinationSchedule";
-import { default as AdminLayout } from "./layouts/Admin";
+import AdminLayout from "./layouts/Admin";
+import ManagerLayout from "./layouts/Manager";
 import NurseLayout from "./layouts/Nurse";
 import User from "./layouts/User";
 import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
-// Import manager components
-import AlertsAndEvents from "./components/manager/AlertsAndEvents";
-import ManagerDashboard from "./components/manager/Dashboard";
-import HealthCheckupCampaigns from "./components/manager/HealthCheckupCampaigns";
-import HealthReports from "./components/manager/HealthReports";
-import StudentList from "./components/manager/StudentList";
-import VaccinationCampaigns from "./components/manager/VaccinationCampaigns";
-import ManagerLayout from "./layouts/Manager";
 
 const App = () => {
   return (
