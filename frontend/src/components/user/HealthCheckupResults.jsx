@@ -75,58 +75,56 @@ const HealthCheckupResults = () => {
   ];
 
   const handleDownload = () => {
-    // Implement download functionality
     message.success("Đang tải xuống kết quả khám sức khỏe...");
   };
 
   const handlePrint = () => {
-    // Implement print functionality
     window.print();
   };
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <Title level={2}>Kết quả khám sức khỏe</Title>
-        <Space>
-          <Select
-            style={{ width: 200 }}
-            value={selectedChild}
-            onChange={setSelectedChild}
-            options={children}
+    <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
+      <div className="w-full max-w-3xl">
+        <Card
+          className="rounded-3xl shadow-lg border-0 mt-12"
+          style={{
+            background: "#fff",
+            borderRadius: "1.5rem",
+            boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
+            padding: "2rem",
+            marginTop: "3rem",
+          }}
+        >
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 gap-4">
+            <Title
+              level={2}
+              className="!text-[#36ae9a] !mb-0 text-center md:text-left"
+            >
+              Kết quả khám sức khỏe
+            </Title>
+            <Space>
+              <Select
+                style={{ width: 200 }}
+                value={selectedChild}
+                onChange={setSelectedChild}
+                options={children}
+              />
+              <Button icon={<DownloadOutlined />} onClick={handleDownload}>
+                Tải xuống
+              </Button>
+              <Button icon={<PrinterOutlined />} onClick={handlePrint}>
+                In
+              </Button>
+            </Space>
+          </div>
+          <Table
+            columns={columns}
+            dataSource={checkupResults}
+            pagination={false}
+            className="rounded-xl"
           />
-          <Button icon={<DownloadOutlined />} onClick={handleDownload}>
-            Tải xuống
-          </Button>
-          <Button icon={<PrinterOutlined />} onClick={handlePrint}>
-            In
-          </Button>
-        </Space>
+        </Card>
       </div>
-
-      <Card>
-        <Table
-          columns={columns}
-          dataSource={checkupResults}
-          pagination={false}
-        />
-      </Card>
-
-      <style jsx>{`
-        @media print {
-          .ant-layout-header,
-          .ant-layout-sider,
-          .ant-btn {
-            display: none !important;
-          }
-          .ant-table {
-            border: 1px solid #f0f0f0;
-          }
-          .ant-table-cell {
-            border: 1px solid #f0f0f0;
-          }
-        }
-      `}</style>
     </div>
   );
 };

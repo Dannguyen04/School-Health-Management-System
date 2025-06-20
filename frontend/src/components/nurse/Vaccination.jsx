@@ -25,51 +25,51 @@ const Vaccination = () => {
 
   const columns = [
     {
-      title: "Student ID",
+      title: "Mã học sinh",
       dataIndex: "studentId",
       key: "studentId",
     },
     {
-      title: "Student Name",
+      title: "Tên học sinh",
       dataIndex: "studentName",
       key: "studentName",
     },
     {
-      title: "Grade",
+      title: "Lớp",
       dataIndex: "grade",
       key: "grade",
     },
     {
-      title: "Vaccine Name",
+      title: "Tên vắc xin",
       dataIndex: "vaccineName",
       key: "vaccineName",
     },
     {
-      title: "Date",
+      title: "Ngày tiêm",
       dataIndex: "date",
       key: "date",
     },
     {
-      title: "Batch Number",
+      title: "Số lô",
       dataIndex: "batchNumber",
       key: "batchNumber",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <Tag color={status === "completed" ? "green" : "orange"}>
-          {status.charAt(0).toUpperCase() + status.slice(1)}
+          {status === "completed" ? "Đã tiêm" : "Đang chờ"}
         </Tag>
       ),
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button onClick={() => handleViewDetails(record)}>Details</Button>
+          <Button onClick={() => handleViewDetails(record)}>Chi tiết</Button>
         </Space>
       ),
     },
@@ -77,26 +77,27 @@ const Vaccination = () => {
 
   const handleViewDetails = (record) => {
     Modal.info({
-      title: "Vaccination Details",
+      title: "Chi tiết tiêm chủng",
       content: (
         <div className="space-y-4">
           <p>
-            <strong>Student:</strong> {record.studentName}
+            <strong>Học sinh:</strong> {record.studentName}
           </p>
           <p>
-            <strong>Vaccine:</strong> {record.vaccineName}
+            <strong>Vắc xin:</strong> {record.vaccineName}
           </p>
           <p>
-            <strong>Date:</strong> {record.date}
+            <strong>Ngày tiêm:</strong> {record.date}
           </p>
           <p>
-            <strong>Batch Number:</strong> {record.batchNumber}
+            <strong>Số lô:</strong> {record.batchNumber}
           </p>
           <p>
-            <strong>Status:</strong> {record.status}
+            <strong>Trạng thái:</strong>{" "}
+            {record.status === "completed" ? "Đã tiêm" : "Đang chờ"}
           </p>
           <p>
-            <strong>Notes:</strong> {record.notes}
+            <strong>Ghi chú:</strong> {record.notes}
           </p>
         </div>
       ),
@@ -118,13 +119,13 @@ const Vaccination = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Vaccination Records</h1>
+        <h1 className="text-2xl font-bold">Hồ sơ tiêm chủng</h1>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setIsModalVisible(true)}
         >
-          Add Record
+          Thêm hồ sơ
         </Button>
       </div>
 
@@ -132,28 +133,32 @@ const Vaccination = () => {
         <Form form={searchForm} onFinish={handleSearch} layout="vertical">
           <Row gutter={16}>
             <Col xs={24} sm={8}>
-              <Form.Item name="studentId" label="Student ID">
-                <Input placeholder="Enter student ID" />
+              <Form.Item name="studentId" label="Mã học sinh">
+                <Input placeholder="Nhập mã học sinh" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="grade" label="Grade">
-                <Select placeholder="Select grade">
-                  <Select.Option value="Grade 1">Grade 1</Select.Option>
-                  <Select.Option value="Grade 2">Grade 2</Select.Option>
-                  <Select.Option value="Grade 3">Grade 3</Select.Option>
-                  <Select.Option value="Grade 4">Grade 4</Select.Option>
-                  <Select.Option value="Grade 5">Grade 5</Select.Option>
+              <Form.Item name="grade" label="Lớp">
+                <Select placeholder="Chọn lớp">
+                  <Select.Option value="Lớp 1">Lớp 1</Select.Option>
+                  <Select.Option value="Lớp 2">Lớp 2</Select.Option>
+                  <Select.Option value="Lớp 3">Lớp 3</Select.Option>
+                  <Select.Option value="Lớp 4">Lớp 4</Select.Option>
+                  <Select.Option value="Lớp 5">Lớp 5</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="vaccineName" label="Vaccine">
-                <Select placeholder="Select vaccine">
-                  <Select.Option value="Flu Shot">Flu Shot</Select.Option>
-                  <Select.Option value="MMR">MMR</Select.Option>
-                  <Select.Option value="DTaP">DTaP</Select.Option>
-                  <Select.Option value="Hepatitis B">Hepatitis B</Select.Option>
+              <Form.Item name="vaccineName" label="Vắc xin">
+                <Select placeholder="Chọn vắc xin">
+                  <Select.Option value="Cúm">Cúm</Select.Option>
+                  <Select.Option value="Sởi - Quai bị - Rubella">
+                    Sởi - Quai bị - Rubella
+                  </Select.Option>
+                  <Select.Option value="Bạch hầu - Ho gà - Uốn ván">
+                    Bạch hầu - Ho gà - Uốn ván
+                  </Select.Option>
+                  <Select.Option value="Viêm gan B">Viêm gan B</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -165,7 +170,7 @@ const Vaccination = () => {
                 icon={<SearchOutlined />}
                 htmlType="submit"
               >
-                Search
+                Tìm kiếm
               </Button>
             </Col>
           </Row>
@@ -177,7 +182,7 @@ const Vaccination = () => {
       </Card>
 
       <Modal
-        title="Add Vaccination Record"
+        title="Thêm hồ sơ tiêm chủng"
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => {
@@ -189,42 +194,46 @@ const Vaccination = () => {
         <Form form={vaccinationForm} layout="vertical">
           <Form.Item
             name="studentId"
-            label="Student ID"
-            rules={[{ required: true, message: "Please enter student ID" }]}
+            label="Mã học sinh"
+            rules={[{ required: true, message: "Vui lòng nhập mã học sinh" }]}
           >
             <Input />
           </Form.Item>
 
           <Form.Item
             name="vaccineName"
-            label="Vaccine Name"
-            rules={[{ required: true, message: "Please select vaccine" }]}
+            label="Tên vắc xin"
+            rules={[{ required: true, message: "Vui lòng chọn vắc xin" }]}
           >
             <Select>
-              <Select.Option value="Flu Shot">Flu Shot</Select.Option>
-              <Select.Option value="MMR">MMR</Select.Option>
-              <Select.Option value="DTaP">DTaP</Select.Option>
-              <Select.Option value="Hepatitis B">Hepatitis B</Select.Option>
+              <Select.Option value="Cúm">Cúm</Select.Option>
+              <Select.Option value="Sởi - Quai bị - Rubella">
+                Sởi - Quai bị - Rubella
+              </Select.Option>
+              <Select.Option value="Bạch hầu - Ho gà - Uốn ván">
+                Bạch hầu - Ho gà - Uốn ván
+              </Select.Option>
+              <Select.Option value="Viêm gan B">Viêm gan B</Select.Option>
             </Select>
           </Form.Item>
 
           <Form.Item
             name="date"
-            label="Vaccination Date"
-            rules={[{ required: true, message: "Please select date" }]}
+            label="Ngày tiêm"
+            rules={[{ required: true, message: "Vui lòng chọn ngày tiêm" }]}
           >
             <DatePicker style={{ width: "100%" }} />
           </Form.Item>
 
           <Form.Item
             name="batchNumber"
-            label="Batch Number"
-            rules={[{ required: true, message: "Please enter batch number" }]}
+            label="Số lô"
+            rules={[{ required: true, message: "Vui lòng nhập số lô" }]}
           >
             <Input />
           </Form.Item>
 
-          <Form.Item name="notes" label="Notes">
+          <Form.Item name="notes" label="Ghi chú">
             <TextArea rows={4} />
           </Form.Item>
         </Form>

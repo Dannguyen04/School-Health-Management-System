@@ -1,461 +1,116 @@
-import { useEffect, useState } from "react";
 import {
-    AlertOutlined,
-    CalendarOutlined,
-    MedicineBoxOutlined,
-    TeamOutlined,
-    CheckCircleOutlined,
-    ClockCircleOutlined,
+  AlertOutlined,
+  CalendarOutlined,
+  MedicineBoxOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
-import {
-    Alert,
-    Card,
-    Col,
-    Row,
-    Statistic,
-    Table,
-    Button,
-    Modal,
-    Form,
-    Input,
-    Select,
-    message,
-    Spin,
-} from "antd";
+import { Alert, Card, Col, Row, Statistic, Table } from "antd";
 import React from "react";
-import axios from "axios";
-import dayjs from "dayjs";
-import "dayjs/locale/vi";
+import { dashboardStats, medicalInventory } from "../../mock/nurseData";
 
-dayjs.locale("vi");
+const Dashboard = () => {
+  // Filter low stock items
+  const lowStockItems = medicalInventory.filter(
+    (item) => item.quantity <= item.minStock
+  );
 
-const { TextArea } = Input;
-const { Option } = Select;
+  const columns = [
+    {
+      title: "Tên vật tư",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "Tồn kho hiện tại",
+      dataIndex: "quantity",
+      key: "quantity",
+      render: (text, record) => `${text} ${record.unit}`,
+    },
+    {
+      title: "Tồn kho tối thiểu",
+      dataIndex: "minStock",
+      key: "minStock",
+      render: (text, record) => `${text} ${record.unit}`,
+    },
+  ];
 
-const NurseDashboard = () => {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [stats, setStats] = useState({
-        totalStudents: 0,
-        totalMedicalEvents: 0,
-        upcomingVaccinations: 0,
-        pendingTasks: 0,
-    });
-    const [recentEvents, setRecentEvents] = useState([]);
-    const [upcomingVaccinations, setUpcomingVaccinations] = useState([]);
-    const [selectedEvent, setSelectedEvent] = useState(null);
-    const [updateModalVisible, setUpdateModalVisible] = useState(false);
-    const [form] = Form.useForm();
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Bảng điều khiển</h1>
 
-    // Get auth token from localStorage
-    const getAuthToken = () => {
-        return localStorage.getItem("token");
-    };
+      {/* Statistics Cards */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Tổng số học sinh"
+              value={dashboardStats.totalStudents}
+              prefix={<TeamOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Học sinh đã tiêm chủng"
+              value={dashboardStats.vaccinatedStudents}
+              prefix={<MedicineBoxOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Khám sức khỏe"
+              value={dashboardStats.healthCheckups}
+              prefix={<CalendarOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card>
+            <Statistic
+              title="Lịch hẹn hôm nay"
+              value={dashboardStats.todayAppointments}
+              prefix={<CalendarOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
 
-    // Login function to get token
-    const login = async () => {
-        try {
-            const response = await axios.post(
-                "http://localhost:5000/auth/login",
-                {
-                    email: "nurse@school.com", // Replace with actual nurse email
-                    password: "password123", // Replace with actual password
-                }
-            );
+      {/* Alerts Section */}
+      {lowStockItems.length > 0 && (
+        <Alert
+          message="Cảnh báo tồn kho thấp"
+          description={`${lowStockItems.length} vật tư đang ở mức tồn kho thấp`}
+          type="warning"
+          showIcon
+          icon={<AlertOutlined />}
+        />
+      )}
 
-            if (response.data.success) {
-                localStorage.setItem("token", response.data.token);
-                return response.data.token;
-            }
-        } catch (error) {
-            console.error("Login failed:", error);
-            throw error;
-        }
-    };
+      {/* Low Stock Items Table */}
+      {lowStockItems.length > 0 && (
+        <Card title="Vật tư tồn kho thấp" className="mt-4">
+          <Table
+            dataSource={lowStockItems}
+            columns={columns}
+            rowKey="id"
+            pagination={false}
+          />
+        </Card>
+      )}
 
-    // Configure axios with auth header
-    const getApiInstance = () => {
-        const token = getAuthToken();
-        return axios.create({
-            baseURL: "http://localhost:5000",
-            headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
-            },
-        });
-    };
-
-    // Fetch dashboard data
-    const fetchDashboardData = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            let token = getAuthToken();
-            if (!token) {
-                // Try to login if no token
-                try {
-                    token = await login();
-                } catch (loginError) {
-                    setError("Authentication failed. Please login first.");
-                    message.error("Authentication failed. Please login first.");
-                    return;
-                }
-            }
-
-            const api = getApiInstance();
-
-            const [statsRes, eventsRes, vaccinationsRes] = await Promise.all([
-                api.get("/nurse/dashboard/stats"),
-                api.get("/nurse/dashboard/recent-events"),
-                api.get("/nurse/dashboard/upcoming-vaccinations"),
-            ]);
-
-            if (statsRes.data.success) {
-                setStats(statsRes.data.data);
-            }
-
-            if (eventsRes.data.success) {
-                setRecentEvents(eventsRes.data.data);
-            }
-
-            if (vaccinationsRes.data.success) {
-                setUpcomingVaccinations(vaccinationsRes.data.data);
-            }
-        } catch (error) {
-            console.error("Error fetching dashboard data:", error);
-            if (error.response?.status === 401) {
-                // Token expired or invalid, try to login again
-                localStorage.removeItem("token");
-                setError("Session expired. Please login again.");
-                message.error("Session expired. Please login again.");
-            } else {
-                setError(
-                    error.response?.data?.error ||
-                        error.message ||
-                        "Không thể tải dữ liệu dashboard"
-                );
-                message.error("Không thể tải dữ liệu dashboard");
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchDashboardData();
-    }, []);
-
-    // Handle event status update
-    const handleUpdateEvent = async (values) => {
-        try {
-            const api = getApiInstance();
-            const response = await api.patch(
-                `/nurse/medical-events/${selectedEvent.id}/status`,
-                values
-            );
-
-            if (response.data.success) {
-                message.success("Cập nhật trạng thái thành công");
-                setUpdateModalVisible(false);
-                fetchDashboardData(); // Refresh data
-            } else {
-                message.error("Cập nhật thất bại");
-            }
-        } catch (error) {
-            console.error("Error updating event:", error);
-            message.error("Không thể cập nhật trạng thái");
-        }
-    };
-
-    // Render severity badge
-    const renderSeverityBadge = (severity) => {
-        const colors = {
-            low: "bg-green-100 text-green-800",
-            medium: "bg-yellow-100 text-yellow-800",
-            high: "bg-orange-100 text-orange-800",
-            critical: "bg-red-100 text-red-800",
-        };
-        return (
-            <span
-                className={`px-2 py-1 rounded-full text-xs ${
-                    colors[severity] || colors.medium
-                }`}
-            >
-                {severity?.toUpperCase() || "UNKNOWN"}
-            </span>
-        );
-    };
-
-    // Render status badge
-    const renderStatusBadge = (status) => {
-        const colors = {
-            PENDING: "bg-yellow-100 text-yellow-800",
-            IN_PROGRESS: "bg-blue-100 text-blue-800",
-            RESOLVED: "bg-green-100 text-green-800",
-            REFERRED: "bg-purple-100 text-purple-800",
-        };
-        return (
-            <span
-                className={`px-2 py-1 rounded-full text-xs ${
-                    colors[status] || colors.PENDING
-                }`}
-            >
-                {status?.replace("_", " ") || "UNKNOWN"}
-            </span>
-        );
-    };
-
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <Spin size="large" />
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="space-y-6">
-                <Alert
-                    message="Lỗi tải dữ liệu"
-                    description={error}
-                    type="error"
-                    showIcon
-                    action={
-                        <Button size="small" onClick={fetchDashboardData}>
-                            Thử lại
-                        </Button>
-                    }
-                />
-            </div>
-        );
-    }
-
-    return (
-        <div className="space-y-6">
-            <h2 className="text-2xl font-bold mb-6">
-                Tổng quan Y tế Học đường
-            </h2>
-
-            <Row gutter={[16, 16]}>
-                <Col xs={24} sm={12} lg={6}>
-                    <Card>
-                        <Statistic
-                            title="Tổng số học sinh"
-                            value={stats.totalStudents}
-                            prefix={<TeamOutlined />}
-                        />
-                    </Card>
-                </Col>
-
-                <Col xs={24} sm={12} lg={6}>
-                    <Card>
-                        <Statistic
-                            title="Sự cố y tế trong tháng"
-                            value={stats.totalMedicalEvents}
-                            prefix={<AlertOutlined />}
-                        />
-                    </Card>
-                </Col>
-
-                <Col xs={24} sm={12} lg={6}>
-                    <Card>
-                        <Statistic
-                            title="Tiêm chủng sắp tới"
-                            value={stats.upcomingVaccinations}
-                            prefix={<CalendarOutlined />}
-                        />
-                    </Card>
-                </Col>
-
-                <Col xs={24} sm={12} lg={6}>
-                    <Card>
-                        <Statistic
-                            title="Công việc đang chờ"
-                            value={stats.pendingTasks}
-                            prefix={<MedicineBoxOutlined />}
-                        />
-                    </Card>
-                </Col>
-            </Row>
-
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <Card
-                    title="Sự cố y tế gần đây"
-                    extra={
-                        <Button
-                            type="link"
-                            onClick={() => fetchDashboardData()}
-                        >
-                            Làm mới
-                        </Button>
-                    }
-                >
-                    <div className="space-y-4">
-                        {recentEvents.length > 0 ? (
-                            recentEvents.map((event) => (
-                                <div
-                                    key={event.id}
-                                    className="p-4 bg-white rounded-lg border hover:shadow-md transition-shadow cursor-pointer"
-                                    onClick={() => {
-                                        setSelectedEvent(event);
-                                        setUpdateModalVisible(true);
-                                    }}
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-medium text-gray-900">
-                                            {event.title}
-                                        </h3>
-                                        {renderSeverityBadge(event.severity)}
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
-                                        <span>{event.studentName}</span>
-                                        <span>•</span>
-                                        <span>Lớp {event.studentClass}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-500">
-                                            {dayjs(event.occurredAt).format(
-                                                "HH:mm DD/MM/YYYY"
-                                            )}
-                                        </span>
-                                        {renderStatusBadge(event.status)}
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center text-gray-500 py-8">
-                                Không có sự cố y tế gần đây
-                            </div>
-                        )}
-                    </div>
-                </Card>
-
-                <Card
-                    title="Lịch tiêm chủng sắp tới"
-                    extra={
-                        <Button
-                            type="link"
-                            onClick={() => fetchDashboardData()}
-                        >
-                            Làm mới
-                        </Button>
-                    }
-                >
-                    <div className="space-y-4">
-                        {upcomingVaccinations.length > 0 ? (
-                            upcomingVaccinations.map((vaccination) => (
-                                <div
-                                    key={vaccination.id}
-                                    className="p-4 bg-white rounded-lg border hover:shadow-md transition-shadow"
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <h3 className="font-medium text-gray-900">
-                                            {vaccination.campaignName}
-                                        </h3>
-                                        <span className="text-sm text-blue-600">
-                                            {dayjs(
-                                                vaccination.scheduledDate
-                                            ).format("DD/MM/YYYY")}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                                        <span>
-                                            Lớp {vaccination.studentClass}
-                                        </span>
-                                        <span>•</span>
-                                        <span>{vaccination.status}</span>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="text-center text-gray-500 py-8">
-                                Không có lịch tiêm chủng sắp tới
-                            </div>
-                        )}
-                    </div>
-                </Card>
-            </div>
-
-            {/* Modal cập nhật trạng thái sự cố */}
-            <Modal
-                title="Cập nhật trạng thái sự cố"
-                open={updateModalVisible}
-                onCancel={() => setUpdateModalVisible(false)}
-                footer={null}
-            >
-                {selectedEvent && (
-                    <Form
-                        form={form}
-                        layout="vertical"
-                        onFinish={handleUpdateEvent}
-                        initialValues={{
-                            status: selectedEvent.status,
-                            treatment: "",
-                            outcome: "",
-                        }}
-                    >
-                        <Form.Item
-                            name="status"
-                            label="Trạng thái"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Vui lòng chọn trạng thái",
-                                },
-                            ]}
-                        >
-                            <Select>
-                                <Option value="PENDING">Đang chờ</Option>
-                                <Option value="IN_PROGRESS">Đang xử lý</Option>
-                                <Option value="RESOLVED">Đã giải quyết</Option>
-                                <Option value="REFERRED">Chuyển tuyến</Option>
-                            </Select>
-                        </Form.Item>
-
-                        <Form.Item
-                            name="treatment"
-                            label="Điều trị"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Vui lòng nhập thông tin điều trị",
-                                },
-                            ]}
-                        >
-                            <TextArea
-                                rows={4}
-                                placeholder="Nhập thông tin điều trị..."
-                            />
-                        </Form.Item>
-
-                        <Form.Item
-                            name="outcome"
-                            label="Kết quả"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Vui lòng nhập kết quả",
-                                },
-                            ]}
-                        >
-                            <TextArea
-                                rows={4}
-                                placeholder="Nhập kết quả điều trị..."
-                            />
-                        </Form.Item>
-
-                        <Form.Item>
-                            <Button type="primary" htmlType="submit" block>
-                                Cập nhật
-                            </Button>
-                        </Form.Item>
-                    </Form>
-                )}
-            </Modal>
-        </div>
-    );
+      {/* Pending Medications */}
+      <Card title="Thuốc đang chờ" className="mt-4">
+        <Statistic
+          title="Học sinh cần uống thuốc"
+          value={dashboardStats.pendingMedications}
+          prefix={<MedicineBoxOutlined />}
+        />
+      </Card>
+    </div>
+  );
 };
 
-export default NurseDashboard;
+export default Dashboard;

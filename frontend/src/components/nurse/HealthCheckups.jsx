@@ -18,7 +18,7 @@ import {
   Table,
   Tag,
 } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 import { healthCheckups } from "../../mock/nurseData";
 
 const { TextArea } = Input;
@@ -30,22 +30,22 @@ const HealthCheckups = () => {
 
   const columns = [
     {
-      title: "Student ID",
+      title: "Mã học sinh",
       dataIndex: "studentId",
       key: "studentId",
     },
     {
-      title: "Student Name",
+      title: "Tên học sinh",
       dataIndex: "studentName",
       key: "studentName",
     },
     {
-      title: "Grade",
+      title: "Lớp",
       dataIndex: "grade",
       key: "grade",
     },
     {
-      title: "Date",
+      title: "Ngày khám",
       dataIndex: "date",
       key: "date",
     },
@@ -70,17 +70,17 @@ const HealthCheckups = () => {
       ),
     },
     {
-      title: "Vision",
+      title: "Thị lực",
       dataIndex: "vision",
       key: "vision",
     },
     {
-      title: "Blood Pressure",
+      title: "Huyết áp",
       dataIndex: "bloodPressure",
       key: "bloodPressure",
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "actions",
       render: (_, record) => (
         <Space>
@@ -88,7 +88,7 @@ const HealthCheckups = () => {
             icon={<FileTextOutlined />}
             onClick={() => handleViewDetails(record)}
           >
-            Details
+            Chi tiết
           </Button>
         </Space>
       ),
@@ -97,29 +97,29 @@ const HealthCheckups = () => {
 
   const handleViewDetails = (record) => {
     Modal.info({
-      title: "Health Checkup Details",
+      title: "Chi tiết khám sức khỏe",
       content: (
         <div className="space-y-4">
           <p>
-            <strong>Student:</strong> {record.studentName}
+            <strong>Học sinh:</strong> {record.studentName}
           </p>
           <p>
-            <strong>Height:</strong> {record.height} cm
+            <strong>Chiều cao:</strong> {record.height} cm
           </p>
           <p>
-            <strong>Weight:</strong> {record.weight} kg
+            <strong>Cân nặng:</strong> {record.weight} kg
           </p>
           <p>
             <strong>BMI:</strong> {record.bmi}
           </p>
           <p>
-            <strong>Vision:</strong> {record.vision}
+            <strong>Thị lực:</strong> {record.vision}
           </p>
           <p>
-            <strong>Blood Pressure:</strong> {record.bloodPressure}
+            <strong>Huyết áp:</strong> {record.bloodPressure}
           </p>
           <p>
-            <strong>Notes:</strong> {record.notes}
+            <strong>Ghi chú:</strong> {record.notes}
           </p>
         </div>
       ),
@@ -141,13 +141,13 @@ const HealthCheckups = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Health Checkups</h1>
+        <h1 className="text-2xl font-bold">Khám sức khỏe</h1>
         <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setIsModalVisible(true)}
         >
-          Add Checkup
+          Thêm khám
         </Button>
       </div>
 
@@ -155,23 +155,23 @@ const HealthCheckups = () => {
         <Form form={searchForm} onFinish={handleSearch} layout="vertical">
           <Row gutter={16}>
             <Col xs={24} sm={8}>
-              <Form.Item name="studentId" label="Student ID">
-                <Input placeholder="Enter student ID" />
+              <Form.Item name="studentId" label="Mã học sinh">
+                <Input placeholder="Nhập mã học sinh" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="grade" label="Grade">
-                <Select placeholder="Select grade">
-                  <Select.Option value="Grade 1">Grade 1</Select.Option>
-                  <Select.Option value="Grade 2">Grade 2</Select.Option>
-                  <Select.Option value="Grade 3">Grade 3</Select.Option>
-                  <Select.Option value="Grade 4">Grade 4</Select.Option>
-                  <Select.Option value="Grade 5">Grade 5</Select.Option>
+              <Form.Item name="grade" label="Lớp">
+                <Select placeholder="Chọn lớp">
+                  <Select.Option value="Lớp 1">Lớp 1</Select.Option>
+                  <Select.Option value="Lớp 2">Lớp 2</Select.Option>
+                  <Select.Option value="Lớp 3">Lớp 3</Select.Option>
+                  <Select.Option value="Lớp 4">Lớp 4</Select.Option>
+                  <Select.Option value="Lớp 5">Lớp 5</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="date" label="Checkup Date">
+              <Form.Item name="date" label="Ngày khám">
                 <DatePicker style={{ width: "100%" }} />
               </Form.Item>
             </Col>
@@ -183,7 +183,7 @@ const HealthCheckups = () => {
                 icon={<SearchOutlined />}
                 htmlType="submit"
               >
-                Search
+                Tìm kiếm
               </Button>
             </Col>
           </Row>
@@ -195,7 +195,7 @@ const HealthCheckups = () => {
       </Card>
 
       <Modal
-        title="Add Health Checkup"
+        title="Thêm khám sức khỏe"
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => {
@@ -207,8 +207,8 @@ const HealthCheckups = () => {
         <Form form={checkupForm} layout="vertical">
           <Form.Item
             name="studentId"
-            label="Student ID"
-            rules={[{ required: true, message: "Please enter student ID" }]}
+            label="Mã học sinh"
+            rules={[{ required: true, message: "Vui lòng nhập mã học sinh" }]}
           >
             <Input />
           </Form.Item>
@@ -217,8 +217,8 @@ const HealthCheckups = () => {
             <Col span={12}>
               <Form.Item
                 name="height"
-                label="Height (cm)"
-                rules={[{ required: true, message: "Please enter height" }]}
+                label="Chiều cao (cm)"
+                rules={[{ required: true, message: "Vui lòng nhập chiều cao" }]}
               >
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
@@ -226,8 +226,8 @@ const HealthCheckups = () => {
             <Col span={12}>
               <Form.Item
                 name="weight"
-                label="Weight (kg)"
-                rules={[{ required: true, message: "Please enter weight" }]}
+                label="Cân nặng (kg)"
+                rules={[{ required: true, message: "Vui lòng nhập cân nặng" }]}
               >
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
@@ -238,26 +238,24 @@ const HealthCheckups = () => {
             <Col span={12}>
               <Form.Item
                 name="vision"
-                label="Vision"
-                rules={[{ required: true, message: "Please enter vision" }]}
+                label="Thị lực"
+                rules={[{ required: true, message: "Vui lòng nhập thị lực" }]}
               >
-                <Input placeholder="e.g., 20/20" />
+                <Input placeholder="Ví dụ: 10/10" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="bloodPressure"
-                label="Blood Pressure"
-                rules={[
-                  { required: true, message: "Please enter blood pressure" },
-                ]}
+                label="Huyết áp"
+                rules={[{ required: true, message: "Vui lòng nhập huyết áp" }]}
               >
-                <Input placeholder="e.g., 120/80" />
+                <Input placeholder="Ví dụ: 120/80" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="notes" label="Notes">
+          <Form.Item name="notes" label="Ghi chú">
             <TextArea rows={4} />
           </Form.Item>
         </Form>

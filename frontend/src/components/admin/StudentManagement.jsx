@@ -1,18 +1,29 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import {
   Button,
+  Card,
+  Col,
   DatePicker,
   Form,
   Input,
+  InputNumber,
+  message,
   Modal,
+  Row,
   Select,
   Space,
+  Spin,
   Table,
   Tag,
-  message,
 } from "antd";
+import axios from "axios";
 import dayjs from "dayjs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const { Option } = Select;
 
@@ -20,33 +31,99 @@ const StudentManagement = () => {
   const [form] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [students, setStudents] = useState([]); // State for real student data
+  const [filteredStudents, setFilteredStudents] = useState([]); // State for filtered students
+  const [tableLoading, setTableLoading] = useState(false); // Loading for table
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState(null);
 
-  // Mock data - replace with real data from API
-  const [students, setStudents] = useState([
-    {
-      id: 1,
-      studentCode: "STU001",
-      name: "John Doe",
-      email: "john@example.com",
-      dateOfBirth: "2010-05-15",
-      gender: "MALE",
-      class: "10A",
-      grade: "10",
-      bloodType: "A+",
-      emergencyContact: "Jane Doe",
-      emergencyPhone: "1234567890",
-      status: "active",
-    },
-  ]);
+  const [searchForm] = Form.useForm();
+
+  // Function to search
+  const handleSearch = (values) => {
+    const { studentCode, name, class: studentClass } = values;
+
+    let filtered = [...students];
+
+    if (studentCode) {
+      filtered = filtered.filter((student) =>
+        student.studentCode?.toLowerCase().includes(studentCode.toLowerCase())
+      );
+    }
+
+    if (name) {
+      filtered = filtered.filter((student) =>
+        student.name?.toLowerCase().includes(name.toLowerCase())
+      );
+    }
+
+    if (studentClass) {
+      filtered = filtered.filter((student) =>
+        student.class?.toLowerCase().includes(studentClass.toLowerCase())
+      );
+    }
+
+    setFilteredStudents(filtered);
+  };
+
+  // Function to fetch students
+  const fetchStudents = async () => {
+    setTableLoading(true);
+    try {
+      const authToken = localStorage.getItem("token");
+      if (!authToken) {
+        message.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+        setTableLoading(false);
+        return;
+      }
+
+      const response = await axios.get("/api/admin/students/all", {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      // Map the fetched data to match the table's expected structure
+      const formattedStudents = response.data.data.map((user) => ({
+        id: user.id,
+        studentCode: user.studentProfile?.studentCode,
+        name: user.fullName,
+        email: user.email,
+        dateOfBirth: user.studentProfile?.dateOfBirth,
+        gender: user.studentProfile?.gender,
+        class: user.studentProfile?.class,
+        grade: user.studentProfile?.grade,
+        bloodType: user.studentProfile?.bloodType,
+        emergencyContact: user.studentProfile?.emergencyContact,
+        emergencyPhone: user.studentProfile?.emergencyPhone,
+        status: user.isActive ? "active" : "inactive",
+      }));
+      setStudents(formattedStudents);
+      setFilteredStudents(formattedStudents); // Initialize filtered students with all students
+    } catch (error) {
+      message.error(
+        error.response?.data?.error || "Không thể tải danh sách học sinh"
+      );
+      console.error("Lỗi khi tải danh sách học sinh:", error);
+    } finally {
+      setTableLoading(false);
+    }
+  };
+
+  // Fetch students on component mount
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
   const columns = [
     {
-      title: "Student Code",
+      title: "Mã học sinh",
       dataIndex: "studentCode",
       key: "studentCode",
     },
     {
-      title: "Name",
+      title: "Tên",
       dataIndex: "name",
       key: "name",
     },
@@ -56,39 +133,39 @@ const StudentManagement = () => {
       key: "email",
     },
     {
-      title: "Class",
+      title: "Lớp",
       dataIndex: "class",
       key: "class",
     },
     {
-      title: "Grade",
+      title: "Khối",
       dataIndex: "grade",
       key: "grade",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <Tag color={status === "active" ? "green" : "red"}>
-          {status.toUpperCase()}
+          {status === "active" ? "Hoạt động" : "Không hoạt động"}
         </Tag>
       ),
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "actions",
       render: (_, record) => (
         <Space>
           <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            Edit
+            Sửa
           </Button>
           <Button
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
           >
-            Delete
+            Xóa
           </Button>
         </Space>
       ),
@@ -104,194 +181,321 @@ const StudentManagement = () => {
   const handleEdit = (student) => {
     setEditingStudent(student);
     form.setFieldsValue({
-      ...student,
+      name: student.name,
+      email: student.email,
       dateOfBirth: dayjs(student.dateOfBirth),
+      gender: student.gender,
+      grade: Number(student.grade),
+      class: student.class,
+      emergencyContact: student.emergencyContact,
+      emergencyPhone: student.emergencyPhone,
     });
     setIsModalVisible(true);
-  };
-
-  const handleDelete = (studentId) => {
-    Modal.confirm({
-      title: "Are you sure you want to delete this student?",
-      content: "This action cannot be undone.",
-      okText: "Yes",
-      okType: "danger",
-      cancelText: "No",
-      onOk: () => {
-        setStudents(students.filter((student) => student.id !== studentId));
-        message.success("Student deleted successfully");
-      },
-    });
   };
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       const formattedValues = {
-        ...values,
+        fullName: values.name,
+        email: values.email,
+        phone: values.emergencyPhone,
+        password: "defaultPassword123",
         dateOfBirth: values.dateOfBirth.toISOString(),
-        role: "STUDENT", // Default role for students
+        gender: values.gender,
+        grade: parseInt(values.grade),
+        class: values.class,
+        emergencyContact: values.emergencyContact,
+        emergencyPhone: values.emergencyPhone,
+        parentName: values.parentName,
       };
 
       if (editingStudent) {
-        // Update existing student
-        setStudents(
-          students.map((student) =>
-            student.id === editingStudent.id
-              ? { ...student, ...formattedValues }
-              : student
-          )
-        );
-        message.success("Student updated successfully");
+        // Update student
+        setLoading(true);
+        try {
+          const authToken = localStorage.getItem("token");
+          if (!authToken) {
+            message.error(
+              "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
+            );
+            setLoading(false);
+            setIsModalVisible(false);
+            return;
+          }
+
+          const updateValues = {
+            fullName: values.name,
+            email: values.email,
+            phone: values.emergencyPhone,
+            dateOfBirth: values.dateOfBirth.toISOString(),
+            gender: values.gender,
+            grade: parseInt(values.grade),
+            class: values.class,
+            emergencyContact: values.emergencyContact,
+            emergencyPhone: values.emergencyPhone,
+          };
+
+          await axios.put(
+            `/api/admin/students/${editingStudent.id}`,
+            updateValues,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            }
+          );
+          message.success("Cập nhật học sinh thành công");
+          fetchStudents(); // Refresh data after update
+        } catch (error) {
+          message.error(
+            error.response?.data?.error || "Không thể cập nhật học sinh"
+          );
+          console.error("Lỗi khi cập nhật học sinh:", error);
+        } finally {
+          setLoading(false);
+        }
       } else {
-        // Add new student
-        const newStudent = {
-          id: students.length + 1,
-          ...formattedValues,
-          status: "active",
-        };
-        setStudents([...students, newStudent]);
-        message.success("Student added successfully");
+        setLoading(true);
+        try {
+          const authToken = localStorage.getItem("token");
+          if (!authToken) {
+            message.error(
+              "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
+            );
+            setLoading(false);
+            setIsModalVisible(false);
+            return;
+          }
+
+          await axios.post(
+            "http://localhost:5000/api/admin/students",
+            formattedValues,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            }
+          );
+
+          message.success("Thêm học sinh thành công");
+          fetchStudents(); // Refresh data after adding a new student
+        } catch (error) {
+          message.error(
+            error.response?.data?.error || "Không thể thêm học sinh"
+          );
+          console.error("Lỗi khi thêm học sinh:", error);
+        } finally {
+          setLoading(false);
+        }
       }
       setIsModalVisible(false);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.error("Lỗi xác thực:", error);
+    }
+  };
+
+  const handleDelete = (studentId) => {
+    setStudentToDelete(studentId);
+    setIsDeleteModalVisible(true);
+    console.log("isDeleteModalVisible set to:", true);
+  };
+
+  const confirmDelete = async () => {
+    if (!studentToDelete) return;
+
+    setTableLoading(true); // Indicate loading for the table/delete action
+    try {
+      const authToken = localStorage.getItem("token");
+      if (!authToken) {
+        message.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+        setTableLoading(false);
+        setIsDeleteModalVisible(false);
+        return;
+      }
+      // Call deleteUser endpoint for students
+      await axios.delete(`/api/admin/users/${studentToDelete}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      message.success("Xóa học sinh thành công");
+      fetchStudents(); // Refresh data after deletion
+    } catch (error) {
+      message.error(error.response?.data?.error || "Không thể xóa học sinh");
+      console.error("Lỗi khi xóa học sinh:", error);
+    } finally {
+      setTableLoading(false);
+      setIsDeleteModalVisible(false);
+      setStudentToDelete(null);
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Student Management</h1>
+        <h1 className="text-2xl font-bold">Quản lý học sinh</h1>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          Add Student
+          Thêm học sinh
         </Button>
       </div>
 
+      <Card>
+        <Form form={searchForm} onFinish={handleSearch} layout="vertical">
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item name="studentCode" label="Mã học sinh">
+                <Input placeholder="Nhập mã học sinh" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="name" label="Tên học sinh">
+                <Input placeholder="Nhập tên học sinh" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="class" label="Lớp">
+                <Input placeholder="Nhập lớp" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24} className="text-right">
+              <Space>
+                <Button
+                  onClick={() => {
+                    searchForm.resetFields();
+                    setFilteredStudents(students);
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  htmlType="submit"
+                >
+                  Tìm kiếm
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        </Form>
+      </Card>
+
       <Table
         columns={columns}
-        dataSource={students}
+        dataSource={filteredStudents}
         rowKey="id"
-        pagination={{ pageSize: 10 }}
+        pagination={{ pageSize: 5 }}
+        loading={tableLoading}
       />
 
+      {/* Delete Confirmation Modal */}
       <Modal
-        title={editingStudent ? "Edit Student" : "Add Student"}
+        title="Xác nhận xóa học sinh"
+        open={isDeleteModalVisible}
+        onOk={confirmDelete}
+        onCancel={() => {
+          setIsDeleteModalVisible(false);
+          setStudentToDelete(null);
+        }}
+        okText="Xóa"
+        okType="danger"
+        cancelText="Hủy"
+        confirmLoading={tableLoading}
+      >
+        <p>Bạn có chắc chắn muốn xóa học sinh này?</p>
+      </Modal>
+
+      <Modal
+        title={editingStudent ? "Sửa thông tin học sinh" : "Thêm học sinh mới"}
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => setIsModalVisible(false)}
-        okText={editingStudent ? "Update" : "Add"}
-        width={800}
+        okText={editingStudent ? "Cập nhật" : "Thêm"}
+        confirmLoading={loading}
       >
-        <Form form={form} layout="vertical">
-          <div className="grid grid-cols-2 gap-4">
-            <Form.Item
-              name="studentCode"
-              label="Student Code"
-              rules={[
-                { required: true, message: "Please input the student code!" },
-              ]}
-            >
-              <Input />
-            </Form.Item>
-
+        <Spin spinning={loading}>
+          <Form form={form} layout="vertical">
             <Form.Item
               name="name"
-              label="Name"
-              rules={[{ required: true, message: "Please input the name!" }]}
+              label="Họ và tên"
+              rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}
             >
               <Input />
             </Form.Item>
-
             <Form.Item
               name="email"
               label="Email"
               rules={[
-                { required: true, message: "Please input the email!" },
-                { type: "email", message: "Please enter a valid email!" },
+                { required: true, message: "Vui lòng nhập email!" },
+                { type: "email", message: "Email không hợp lệ!" },
               ]}
             >
               <Input />
             </Form.Item>
-
             <Form.Item
               name="dateOfBirth"
-              label="Date of Birth"
-              rules={[
-                { required: true, message: "Please select date of birth!" },
-              ]}
+              label="Ngày sinh"
+              rules={[{ required: true, message: "Vui lòng chọn ngày sinh!" }]}
             >
-              <DatePicker className="w-full" />
+              <DatePicker style={{ width: "100%" }} />
             </Form.Item>
-
             <Form.Item
               name="gender"
-              label="Gender"
-              rules={[{ required: true, message: "Please select gender!" }]}
+              label="Giới tính"
+              rules={[{ required: true, message: "Vui lòng chọn giới tính!" }]}
             >
               <Select>
-                <Option value="MALE">Male</Option>
-                <Option value="FEMALE">Female</Option>
-                <Option value="OTHER">Other</Option>
+                <Option value="male">Nam</Option>
+                <Option value="female">Nữ</Option>
+                <Option value="other">Khác</Option>
               </Select>
             </Form.Item>
-
-            <Form.Item
-              name="class"
-              label="Class"
-              rules={[{ required: true, message: "Please input the class!" }]}
-            >
-              <Input />
-            </Form.Item>
-
             <Form.Item
               name="grade"
-              label="Grade"
-              rules={[{ required: true, message: "Please input the grade!" }]}
+              label="Khối"
+              rules={[{ required: true, message: "Vui lòng nhập khối!" }]}
+            >
+              <InputNumber min={1} max={12} style={{ width: "100%" }} />
+            </Form.Item>
+            <Form.Item
+              name="class"
+              label="Lớp"
+              rules={[{ required: true, message: "Vui lòng nhập lớp!" }]}
             >
               <Input />
             </Form.Item>
-
-            <Form.Item name="bloodType" label="Blood Type">
-              <Select allowClear>
-                <Option value="A+">A+</Option>
-                <Option value="A-">A-</Option>
-                <Option value="B+">B+</Option>
-                <Option value="B-">B-</Option>
-                <Option value="AB+">AB+</Option>
-                <Option value="AB-">AB-</Option>
-                <Option value="O+">O+</Option>
-                <Option value="O-">O-</Option>
-              </Select>
-            </Form.Item>
-
             <Form.Item
               name="emergencyContact"
-              label="Emergency Contact Name"
+              label="Người liên hệ khẩn cấp"
               rules={[
-                {
-                  required: true,
-                  message: "Please input emergency contact name!",
-                },
+                { required: true, message: "Vui lòng nhập tên người liên hệ!" },
               ]}
             >
               <Input />
             </Form.Item>
-
             <Form.Item
               name="emergencyPhone"
-              label="Emergency Contact Phone"
+              label="Số điện thoại liên hệ khẩn cấp"
               rules={[
-                {
-                  required: true,
-                  message: "Please input emergency contact phone!",
-                },
+                { required: true, message: "Vui lòng nhập số điện thoại!" },
               ]}
             >
               <Input />
             </Form.Item>
-          </div>
-        </Form>
+            <Form.Item
+              name="parentName"
+              label="Tên phụ huynh"
+              rules={[
+                { required: true, message: "Vui lòng nhập tên phụ huynh!" },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+          </Form>
+        </Spin>
       </Modal>
     </div>
   );

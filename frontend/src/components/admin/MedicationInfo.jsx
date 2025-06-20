@@ -3,7 +3,6 @@ import {
   EditOutlined,
   EyeOutlined,
   PlusOutlined,
-  UploadOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -14,7 +13,6 @@ import {
   Space,
   Table,
   Tag,
-  Upload,
   message,
 } from "antd";
 import React, { useState } from "react";
@@ -30,83 +28,83 @@ const MedicationInfo = () => {
   const [medications, setMedications] = useState([
     {
       id: 1,
-      studentName: "Alice Johnson",
+      studentName: "Nguyễn Văn A",
       grade: "5A",
       medicationName: "Paracetamol",
       dosage: "500mg",
-      frequency: "Twice daily",
+      frequency: "2 lần/ngày",
       startDate: "2024-03-15",
       endDate: "2024-03-20",
       status: "active",
-      notes: "Take after meals",
+      notes: "Uống sau bữa ăn",
     },
     {
       id: 2,
-      studentName: "Bob Smith",
+      studentName: "Trần Thị B",
       grade: "4B",
       medicationName: "Amoxicillin",
       dosage: "250mg",
-      frequency: "Three times daily",
+      frequency: "3 lần/ngày",
       startDate: "2024-03-14",
       endDate: "2024-03-21",
       status: "active",
-      notes: "Take with water",
+      notes: "Uống với nước",
     },
   ]);
 
   const columns = [
     {
-      title: "Student Name",
+      title: "Tên học sinh",
       dataIndex: "studentName",
       key: "studentName",
     },
     {
-      title: "Grade",
+      title: "Lớp",
       dataIndex: "grade",
       key: "grade",
     },
     {
-      title: "Medication",
+      title: "Tên thuốc",
       dataIndex: "medicationName",
       key: "medicationName",
     },
     {
-      title: "Dosage",
+      title: "Liều lượng",
       dataIndex: "dosage",
       key: "dosage",
     },
     {
-      title: "Frequency",
+      title: "Tần suất",
       dataIndex: "frequency",
       key: "frequency",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <Tag color={status === "active" ? "green" : "red"}>
-          {status.toUpperCase()}
+          {status === "active" ? "Đang sử dụng" : "Đã kết thúc"}
         </Tag>
       ),
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "actions",
       render: (_, record) => (
         <Space>
           <Button icon={<EyeOutlined />} onClick={() => handleView(record)}>
-            View
+            Xem
           </Button>
           <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            Edit
+            Sửa
           </Button>
           <Button
             danger
             icon={<DeleteOutlined />}
             onClick={() => handleDelete(record.id)}
           >
-            Delete
+            Xóa
           </Button>
         </Space>
       ),
@@ -132,14 +130,14 @@ const MedicationInfo = () => {
 
   const handleDelete = (medicationId) => {
     Modal.confirm({
-      title: "Delete Medication Record",
-      content: "Are you sure you want to delete this medication record?",
-      okText: "Yes",
+      title: "Xóa thông tin thuốc",
+      content: "Bạn có chắc chắn muốn xóa thông tin thuốc này?",
+      okText: "Có",
       okType: "danger",
-      cancelText: "No",
+      cancelText: "Không",
       onOk: () => {
         setMedications(medications.filter((med) => med.id !== medicationId));
-        message.success("Medication record deleted successfully");
+        message.success("Xóa thông tin thuốc thành công");
       },
     });
   };
@@ -154,7 +152,7 @@ const MedicationInfo = () => {
             med.id === editingMedication.id ? { ...med, ...values } : med
           )
         );
-        message.success("Medication record updated successfully");
+        message.success("Cập nhật thông tin thuốc thành công");
       } else {
         // Add new medication
         const newMedication = {
@@ -163,20 +161,20 @@ const MedicationInfo = () => {
           status: "active",
         };
         setMedications([...medications, newMedication]);
-        message.success("Medication record added successfully");
+        message.success("Thêm thông tin thuốc thành công");
       }
       setIsModalVisible(false);
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.error("Lỗi xác thực:", error);
     }
   };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Medication Information</h1>
+        <h1 className="text-2xl font-bold">Thông tin thuốc</h1>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          Add Medication
+          Thêm thuốc
         </Button>
       </div>
 
@@ -188,79 +186,78 @@ const MedicationInfo = () => {
       />
 
       <Modal
-        title={editingMedication ? "Edit Medication" : "Add Medication"}
+        title={editingMedication ? "Sửa thông tin thuốc" : "Thêm thuốc mới"}
         open={isModalVisible}
         onOk={handleSubmit}
         onCancel={() => setIsModalVisible(false)}
-        okText={editingMedication ? "Update" : "Add"}
+        okText={editingMedication ? "Cập nhật" : "Thêm"}
         width={800}
       >
         <Form form={form} layout="vertical">
           <div className="grid grid-cols-2 gap-4">
             <Form.Item
               name="studentName"
-              label="Student Name"
+              label="Tên học sinh"
               rules={[
-                { required: true, message: "Please input student name!" },
+                { required: true, message: "Vui lòng nhập tên học sinh!" },
               ]}
             >
               <Input />
             </Form.Item>
             <Form.Item
               name="grade"
-              label="Grade"
-              rules={[{ required: true, message: "Please input grade!" }]}
+              label="Lớp"
+              rules={[{ required: true, message: "Vui lòng nhập lớp!" }]}
             >
               <Input />
             </Form.Item>
             <Form.Item
               name="medicationName"
-              label="Medication Name"
-              rules={[
-                { required: true, message: "Please input medication name!" },
-              ]}
+              label="Tên thuốc"
+              rules={[{ required: true, message: "Vui lòng nhập tên thuốc!" }]}
             >
               <Input />
             </Form.Item>
             <Form.Item
               name="dosage"
-              label="Dosage"
-              rules={[{ required: true, message: "Please input dosage!" }]}
+              label="Liều lượng"
+              rules={[{ required: true, message: "Vui lòng nhập liều lượng!" }]}
             >
               <Input />
             </Form.Item>
             <Form.Item
               name="frequency"
-              label="Frequency"
-              rules={[{ required: true, message: "Please input frequency!" }]}
+              label="Tần suất"
+              rules={[{ required: true, message: "Vui lòng nhập tần suất!" }]}
             >
               <Input />
             </Form.Item>
             <Form.Item
               name="startDate"
-              label="Start Date"
-              rules={[{ required: true, message: "Please select start date!" }]}
+              label="Ngày bắt đầu"
+              rules={[
+                { required: true, message: "Vui lòng chọn ngày bắt đầu!" },
+              ]}
             >
               <DatePicker className="w-full" />
             </Form.Item>
             <Form.Item
               name="endDate"
-              label="End Date"
-              rules={[{ required: true, message: "Please select end date!" }]}
+              label="Ngày kết thúc"
+              rules={[
+                { required: true, message: "Vui lòng chọn ngày kết thúc!" },
+              ]}
             >
               <DatePicker className="w-full" />
             </Form.Item>
+            <Form.Item
+              name="notes"
+              label="Ghi chú"
+              rules={[{ required: true, message: "Vui lòng nhập ghi chú!" }]}
+            >
+              <TextArea rows={4} />
+            </Form.Item>
           </div>
-
-          <Form.Item name="notes" label="Notes">
-            <TextArea rows={4} />
-          </Form.Item>
-
-          <Form.Item name="prescriptionFile" label="Prescription File">
-            <Upload>
-              <Button icon={<UploadOutlined />}>Upload File</Button>
-            </Upload>
-          </Form.Item>
         </Form>
       </Modal>
     </div>

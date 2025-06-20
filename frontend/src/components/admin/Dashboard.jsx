@@ -37,21 +37,21 @@ const AdminDashboard = () => {
   ];
 
   const formStatusData = [
-    { status: "Approved", count: 150 },
-    { status: "Pending", count: 30 },
-    { status: "Rejected", count: 20 },
+    { status: "Đã duyệt", count: 150 },
+    { status: "Đang chờ", count: 30 },
+    { status: "Từ chối", count: 20 },
   ];
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <h1 className="text-2xl font-bold">Bảng điều khiển</h1>
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Total Users"
+              title="Tổng số người dùng"
               value={userStats.total}
               prefix={<UserOutlined />}
             />
@@ -60,7 +60,7 @@ const AdminDashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Total Forms"
+              title="Tổng số biểu mẫu"
               value={formStats.total}
               prefix={<FileTextOutlined />}
             />
@@ -69,7 +69,7 @@ const AdminDashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Approved Forms"
+              title="Biểu mẫu đã duyệt"
               value={formStats.approved}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: "#3f8600" }}
@@ -79,7 +79,7 @@ const AdminDashboard = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card>
             <Statistic
-              title="Active Medications"
+              title="Thuốc đang sử dụng"
               value={medicationStats.active}
               prefix={<MedicineBoxOutlined />}
             />
@@ -90,7 +90,7 @@ const AdminDashboard = () => {
       {/* Charts */}
       <Row gutter={[16, 16]}>
         <Col xs={24} lg={12}>
-          <Card title="User Growth Trend">
+          <Card title="Xu hướng tăng trưởng người dùng">
             <Line
               data={userTrendData}
               xField="date"
@@ -102,7 +102,7 @@ const AdminDashboard = () => {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Form Status Distribution">
+          <Card title="Phân bố trạng thái biểu mẫu">
             <Bar
               data={formStatusData}
               xField="count"
