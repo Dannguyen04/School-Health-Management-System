@@ -13,12 +13,14 @@ import {
   Input,
   message,
   Modal,
+  Popconfirm,
   Row,
   Select,
   Space,
   Spin,
   Table,
   Tag,
+  Tooltip,
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -34,8 +36,6 @@ const StudentManagement = () => {
   const [students, setStudents] = useState([]); // State for real student data
   const [filteredStudents, setFilteredStudents] = useState([]); // State for filtered students
   const [tableLoading, setTableLoading] = useState(false); // Loading for table
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [studentToDelete, setStudentToDelete] = useState(null);
 
   const [searchForm] = Form.useForm();
 
@@ -156,16 +156,26 @@ const StudentManagement = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            Sửa
-          </Button>
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
+          <Tooltip title="Sửa">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              type="primary"
+              size="small"
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xác nhận xóa học sinh"
+            description={`Bạn có chắc chắn muốn xóa học sinh "${record.name}"?`}
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okType="danger"
           >
-            Xóa
-          </Button>
+            <Tooltip title="Xóa">
+              <Button danger icon={<DeleteOutlined />} size="small" />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -307,26 +317,17 @@ const StudentManagement = () => {
     }
   };
 
-  const handleDelete = (studentId) => {
-    setStudentToDelete(studentId);
-    setIsDeleteModalVisible(true);
-    console.log("isDeleteModalVisible set to:", true);
-  };
-
-  const confirmDelete = async () => {
-    if (!studentToDelete) return;
-
-    setTableLoading(true); // Indicate loading for the table/delete action
+  const handleDelete = async (studentId) => {
+    setTableLoading(true);
     try {
       const authToken = localStorage.getItem("token");
       if (!authToken) {
         message.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
         setTableLoading(false);
-        setIsDeleteModalVisible(false);
         return;
       }
       // Call deleteUser endpoint for students
-      await axios.delete(`/api/admin/users/${studentToDelete}`, {
+      await axios.delete(`/api/admin/users/${studentId}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -338,8 +339,6 @@ const StudentManagement = () => {
       console.error("Lỗi khi xóa học sinh:", error);
     } finally {
       setTableLoading(false);
-      setIsDeleteModalVisible(false);
-      setStudentToDelete(null);
     }
   };
 
@@ -399,26 +398,9 @@ const StudentManagement = () => {
         columns={columns}
         dataSource={filteredStudents}
         rowKey="id"
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 5, showQuickJumper: true }}
         loading={tableLoading}
       />
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        title="Xác nhận xóa học sinh"
-        open={isDeleteModalVisible}
-        onOk={confirmDelete}
-        onCancel={() => {
-          setIsDeleteModalVisible(false);
-          setStudentToDelete(null);
-        }}
-        okText="Xóa"
-        okType="danger"
-        cancelText="Hủy"
-        confirmLoading={tableLoading}
-      >
-        <p>Bạn có chắc chắn muốn xóa học sinh này?</p>
-      </Modal>
 
       <Modal
         title={editingStudent ? "Sửa thông tin học sinh" : "Thêm học sinh mới"}
