@@ -36,6 +36,19 @@ export const getDashboardStats = async (req, res) => {
             },
         });
 
+        // Lấy số thuốc đang chờ
+        const pendingMedications = await prisma.studentMedication.count({
+            where: {
+                status: "PENDING_APPROVAL",
+            },
+        });
+
+        // Lấy số vật tư tồn kho thấp
+        const medications = await prisma.medication.findMany();
+        const lowStockItems = medications.filter(
+            (med) => med.stockQuantity <= med.minStockLevel
+        ).length;
+
         res.json({
             success: true,
             data: {
@@ -43,6 +56,8 @@ export const getDashboardStats = async (req, res) => {
                 totalMedicalEvents,
                 upcomingVaccinations,
                 pendingTasks,
+                pendingMedications,
+                lowStockItems,
             },
         });
     } catch (error) {
@@ -50,6 +65,38 @@ export const getDashboardStats = async (req, res) => {
         res.status(500).json({
             success: false,
             error: "Error getting dashboard statistics",
+        });
+    }
+};
+
+// Lấy danh sách vật tư y tế
+export const getMedicalInventory = async (req, res) => {
+    try {
+        const medications = await prisma.medication.findMany({
+            orderBy: {
+                name: "asc",
+            },
+        });
+
+        const formattedInventory = medications.map((med) => ({
+            id: med.id,
+            name: med.name,
+            quantity: med.stockQuantity,
+            unit: med.unit,
+            minStock: med.minStockLevel,
+            expiryDate: med.expiryDate,
+            category: med.description || "General",
+        }));
+
+        res.json({
+            success: true,
+            data: formattedInventory,
+        });
+    } catch (error) {
+        console.error("Error getting medical inventory:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error getting medical inventory",
         });
     }
 };
