@@ -5,6 +5,7 @@ import {
     getRecentMedicalEvents,
     getUpcomingVaccinations,
     updateMedicalEventStatus,
+    getMedicalInventory,
 } from "../controllers/NurseController.js";
 
 const router = express.Router();
@@ -16,6 +17,9 @@ router.use(authenticateToken);
 router.get("/dashboard/stats", getDashboardStats);
 router.get("/dashboard/recent-events", getRecentMedicalEvents);
 router.get("/dashboard/upcoming-vaccinations", getUpcomingVaccinations);
+
+// Inventory routes
+router.get("/inventory", getMedicalInventory);
 
 // Medical event routes
 router.patch("/medical-events/:eventId/status", updateMedicalEventStatus);
