@@ -71,4 +71,10 @@ export const userAPI = {
     updateProfile: (data) => api.put("/auth/profile", data),
 };
 
+// Admin API endpoints
+export const adminAPI = {
+    // Dashboard statistics
+    getDashboardStats: () => api.get("/admin/dashboard/stats"),
+};
+
 export default api;

@@ -981,6 +981,183 @@ const filterStudents = async (req, res) => {
     }
 };
 
+// Dashboard statistics functions
+const getDashboardStats = async (req, res) => {
+    try {
+        // Get user statistics
+        const totalUsers = await prisma.users.count({
+            where: { isActive: true },
+        });
+
+        const activeUsers = await prisma.users.count({
+            where: { isActive: true },
+        });
+
+        const nurses = await prisma.users.count({
+            where: {
+                role: "SCHOOL_NURSE",
+                isActive: true,
+            },
+        });
+
+        const parents = await prisma.users.count({
+            where: {
+                role: "PARENT",
+                isActive: true,
+            },
+        });
+
+        const students = await prisma.users.count({
+            where: {
+                role: "STUDENT",
+                isActive: true,
+            },
+        });
+
+        // Get medication statistics from StudentMedication table
+        const totalMedications = await prisma.studentMedication.count();
+        const activeMedications = await prisma.studentMedication.count({
+            where: {
+                status: "ACTIVE",
+                endDate: {
+                    gte: new Date(),
+                },
+            },
+        });
+        const completedMedications = await prisma.studentMedication.count({
+            where: {
+                status: "ACTIVE",
+                endDate: {
+                    lt: new Date(),
+                },
+            },
+        });
+
+        // Get medical events statistics
+        const totalMedicalEvents = await prisma.medicalEvent.count();
+        const resolvedMedicalEvents = await prisma.medicalEvent.count({
+            where: { status: "RESOLVED" },
+        });
+        const pendingMedicalEvents = await prisma.medicalEvent.count({
+            where: { status: "PENDING" },
+        });
+        const inProgressMedicalEvents = await prisma.medicalEvent.count({
+            where: { status: "IN_PROGRESS" },
+        });
+
+        // Get vaccination campaign statistics
+        const totalVaccinationCampaigns =
+            await prisma.vaccinationCampaign.count({
+                where: { isActive: true },
+            });
+        const upcomingVaccinationCampaigns =
+            await prisma.vaccinationCampaign.count({
+                where: {
+                    isActive: true,
+                    scheduledDate: {
+                        gte: new Date(),
+                    },
+                },
+            });
+
+        // Get form statistics (using StudentMedication as forms for now)
+        const totalForms = await prisma.studentMedication.count();
+        const approvedForms = await prisma.studentMedication.count({
+            where: { status: "APPROVED" },
+        });
+        const pendingForms = await prisma.studentMedication.count({
+            where: { status: "PENDING_APPROVAL" },
+        });
+        const rejectedForms = await prisma.studentMedication.count({
+            where: { status: "REJECTED" },
+        });
+
+        // Get user growth trend (last 6 months)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        const userGrowthData = [];
+        for (let i = 0; i < 6; i++) {
+            const date = new Date();
+            date.setMonth(date.getMonth() - (5 - i));
+            const monthYear = date.toISOString().slice(0, 7); // YYYY-MM format
+
+            const userCount = await prisma.users.count({
+                where: {
+                    createdAt: {
+                        lte: date,
+                    },
+                    isActive: true,
+                },
+            });
+
+            userGrowthData.push({
+                date: monthYear,
+                users: userCount,
+            });
+        }
+
+        // Get form status distribution
+        const formStatusData = [
+            { status: "Đã duyệt", count: approvedForms },
+            { status: "Đang chờ", count: pendingForms },
+            { status: "Từ chối", count: rejectedForms },
+        ];
+
+        // Get medical event status distribution
+        const medicalEventStatusData = [
+            { status: "Đã giải quyết", count: resolvedMedicalEvents },
+            { status: "Đang chờ", count: pendingMedicalEvents },
+            { status: "Đang xử lý", count: inProgressMedicalEvents },
+        ];
+
+        const stats = {
+            userStats: {
+                total: totalUsers,
+                active: activeUsers,
+                nurses,
+                parents,
+                students,
+            },
+            formStats: {
+                total: totalForms,
+                approved: approvedForms,
+                pending: pendingForms,
+                rejected: rejectedForms,
+            },
+            medicationStats: {
+                total: totalMedications,
+                active: activeMedications,
+                completed: completedMedications,
+            },
+            medicalEventStats: {
+                total: totalMedicalEvents,
+                resolved: resolvedMedicalEvents,
+                pending: pendingMedicalEvents,
+                inProgress: inProgressMedicalEvents,
+            },
+            vaccinationCampaignStats: {
+                total: totalVaccinationCampaigns,
+                upcoming: upcomingVaccinationCampaigns,
+            },
+            userGrowthData,
+            formStatusData,
+            medicalEventStatusData,
+        };
+
+        res.status(200).json({
+            success: true,
+            data: stats,
+        });
+    } catch (error) {
+        console.error("Lỗi khi lấy thống kê dashboard:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi máy chủ nội bộ",
+        });
+    }
+};
+
 process.on("SIGTERM", async () => {
     console.log("Shutting down AdminController...");
     await prisma.$disconnect();
@@ -1003,4 +1180,5 @@ export {
     deleteUser,
     filterUsers,
     filterStudents,
+    getDashboardStats,
 };

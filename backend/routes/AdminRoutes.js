@@ -11,12 +11,21 @@ import {
     deleteUser,
     updateRole,
     filterUsers,
+    getDashboardStats,
 } from "../controllers/AdminController.js";
 
 const router = express.Router();
 
 // Đăng nhập admin
 router.post("/admin", authenticateToken, verifyAdmin);
+
+// Dashboard statistics
+router.get(
+    "/dashboard/stats",
+    authenticateToken,
+    verifyAdmin,
+    getDashboardStats
+);
 
 // Mount các route con liên quan đến student
 router.use("/students", authenticateToken, verifyAdmin, studentRoutes);
