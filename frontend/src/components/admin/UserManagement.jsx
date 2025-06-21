@@ -2,7 +2,6 @@ import {
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
-  ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
 import {
@@ -51,7 +50,7 @@ const UserManagement = () => {
 
     if (email) {
       filtered = filtered.filter((user) =>
-        user.email?.toLowerCase().includes(email.toLowerCase())
+        user.email?.toLowerCase().includes(email)
       );
     }
 
@@ -74,61 +73,26 @@ const UserManagement = () => {
         return;
       }
 
-      const response = await axios.get(
-        "http://localhost:5000/admin/users/getAllUsers",
-        {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-          },
-        }
-      );
+      const response = await axios.get("/api/admin/users/getAllUsers", {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
 
-      console.log("API Response:", response.data); // Debug log
-
-      if (response.data.success && response.data.data) {
-        const formattedUsers = response.data.data.map((user) => ({
-          id: user.id,
-          name: user.fullName,
-          email: user.email,
-          role: user.role,
-          status: user.isActive ? "active" : "inactive",
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-        }));
-
-        setUsers(formattedUsers);
-        setFilteredUsers(formattedUsers);
-
-        // Tính toán thống kê
-        const total = formattedUsers.length;
-        const active = formattedUsers.filter(
-          (user) => user.status === "active"
-        ).length;
-        const inactive = total - active;
-
-        setStats({ total, active, inactive });
-      } else {
-        message.error("Dữ liệu không hợp lệ từ server");
-      }
+      const formattedUsers = response.data.data.map((user) => ({
+        id: user.id,
+        name: user.fullName,
+        email: user.email,
+        role: user.role,
+        status: user.isActive ? "active" : "inactive",
+      }));
+      setUsers(formattedUsers);
+      setFilteredUsers(formattedUsers);
     } catch (error) {
-      console.error("Chi tiết lỗi:", error);
-      if (error.response) {
-        console.error("Response data:", error.response.data);
-        console.error("Response status:", error.response.status);
-        message.error(
-          error.response.data?.error ||
-            error.response.data?.message ||
-            "Không thể tải danh sách người dùng"
-        );
-      } else if (error.request) {
-        console.error("Request error:", error.request);
-        message.error(
-          "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng."
-        );
-      } else {
-        console.error("Error:", error.message);
-        message.error("Có lỗi xảy ra khi tải dữ liệu");
-      }
+      message.error(
+        error.response?.data?.message || "Không thể tải danh sách người dùng"
+      );
+      console.error("Lỗi khi tải danh sách người dùng:", error);
     } finally {
       setTableLoading(false);
     }
@@ -221,19 +185,13 @@ const UserManagement = () => {
 
   const handleAdd = () => {
     setEditingUser(null);
-    setShowPassword(false);
     form.resetFields();
     setIsModalVisible(true);
   };
 
   const handleEdit = (user) => {
     setEditingUser(user);
-    setShowPassword(false);
-    form.setFieldsValue({
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    });
+    form.setFieldsValue(user);
     setIsModalVisible(true);
   };
 
@@ -327,64 +285,25 @@ const UserManagement = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold text-gray-800">Quản lý người dùng</h1>
-        <div className="flex gap-2">
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={fetchUsers}
-            loading={tableLoading}
-          >
-            Làm mới
-          </Button>
+        <h1 className="text-2xl font-bold">Quản lý người dùng</h1>
+        <div>
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
             Thêm người dùng
           </Button>
         </div>
       </div>
 
-      {/* Thống kê */}
-      <Row gutter={16}>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="Tổng số người dùng"
-              value={stats.total}
-              valueStyle={{ color: "#3f8600" }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="Người dùng hoạt động"
-              value={stats.active}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Card>
-        </Col>
-        <Col span={8}>
-          <Card>
-            <Statistic
-              title="Người dùng không hoạt động"
-              value={stats.inactive}
-              valueStyle={{ color: "#cf1322" }}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Tìm kiếm */}
-      <Card title="Tìm kiếm người dùng" className="shadow-sm">
+      <Card>
         <Form form={searchForm} onFinish={handleSearch} layout="vertical">
           <Row gutter={16}>
             <Col xs={24} sm={8}>
               <Form.Item name="name" label="Tên người dùng">
-                <Input placeholder="Nhập tên người dùng" allowClear />
+                <Input placeholder="Nhập tên người dùng" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
               <Form.Item name="email" label="Email">
-                <Input placeholder="Nhập email" allowClear />
+                <Input placeholder="Nhập email" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
@@ -401,7 +320,14 @@ const UserManagement = () => {
           <Row>
             <Col span={24} className="text-right">
               <Space>
-                <Button onClick={handleResetSearch}>Xóa bộ lọc</Button>
+                <Button
+                  onClick={() => {
+                    searchForm.resetFields();
+                    setFilteredUsers(users);
+                  }}
+                >
+                  Xóa bộ lọc
+                </Button>
                 <Button
                   type="primary"
                   icon={<SearchOutlined />}

@@ -1,11 +1,8 @@
 import {
-    DeleteOutlined,
-    EditOutlined,
-    PlusOutlined,
-    SearchOutlined,
-    ReloadOutlined,
-    UserOutlined,
-    TeamOutlined,
+  DeleteOutlined,
+  EditOutlined,
+  PlusOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import {
   Button,
@@ -40,54 +37,45 @@ const StudentManagement = () => {
   const [filteredStudents, setFilteredStudents] = useState([]); // State for filtered students
   const [tableLoading, setTableLoading] = useState(false); // Loading for table
 
-    const [searchForm] = Form.useForm();
-    const [formError, setFormError] = useState("");
-    const [deleteError, setDeleteError] = useState("");
-    const [deletingStudentId, setDeletingStudentId] = useState(null);
+  const [searchForm] = Form.useForm();
 
-    // Function to search
-    const handleSearch = (values) => {
-        const { studentCode, name, class: studentClass } = values;
+  // Function to search
+  const handleSearch = (values) => {
+    const { studentCode, name, class: studentClass } = values;
 
-        let filtered = [...students];
+    let filtered = [...students];
 
-        if (studentCode) {
-            filtered = filtered.filter((student) =>
-                student.studentCode
-                    ?.toLowerCase()
-                    .includes(studentCode.toLowerCase())
-            );
-        }
+    if (studentCode) {
+      filtered = filtered.filter((student) =>
+        student.studentCode?.toLowerCase().includes(studentCode.toLowerCase())
+      );
+    }
 
-        if (name) {
-            filtered = filtered.filter((student) =>
-                student.name?.toLowerCase().includes(name.toLowerCase())
-            );
-        }
+    if (name) {
+      filtered = filtered.filter((student) =>
+        student.name?.toLowerCase().includes(name.toLowerCase())
+      );
+    }
 
-        if (studentClass) {
-            filtered = filtered.filter((student) =>
-                student.class
-                    ?.toLowerCase()
-                    .includes(studentClass.toLowerCase())
-            );
-        }
+    if (studentClass) {
+      filtered = filtered.filter((student) =>
+        student.class?.toLowerCase().includes(studentClass.toLowerCase())
+      );
+    }
 
-        setFilteredStudents(filtered);
-    };
+    setFilteredStudents(filtered);
+  };
 
-    // Function to fetch students
-    const fetchStudents = async () => {
-        setTableLoading(true);
-        try {
-            const authToken = localStorage.getItem("token");
-            if (!authToken) {
-                message.error(
-                    "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
-                );
-                setTableLoading(false);
-                return;
-            }
+  // Function to fetch students
+  const fetchStudents = async () => {
+    setTableLoading(true);
+    try {
+      const authToken = localStorage.getItem("token");
+      if (!authToken) {
+        message.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+        setTableLoading(false);
+        return;
+      }
 
       const response = await axios.get("/api/admin/students", {
         headers: {
@@ -95,61 +83,32 @@ const StudentManagement = () => {
         },
       });
 
-            if (response.data.success && response.data.data) {
-                // Map the fetched data to match the table's expected structure
-                const formattedStudents = response.data.data.map((user) => ({
-                    id: user.id,
-                    studentCode: user.studentProfile?.studentCode,
-                    name: user.fullName,
-                    email: user.email,
-                    dateOfBirth: user.studentProfile?.dateOfBirth,
-                    gender: user.studentProfile?.gender,
-                    class: user.studentProfile?.class,
-                    grade: user.studentProfile?.grade,
-                    bloodType: user.studentProfile?.bloodType,
-                    emergencyContact: user.studentProfile?.emergencyContact,
-                    emergencyPhone: user.studentProfile?.emergencyPhone,
-                    status: user.isActive ? "active" : "inactive",
-                    createdAt: user.createdAt,
-                }));
-
-                setStudents(formattedStudents);
-                setFilteredStudents(formattedStudents);
-
-                // Tính toán thống kê
-                const total = formattedStudents.length;
-                const active = formattedStudents.filter(
-                    (student) => student.status === "active"
-                ).length;
-                const inactive = total - active;
-
-                setStats({ total, active, inactive });
-            } else {
-                message.error("Dữ liệu không hợp lệ từ server");
-            }
-        } catch (error) {
-            console.error("Chi tiết lỗi:", error);
-            if (error.response) {
-                console.error("Response data:", error.response.data);
-                console.error("Response status:", error.response.status);
-                message.error(
-                    error.response.data?.error ||
-                        error.response.data?.message ||
-                        "Không thể tải danh sách học sinh"
-                );
-            } else if (error.request) {
-                console.error("Request error:", error.request);
-                message.error(
-                    "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng."
-                );
-            } else {
-                console.error("Error:", error.message);
-                message.error("Có lỗi xảy ra khi tải dữ liệu");
-            }
-        } finally {
-            setTableLoading(false);
-        }
-    };
+      // Map the fetched data to match the table's expected structure
+      const formattedStudents = response.data.data.map((user) => ({
+        id: user.id,
+        studentCode: user.studentProfile?.studentCode,
+        name: user.fullName,
+        email: user.email,
+        dateOfBirth: user.studentProfile?.dateOfBirth,
+        gender: user.studentProfile?.gender,
+        class: user.studentProfile?.class,
+        grade: user.studentProfile?.grade,
+        bloodType: user.studentProfile?.bloodType,
+        emergencyContact: user.studentProfile?.emergencyContact,
+        emergencyPhone: user.studentProfile?.emergencyPhone,
+        status: user.isActive ? "active" : "inactive",
+      }));
+      setStudents(formattedStudents);
+      setFilteredStudents(formattedStudents); // Initialize filtered students with all students
+    } catch (error) {
+      message.error(
+        error.response?.data?.error || "Không thể tải danh sách học sinh"
+      );
+      console.error("Lỗi khi tải danh sách học sinh:", error);
+    } finally {
+      setTableLoading(false);
+    }
+  };
 
   // Fetch students on component mount
   useEffect(() => {
@@ -222,12 +181,11 @@ const StudentManagement = () => {
     },
   ];
 
-    const handleAdd = () => {
-        setEditingStudent(null);
-        setFormError("");
-        form.resetFields();
-        setIsModalVisible(true);
-    };
+  const handleAdd = () => {
+    setEditingStudent(null);
+    form.resetFields();
+    setIsModalVisible(true);
+  };
 
   const handleEdit = (student) => {
     setEditingStudent(student);
@@ -277,24 +235,19 @@ const StudentManagement = () => {
             parentName: values.parentName,
           };
 
-            console.log("📤 Sending data:", formattedValues); // Debug log
-
-            setLoading(true);
-            try {
-                const authToken = localStorage.getItem("token");
-                console.log(
-                    "🔑 Token from localStorage:",
-                    authToken ? "Có token" : "Không có token"
-                );
-
-                if (!authToken) {
-                    message.error(
-                        "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
-                    );
-                    setLoading(false);
-                    setIsModalVisible(false);
-                    return;
-                }
+      if (editingStudent) {
+        // Update student
+        setLoading(true);
+        try {
+          const authToken = localStorage.getItem("token");
+          if (!authToken) {
+            message.error(
+              "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
+            );
+            setLoading(false);
+            setIsModalVisible(false);
+            return;
+          }
 
           const updateValues = {
             studentCode: values.studentCode,
@@ -321,23 +274,25 @@ const StudentManagement = () => {
           message.success("Cập nhật học sinh thành công");
           fetchStudents();
         } catch (error) {
-            console.error("Lỗi xác thực:", error);
+          message.error(
+            error.response?.data?.error || "Không thể cập nhật học sinh"
+          );
+          console.error("Lỗi khi cập nhật học sinh:", error);
+        } finally {
+          setLoading(false);
         }
-    };
-
-    const handleDelete = async (studentId) => {
-        setDeletingStudentId(studentId);
-        setDeleteError("");
-
+      } else {
+        setLoading(true);
         try {
-            const authToken = localStorage.getItem("token");
-            if (!authToken) {
-                message.error(
-                    "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
-                );
-                setDeletingStudentId(null);
-                return;
-            }
+          const authToken = localStorage.getItem("token");
+          if (!authToken) {
+            message.error(
+              "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
+            );
+            setLoading(false);
+            setIsModalVisible(false);
+            return;
+          }
 
           await axios.post("/api/admin/students", formattedValues, {
             headers: {
@@ -348,62 +303,10 @@ const StudentManagement = () => {
           message.success("Thêm học sinh thành công");
           fetchStudents();
         } catch (error) {
-            console.error("❌ Lỗi khi xóa học sinh:", error.response?.data);
-            console.error("📋 Status:", error.response?.status);
-            console.error("📋 Full Error:", error);
-
-            let errorMessage = "Không thể xóa học sinh";
-
-            if (error.response?.data?.error) {
-                const backendError = error.response.data.error;
-
-                if (backendError.includes("Xung đột dữ liệu")) {
-                    errorMessage = "Có xung đột dữ liệu. Vui lòng thử lại sau!";
-                } else if (
-                    backendError.includes(
-                        "Không thể xóa do có dữ liệu liên quan"
-                    )
-                ) {
-                    errorMessage =
-                        "Không thể xóa học sinh do có dữ liệu liên quan (hồ sơ y tế, thuốc, v.v.). Vui lòng xóa các dữ liệu liên quan trước!";
-                } else if (backendError.includes("Không tìm thấy bản ghi")) {
-                    errorMessage = "Học sinh không tồn tại hoặc đã bị xóa!";
-                } else if (backendError.includes("Lỗi máy chủ nội bộ")) {
-                    errorMessage =
-                        "Lỗi hệ thống. Vui lòng liên hệ quản trị viên!";
-                } else {
-                    errorMessage = backendError;
-                }
-            } else if (error.response?.status === 401) {
-                errorMessage =
-                    "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
-            } else if (error.response?.status === 403) {
-                errorMessage = "Bạn không có quyền xóa học sinh!";
-            } else if (error.response?.status === 404) {
-                errorMessage = "Không tìm thấy học sinh cần xóa!";
-            } else if (error.response?.status === 409) {
-                errorMessage = "Xung đột dữ liệu. Vui lòng thử lại sau!";
-            } else if (error.response?.status >= 500) {
-                errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau!";
-            } else if (error.request) {
-                errorMessage =
-                    "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng!";
-            }
-
-            // Kiểm tra lỗi Prisma cụ thể
-            if (error.response?.data?.code === "P2014") {
-                errorMessage =
-                    "Không thể xóa học sinh do có dữ liệu audit log liên quan. Vui lòng thử lại sau!";
-            } else if (error.response?.data?.code === "P2003") {
-                errorMessage =
-                    "Không thể xóa học sinh do có dữ liệu liên quan (hồ sơ y tế, thuốc, v.v.). Vui lòng xóa các dữ liệu liên quan trước!";
-            } else if (error.response?.data?.code === "P2025") {
-                errorMessage = "Học sinh không tồn tại hoặc đã bị xóa!";
-            }
-
-            setDeleteError(errorMessage);
-            message.error(errorMessage);
-            console.error("Lỗi khi xóa học sinh:", error);
+          message.error(
+            error.response?.data?.error || "Không thể thêm học sinh"
+          );
+          console.error("Lỗi khi thêm học sinh:", error);
         } finally {
           setLoading(false);
         }
@@ -439,111 +342,57 @@ const StudentManagement = () => {
     }
   };
 
-    return (
-        <div className="space-y-6">
-            <div className="flex justify-between items-center">
-                <h1 className="text-2xl font-bold text-gray-800">
-                    Quản lý học sinh
-                </h1>
-                <div className="flex gap-2">
-                    <Button
-                        icon={<ReloadOutlined />}
-                        onClick={fetchStudents}
-                        loading={tableLoading}
-                    >
-                        Làm mới
-                    </Button>
-                    <Button
-                        type="primary"
-                        icon={<PlusOutlined />}
-                        onClick={handleAdd}
-                    >
-                        Thêm học sinh
-                    </Button>
-                </div>
-            </div>
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Quản lý học sinh</h1>
+        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+          Thêm học sinh
+        </Button>
+      </div>
 
-            {/* Thống kê */}
-            <Row gutter={16}>
-                <Col span={8}>
-                    <Card>
-                        <Statistic
-                            title="Tổng số học sinh"
-                            value={stats.total}
-                            prefix={<TeamOutlined />}
-                            valueStyle={{ color: "#3f8600" }}
-                        />
-                    </Card>
-                </Col>
-                <Col span={8}>
-                    <Card>
-                        <Statistic
-                            title="Học sinh hoạt động"
-                            value={stats.active}
-                            prefix={<UserOutlined />}
-                            valueStyle={{ color: "#1890ff" }}
-                        />
-                    </Card>
-                </Col>
-                <Col span={8}>
-                    <Card>
-                        <Statistic
-                            title="Học sinh không hoạt động"
-                            value={stats.inactive}
-                            valueStyle={{ color: "#cf1322" }}
-                        />
-                    </Card>
-                </Col>
-            </Row>
-
-            {/* Tìm kiếm */}
-            <Card title="Tìm kiếm học sinh" className="shadow-sm">
-                <Form
-                    form={searchForm}
-                    onFinish={handleSearch}
-                    layout="vertical"
+      <Card>
+        <Form form={searchForm} onFinish={handleSearch} layout="vertical">
+          <Row gutter={16}>
+            <Col xs={24} sm={8}>
+              <Form.Item name="studentCode" label="Mã học sinh">
+                <Input placeholder="Nhập mã học sinh" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="name" label="Tên học sinh">
+                <Input placeholder="Nhập tên học sinh" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="class" label="Lớp">
+                <Input placeholder="Nhập lớp" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row>
+            <Col span={24} className="text-right">
+              <Space>
+                <Button
+                  onClick={() => {
+                    searchForm.resetFields();
+                    setFilteredStudents(students);
+                  }}
                 >
-                    <Row gutter={16}>
-                        <Col xs={24} sm={8}>
-                            <Form.Item name="studentCode" label="Mã học sinh">
-                                <Input
-                                    placeholder="Nhập mã học sinh"
-                                    allowClear
-                                />
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                            <Form.Item name="name" label="Tên học sinh">
-                                <Input
-                                    placeholder="Nhập tên học sinh"
-                                    allowClear
-                                />
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
-                            <Form.Item name="class" label="Lớp">
-                                <Input placeholder="Nhập lớp" allowClear />
-                            </Form.Item>
-                        </Col>
-                    </Row>
-                    <Row>
-                        <Col span={24} className="text-right">
-                            <Space>
-                                <Button onClick={handleResetSearch}>
-                                    Xóa bộ lọc
-                                </Button>
-                                <Button
-                                    type="primary"
-                                    icon={<SearchOutlined />}
-                                    htmlType="submit"
-                                >
-                                    Tìm kiếm
-                                </Button>
-                            </Space>
-                        </Col>
-                    </Row>
-                </Form>
-            </Card>
+                  Xóa bộ lọc
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  htmlType="submit"
+                >
+                  Tìm kiếm
+                </Button>
+              </Space>
+            </Col>
+          </Row>
+        </Form>
+      </Card>
 
       <Table
         columns={columns}

@@ -1,11 +1,4 @@
-import {
-  EditOutlined,
-  FacebookOutlined,
-  InstagramOutlined,
-  LinkedinOutlined,
-  TwitterOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, UserOutlined } from "@ant-design/icons";
 import {
   Avatar,
   Button,
@@ -182,26 +175,6 @@ const UserProfile = () => {
             </Col>
             <Col>
               <Space>
-                <Button
-                  shape="circle"
-                  icon={<FacebookOutlined />}
-                  type="default"
-                />
-                <Button
-                  shape="circle"
-                  icon={<TwitterOutlined />}
-                  type="default"
-                />
-                <Button
-                  shape="circle"
-                  icon={<LinkedinOutlined />}
-                  type="default"
-                />
-                <Button
-                  shape="circle"
-                  icon={<InstagramOutlined />}
-                  type="default"
-                />
                 <Button
                   icon={<EditOutlined />}
                   onClick={handleEditBasicInfo}
