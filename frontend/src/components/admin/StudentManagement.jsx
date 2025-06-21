@@ -8,6 +8,7 @@ import {
     TeamOutlined,
 } from "@ant-design/icons";
 import {
+    Alert,
     Button,
     Card,
     Col,
@@ -48,6 +49,9 @@ const StudentManagement = () => {
     });
 
     const [searchForm] = Form.useForm();
+    const [formError, setFormError] = useState("");
+    const [deleteError, setDeleteError] = useState("");
+    const [deletingStudentId, setDeletingStudentId] = useState(null);
 
     // Function to search
     const handleSearch = (values) => {
@@ -288,17 +292,19 @@ const StudentManagement = () => {
                     </Tooltip>
                     <Popconfirm
                         title="Xóa học sinh"
-                        description="Bạn có chắc chắn muốn xóa học sinh này? Hành động này không thể hoàn tác."
+                        description="Bạn có chắc chắn muốn xóa học sinh này không? Hành động này không thể hoàn tác."
                         onConfirm={() => handleDelete(record.id)}
-                        okText="Xóa"
+                        okText="Có, xóa"
                         cancelText="Hủy"
-                        okType="danger"
+                        placement="topRight"
                     >
                         <Tooltip title="Xóa học sinh">
                             <Button
+                                type="primary"
                                 danger
                                 icon={<DeleteOutlined />}
                                 size="small"
+                                loading={deletingStudentId === record.id}
                             >
                                 Xóa
                             </Button>
@@ -311,12 +317,14 @@ const StudentManagement = () => {
 
     const handleAdd = () => {
         setEditingStudent(null);
+        setFormError("");
         form.resetFields();
         setIsModalVisible(true);
     };
 
     const handleEdit = (student) => {
         setEditingStudent(student);
+        setFormError("");
         form.setFieldsValue({
             name: student.name,
             email: student.email,
@@ -335,7 +343,10 @@ const StudentManagement = () => {
 
     const handleSubmit = async () => {
         try {
+            setFormError(""); // Xóa lỗi cũ
             const values = await form.validateFields();
+            console.log("📋 Form values:", values); // Debug log
+
             const formattedValues = {
                 fullName: values.name,
                 email: values.email,
@@ -344,16 +355,23 @@ const StudentManagement = () => {
                 dateOfBirth: values.dateOfBirth.toISOString(),
                 gender: values.gender,
                 grade: parseInt(values.grade),
-                class: values.class,
+                class: values.class, // Backend sẽ map thành studentClass
                 emergencyContact: values.emergencyContact,
                 emergencyPhone: values.emergencyPhone,
                 bloodType: values.bloodType,
                 parentName: values.parentName,
             };
 
+            console.log("📤 Sending data:", formattedValues); // Debug log
+
             setLoading(true);
             try {
                 const authToken = localStorage.getItem("token");
+                console.log(
+                    "🔑 Token from localStorage:",
+                    authToken ? "Có token" : "Không có token"
+                );
+
                 if (!authToken) {
                     message.error(
                         "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
@@ -404,10 +422,76 @@ const StudentManagement = () => {
                 fetchStudents();
                 setIsModalVisible(false);
             } catch (error) {
-                message.error(
-                    error.response?.data?.error ||
-                        "Không thể thực hiện thao tác"
-                );
+                console.error("❌ API Error:", error.response?.data);
+                console.error("📋 Error Status:", error.response?.status);
+                console.error("📋 Error Message:", error.response?.data?.error);
+                console.error("📋 Full Error Response:", error.response);
+
+                // Hiển thị lỗi chi tiết hơn
+                let errorMessage = "Không thể thực hiện thao tác";
+
+                if (error.response?.data?.error) {
+                    const backendError = error.response.data.error;
+
+                    // Xử lý các loại lỗi cụ thể
+                    if (backendError.includes("Thiếu trường bắt buộc")) {
+                        errorMessage = backendError;
+                    } else if (backendError.includes("Email không hợp lệ")) {
+                        errorMessage =
+                            "Email không đúng định dạng. Vui lòng kiểm tra lại!";
+                    } else if (backendError.includes("Email đã tồn tại")) {
+                        errorMessage =
+                            "Email này đã được sử dụng. Vui lòng chọn email khác!";
+                    } else if (
+                        backendError.includes(
+                            "Mật khẩu phải có ít nhất 8 ký tự"
+                        )
+                    ) {
+                        errorMessage =
+                            "Mật khẩu không đủ mạnh. Vui lòng thử lại!";
+                    } else if (
+                        backendError.includes("Ngày sinh không hợp lệ")
+                    ) {
+                        errorMessage =
+                            "Ngày sinh không hợp lệ. Học sinh phải từ 3-18 tuổi!";
+                    } else if (
+                        backendError.includes("Khối lớp phải từ 1 đến 5")
+                    ) {
+                        errorMessage =
+                            "Khối lớp không hợp lệ. Vui lòng chọn từ 1-5!";
+                    } else if (backendError.includes("Giới tính phải là")) {
+                        errorMessage =
+                            "Giới tính không hợp lệ. Vui lòng chọn Nam, Nữ hoặc Khác!";
+                    } else if (backendError.includes("Access token required")) {
+                        errorMessage =
+                            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
+                    } else if (
+                        backendError.includes("Không tìm thấy phụ huynh")
+                    ) {
+                        errorMessage =
+                            "Không tìm thấy phụ huynh với tên này. Học sinh vẫn được tạo nhưng chưa gán phụ huynh.";
+                    } else {
+                        errorMessage = backendError;
+                    }
+                } else if (error.response?.status === 401) {
+                    errorMessage =
+                        "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
+                } else if (error.response?.status === 403) {
+                    errorMessage = "Bạn không có quyền thực hiện thao tác này!";
+                } else if (error.response?.status === 404) {
+                    errorMessage = "Không tìm thấy dữ liệu cần thiết!";
+                } else if (error.response?.status === 422) {
+                    errorMessage =
+                        "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin!";
+                } else if (error.response?.status >= 500) {
+                    errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau!";
+                } else if (error.request) {
+                    errorMessage =
+                        "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng!";
+                }
+
+                setFormError(errorMessage);
+                message.error(errorMessage);
                 console.error("Lỗi:", error);
             } finally {
                 setLoading(false);
@@ -418,19 +502,21 @@ const StudentManagement = () => {
     };
 
     const handleDelete = async (studentId) => {
-        setTableLoading(true);
+        setDeletingStudentId(studentId);
+        setDeleteError("");
+
         try {
             const authToken = localStorage.getItem("token");
             if (!authToken) {
                 message.error(
                     "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
                 );
-                setTableLoading(false);
+                setDeletingStudentId(null);
                 return;
             }
 
             await axios.delete(
-                `http://localhost:5000/admin/users/${studentId}`,
+                `http://localhost:5000/admin/students/${studentId}`,
                 {
                     headers: {
                         Authorization: `Bearer ${authToken}`,
@@ -439,14 +525,67 @@ const StudentManagement = () => {
             );
 
             message.success("Xóa học sinh thành công");
-            fetchStudents();
+            // Cập nhật danh sách học sinh sau khi xóa
+            await fetchStudents();
         } catch (error) {
-            message.error(
-                error.response?.data?.error || "Không thể xóa học sinh"
-            );
+            console.error("❌ Lỗi khi xóa học sinh:", error.response?.data);
+            console.error("📋 Status:", error.response?.status);
+            console.error("📋 Full Error:", error);
+
+            let errorMessage = "Không thể xóa học sinh";
+
+            if (error.response?.data?.error) {
+                const backendError = error.response.data.error;
+
+                if (backendError.includes("Xung đột dữ liệu")) {
+                    errorMessage = "Có xung đột dữ liệu. Vui lòng thử lại sau!";
+                } else if (
+                    backendError.includes(
+                        "Không thể xóa do có dữ liệu liên quan"
+                    )
+                ) {
+                    errorMessage =
+                        "Không thể xóa học sinh do có dữ liệu liên quan (hồ sơ y tế, thuốc, v.v.). Vui lòng xóa các dữ liệu liên quan trước!";
+                } else if (backendError.includes("Không tìm thấy bản ghi")) {
+                    errorMessage = "Học sinh không tồn tại hoặc đã bị xóa!";
+                } else if (backendError.includes("Lỗi máy chủ nội bộ")) {
+                    errorMessage =
+                        "Lỗi hệ thống. Vui lòng liên hệ quản trị viên!";
+                } else {
+                    errorMessage = backendError;
+                }
+            } else if (error.response?.status === 401) {
+                errorMessage =
+                    "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
+            } else if (error.response?.status === 403) {
+                errorMessage = "Bạn không có quyền xóa học sinh!";
+            } else if (error.response?.status === 404) {
+                errorMessage = "Không tìm thấy học sinh cần xóa!";
+            } else if (error.response?.status === 409) {
+                errorMessage = "Xung đột dữ liệu. Vui lòng thử lại sau!";
+            } else if (error.response?.status >= 500) {
+                errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau!";
+            } else if (error.request) {
+                errorMessage =
+                    "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng!";
+            }
+
+            // Kiểm tra lỗi Prisma cụ thể
+            if (error.response?.data?.code === "P2014") {
+                errorMessage =
+                    "Không thể xóa học sinh do có dữ liệu audit log liên quan. Vui lòng thử lại sau!";
+            } else if (error.response?.data?.code === "P2003") {
+                errorMessage =
+                    "Không thể xóa học sinh do có dữ liệu liên quan (hồ sơ y tế, thuốc, v.v.). Vui lòng xóa các dữ liệu liên quan trước!";
+            } else if (error.response?.data?.code === "P2025") {
+                errorMessage = "Học sinh không tồn tại hoặc đã bị xóa!";
+            }
+
+            setDeleteError(errorMessage);
+            message.error(errorMessage);
             console.error("Lỗi khi xóa học sinh:", error);
         } finally {
-            setTableLoading(false);
+            setDeletingStudentId(null);
         }
     };
 
@@ -563,6 +702,19 @@ const StudentManagement = () => {
 
             {/* Bảng dữ liệu */}
             <Card className="shadow-sm">
+                {deleteError && (
+                    <Alert
+                        message="Lỗi xóa học sinh"
+                        description={deleteError}
+                        type="error"
+                        showIcon
+                        closable
+                        onClose={() => {
+                            setDeleteError("");
+                        }}
+                        style={{ marginBottom: 16 }}
+                    />
+                )}
                 <Table
                     columns={columns}
                     dataSource={filteredStudents}
@@ -588,7 +740,11 @@ const StudentManagement = () => {
                 }
                 open={isModalVisible}
                 onOk={handleSubmit}
-                onCancel={() => setIsModalVisible(false)}
+                onCancel={() => {
+                    setIsModalVisible(false);
+                    setFormError("");
+                    form.resetFields();
+                }}
                 okText={editingStudent ? "Cập nhật" : "Thêm"}
                 cancelText="Hủy"
                 confirmLoading={loading}
@@ -596,6 +752,17 @@ const StudentManagement = () => {
                 destroyOnClose
             >
                 <Spin spinning={loading}>
+                    {formError && (
+                        <Alert
+                            message="Lỗi"
+                            description={formError}
+                            type="error"
+                            showIcon
+                            closable
+                            onClose={() => setFormError("")}
+                            style={{ marginBottom: 16 }}
+                        />
+                    )}
                     <Form form={form} layout="vertical">
                         <Row gutter={16}>
                             <Col span={12}>
@@ -612,7 +779,18 @@ const StudentManagement = () => {
                                             message:
                                                 "Tên phải có ít nhất 2 ký tự!",
                                         },
+                                        {
+                                            max: 50,
+                                            message:
+                                                "Tên không được quá 50 ký tự!",
+                                        },
+                                        {
+                                            pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                                            message:
+                                                "Tên chỉ được chứa chữ cái và khoảng trắng!",
+                                        },
                                     ]}
+                                    extra="Nhập đầy đủ họ và tên học sinh (chỉ chữ cái và khoảng trắng)"
                                 >
                                     <Input placeholder="Nhập họ và tên học sinh" />
                                 </Form.Item>
@@ -630,7 +808,14 @@ const StudentManagement = () => {
                                             type: "email",
                                             message: "Email không hợp lệ!",
                                         },
+                                        {
+                                            pattern:
+                                                /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+                                            message:
+                                                "Email phải có định dạng hợp lệ!",
+                                        },
                                     ]}
+                                    extra="Email sẽ được sử dụng để đăng nhập vào hệ thống"
                                 >
                                     <Input placeholder="Nhập email" />
                                 </Form.Item>
@@ -647,11 +832,65 @@ const StudentManagement = () => {
                                             required: true,
                                             message: "Vui lòng chọn ngày sinh!",
                                         },
+                                        {
+                                            validator: (_, value) => {
+                                                if (!value) {
+                                                    return Promise.reject(
+                                                        new Error(
+                                                            "Vui lòng chọn ngày sinh!"
+                                                        )
+                                                    );
+                                                }
+
+                                                const today = new Date();
+                                                const birthDate =
+                                                    value.toDate();
+                                                const age =
+                                                    today.getFullYear() -
+                                                    birthDate.getFullYear();
+
+                                                if (age < 3) {
+                                                    return Promise.reject(
+                                                        new Error(
+                                                            "Học sinh phải ít nhất 3 tuổi!"
+                                                        )
+                                                    );
+                                                }
+
+                                                if (age > 18) {
+                                                    return Promise.reject(
+                                                        new Error(
+                                                            "Học sinh không được quá 18 tuổi!"
+                                                        )
+                                                    );
+                                                }
+
+                                                return Promise.resolve();
+                                            },
+                                        },
                                     ]}
                                 >
                                     <DatePicker
                                         style={{ width: "100%" }}
                                         placeholder="Chọn ngày sinh"
+                                        disabledDate={(current) => {
+                                            const today = new Date();
+                                            const minDate = new Date(
+                                                today.getFullYear() - 18,
+                                                0,
+                                                1
+                                            );
+                                            const maxDate = new Date(
+                                                today.getFullYear() - 3,
+                                                11,
+                                                31
+                                            );
+                                            return (
+                                                current &&
+                                                (current > maxDate ||
+                                                    current < minDate)
+                                            );
+                                        }}
                                     />
                                 </Form.Item>
                             </Col>
@@ -685,13 +924,34 @@ const StudentManagement = () => {
                                             required: true,
                                             message: "Vui lòng nhập khối!",
                                         },
+                                        {
+                                            validator: (_, value) => {
+                                                if (!value) {
+                                                    return Promise.reject(
+                                                        new Error(
+                                                            "Vui lòng nhập khối!"
+                                                        )
+                                                    );
+                                                }
+
+                                                if (value < 1 || value > 5) {
+                                                    return Promise.reject(
+                                                        new Error(
+                                                            "Khối phải từ 1 đến 5!"
+                                                        )
+                                                    );
+                                                }
+
+                                                return Promise.resolve();
+                                            },
+                                        },
                                     ]}
                                 >
                                     <InputNumber
                                         min={1}
-                                        max={12}
+                                        max={5}
                                         style={{ width: "100%" }}
-                                        placeholder="Nhập khối"
+                                        placeholder="Nhập khối (1-5)"
                                     />
                                 </Form.Item>
                             </Col>
@@ -704,9 +964,15 @@ const StudentManagement = () => {
                                             required: true,
                                             message: "Vui lòng nhập lớp!",
                                         },
+                                        {
+                                            pattern: /^[1-5][A-Z]$/,
+                                            message:
+                                                "Lớp phải có định dạng: Khối + Chữ cái (VD: 1A, 2B, 3C)!",
+                                        },
                                     ]}
+                                    extra="Định dạng: Khối + Chữ cái (VD: 1A, 2B, 3C, 4D, 5E)"
                                 >
-                                    <Input placeholder="Nhập lớp" />
+                                    <Input placeholder="VD: 1A, 2B, 3C" />
                                 </Form.Item>
                             </Col>
                         </Row>
@@ -739,6 +1005,16 @@ const StudentManagement = () => {
                                             message:
                                                 "Vui lòng nhập tên người liên hệ!",
                                         },
+                                        {
+                                            min: 2,
+                                            message:
+                                                "Tên người liên hệ phải có ít nhất 2 ký tự!",
+                                        },
+                                        {
+                                            pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                                            message:
+                                                "Tên chỉ được chứa chữ cái và khoảng trắng!",
+                                        },
                                     ]}
                                 >
                                     <Input placeholder="Nhập tên người liên hệ" />
@@ -758,9 +1034,19 @@ const StudentManagement = () => {
                                     pattern: /^[0-9+\-\s()]+$/,
                                     message: "Số điện thoại không hợp lệ!",
                                 },
+                                {
+                                    min: 10,
+                                    message:
+                                        "Số điện thoại phải có ít nhất 10 số!",
+                                },
+                                {
+                                    max: 15,
+                                    message:
+                                        "Số điện thoại không được quá 15 ký tự!",
+                                },
                             ]}
                         >
-                            <Input placeholder="Nhập số điện thoại" />
+                            <Input placeholder="VD: 0987654321 hoặc 0987-654-321" />
                         </Form.Item>
 
                         {!editingStudent && (
@@ -769,12 +1055,29 @@ const StudentManagement = () => {
                                 label="Tên phụ huynh"
                                 rules={[
                                     {
-                                        required: true,
-                                        message: "Vui lòng nhập tên phụ huynh!",
+                                        pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                                        message:
+                                            "Tên chỉ được chứa chữ cái và khoảng trắng!",
                                     },
                                 ]}
                             >
-                                <Input placeholder="Nhập tên phụ huynh" />
+                                <Input placeholder="Nhập tên phụ huynh (không bắt buộc)" />
+                            </Form.Item>
+                        )}
+
+                        {editingStudent && (
+                            <Form.Item
+                                name="parentName"
+                                label="Tên phụ huynh"
+                                rules={[
+                                    {
+                                        pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                                        message:
+                                            "Tên chỉ được chứa chữ cái và khoảng trắng!",
+                                    },
+                                ]}
+                            >
+                                <Input placeholder="Nhập tên phụ huynh (không bắt buộc)" />
                             </Form.Item>
                         )}
                     </Form>
