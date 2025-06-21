@@ -19,7 +19,6 @@ import StudentTreatment from "./components/nurse/StudentTreatment";
 import Vaccination from "./components/nurse/Vaccination";
 import ScrollToTop from "./components/ScrollToTop";
 import UserProfile from "./components/shared/UserProfile";
-import Blog from "./components/user/Blog";
 import VaccineConsentForm from "./components/user/ConsentForms";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
@@ -129,7 +128,6 @@ const App = () => {
           <Route path="consent-forms" element={<VaccineConsentForm />} />
           <Route path="health-profile" element={<HealthProfile />} />
           <Route path="medicine-info" element={<MedicineInfo />} />
-          <Route path="blog" element={<Blog />} />
           <Route path="profile" element={<UserProfile />} />
         </Route>
       </Routes>
