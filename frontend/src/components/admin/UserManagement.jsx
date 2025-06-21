@@ -87,39 +87,61 @@ const UserManagement = () => {
                 return;
             }
 
-            const response = await axios.get("/api/admin/users/getAllUsers", {
-                headers: {
-                    Authorization: `Bearer ${authToken}`,
-                },
-            });
-
-            const formattedUsers = response.data.data.map((user) => ({
-                id: user.id,
-                name: user.fullName,
-                email: user.email,
-                role: user.role,
-                status: user.isActive ? "active" : "inactive",
-                createdAt: user.createdAt,
-                updatedAt: user.updatedAt,
-            }));
-
-            setUsers(formattedUsers);
-            setFilteredUsers(formattedUsers);
-
-            // Tính toán thống kê
-            const total = formattedUsers.length;
-            const active = formattedUsers.filter(
-                (user) => user.status === "active"
-            ).length;
-            const inactive = total - active;
-
-            setStats({ total, active, inactive });
-        } catch (error) {
-            message.error(
-                error.response?.data?.message ||
-                    "Không thể tải danh sách người dùng"
+            const response = await axios.get(
+                "http://localhost:5000/admin/users/getAllUsers",
+                {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                }
             );
-            console.error("Lỗi khi tải danh sách người dùng:", error);
+
+            console.log("API Response:", response.data); // Debug log
+
+            if (response.data.success && response.data.data) {
+                const formattedUsers = response.data.data.map((user) => ({
+                    id: user.id,
+                    name: user.fullName,
+                    email: user.email,
+                    role: user.role,
+                    status: user.isActive ? "active" : "inactive",
+                    createdAt: user.createdAt,
+                    updatedAt: user.updatedAt,
+                }));
+
+                setUsers(formattedUsers);
+                setFilteredUsers(formattedUsers);
+
+                // Tính toán thống kê
+                const total = formattedUsers.length;
+                const active = formattedUsers.filter(
+                    (user) => user.status === "active"
+                ).length;
+                const inactive = total - active;
+
+                setStats({ total, active, inactive });
+            } else {
+                message.error("Dữ liệu không hợp lệ từ server");
+            }
+        } catch (error) {
+            console.error("Chi tiết lỗi:", error);
+            if (error.response) {
+                console.error("Response data:", error.response.data);
+                console.error("Response status:", error.response.status);
+                message.error(
+                    error.response.data?.error ||
+                        error.response.data?.message ||
+                        "Không thể tải danh sách người dùng"
+                );
+            } else if (error.request) {
+                console.error("Request error:", error.request);
+                message.error(
+                    "Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng."
+                );
+            } else {
+                console.error("Error:", error.message);
+                message.error("Có lỗi xảy ra khi tải dữ liệu");
+            }
         } finally {
             setTableLoading(false);
         }
@@ -278,7 +300,7 @@ const UserManagement = () => {
                 return;
             }
 
-            await axios.delete(`/api/admin/users/${userId}`, {
+            await axios.delete(`http://localhost:5000/admin/users/${userId}`, {
                 headers: {
                     Authorization: `Bearer ${authToken}`,
                 },
@@ -321,7 +343,7 @@ const UserManagement = () => {
                 if (editingUser) {
                     // Update user
                     await axios.put(
-                        `/api/admin/users/${editingUser.id}`,
+                        `http://localhost:5000/admin/users/${editingUser.id}`,
                         {
                             fullName: values.name,
                             email: values.email,
@@ -338,7 +360,7 @@ const UserManagement = () => {
                 } else {
                     // Add new user
                     await axios.post(
-                        "/api/admin/users/addRole",
+                        "http://localhost:5000/admin/users/",
                         formattedValues,
                         {
                             headers: {
