@@ -176,24 +176,35 @@ const MedicalInventory = () => {
     };
 
     const handleDelete = (record) => {
-        Modal.confirm({
-            title: "Bạn có chắc chắn muốn xóa vật tư này?",
-            content: `Việc này sẽ xóa vĩnh viễn ${record.name} khỏi kho.`,
-            okText: "Có",
-            okType: "danger",
-            cancelText: "Không",
-            onOk: async () => {
-                try {
-                    await nurseAPI.deleteMedicalInventory(record.id);
-                    message.success("Xóa vật tư thành công");
-                    fetchInventory();
-                } catch (error) {
-                    message.error(
-                        error.response?.data?.error || "Lỗi khi xóa vật tư"
-                    );
-                }
-            },
-        });
+        console.log(
+            "Delete button clicked for:",
+            record.name,
+            "ID:",
+            record.id
+        );
+
+        if (window.confirm(`Bạn có chắc chắn muốn xóa ${record.name}?`)) {
+            console.log("User confirmed deletion, calling API...");
+            performDelete(record);
+        } else {
+            console.log("User cancelled deletion");
+        }
+    };
+
+    const performDelete = async (record) => {
+        try {
+            await nurseAPI.deleteMedicalInventory(record.id);
+            console.log("Delete successful");
+            message.success("Xóa vật tư thành công");
+            fetchInventory();
+        } catch (error) {
+            console.error("Delete failed:", error);
+            const errorMessage =
+                error.response?.data?.error ||
+                error.message ||
+                "Lỗi khi xóa vật tư";
+            message.error(errorMessage);
+        }
     };
 
     const handleSubmit = async () => {

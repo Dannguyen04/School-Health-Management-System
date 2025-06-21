@@ -318,6 +318,7 @@ export const updateMedicalInventory = async (req, res) => {
 export const deleteMedicalInventory = async (req, res) => {
     try {
         const { id } = req.params;
+        console.log("Delete request for ID:", id);
 
         // Kiểm tra xem vật tư có tồn tại không
         const existingMedication = await prisma.medication.findUnique({
@@ -325,18 +326,29 @@ export const deleteMedicalInventory = async (req, res) => {
             include: {
                 studentMedications: true,
                 medicalEventMedications: true,
+                stockMovements: true,
             },
         });
 
         if (!existingMedication) {
+            console.log("Medication not found");
             return res.status(404).json({
                 success: false,
                 error: "Vật tư y tế không tồn tại",
             });
         }
 
+        console.log("Found medication:", existingMedication.name);
+        console.log("Related records:", {
+            studentMedications: existingMedication.studentMedications.length,
+            medicalEventMedications:
+                existingMedication.medicalEventMedications.length,
+            stockMovements: existingMedication.stockMovements.length,
+        });
+
         // Kiểm tra xem vật tư có đang được sử dụng không
         if (existingMedication.studentMedications.length > 0) {
+            console.log("Cannot delete - used by students");
             return res.status(400).json({
                 success: false,
                 error: "Không thể xóa vật tư đang được sử dụng bởi học sinh",
@@ -344,6 +356,7 @@ export const deleteMedicalInventory = async (req, res) => {
         }
 
         if (existingMedication.medicalEventMedications.length > 0) {
+            console.log("Cannot delete - used in medical events");
             return res.status(400).json({
                 success: false,
                 error: "Không thể xóa vật tư đã được sử dụng trong sự cố y tế",
@@ -351,21 +364,26 @@ export const deleteMedicalInventory = async (req, res) => {
         }
 
         // Xóa các bản ghi stock movement trước
-        await prisma.stockMovement.deleteMany({
-            where: { medicationId: id },
-        });
+        if (existingMedication.stockMovements.length > 0) {
+            console.log("Deleting stock movements...");
+            await prisma.stockMovement.deleteMany({
+                where: { medicationId: id },
+            });
+        }
 
         // Xóa vật tư
+        console.log("Deleting medication...");
         await prisma.medication.delete({
             where: { id },
         });
 
+        console.log("Delete successful");
         res.json({
             success: true,
             message: "Vật tư y tế đã được xóa thành công",
         });
     } catch (error) {
-        console.error("Error deleting medical inventory:", error);
+        console.error("Delete error:", error);
         res.status(500).json({
             success: false,
             error: "Error deleting medical inventory",
