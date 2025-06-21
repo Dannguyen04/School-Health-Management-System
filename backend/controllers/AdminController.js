@@ -21,7 +21,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 
 const VALID_ROLES = ["PARENT", "SCHOOL_NURSE", "MANAGER", "ADMIN"];
-const VALID_GENDERS = ["MALE", "FEMALE"];
+const VALID_GENDERS = ["NAM", "NỮ"];
 
 const roleToModel = {
   STUDENT: "studentProfile",
@@ -96,6 +96,16 @@ const findParentByName = async (parentName, tx = prisma) => {
     throw new Error(`Error finding parent: ${error.message}`);
   }
 };
+// Hàm loại bỏ các trường profile null khỏi user
+function cleanUserProfiles(user) {
+  const cleaned = { ...user };
+  if (cleaned.parentProfile === null) delete cleaned.parentProfile;
+  if (cleaned.nurseProfile === null) delete cleaned.nurseProfile;
+  if (cleaned.managerProfile === null) delete cleaned.managerProfile;
+  if (cleaned.adminProfile === null) delete cleaned.adminProfile;
+  if (cleaned.studentProfile === null) delete cleaned.studentProfile;
+  return cleaned;
+}
 
 const assignParentToStudent = async (
   studentId,
@@ -211,9 +221,9 @@ const addStudent = async (req, res) => {
   try {
     const {
       fullName,
+      password,
       email,
       phone,
-      password,
       dateOfBirth,
       gender,
       grade,
@@ -227,12 +237,13 @@ const addStudent = async (req, res) => {
     const requiredFields = [
       "fullName",
       "email",
-      "phone",
       "password",
       "dateOfBirth",
       "gender",
-      "grade",
       "studentClass",
+      "grade",
+      "emergencyContact",
+      "emergencyPhone",
       "parentName",
     ];
 
@@ -283,12 +294,7 @@ const addStudent = async (req, res) => {
       });
     }
 
-    const [existingUser, existingStudent] = await Promise.all([
-      findUserByEmail(email),
-      studentCode
-        ? prisma.student.findUnique({ where: { studentCode } })
-        : null,
-    ]);
+    const existingUser = await findUserByEmail(email);
 
     if (existingUser) {
       return res.status(422).json({
@@ -297,19 +303,11 @@ const addStudent = async (req, res) => {
       });
     }
 
-    if (existingStudent) {
-      return res.status(422).json({
-        success: false,
-        error: "Mã học sinh đã tồn tại",
-      });
-    }
-
     const result = await prisma.$transaction(async (tx) => {
       const user = await tx.users.create({
         data: {
           fullName: fullName.trim(),
           email: email.toLowerCase().trim(),
-          phone: phone.trim(),
           password: password,
           role: "STUDENT",
           isActive: true,
@@ -349,12 +347,12 @@ const addStudent = async (req, res) => {
         "student",
         student.id,
         {
-          fullName,
-          email,
-          studentCode,
-          grade,
-          class: studentClass,
-          parentAssigned: parentResult.data.parentName,
+          Name: fullName,
+          Email: email,
+          "Mã học sinh": student.studentCode,
+          "Khối lớp": grade,
+          Lớp: studentClass,
+          "Phụ huynh": parentResult?.data?.parentName || null,
         },
         req
       );
@@ -502,22 +500,13 @@ const getAllUsers = async (req, res) => {
         adminProfile: true,
       },
     });
-
-    if (!users || users.length === 0) {
-      console.log("Không có nhân viên nào trong hệ thống");
-      return res
-        .status(404)
-        .json({ message: "Không có nhân viên nào trong hệ thống" });
-    }
-
-    res.status(200).json({ success: true, data: users });
+    const cleanedUsers = users.map(cleanUserProfiles);
+    res.status(200).json({ success: true, data: cleanedUsers });
   } catch (error) {
     console.log(error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
-
-//getAllStudent
 const getAllStudents = async (req, res) => {
   try {
     const students = await prisma.users.findMany({
@@ -528,15 +517,14 @@ const getAllStudents = async (req, res) => {
         studentProfile: true,
       },
     });
-
     if (!students || students.length === 0) {
       return res.status(404).json({
         success: false,
         error: "Không có học sinh nào trong hệ thống",
       });
     }
-
-    res.status(200).json({ success: true, data: students });
+    const cleanedStudents = students.map(cleanUserProfiles);
+    res.status(200).json({ success: true, data: cleanedStudents });
   } catch (error) {
     console.log(error.message);
     return res.status(500).json({ success: false, error: error.message });
@@ -546,7 +534,6 @@ const getAllStudents = async (req, res) => {
 const updateRole = async (req, res) => {
   const { id } = req.params;
   const { role, email, password, fullName } = req.body;
-
   try {
     if (!email || !fullName || !role) {
       return res.status(400).json({
@@ -582,7 +569,6 @@ const updateRole = async (req, res) => {
         error: "Email đã được sử dụng",
       });
     }
-
     const updatedUser = await prisma.$transaction(async (tx) => {
       const currentUser = await tx.users.findUnique({
         where: { id },
@@ -593,18 +579,14 @@ const updateRole = async (req, res) => {
           adminProfile: true,
         },
       });
-
       if (!currentUser) {
         throw new Error("User not found");
       }
-
-      // If role is changing, delete old profile and create new one
       if (currentUser.role !== normalizedRole) {
         const oldTableName = roleToTable[currentUser.role];
         if (oldTableName && currentUser[roleToModel[currentUser.role]]) {
           await tx[oldTableName].delete({ where: { userId: id } });
         }
-
         const newTableName = roleToTable[normalizedRole];
         if (newTableName) {
           await tx[newTableName].create({
@@ -612,18 +594,15 @@ const updateRole = async (req, res) => {
           });
         }
       }
-
       const updateData = {
         role: normalizedRole,
         email: email.toLowerCase().trim(),
         fullName: fullName.trim(),
         updatedAt: new Date(),
       };
-
       if (password) {
         updateData.password = password;
       }
-
       const user = await tx.users.update({
         where: { id },
         data: updateData,
@@ -634,9 +613,12 @@ const updateRole = async (req, res) => {
           role: true,
           createdAt: true,
           updatedAt: true,
+          parentProfile: true,
+          nurseProfile: true,
+          managerProfile: true,
+          adminProfile: true,
         },
       });
-
       await createAuditLog(
         tx,
         id,
@@ -650,14 +632,13 @@ const updateRole = async (req, res) => {
         },
         req
       );
-
       return user;
     });
-
+    const cleanedUser = cleanUserProfiles(updatedUser);
     res.status(200).json({
       success: true,
       message: "Cập nhật người dùng thành công",
-      data: updatedUser,
+      data: cleanedUser,
     });
   } catch (error) {
     console.error("Lỗi khi cập nhật người dùng:", error);
@@ -926,6 +907,77 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const filterUsers = async (req, res) => {
+  try {
+    const { name, email, role } = req.query;
+    const where = {};
+    if (name && name.trim() !== "") {
+      where.fullName = { contains: name.trim(), mode: "insensitive" };
+    }
+    if (email && email.trim() !== "") {
+      where.email = { contains: email.trim(), mode: "insensitive" };
+    }
+    if (role && role.trim() !== "") {
+      where.role = normalizeRole(role);
+    } else {
+      where.role = { not: "STUDENT" };
+    }
+    const users = await prisma.users.findMany({
+      where,
+      include: {
+        parentProfile: true,
+        nurseProfile: true,
+        managerProfile: true,
+        adminProfile: true,
+      },
+    });
+    const cleanedUsers = users.map(cleanUserProfiles);
+    res.status(200).json({ success: true, data: cleanedUsers });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+const filterStudents = async (req, res) => {
+  try {
+    const { studentCode, name, class: studentClass } = req.query;
+    const where = {
+      role: "STUDENT",
+    };
+
+    if (studentCode && studentCode.trim() !== "") {
+      where.studentProfile = {
+        studentCode: {
+          contains: studentCode.trim(),
+          mode: "insensitive",
+        },
+      };
+    }
+    if (name && name.trim() !== "") {
+      where.fullName = { contains: name.trim(), mode: "insensitive" };
+    }
+    if (studentClass && studentClass.trim() !== "") {
+      if (!where.studentProfile) where.studentProfile = {};
+      where.studentProfile.class = {
+        contains: studentClass.trim(),
+        mode: "insensitive",
+      };
+    }
+
+    const students = await prisma.users.findMany({
+      where,
+      include: {
+        studentProfile: true,
+      },
+    });
+
+    const cleanedStudents = students.map(cleanUserProfiles);
+    res.status(200).json({ success: true, data: cleanedStudents });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 process.on("SIGTERM", async () => {
   console.log("Shutting down AdminController...");
   await prisma.$disconnect();
@@ -942,6 +994,8 @@ export {
   addRole,
   addStudent,
   deleteUser,
+  filterStudents,
+  filterUsers,
   getAllStudents,
   getAllUsers,
   updateRole,

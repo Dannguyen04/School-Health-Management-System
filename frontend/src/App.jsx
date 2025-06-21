@@ -1,8 +1,6 @@
 import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
-import ConsentForms from "./components/admin/ConsentForms";
 import AdminDashboard from "./components/admin/Dashboard";
-import MedicationInfo from "./components/admin/MedicationInfo";
 import StudentManagement from "./components/admin/StudentManagement";
 import UserManagement from "./components/admin/UserManagement";
 import AlertsAndEvents from "./components/manager/AlertsAndEvents";
@@ -15,13 +13,14 @@ import Campaigns from "./components/nurse/Campaigns";
 import ConfirmedMedicines from "./components/nurse/ConfirmedMedicines";
 import Dashboard from "./components/nurse/Dashboard";
 import HealthCheckups from "./components/nurse/HealthCheckups";
+import MedicalEventReport from "./components/nurse/MedicalEventReport";
 import MedicalInventory from "./components/nurse/MedicalInventory";
-import Reports from "./components/nurse/Reports";
 import StudentTreatment from "./components/nurse/StudentTreatment";
 import Vaccination from "./components/nurse/Vaccination";
+import ScrollToTop from "./components/ScrollToTop";
 import UserProfile from "./components/shared/UserProfile";
 import Blog from "./components/user/Blog";
-import UserConsentForms from "./components/user/ConsentForms";
+import VaccineConsentForm from "./components/user/ConsentForms";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
 import MedicineInfo from "./components/user/MedicineInfo";
@@ -38,6 +37,7 @@ import RoleBaseRoutes from "./utils/RoleBaseRoutes";
 const App = () => {
   return (
     <Router>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Homepage />} />
         <Route path="/auth" element={<AuthPage />} />
@@ -59,7 +59,7 @@ const App = () => {
           <Route path="vaccination" element={<Vaccination />} />
           <Route path="health-checkups" element={<HealthCheckups />} />
           <Route path="confirmed-medicines" element={<ConfirmedMedicines />} />
-          <Route path="reports" element={<Reports />} />
+          <Route path="medical-event" element={<MedicalEventReport />} />
           <Route path="profile" element={<UserProfile />} />
         </Route>
 
@@ -77,8 +77,6 @@ const App = () => {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="students" element={<StudentManagement />} />
-          <Route path="consent-forms" element={<ConsentForms />} />
-          <Route path="medication-info" element={<MedicationInfo />} />
           <Route path="profile" element={<UserProfile />} />
         </Route>
 
@@ -128,7 +126,7 @@ const App = () => {
             path="health-checkup-results"
             element={<HealthCheckupResults />}
           />
-          <Route path="consent-forms" element={<UserConsentForms />} />
+          <Route path="consent-forms" element={<VaccineConsentForm />} />
           <Route path="health-profile" element={<HealthProfile />} />
           <Route path="medicine-info" element={<MedicineInfo />} />
           <Route path="blog" element={<Blog />} />

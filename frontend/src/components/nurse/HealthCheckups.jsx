@@ -1,8 +1,4 @@
-import {
-  FileTextOutlined,
-  PlusOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { FileTextOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -142,13 +138,13 @@ const HealthCheckups = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Khám sức khỏe</h1>
-        <Button
+        {/* <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setIsModalVisible(true)}
         >
           Thêm khám
-        </Button>
+        </Button> */}
       </div>
 
       <Card>

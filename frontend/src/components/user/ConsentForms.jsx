@@ -1,27 +1,39 @@
-import {
-  CheckOutlined,
-  CloseOutlined,
-  FileTextOutlined,
-} from "@ant-design/icons";
+import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
-  List,
-  Modal,
+  message,
   Select,
   Space,
+  Table,
   Tag,
   Typography,
-  message,
 } from "antd";
 import { useState } from "react";
 
 const { Title, Text } = Typography;
 
-const UserConsentForms = () => {
+const requirementMap = {
+  REQUIRED: "Bắt buộc",
+  OPTIONAL: "Tùy chọn",
+};
+
+const doseMap = {
+  FIRST: "Liều đầu tiên",
+  SECOND: "Liều thứ hai",
+  BOOSTER: "Liều nhắc lại",
+};
+
+const statusMap = {
+  UNSCHEDULED: { color: "default", text: "Chưa lên lịch" },
+  SCHEDULED: { color: "processing", text: "Đã lên lịch" },
+  COMPLETED: { color: "success", text: "Đã tiêm" },
+  POSTPONED: { color: "warning", text: "Hoãn" },
+  CANCELLED: { color: "error", text: "Hủy" },
+};
+
+const VaccineConsentForm = () => {
   const [selectedChild, setSelectedChild] = useState("child1");
-  const [selectedForm, setSelectedForm] = useState(null);
-  const [isModalVisible, setIsModalVisible] = useState(false);
 
   // Mock data - replace with actual API data
   const children = [
@@ -29,61 +41,167 @@ const UserConsentForms = () => {
     { value: "child2", label: "Nguyễn Văn B" },
   ];
 
-  const [forms, setForms] = useState([
+  const [vaccines, setVaccines] = useState([
     {
       id: 1,
-      title: "Đồng ý tiêm chủng",
-      type: "vaccination",
-      description: "Form đồng ý cho phép tiêm chủng các loại vaccine theo lịch",
-      status: "pending",
-      submittedDate: "2024-03-10",
+      name: "Vaccine Sởi - Rubella",
+      requirement: "REQUIRED",
+      expiredDate: "2024-12-31",
+      status: "SCHEDULED",
+      administeredDate: null,
+      dose: "FIRST",
+      sideEffects: "",
+      notes: "Tiêm phòng cho trẻ lớp 1",
+      parentConsent: null,
+      consentDate: null,
+      scheduledDate: "2024-06-15",
     },
     {
       id: 2,
-      title: "Đồng ý khám sức khỏe",
-      type: "checkup",
-      description: "Form đồng ý cho phép khám sức khỏe định kỳ",
-      status: "approved",
-      submittedDate: "2024-03-05",
+      name: "Vaccine Cúm mùa",
+      requirement: "OPTIONAL",
+      expiredDate: "2024-11-30",
+      status: "SCHEDULED",
+      administeredDate: null,
+      dose: "SECOND",
+      sideEffects: "",
+      notes: "Khuyến nghị cho trẻ có bệnh nền",
+      parentConsent: true,
+      consentDate: "2024-05-01",
+      scheduledDate: "2024-06-20",
+    },
+    {
+      id: 3,
+      name: "Vaccine Viêm gan B",
+      requirement: "REQUIRED",
+      expiredDate: "2024-10-10",
+      status: "SCHEDULED",
+      administeredDate: null,
+      dose: "BOOSTER",
+      sideEffects: "",
+      notes: "Liều nhắc lại cho trẻ lớp 5",
+      parentConsent: false,
+      consentDate: "2024-05-02",
+      scheduledDate: "2024-06-25",
     },
   ]);
 
-  const getStatusTag = (status) => {
-    const statusConfig = {
-      approved: { color: "success", text: "Đã đồng ý" },
-      rejected: { color: "error", text: "Không đồng ý" },
-      pending: { color: "warning", text: "Chưa xác nhận" },
-    };
-
-    const config = statusConfig[status];
-    return <Tag color={config.color}>{config.text}</Tag>;
+  const getConsentTag = (consent) => {
+    if (consent === true) return <Tag color="success">Đã đồng ý</Tag>;
+    if (consent === false) return <Tag color="error">Không đồng ý</Tag>;
+    return <Tag color="warning">Chưa xác nhận</Tag>;
   };
 
-  const handleConsent = (formId, approved) => {
-    Modal.confirm({
-      title: approved ? "Xác nhận đồng ý" : "Xác nhận không đồng ý",
-      content: "Bạn có chắc chắn về quyết định này?",
-      onOk: () => {
-        setForms(
-          forms.map((form) =>
-            form.id === formId
-              ? { ...form, status: approved ? "approved" : "rejected" }
-              : form
-          )
-        );
-        message.success(
-          approved
-            ? "Đã xác nhận đồng ý thành công"
-            : "Đã xác nhận không đồng ý"
-        );
-        setIsModalVisible(false);
-      },
-    });
+  const handleConsent = (vaccineId, consent) => {
+    setVaccines(
+      vaccines.map((v) =>
+        v.id === vaccineId
+          ? {
+              ...v,
+              parentConsent: consent,
+              consentDate: new Date().toISOString().slice(0, 10),
+            }
+          : v
+      )
+    );
+    message.success(
+      consent
+        ? "Đã xác nhận đồng ý tiêm vaccine"
+        : "Đã xác nhận không đồng ý tiêm vaccine"
+    );
   };
+
+  const columns = [
+    {
+      title: "Tên vaccine",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "Loại liều",
+      dataIndex: "dose",
+      key: "dose",
+      render: (dose) => doseMap[dose],
+    },
+    {
+      title: "Yêu cầu",
+      dataIndex: "requirement",
+      key: "requirement",
+      render: (req) => requirementMap[req],
+    },
+    {
+      title: "Ngày dự kiến tiêm",
+      dataIndex: "scheduledDate",
+      key: "scheduledDate",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => (
+        <Tag color={statusMap[status].color}>{statusMap[status].text}</Tag>
+      ),
+    },
+    {
+      title: "Ngày hết hạn",
+      dataIndex: "expiredDate",
+      key: "expiredDate",
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "notes",
+      key: "notes",
+    },
+    {
+      title: "Tác dụng phụ",
+      dataIndex: "sideEffects",
+      key: "sideEffects",
+      render: (val) => val || "Không có",
+    },
+    {
+      title: "Trạng thái xác nhận",
+      dataIndex: "parentConsent",
+      key: "parentConsent",
+      render: getConsentTag,
+    },
+    {
+      title: "Ngày xác nhận",
+      dataIndex: "consentDate",
+      key: "consentDate",
+      render: (val) => val || "-",
+    },
+    {
+      title: "Hành động",
+      key: "action",
+      width: 120,
+      render: (_, record) => (
+        <Space>
+          <Button
+            type="primary"
+            icon={<CheckOutlined />}
+            onClick={() => handleConsent(record.id, true)}
+            disabled={record.parentConsent !== null}
+            size="small"
+          >
+            Đồng ý
+          </Button>
+          <Button
+            danger
+            icon={<CloseOutlined />}
+            onClick={() => handleConsent(record.id, false)}
+            disabled={record.parentConsent !== null}
+            size="small"
+          >
+            Không
+          </Button>
+        </Space>
+      ),
+    },
+  ];
 
   return (
     <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
-      <div className="w-full max-w-3xl">
+      <div className="w-full max-w-6xl">
         <Card
           className="rounded-3xl shadow-lg border-0 mt-12"
           style={{
@@ -106,10 +224,10 @@ const UserConsentForms = () => {
           >
             <div>
               <Title level={2} className="!text-[#36ae9a] !mb-0">
-                Form đồng ý
+                Xác nhận tiêm vaccine
               </Title>
               <Text type="secondary">
-                Danh sách các form đồng ý cho học sinh
+                Danh sách các đợt tiêm vaccine cho học sinh
               </Text>
             </div>
             <Select
@@ -119,85 +237,18 @@ const UserConsentForms = () => {
               options={children}
             />
           </div>
-
-          <Card
-            className="rounded-xl border-0 shadow-none"
-            style={{ marginBottom: 24 }}
-          >
-            <List
-              grid={{ gutter: 16, xs: 1, sm: 1, md: 2, lg: 2, xl: 2, xxl: 3 }}
-              dataSource={forms}
-              renderItem={(form) => (
-                <List.Item>
-                  <Card
-                    title={
-                      <Space>
-                        <FileTextOutlined />
-                        {form.title}
-                      </Space>
-                    }
-                    extra={getStatusTag(form.status)}
-                  >
-                    <Text>{form.description}</Text>
-                    <div className="mt-4">
-                      <Text type="secondary">
-                        Ngày gửi: {form.submittedDate}
-                      </Text>
-                    </div>
-                    <div className="mt-4 flex justify-end">
-                      <Space>
-                        <Button
-                          type="primary"
-                          icon={<CheckOutlined />}
-                          onClick={() => handleConsent(form.id, true)}
-                          disabled={form.status !== "pending"}
-                        >
-                          Tôi đồng ý
-                        </Button>
-                        <Button
-                          danger
-                          icon={<CloseOutlined />}
-                          onClick={() => handleConsent(form.id, false)}
-                          disabled={form.status !== "pending"}
-                        >
-                          Tôi không đồng ý
-                        </Button>
-                      </Space>
-                    </div>
-                  </Card>
-                </List.Item>
-              )}
-            />
-          </Card>
-
-          <Modal
-            title={selectedForm?.title}
-            open={isModalVisible}
-            onCancel={() => setIsModalVisible(false)}
-            footer={null}
-            width={800}
-          >
-            {selectedForm && (
-              <div className="space-y-4">
-                <div>
-                  <Text strong>Mô tả:</Text>
-                  <p>{selectedForm.description}</p>
-                </div>
-                <div>
-                  <Text strong>Trạng thái:</Text>
-                  <p>{getStatusTag(selectedForm.status)}</p>
-                </div>
-                <div>
-                  <Text strong>Ngày gửi:</Text>
-                  <p>{selectedForm.submittedDate}</p>
-                </div>
-              </div>
-            )}
-          </Modal>
+          <Table
+            columns={columns}
+            dataSource={vaccines}
+            rowKey="id"
+            pagination={false}
+            bordered
+            scroll={{ x: "max-content" }}
+          />
         </Card>
       </div>
     </div>
   );
 };
 
-export default UserConsentForms;
+export default VaccineConsentForm;

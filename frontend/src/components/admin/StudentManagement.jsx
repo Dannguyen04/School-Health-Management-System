@@ -11,7 +11,6 @@ import {
   DatePicker,
   Form,
   Input,
-  InputNumber,
   message,
   Modal,
   Row,
@@ -263,7 +262,7 @@ const StudentManagement = () => {
             }
           );
           message.success("Cập nhật học sinh thành công");
-          fetchStudents(); // Refresh data after update
+          fetchStudents();
         } catch (error) {
           message.error(
             error.response?.data?.error || "Không thể cập nhật học sinh"
@@ -292,7 +291,7 @@ const StudentManagement = () => {
           });
 
           message.success("Thêm học sinh thành công");
-          fetchStudents(); // Refresh data after adding a new student
+          fetchStudents();
         } catch (error) {
           message.error(
             error.response?.data?.error || "Không thể thêm học sinh"
@@ -472,9 +471,8 @@ const StudentManagement = () => {
               rules={[{ required: true, message: "Vui lòng chọn giới tính!" }]}
             >
               <Select>
-                <Option value="male">Nam</Option>
-                <Option value="female">Nữ</Option>
-                <Option value="other">Khác</Option>
+                <Option value="Nam">Nam</Option>
+                <Option value="Nữ">Nữ</Option>
               </Select>
             </Form.Item>
             <Form.Item
@@ -482,7 +480,13 @@ const StudentManagement = () => {
               label="Khối"
               rules={[{ required: true, message: "Vui lòng nhập khối!" }]}
             >
-              <InputNumber min={1} max={12} style={{ width: "100%" }} />
+              <Select>
+                <Option value="1">1</Option>
+                <Option value="2">2</Option>
+                <Option value="3">3</Option>
+                <Option value="4">4</Option>
+                <Option value="5">5</Option>
+              </Select>
             </Form.Item>
             <Form.Item
               name="class"
