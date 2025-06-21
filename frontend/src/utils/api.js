@@ -62,4 +62,13 @@ export const nurseAPI = {
     getMedicineStats: () => api.get("/medicines/statistics"),
 };
 
+// User API endpoints
+export const userAPI = {
+    // Get current user profile
+    getProfile: () => api.get("/auth/profile"),
+
+    // Update current user profile
+    updateProfile: (data) => api.put("/auth/profile", data),
+};
+
 export default api;
