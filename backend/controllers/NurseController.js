@@ -72,7 +72,32 @@ export const getDashboardStats = async (req, res) => {
 // Lấy danh sách vật tư y tế
 export const getMedicalInventory = async (req, res) => {
     try {
+        const { search, category, lowStock } = req.query;
+
+        let whereClause = {};
+
+        // Tìm kiếm theo tên
+        if (search) {
+            whereClause.name = {
+                contains: search,
+                mode: "insensitive",
+            };
+        }
+
+        // Lọc theo danh mục
+        if (category) {
+            whereClause.description = category;
+        }
+
+        // Lọc theo tồn kho thấp
+        if (lowStock === "true") {
+            whereClause.stockQuantity = {
+                lte: whereClause.minStockLevel || 10,
+            };
+        }
+
         const medications = await prisma.medication.findMany({
+            where: whereClause,
             orderBy: {
                 name: "asc",
             },
@@ -86,6 +111,8 @@ export const getMedicalInventory = async (req, res) => {
             minStock: med.minStockLevel,
             expiryDate: med.expiryDate,
             category: med.description || "General",
+            manufacturer: med.manufacturer,
+            dosage: med.dosage,
         }));
 
         res.json({
@@ -97,6 +124,284 @@ export const getMedicalInventory = async (req, res) => {
         res.status(500).json({
             success: false,
             error: "Error getting medical inventory",
+        });
+    }
+};
+
+// Thêm vật tư y tế mới
+export const createMedicalInventory = async (req, res) => {
+    try {
+        const {
+            name,
+            description,
+            dosage,
+            unit,
+            manufacturer,
+            expiryDate,
+            stockQuantity,
+            minStockLevel,
+        } = req.body;
+
+        // Kiểm tra xem vật tư đã tồn tại chưa
+        const existingMedication = await prisma.medication.findFirst({
+            where: {
+                name: {
+                    equals: name,
+                    mode: "insensitive",
+                },
+            },
+        });
+
+        if (existingMedication) {
+            return res.status(400).json({
+                success: false,
+                error: "Vật tư y tế này đã tồn tại trong kho",
+            });
+        }
+
+        const newMedication = await prisma.medication.create({
+            data: {
+                name,
+                description,
+                dosage,
+                unit,
+                manufacturer,
+                expiryDate: expiryDate ? new Date(expiryDate) : null,
+                stockQuantity: parseInt(stockQuantity) || 0,
+                minStockLevel: parseInt(minStockLevel) || 10,
+            },
+        });
+
+        // Tạo bản ghi stock movement cho việc nhập kho
+        if (parseInt(stockQuantity) > 0) {
+            await prisma.stockMovement.create({
+                data: {
+                    medicationId: newMedication.id,
+                    type: "in",
+                    quantity: parseInt(stockQuantity),
+                    reason: "Nhập kho ban đầu",
+                    reference: "Initial stock",
+                },
+            });
+        }
+
+        res.status(201).json({
+            success: true,
+            data: {
+                id: newMedication.id,
+                name: newMedication.name,
+                quantity: newMedication.stockQuantity,
+                unit: newMedication.unit,
+                minStock: newMedication.minStockLevel,
+                expiryDate: newMedication.expiryDate,
+                category: newMedication.description || "General",
+                manufacturer: newMedication.manufacturer,
+                dosage: newMedication.dosage,
+            },
+        });
+    } catch (error) {
+        console.error("Error creating medical inventory:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error creating medical inventory",
+        });
+    }
+};
+
+// Cập nhật vật tư y tế
+export const updateMedicalInventory = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            name,
+            description,
+            dosage,
+            unit,
+            manufacturer,
+            expiryDate,
+            stockQuantity,
+            minStockLevel,
+        } = req.body;
+
+        // Kiểm tra xem vật tư có tồn tại không
+        const existingMedication = await prisma.medication.findUnique({
+            where: { id },
+        });
+
+        if (!existingMedication) {
+            return res.status(404).json({
+                success: false,
+                error: "Vật tư y tế không tồn tại",
+            });
+        }
+
+        // Kiểm tra xem tên mới có trùng với vật tư khác không
+        if (name && name !== existingMedication.name) {
+            const duplicateMedication = await prisma.medication.findFirst({
+                where: {
+                    name: {
+                        equals: name,
+                        mode: "insensitive",
+                    },
+                    id: {
+                        not: id,
+                    },
+                },
+            });
+
+            if (duplicateMedication) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Tên vật tư y tế này đã tồn tại",
+                });
+            }
+        }
+
+        // Tính toán sự thay đổi số lượng
+        const quantityChange =
+            parseInt(stockQuantity) - existingMedication.stockQuantity;
+
+        const updatedMedication = await prisma.medication.update({
+            where: { id },
+            data: {
+                name,
+                description,
+                dosage,
+                unit,
+                manufacturer,
+                expiryDate: expiryDate ? new Date(expiryDate) : null,
+                stockQuantity: parseInt(stockQuantity) || 0,
+                minStockLevel: parseInt(minStockLevel) || 10,
+            },
+        });
+
+        // Tạo bản ghi stock movement nếu có thay đổi số lượng
+        if (quantityChange !== 0) {
+            await prisma.stockMovement.create({
+                data: {
+                    medicationId: id,
+                    type: quantityChange > 0 ? "in" : "out",
+                    quantity: Math.abs(quantityChange),
+                    reason:
+                        quantityChange > 0
+                            ? "Cập nhật số lượng"
+                            : "Điều chỉnh số lượng",
+                    reference: "Inventory update",
+                },
+            });
+        }
+
+        res.json({
+            success: true,
+            data: {
+                id: updatedMedication.id,
+                name: updatedMedication.name,
+                quantity: updatedMedication.stockQuantity,
+                unit: updatedMedication.unit,
+                minStock: updatedMedication.minStockLevel,
+                expiryDate: updatedMedication.expiryDate,
+                category: updatedMedication.description || "General",
+                manufacturer: updatedMedication.manufacturer,
+                dosage: updatedMedication.dosage,
+            },
+        });
+    } catch (error) {
+        console.error("Error updating medical inventory:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error updating medical inventory",
+        });
+    }
+};
+
+// Xóa vật tư y tế
+export const deleteMedicalInventory = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Kiểm tra xem vật tư có tồn tại không
+        const existingMedication = await prisma.medication.findUnique({
+            where: { id },
+            include: {
+                studentMedications: true,
+                medicalEventMedications: true,
+            },
+        });
+
+        if (!existingMedication) {
+            return res.status(404).json({
+                success: false,
+                error: "Vật tư y tế không tồn tại",
+            });
+        }
+
+        // Kiểm tra xem vật tư có đang được sử dụng không
+        if (existingMedication.studentMedications.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: "Không thể xóa vật tư đang được sử dụng bởi học sinh",
+            });
+        }
+
+        if (existingMedication.medicalEventMedications.length > 0) {
+            return res.status(400).json({
+                success: false,
+                error: "Không thể xóa vật tư đã được sử dụng trong sự cố y tế",
+            });
+        }
+
+        // Xóa các bản ghi stock movement trước
+        await prisma.stockMovement.deleteMany({
+            where: { medicationId: id },
+        });
+
+        // Xóa vật tư
+        await prisma.medication.delete({
+            where: { id },
+        });
+
+        res.json({
+            success: true,
+            message: "Vật tư y tế đã được xóa thành công",
+        });
+    } catch (error) {
+        console.error("Error deleting medical inventory:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error deleting medical inventory",
+        });
+    }
+};
+
+// Lấy danh sách danh mục vật tư
+export const getInventoryCategories = async (req, res) => {
+    try {
+        const categories = await prisma.medication.findMany({
+            select: {
+                description: true,
+            },
+            where: {
+                description: {
+                    not: null,
+                },
+            },
+            distinct: ["description"],
+        });
+
+        const categoryList = categories
+            .map((cat) => cat.description)
+            .filter((cat) => cat && cat.trim() !== "")
+            .sort();
+
+        res.json({
+            success: true,
+            data: categoryList,
+        });
+    } catch (error) {
+        console.error("Error getting inventory categories:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error getting inventory categories",
         });
     }
 };

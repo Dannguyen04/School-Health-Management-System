@@ -48,7 +48,12 @@ export const nurseAPI = {
         api.get("/nurse/dashboard/upcoming-vaccinations"),
 
     // Medical inventory
-    getMedicalInventory: () => api.get("/nurse/inventory"),
+    getMedicalInventory: (params) => api.get("/nurse/inventory", { params }),
+    createMedicalInventory: (data) => api.post("/nurse/inventory", data),
+    updateMedicalInventory: (id, data) =>
+        api.put(`/nurse/inventory/${id}`, data),
+    deleteMedicalInventory: (id) => api.delete(`/nurse/inventory/${id}`),
+    getInventoryCategories: () => api.get("/nurse/inventory/categories"),
 
     // Pending medications
     getPendingMedicines: () => api.get("/medicines/pending"),

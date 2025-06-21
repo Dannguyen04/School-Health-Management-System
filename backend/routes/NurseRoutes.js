@@ -6,6 +6,10 @@ import {
     getUpcomingVaccinations,
     updateMedicalEventStatus,
     getMedicalInventory,
+    createMedicalInventory,
+    updateMedicalInventory,
+    deleteMedicalInventory,
+    getInventoryCategories,
 } from "../controllers/NurseController.js";
 
 const router = express.Router();
@@ -20,6 +24,10 @@ router.get("/dashboard/upcoming-vaccinations", getUpcomingVaccinations);
 
 // Inventory routes
 router.get("/inventory", getMedicalInventory);
+router.post("/inventory", createMedicalInventory);
+router.put("/inventory/:id", updateMedicalInventory);
+router.delete("/inventory/:id", deleteMedicalInventory);
+router.get("/inventory/categories", getInventoryCategories);
 
 // Medical event routes
 router.patch("/medical-events/:eventId/status", updateMedicalEventStatus);
