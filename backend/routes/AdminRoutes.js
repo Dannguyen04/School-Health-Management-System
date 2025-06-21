@@ -2,16 +2,21 @@ import express from "express";
 import studentRoutes from "./StudentRoutes.js";
 
 import {
-  addRole,
-  deleteUser,
-  filterUsers,
-  getAllUsers,
-  getDashboardStats,
-  updateRole,
+    addRole,
+    deleteUser,
+    filterUsers,
+    getAllUsers,
+    getDashboardStats,
+    updateRole,
+    addStudent,
+    getAllStudents,
+    updateStudent,
+    filterStudents,
+    getAllStudentsForNurse,
 } from "../controllers/AdminController.js";
 import {
-  authenticateToken,
-  verifyAdmin,
+    authenticateToken,
+    verifyAdmin,
 } from "../middleware/authenticateToken.js";
 
 const router = express.Router();
@@ -21,10 +26,10 @@ router.post("/admin", authenticateToken, verifyAdmin);
 
 // Dashboard statistics
 router.get(
-  "/dashboard/stats",
-  authenticateToken,
-  verifyAdmin,
-  getDashboardStats
+    "/dashboard/stats",
+    authenticateToken,
+    verifyAdmin,
+    getDashboardStats
 );
 
 // Mount các route con liên quan đến student
@@ -39,5 +44,18 @@ router.delete("/users/:id", authenticateToken, verifyAdmin, deleteUser);
 router.put("/users/:id", authenticateToken, verifyAdmin, updateRole);
 
 router.get("/users/filter", authenticateToken, verifyAdmin, filterUsers);
+
+router.post("/", authenticateToken, verifyAdmin, addStudent);
+
+router.get("/", authenticateToken, verifyAdmin, getAllStudents);
+
+router.put("/:id", authenticateToken, verifyAdmin, updateStudent);
+
+router.delete("/:id", authenticateToken, verifyAdmin, deleteUser);
+
+router.get("/filter", authenticateToken, verifyAdmin, filterStudents);
+
+// Route cho y tá lấy danh sách học sinh
+router.get("/students-for-nurse", authenticateToken, getAllStudentsForNurse);
 
 export default router;

@@ -10,6 +10,11 @@ import {
     updateMedicalInventory,
     deleteMedicalInventory,
     getInventoryCategories,
+    getAllMedicalEvents,
+    createMedicalEvent,
+    updateMedicalEvent,
+    deleteMedicalEvent,
+    getMedicalEventById,
 } from "../controllers/NurseController.js";
 
 const router = express.Router();
@@ -30,6 +35,11 @@ router.delete("/inventory/:id", deleteMedicalInventory);
 router.get("/inventory/categories", getInventoryCategories);
 
 // Medical event routes
+router.get("/medical-events", getAllMedicalEvents);
+router.post("/medical-events", createMedicalEvent);
+router.get("/medical-events/:eventId", getMedicalEventById);
+router.put("/medical-events/:eventId", updateMedicalEvent);
+router.delete("/medical-events/:eventId", deleteMedicalEvent);
 router.patch("/medical-events/:eventId/status", updateMedicalEventStatus);
 
 export default router;

@@ -60,6 +60,19 @@ export const nurseAPI = {
 
     // Medicine statistics
     getMedicineStats: () => api.get("/medicines/statistics"),
+
+    // Medical events
+    getAllMedicalEvents: () => api.get("/nurse/medical-events"),
+    createMedicalEvent: (data) => api.post("/nurse/medical-events", data),
+    getMedicalEventById: (id) => api.get(`/nurse/medical-events/${id}`),
+    updateMedicalEvent: (id, data) =>
+        api.put(`/nurse/medical-events/${id}`, data),
+    deleteMedicalEvent: (id) => api.delete(`/nurse/medical-events/${id}`),
+    updateMedicalEventStatus: (id, data) =>
+        api.patch(`/nurse/medical-events/${id}/status`, data),
+
+    // Students for nurse
+    getStudentsForNurse: () => api.get("/admin/students-for-nurse"),
 };
 
 // User API endpoints
