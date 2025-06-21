@@ -2,17 +2,17 @@ import express from "express";
 import studentRoutes from "./StudentRoutes.js";
 
 import {
-    authenticateToken,
-    verifyAdmin,
-} from "../middleware/authenticateToken.js";
-import {
-    getAllUsers,
-    addRole,
-    deleteUser,
-    updateRole,
-    filterUsers,
-    getDashboardStats,
+  addRole,
+  deleteUser,
+  filterUsers,
+  getAllUsers,
+  getDashboardStats,
+  updateRole,
 } from "../controllers/AdminController.js";
+import {
+  authenticateToken,
+  verifyAdmin,
+} from "../middleware/authenticateToken.js";
 
 const router = express.Router();
 
@@ -21,10 +21,10 @@ router.post("/admin", authenticateToken, verifyAdmin);
 
 // Dashboard statistics
 router.get(
-    "/dashboard/stats",
-    authenticateToken,
-    verifyAdmin,
-    getDashboardStats
+  "/dashboard/stats",
+  authenticateToken,
+  verifyAdmin,
+  getDashboardStats
 );
 
 // Mount các route con liên quan đến student

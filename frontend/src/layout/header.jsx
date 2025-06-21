@@ -1,6 +1,6 @@
 import { LogoutOutlined, UserOutlined } from "@ant-design/icons";
 import { Avatar, Dropdown, Space, message } from "antd";
-import { Bell, ChevronsLeft, Search } from "lucide-react";
+import { ChevronsLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import PropTypes from "prop-types";
@@ -56,21 +56,8 @@ export const Header = ({ collapsed, setCollapsed }) => {
         >
           <ChevronsLeft className={collapsed && "rotate-180"} />
         </button>
-        <div className="input">
-          <Search size={20} className="text-slate-300" />
-          <input
-            type="text"
-            name="search"
-            id="search"
-            placeholder="Search..."
-            className="w-full bg-transparent text-slate-900 outline-0 placeholder:text-slate-300"
-          />
-        </div>
       </div>
       <div className="flex items-center gap-x-3">
-        <button className="btn-ghost size-10">
-          <Bell size={20} />
-        </button>
         <Dropdown menu={{ items: menuItems }} placement="bottomRight" arrow>
           <Space className="cursor-pointer">
             <Avatar icon={<UserOutlined />} />

@@ -1,14 +1,14 @@
 import express from "express";
 import {
-    addStudent,
-    deleteUser,
-    getAllStudents,
-    updateStudent,
-    filterStudents,
+  addStudent,
+  deleteUser,
+  filterStudents,
+  getAllStudents,
+  updateStudent,
 } from "../controllers/AdminController.js";
 import {
-    authenticateToken,
-    verifyAdmin,
+  authenticateToken,
+  verifyAdmin,
 } from "../middleware/authenticateToken.js";
 
 const router = express.Router();

@@ -83,7 +83,7 @@ export const nurseNavbarLinks = [
         path: "/nurse/confirmed-medicines",
         icon: Package,
       },
-      { label: "Báo Cáo", path: "/nurse/reports", icon: BarChart2 },
+      { label: "Báo Cáo Y Tế", path: "/nurse/medical-event", icon: BarChart2 },
     ],
   },
 ];

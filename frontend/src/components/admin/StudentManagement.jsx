@@ -8,25 +8,22 @@ import {
     TeamOutlined,
 } from "@ant-design/icons";
 import {
-    Alert,
-    Button,
-    Card,
-    Col,
-    DatePicker,
-    Form,
-    Input,
-    InputNumber,
-    message,
-    Modal,
-    Row,
-    Select,
-    Space,
-    Spin,
-    Table,
-    Tag,
-    Tooltip,
-    Popconfirm,
-    Statistic,
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Form,
+  Input,
+  message,
+  Modal,
+  Popconfirm,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Table,
+  Tag,
+  Tooltip,
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -35,18 +32,13 @@ import { useEffect, useState } from "react";
 const { Option } = Select;
 
 const StudentManagement = () => {
-    const [form] = Form.useForm();
-    const [isModalVisible, setIsModalVisible] = useState(false);
-    const [editingStudent, setEditingStudent] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [students, setStudents] = useState([]);
-    const [filteredStudents, setFilteredStudents] = useState([]);
-    const [tableLoading, setTableLoading] = useState(false);
-    const [stats, setStats] = useState({
-        total: 0,
-        active: 0,
-        inactive: 0,
-    });
+  const [form] = Form.useForm();
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [editingStudent, setEditingStudent] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [students, setStudents] = useState([]); // State for real student data
+  const [filteredStudents, setFilteredStudents] = useState([]); // State for filtered students
+  const [tableLoading, setTableLoading] = useState(false); // Loading for table
 
     const [searchForm] = Form.useForm();
     const [formError, setFormError] = useState("");
@@ -97,16 +89,11 @@ const StudentManagement = () => {
                 return;
             }
 
-            const response = await axios.get(
-                "http://localhost:5000/admin/students/",
-                {
-                    headers: {
-                        Authorization: `Bearer ${authToken}`,
-                    },
-                }
-            );
-
-            console.log("Students API Response:", response.data); // Debug log
+      const response = await axios.get("/api/admin/students", {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
 
             if (response.data.success && response.data.data) {
                 // Map the fetched data to match the table's expected structure
@@ -164,156 +151,76 @@ const StudentManagement = () => {
         }
     };
 
-    // Fetch students on component mount
-    useEffect(() => {
-        fetchStudents();
-    }, []);
+  // Fetch students on component mount
+  useEffect(() => {
+    fetchStudents();
+  }, []);
 
-    const getGenderLabel = (gender) => {
-        switch (gender) {
-            case "male":
-                return "Nam";
-            case "female":
-                return "Nữ";
-            case "other":
-                return "Khác";
-            default:
-                return gender;
-        }
-    };
-
-    const getGenderColor = (gender) => {
-        switch (gender) {
-            case "male":
-                return "blue";
-            case "female":
-                return "pink";
-            case "other":
-                return "purple";
-            default:
-                return "default";
-        }
-    };
-
-    const columns = [
-        {
-            title: "Mã học sinh",
-            dataIndex: "studentCode",
-            key: "studentCode",
-            render: (code) => (
-                <span className="font-mono text-blue-600">{code}</span>
-            ),
-        },
-        {
-            title: "Tên",
-            dataIndex: "name",
-            key: "name",
-            sorter: (a, b) => a.name.localeCompare(b.name),
-            render: (name) => <span className="font-medium">{name}</span>,
-        },
-        {
-            title: "Email",
-            dataIndex: "email",
-            key: "email",
-            render: (email) => <span className="text-blue-600">{email}</span>,
-        },
-        {
-            title: "Lớp",
-            dataIndex: "class",
-            key: "class",
-            filters: [
-                { text: "Lớp 1", value: "1" },
-                { text: "Lớp 2", value: "2" },
-                { text: "Lớp 3", value: "3" },
-                { text: "Lớp 4", value: "4" },
-                { text: "Lớp 5", value: "5" },
-            ],
-            onFilter: (value, record) => record.class?.includes(value),
-        },
-        {
-            title: "Khối",
-            dataIndex: "grade",
-            key: "grade",
-            sorter: (a, b) => a.grade - b.grade,
-            render: (grade) => <Tag color="orange">Khối {grade}</Tag>,
-        },
-        {
-            title: "Giới tính",
-            dataIndex: "gender",
-            key: "gender",
-            filters: [
-                { text: "Nam", value: "male" },
-                { text: "Nữ", value: "female" },
-                { text: "Khác", value: "other" },
-            ],
-            onFilter: (value, record) => record.gender === value,
-            render: (gender) => (
-                <Tag color={getGenderColor(gender)}>
-                    {getGenderLabel(gender)}
-                </Tag>
-            ),
-        },
-        {
-            title: "Trạng thái",
-            dataIndex: "status",
-            key: "status",
-            filters: [
-                { text: "Hoạt động", value: "active" },
-                { text: "Không hoạt động", value: "inactive" },
-            ],
-            onFilter: (value, record) => record.status === value,
-            render: (status) => (
-                <Tag color={status === "active" ? "green" : "red"}>
-                    {status === "active" ? "Hoạt động" : "Không hoạt động"}
-                </Tag>
-            ),
-        },
-        {
-            title: "Ngày tạo",
-            dataIndex: "createdAt",
-            key: "createdAt",
-            render: (date) => new Date(date).toLocaleDateString("vi-VN"),
-            sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
-        },
-        {
-            title: "Thao tác",
-            key: "actions",
-            render: (_, record) => (
-                <Space>
-                    <Tooltip title="Sửa thông tin học sinh">
-                        <Button
-                            type="primary"
-                            icon={<EditOutlined />}
-                            onClick={() => handleEdit(record)}
-                            size="small"
-                        >
-                            Sửa
-                        </Button>
-                    </Tooltip>
-                    <Popconfirm
-                        title="Xóa học sinh"
-                        description="Bạn có chắc chắn muốn xóa học sinh này không? Hành động này không thể hoàn tác."
-                        onConfirm={() => handleDelete(record.id)}
-                        okText="Có, xóa"
-                        cancelText="Hủy"
-                        placement="topRight"
-                    >
-                        <Tooltip title="Xóa học sinh">
-                            <Button
-                                type="primary"
-                                danger
-                                icon={<DeleteOutlined />}
-                                size="small"
-                                loading={deletingStudentId === record.id}
-                            >
-                                Xóa
-                            </Button>
-                        </Tooltip>
-                    </Popconfirm>
-                </Space>
-            ),
-        },
-    ];
+  const columns = [
+    {
+      title: "Mã học sinh",
+      dataIndex: "studentCode",
+      key: "studentCode",
+    },
+    {
+      title: "Tên",
+      dataIndex: "name",
+      key: "name",
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+    },
+    {
+      title: "Lớp",
+      dataIndex: "class",
+      key: "class",
+    },
+    {
+      title: "Khối",
+      dataIndex: "grade",
+      key: "grade",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => (
+        <Tag color={status === "active" ? "green" : "red"}>
+          {status === "active" ? "Hoạt động" : "Không hoạt động"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Sửa">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              type="primary"
+              size="small"
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xác nhận xóa học sinh"
+            description={`Bạn có chắc chắn muốn xóa học sinh "${record.name}"?`}
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okType="danger"
+          >
+            <Tooltip title="Xóa">
+              <Button danger icon={<DeleteOutlined />} size="small" />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
 
     const handleAdd = () => {
         setEditingStudent(null);
@@ -322,45 +229,53 @@ const StudentManagement = () => {
         setIsModalVisible(true);
     };
 
-    const handleEdit = (student) => {
-        setEditingStudent(student);
-        setFormError("");
-        form.setFieldsValue({
-            name: student.name,
-            email: student.email,
-            dateOfBirth: student.dateOfBirth
-                ? dayjs(student.dateOfBirth)
-                : null,
-            gender: student.gender,
-            grade: Number(student.grade),
-            class: student.class,
-            emergencyContact: student.emergencyContact,
-            emergencyPhone: student.emergencyPhone,
-            bloodType: student.bloodType,
-        });
-        setIsModalVisible(true);
-    };
+  const handleEdit = (student) => {
+    setEditingStudent(student);
+    form.setFieldsValue({
+      studentCode: student.studentCode,
+      name: student.name,
+      email: student.email,
+      dateOfBirth: dayjs(student.dateOfBirth),
+      gender: student.gender,
+      grade: Number(student.grade),
+      class: student.class,
+      emergencyContact: student.emergencyContact,
+      emergencyPhone: student.emergencyPhone,
+    });
+    setIsModalVisible(true);
+  };
 
-    const handleSubmit = async () => {
-        try {
-            setFormError(""); // Xóa lỗi cũ
-            const values = await form.validateFields();
-            console.log("📋 Form values:", values); // Debug log
-
-            const formattedValues = {
-                fullName: values.name,
-                email: values.email,
-                phone: values.emergencyPhone,
-                password: "defaultPassword123",
-                dateOfBirth: values.dateOfBirth.toISOString(),
-                gender: values.gender,
-                grade: parseInt(values.grade),
-                class: values.class, // Backend sẽ map thành studentClass
-                emergencyContact: values.emergencyContact,
-                emergencyPhone: values.emergencyPhone,
-                bloodType: values.bloodType,
-                parentName: values.parentName,
-            };
+  const handleSubmit = async () => {
+    try {
+      const values = await form.validateFields();
+      const formattedValues = editingStudent
+        ? {
+            studentCode: values.studentCode,
+            fullName: values.name,
+            email: values.email,
+            phone: values.emergencyPhone,
+            password: "defaultPassword123",
+            dateOfBirth: values.dateOfBirth.toISOString(),
+            gender: values.gender,
+            grade: parseInt(values.grade),
+            class: values.class,
+            emergencyContact: values.emergencyContact,
+            emergencyPhone: values.emergencyPhone,
+            parentName: values.parentName,
+          }
+        : {
+            fullName: values.name,
+            email: values.email,
+            phone: values.emergencyPhone,
+            password: "defaultPassword123",
+            dateOfBirth: values.dateOfBirth.toISOString(),
+            gender: values.gender,
+            grade: parseInt(values.grade),
+            class: values.class,
+            emergencyContact: values.emergencyContact,
+            emergencyPhone: values.emergencyPhone,
+            parentName: values.parentName,
+          };
 
             console.log("📤 Sending data:", formattedValues); // Debug log
 
@@ -381,121 +296,30 @@ const StudentManagement = () => {
                     return;
                 }
 
-                if (editingStudent) {
-                    // Update student
-                    const updateValues = {
-                        fullName: values.name,
-                        email: values.email,
-                        phone: values.emergencyPhone,
-                        dateOfBirth: values.dateOfBirth.toISOString(),
-                        gender: values.gender,
-                        grade: parseInt(values.grade),
-                        class: values.class,
-                        emergencyContact: values.emergencyContact,
-                        emergencyPhone: values.emergencyPhone,
-                        bloodType: values.bloodType,
-                    };
+          const updateValues = {
+            studentCode: values.studentCode,
+            fullName: values.name,
+            email: values.email,
+            phone: values.emergencyPhone,
+            dateOfBirth: values.dateOfBirth.toISOString(),
+            gender: values.gender,
+            grade: parseInt(values.grade),
+            class: values.class,
+            emergencyContact: values.emergencyContact,
+            emergencyPhone: values.emergencyPhone,
+          };
 
-                    await axios.put(
-                        `http://localhost:5000/admin/students/${editingStudent.id}`,
-                        updateValues,
-                        {
-                            headers: {
-                                Authorization: `Bearer ${authToken}`,
-                            },
-                        }
-                    );
-                    message.success("Cập nhật học sinh thành công");
-                } else {
-                    // Add new student
-                    await axios.post(
-                        "http://localhost:5000/admin/students",
-                        formattedValues,
-                        {
-                            headers: {
-                                Authorization: `Bearer ${authToken}`,
-                            },
-                        }
-                    );
-                    message.success("Thêm học sinh thành công");
-                }
-                fetchStudents();
-                setIsModalVisible(false);
-            } catch (error) {
-                console.error("❌ API Error:", error.response?.data);
-                console.error("📋 Error Status:", error.response?.status);
-                console.error("📋 Error Message:", error.response?.data?.error);
-                console.error("📋 Full Error Response:", error.response);
-
-                // Hiển thị lỗi chi tiết hơn
-                let errorMessage = "Không thể thực hiện thao tác";
-
-                if (error.response?.data?.error) {
-                    const backendError = error.response.data.error;
-
-                    // Xử lý các loại lỗi cụ thể
-                    if (backendError.includes("Thiếu trường bắt buộc")) {
-                        errorMessage = backendError;
-                    } else if (backendError.includes("Email không hợp lệ")) {
-                        errorMessage =
-                            "Email không đúng định dạng. Vui lòng kiểm tra lại!";
-                    } else if (backendError.includes("Email đã tồn tại")) {
-                        errorMessage =
-                            "Email này đã được sử dụng. Vui lòng chọn email khác!";
-                    } else if (
-                        backendError.includes(
-                            "Mật khẩu phải có ít nhất 8 ký tự"
-                        )
-                    ) {
-                        errorMessage =
-                            "Mật khẩu không đủ mạnh. Vui lòng thử lại!";
-                    } else if (
-                        backendError.includes("Ngày sinh không hợp lệ")
-                    ) {
-                        errorMessage =
-                            "Ngày sinh không hợp lệ. Học sinh phải từ 3-18 tuổi!";
-                    } else if (
-                        backendError.includes("Khối lớp phải từ 1 đến 5")
-                    ) {
-                        errorMessage =
-                            "Khối lớp không hợp lệ. Vui lòng chọn từ 1-5!";
-                    } else if (backendError.includes("Giới tính phải là")) {
-                        errorMessage =
-                            "Giới tính không hợp lệ. Vui lòng chọn Nam, Nữ hoặc Khác!";
-                    } else if (backendError.includes("Access token required")) {
-                        errorMessage =
-                            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
-                    } else if (
-                        backendError.includes("Không tìm thấy phụ huynh")
-                    ) {
-                        errorMessage =
-                            "Không tìm thấy phụ huynh với tên này. Học sinh vẫn được tạo nhưng chưa gán phụ huynh.";
-                    } else {
-                        errorMessage = backendError;
-                    }
-                } else if (error.response?.status === 401) {
-                    errorMessage =
-                        "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!";
-                } else if (error.response?.status === 403) {
-                    errorMessage = "Bạn không có quyền thực hiện thao tác này!";
-                } else if (error.response?.status === 404) {
-                    errorMessage = "Không tìm thấy dữ liệu cần thiết!";
-                } else if (error.response?.status === 422) {
-                    errorMessage =
-                        "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin!";
-                } else if (error.response?.status >= 500) {
-                    errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau!";
-                } else if (error.request) {
-                    errorMessage =
-                        "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng!";
-                }
-
-                setFormError(errorMessage);
-                message.error(errorMessage);
-                console.error("Lỗi:", error);
-            } finally {
-                setLoading(false);
+          await axios.put(
+            `/api/admin/students/${editingStudent.id}`,
+            updateValues,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
             }
+          );
+          message.success("Cập nhật học sinh thành công");
+          fetchStudents();
         } catch (error) {
             console.error("Lỗi xác thực:", error);
         }
@@ -515,18 +339,14 @@ const StudentManagement = () => {
                 return;
             }
 
-            await axios.delete(
-                `http://localhost:5000/admin/students/${studentId}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${authToken}`,
-                    },
-                }
-            );
+          await axios.post("/api/admin/students", formattedValues, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
 
-            message.success("Xóa học sinh thành công");
-            // Cập nhật danh sách học sinh sau khi xóa
-            await fetchStudents();
+          message.success("Thêm học sinh thành công");
+          fetchStudents();
         } catch (error) {
             console.error("❌ Lỗi khi xóa học sinh:", error.response?.data);
             console.error("📋 Status:", error.response?.status);
@@ -585,14 +405,39 @@ const StudentManagement = () => {
             message.error(errorMessage);
             console.error("Lỗi khi xóa học sinh:", error);
         } finally {
-            setDeletingStudentId(null);
+          setLoading(false);
         }
-    };
+      }
+      setIsModalVisible(false);
+    } catch (error) {
+      console.error("Lỗi xác thực:", error);
+    }
+  };
 
-    const handleResetSearch = () => {
-        searchForm.resetFields();
-        setFilteredStudents(students);
-    };
+  const handleDelete = async (studentId) => {
+    setTableLoading(true);
+    try {
+      const authToken = localStorage.getItem("token");
+      if (!authToken) {
+        message.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+        setTableLoading(false);
+        return;
+      }
+      // Call deleteUser endpoint for students
+      await axios.delete(`/api/admin/users/${studentId}`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      message.success("Xóa học sinh thành công");
+      fetchStudents(); // Refresh data after deletion
+    } catch (error) {
+      message.error(error.response?.data?.error || "Không thể xóa học sinh");
+      console.error("Lỗi khi xóa học sinh:", error);
+    } finally {
+      setTableLoading(false);
+    }
+  };
 
     return (
         <div className="space-y-6">
@@ -700,391 +545,121 @@ const StudentManagement = () => {
                 </Form>
             </Card>
 
-            {/* Bảng dữ liệu */}
-            <Card className="shadow-sm">
-                {deleteError && (
-                    <Alert
-                        message="Lỗi xóa học sinh"
-                        description={deleteError}
-                        type="error"
-                        showIcon
-                        closable
-                        onClose={() => {
-                            setDeleteError("");
-                        }}
-                        style={{ marginBottom: 16 }}
-                    />
-                )}
-                <Table
-                    columns={columns}
-                    dataSource={filteredStudents}
-                    rowKey="id"
-                    pagination={{
-                        pageSize: 10,
-                        showSizeChanger: true,
-                        showQuickJumper: true,
-                        showTotal: (total, range) =>
-                            `${range[0]}-${range[1]} của ${total} học sinh`,
-                    }}
-                    loading={tableLoading}
-                    scroll={{ x: 1400 }}
-                />
-            </Card>
+      <Table
+        columns={columns}
+        dataSource={filteredStudents}
+        rowKey="id"
+        pagination={{ pageSize: 5, showQuickJumper: true }}
+        loading={tableLoading}
+      />
 
-            {/* Modal thêm/sửa học sinh */}
-            <Modal
-                title={
-                    editingStudent
-                        ? "Sửa thông tin học sinh"
-                        : "Thêm học sinh mới"
-                }
-                open={isModalVisible}
-                onOk={handleSubmit}
-                onCancel={() => {
-                    setIsModalVisible(false);
-                    setFormError("");
-                    form.resetFields();
-                }}
-                okText={editingStudent ? "Cập nhật" : "Thêm"}
-                cancelText="Hủy"
-                confirmLoading={loading}
-                width={700}
-                destroyOnClose
+      <Modal
+        title={editingStudent ? "Sửa thông tin học sinh" : "Thêm học sinh mới"}
+        open={isModalVisible}
+        onOk={handleSubmit}
+        onCancel={() => setIsModalVisible(false)}
+        okText={editingStudent ? "Cập nhật" : "Thêm"}
+        confirmLoading={loading}
+      >
+        <Spin spinning={loading}>
+          <Form form={form} layout="vertical">
+            {editingStudent && (
+              <Form.Item
+                name="studentCode"
+                label="Mã học sinh"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã học sinh!" },
+                ]}
+              >
+                <Input disabled />
+              </Form.Item>
+            )}
+            <Form.Item
+              name="name"
+              label="Họ và tên"
+              rules={[{ required: true, message: "Vui lòng nhập họ và tên!" }]}
             >
-                <Spin spinning={loading}>
-                    {formError && (
-                        <Alert
-                            message="Lỗi"
-                            description={formError}
-                            type="error"
-                            showIcon
-                            closable
-                            onClose={() => setFormError("")}
-                            style={{ marginBottom: 16 }}
-                        />
-                    )}
-                    <Form form={form} layout="vertical">
-                        <Row gutter={16}>
-                            <Col span={12}>
-                                <Form.Item
-                                    name="name"
-                                    label="Họ và tên"
-                                    rules={[
-                                        {
-                                            required: true,
-                                            message: "Vui lòng nhập họ và tên!",
-                                        },
-                                        {
-                                            min: 2,
-                                            message:
-                                                "Tên phải có ít nhất 2 ký tự!",
-                                        },
-                                        {
-                                            max: 50,
-                                            message:
-                                                "Tên không được quá 50 ký tự!",
-                                        },
-                                        {
-                                            pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
-                                            message:
-                                                "Tên chỉ được chứa chữ cái và khoảng trắng!",
-                                        },
-                                    ]}
-                                    extra="Nhập đầy đủ họ và tên học sinh (chỉ chữ cái và khoảng trắng)"
-                                >
-                                    <Input placeholder="Nhập họ và tên học sinh" />
-                                </Form.Item>
-                            </Col>
-                            <Col span={12}>
-                                <Form.Item
-                                    name="email"
-                                    label="Email"
-                                    rules={[
-                                        {
-                                            required: true,
-                                            message: "Vui lòng nhập email!",
-                                        },
-                                        {
-                                            type: "email",
-                                            message: "Email không hợp lệ!",
-                                        },
-                                        {
-                                            pattern:
-                                                /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
-                                            message:
-                                                "Email phải có định dạng hợp lệ!",
-                                        },
-                                    ]}
-                                    extra="Email sẽ được sử dụng để đăng nhập vào hệ thống"
-                                >
-                                    <Input placeholder="Nhập email" />
-                                </Form.Item>
-                            </Col>
-                        </Row>
-
-                        <Row gutter={16}>
-                            <Col span={12}>
-                                <Form.Item
-                                    name="dateOfBirth"
-                                    label="Ngày sinh"
-                                    rules={[
-                                        {
-                                            required: true,
-                                            message: "Vui lòng chọn ngày sinh!",
-                                        },
-                                        {
-                                            validator: (_, value) => {
-                                                if (!value) {
-                                                    return Promise.reject(
-                                                        new Error(
-                                                            "Vui lòng chọn ngày sinh!"
-                                                        )
-                                                    );
-                                                }
-
-                                                const today = new Date();
-                                                const birthDate =
-                                                    value.toDate();
-                                                const age =
-                                                    today.getFullYear() -
-                                                    birthDate.getFullYear();
-
-                                                if (age < 3) {
-                                                    return Promise.reject(
-                                                        new Error(
-                                                            "Học sinh phải ít nhất 3 tuổi!"
-                                                        )
-                                                    );
-                                                }
-
-                                                if (age > 18) {
-                                                    return Promise.reject(
-                                                        new Error(
-                                                            "Học sinh không được quá 18 tuổi!"
-                                                        )
-                                                    );
-                                                }
-
-                                                return Promise.resolve();
-                                            },
-                                        },
-                                    ]}
-                                >
-                                    <DatePicker
-                                        style={{ width: "100%" }}
-                                        placeholder="Chọn ngày sinh"
-                                        disabledDate={(current) => {
-                                            const today = new Date();
-                                            const minDate = new Date(
-                                                today.getFullYear() - 18,
-                                                0,
-                                                1
-                                            );
-                                            const maxDate = new Date(
-                                                today.getFullYear() - 3,
-                                                11,
-                                                31
-                                            );
-                                            return (
-                                                current &&
-                                                (current > maxDate ||
-                                                    current < minDate)
-                                            );
-                                        }}
-                                    />
-                                </Form.Item>
-                            </Col>
-                            <Col span={12}>
-                                <Form.Item
-                                    name="gender"
-                                    label="Giới tính"
-                                    rules={[
-                                        {
-                                            required: true,
-                                            message: "Vui lòng chọn giới tính!",
-                                        },
-                                    ]}
-                                >
-                                    <Select placeholder="Chọn giới tính">
-                                        <Option value="male">Nam</Option>
-                                        <Option value="female">Nữ</Option>
-                                        <Option value="other">Khác</Option>
-                                    </Select>
-                                </Form.Item>
-                            </Col>
-                        </Row>
-
-                        <Row gutter={16}>
-                            <Col span={12}>
-                                <Form.Item
-                                    name="grade"
-                                    label="Khối"
-                                    rules={[
-                                        {
-                                            required: true,
-                                            message: "Vui lòng nhập khối!",
-                                        },
-                                        {
-                                            validator: (_, value) => {
-                                                if (!value) {
-                                                    return Promise.reject(
-                                                        new Error(
-                                                            "Vui lòng nhập khối!"
-                                                        )
-                                                    );
-                                                }
-
-                                                if (value < 1 || value > 5) {
-                                                    return Promise.reject(
-                                                        new Error(
-                                                            "Khối phải từ 1 đến 5!"
-                                                        )
-                                                    );
-                                                }
-
-                                                return Promise.resolve();
-                                            },
-                                        },
-                                    ]}
-                                >
-                                    <InputNumber
-                                        min={1}
-                                        max={5}
-                                        style={{ width: "100%" }}
-                                        placeholder="Nhập khối (1-5)"
-                                    />
-                                </Form.Item>
-                            </Col>
-                            <Col span={12}>
-                                <Form.Item
-                                    name="class"
-                                    label="Lớp"
-                                    rules={[
-                                        {
-                                            required: true,
-                                            message: "Vui lòng nhập lớp!",
-                                        },
-                                        {
-                                            pattern: /^[1-5][A-Z]$/,
-                                            message:
-                                                "Lớp phải có định dạng: Khối + Chữ cái (VD: 1A, 2B, 3C)!",
-                                        },
-                                    ]}
-                                    extra="Định dạng: Khối + Chữ cái (VD: 1A, 2B, 3C, 4D, 5E)"
-                                >
-                                    <Input placeholder="VD: 1A, 2B, 3C" />
-                                </Form.Item>
-                            </Col>
-                        </Row>
-
-                        <Row gutter={16}>
-                            <Col span={12}>
-                                <Form.Item name="bloodType" label="Nhóm máu">
-                                    <Select
-                                        placeholder="Chọn nhóm máu"
-                                        allowClear
-                                    >
-                                        <Option value="A+">A+</Option>
-                                        <Option value="A-">A-</Option>
-                                        <Option value="B+">B+</Option>
-                                        <Option value="B-">B-</Option>
-                                        <Option value="AB+">AB+</Option>
-                                        <Option value="AB-">AB-</Option>
-                                        <Option value="O+">O+</Option>
-                                        <Option value="O-">O-</Option>
-                                    </Select>
-                                </Form.Item>
-                            </Col>
-                            <Col span={12}>
-                                <Form.Item
-                                    name="emergencyContact"
-                                    label="Người liên hệ khẩn cấp"
-                                    rules={[
-                                        {
-                                            required: true,
-                                            message:
-                                                "Vui lòng nhập tên người liên hệ!",
-                                        },
-                                        {
-                                            min: 2,
-                                            message:
-                                                "Tên người liên hệ phải có ít nhất 2 ký tự!",
-                                        },
-                                        {
-                                            pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
-                                            message:
-                                                "Tên chỉ được chứa chữ cái và khoảng trắng!",
-                                        },
-                                    ]}
-                                >
-                                    <Input placeholder="Nhập tên người liên hệ" />
-                                </Form.Item>
-                            </Col>
-                        </Row>
-
-                        <Form.Item
-                            name="emergencyPhone"
-                            label="Số điện thoại liên hệ khẩn cấp"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Vui lòng nhập số điện thoại!",
-                                },
-                                {
-                                    pattern: /^[0-9+\-\s()]+$/,
-                                    message: "Số điện thoại không hợp lệ!",
-                                },
-                                {
-                                    min: 10,
-                                    message:
-                                        "Số điện thoại phải có ít nhất 10 số!",
-                                },
-                                {
-                                    max: 15,
-                                    message:
-                                        "Số điện thoại không được quá 15 ký tự!",
-                                },
-                            ]}
-                        >
-                            <Input placeholder="VD: 0987654321 hoặc 0987-654-321" />
-                        </Form.Item>
-
-                        {!editingStudent && (
-                            <Form.Item
-                                name="parentName"
-                                label="Tên phụ huynh"
-                                rules={[
-                                    {
-                                        pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
-                                        message:
-                                            "Tên chỉ được chứa chữ cái và khoảng trắng!",
-                                    },
-                                ]}
-                            >
-                                <Input placeholder="Nhập tên phụ huynh (không bắt buộc)" />
-                            </Form.Item>
-                        )}
-
-                        {editingStudent && (
-                            <Form.Item
-                                name="parentName"
-                                label="Tên phụ huynh"
-                                rules={[
-                                    {
-                                        pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
-                                        message:
-                                            "Tên chỉ được chứa chữ cái và khoảng trắng!",
-                                    },
-                                ]}
-                            >
-                                <Input placeholder="Nhập tên phụ huynh (không bắt buộc)" />
-                            </Form.Item>
-                        )}
-                    </Form>
-                </Spin>
-            </Modal>
-        </div>
-    );
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="email"
+              label="Email"
+              rules={[
+                { required: true, message: "Vui lòng nhập email!" },
+                { type: "email", message: "Email không hợp lệ!" },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="dateOfBirth"
+              label="Ngày sinh"
+              rules={[{ required: true, message: "Vui lòng chọn ngày sinh!" }]}
+            >
+              <DatePicker style={{ width: "100%" }} />
+            </Form.Item>
+            <Form.Item
+              name="gender"
+              label="Giới tính"
+              rules={[{ required: true, message: "Vui lòng chọn giới tính!" }]}
+            >
+              <Select>
+                <Option value="Nam">Nam</Option>
+                <Option value="Nữ">Nữ</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item
+              name="grade"
+              label="Khối"
+              rules={[{ required: true, message: "Vui lòng nhập khối!" }]}
+            >
+              <Select>
+                <Option value="1">1</Option>
+                <Option value="2">2</Option>
+                <Option value="3">3</Option>
+                <Option value="4">4</Option>
+                <Option value="5">5</Option>
+              </Select>
+            </Form.Item>
+            <Form.Item
+              name="class"
+              label="Lớp"
+              rules={[{ required: true, message: "Vui lòng nhập lớp!" }]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="emergencyContact"
+              label="Người liên hệ khẩn cấp"
+              rules={[
+                { required: true, message: "Vui lòng nhập tên người liên hệ!" },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="emergencyPhone"
+              label="Số điện thoại liên hệ khẩn cấp"
+              rules={[
+                { required: true, message: "Vui lòng nhập số điện thoại!" },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+            <Form.Item
+              name="parentName"
+              label="Tên phụ huynh"
+              rules={[
+                { required: true, message: "Vui lòng nhập tên phụ huynh!" },
+              ]}
+            >
+              <Input />
+            </Form.Item>
+          </Form>
+        </Spin>
+      </Modal>
+    </div>
+  );
 };
 
 export default StudentManagement;
