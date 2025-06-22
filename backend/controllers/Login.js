@@ -82,7 +82,7 @@ const handleLogin = async (req, res) => {
                 user: {
                     id: user.id,
                     email: user.email,
-                    name: user.name,
+                    name: user.fullName,
                     role: user.role,
                 },
             });

@@ -78,6 +78,7 @@ const verifyRole = (requiredRoles) => (req, res, next) => {
 
 // Specific role-based middleware
 const verifyAdmin = verifyRole(["ADMIN"]);
+const verifyManager = verifyRole(["MANAGER"]);
 const verifyUser = verifyRole(["ADMIN", "USER", "PARENTS", "SCHOOL-NURSE"]);
 
 // Cleanup Prisma on shutdown
@@ -87,4 +88,10 @@ process.on("SIGTERM", async () => {
     process.exit(0);
 });
 
-export { authenticateToken, verifyAdmin, verifyRole, verifyUser };
+export {
+    authenticateToken,
+    verifyAdmin,
+    verifyRole,
+    verifyUser,
+    verifyManager,
+};
