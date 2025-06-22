@@ -6,6 +6,7 @@ import AdminRoutes from "./routes/AdminRoutes.js";
 import authRouter from "./routes/auth.js";
 import NurseRoutes from "./routes/NurseRoutes.js";
 import UserRoutes from "./routes/UserRoutes.js";
+import VaccinationCampaignRoutes from "./routes/VaccinationCampaignRoutes.js";
 // import parentRouter from "./routes/ParentRoutes.js";
 
 dotenv.config();
@@ -26,6 +27,7 @@ app.use("/auth", authRouter);
 app.use("/admin", AdminRoutes);
 app.use("/nurse", NurseRoutes);
 app.use("/users", UserRoutes);
+app.use("/manager/vaccination-campaigns", VaccinationCampaignRoutes);
 // app.use("/parent", parentRouter);
 
 // 404 handler
