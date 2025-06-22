@@ -78,7 +78,11 @@ const HealthProfile = () => {
       const response = await parentAPI.getHealthProfile(selectedStudent);
       setHealthProfile(response.data.healthProfile);
     } catch (error) {
+<<<<<<< Updated upstream
       setHealthProfile(null); // Clear profile on error
+=======
+      setHealthProfile(null);
+>>>>>>> Stashed changes
       message.error(
         error.response?.data?.error || "Không thể tải hồ sơ sức khỏe"
       );
@@ -127,7 +131,7 @@ const HealthProfile = () => {
       message.success("Cập nhật hồ sơ sức khỏe thành công");
       setIsEditModalVisible(false);
       setShowSuccess(true);
-      fetchHealthProfile(); // Refresh health profile after update
+      fetchHealthProfile();
     } catch (error) {
       console.error("Error updating health profile:", error);
       message.error(
@@ -138,7 +142,6 @@ const HealthProfile = () => {
     }
   };
 
-  // Helper function to get initial values for the form
   const getInitialValues = () => ({
     allergies: healthProfile?.allergies?.join(", ") || "",
     chronicDiseases: healthProfile?.chronicDiseases?.join(", ") || "",
@@ -232,6 +235,7 @@ const HealthProfile = () => {
             />
           )}
 
+<<<<<<< Updated upstream
           {!selectedStudent && (
             <Alert
               message="Vui lòng chọn học sinh để xem hồ sơ sức khỏe"
@@ -253,6 +257,8 @@ const HealthProfile = () => {
             />
           )}
 
+=======
+>>>>>>> Stashed changes
           {healthProfile && (
             <Card
               className="rounded-xl border-0 shadow-none"
