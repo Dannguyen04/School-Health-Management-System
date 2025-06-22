@@ -9,12 +9,12 @@ import HealthCheckupCampaigns from "./components/manager/HealthCheckupCampaigns"
 import HealthReports from "./components/manager/HealthReports";
 import StudentList from "./components/manager/StudentList";
 import VaccinationCampaigns from "./components/manager/VaccinationCampaigns";
-import Campaigns from "./components/nurse/Campaigns";
 import ConfirmedMedicines from "./components/nurse/ConfirmedMedicines";
 import Dashboard from "./components/nurse/Dashboard";
 import HealthCheckups from "./components/nurse/HealthCheckups";
 import MedicalEventReport from "./components/nurse/MedicalEventReport";
 import MedicalInventory from "./components/nurse/MedicalInventory";
+import StudentHealthProfile from "./components/nurse/StudentHealthProfile";
 import StudentTreatment from "./components/nurse/StudentTreatment";
 import Vaccination from "./components/nurse/Vaccination";
 import ScrollToTop from "./components/ScrollToTop";
@@ -52,7 +52,10 @@ const App = () => {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="campaigns" element={<Campaigns />} />
+          <Route
+            path="student-health-profile"
+            element={<StudentHealthProfile />}
+          />
           <Route path="medical-inventory" element={<MedicalInventory />} />
           <Route path="student-treatment" element={<StudentTreatment />} />
           <Route path="vaccination" element={<Vaccination />} />

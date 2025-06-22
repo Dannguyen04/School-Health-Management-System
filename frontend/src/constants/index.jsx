@@ -3,6 +3,7 @@ import {
   BarChart2,
   FileText,
   FlaskConical,
+  Heart,
   LayoutDashboard,
   Package,
   User,
@@ -78,6 +79,11 @@ export const nurseNavbarLinks = [
       },
       { label: "Tiêm Chủng", path: "/nurse/vaccination", icon: FlaskConical },
       { label: "Khám Sức Khỏe", path: "/nurse/health-checkups", icon: User },
+      {
+        label: "Hồ Sơ Sức Khỏe",
+        path: "/nurse/student-health-profile",
+        icon: Heart,
+      },
       {
         label: "Xác Nhận Thuốc",
         path: "/nurse/confirmed-medicines",
