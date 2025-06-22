@@ -53,7 +53,7 @@ const HealthProfile = () => {
       const studentData = response.data?.data || [];
       setChildren(studentData);
       if (studentData.length > 0) {
-        setSelectedStudent(studentData[0].id);
+        setSelectedStudent(studentData[0].studentId);
       }
     } catch (error) {
       message.error(
@@ -202,8 +202,8 @@ const HealthProfile = () => {
                 >
                   {children.map((child) => (
                     <Select.Option
-                      key={child.id}
-                      value={child.id}
+                      key={child.studentId}
+                      value={child.studentId}
                     >
                       {child.fullName}
                     </Select.Option>
@@ -216,7 +216,7 @@ const HealthProfile = () => {
                 type="primary"
                 icon={<EditOutlined />}
                 onClick={() => setIsEditModalVisible(true)}
-                disabled={!selectedStudent || !healthProfile}
+                disabled={!selectedStudent}
               >
                 Cập nhật thông tin
               </Button>

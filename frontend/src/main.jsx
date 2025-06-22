@@ -1,10 +1,10 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.jsx";
-import AuthContext from "./context/authContext.jsx";
+import { AuthProvider } from "./context/authContext.jsx";
 import "./index.css";
 
 createRoot(document.getElementById("root")).render(
-  <AuthContext>
+  <AuthProvider>
     <App />
-  </AuthContext>
+  </AuthProvider>
 );

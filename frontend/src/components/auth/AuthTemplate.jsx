@@ -18,6 +18,7 @@ import {
   SignUpContainer,
   Title,
 } from "./AuthStyles";
+import api from "../../utils/api";
 
 export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const [signIn, setSignIn] = useState(true);
@@ -32,7 +33,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
     e.preventDefault();
     setErrors({});
     try {
-      const response = await axios.post("http://localhost:5000/auth/login", {
+      const response = await api.post("/auth/login", {
         email,
         password,
       });
@@ -71,7 +72,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
     e.preventDefault();
     setErrors({});
     try {
-      const response = await axios.post("http://localhost:5000/auth/register", {
+      const response = await api.post("/auth/register", {
         name,
         email,
         password,
@@ -113,7 +114,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const handleGoogleSuccess = async (response) => {
     try {
       console.log("Google login response:", response);
-      const res = await axios.post("http://localhost:5000/auth/google-login", {
+      const res = await api.post("/auth/google-login", {
         credential: response.credential,
       });
 
