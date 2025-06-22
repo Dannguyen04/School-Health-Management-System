@@ -21,6 +21,7 @@ import {
   Tag,
 } from "antd";
 import axios from "axios";
+import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
@@ -48,7 +49,7 @@ const VaccineManagement = () => {
   const fetchVaccines = async () => {
     setLoading(true);
     try {
-      const response = await axios.get("/api/manager/vaccination/optional", {
+      const response = await axios.get("/api/manager/vaccination", {
         headers: getHeaders(),
       });
       if (response.data.success) {
@@ -202,7 +203,7 @@ const VaccineManagement = () => {
     setSelectedVaccine(record);
     vaccineForm.setFieldsValue({
       ...record,
-      expiredDate: record.expiredDate ? new Date(record.expiredDate) : null,
+      expiredDate: record.expiredDate ? dayjs(record.expiredDate) : null,
     });
     setIsModalVisible(true);
   };
@@ -227,6 +228,20 @@ const VaccineManagement = () => {
           ? values.expiredDate.toISOString()
           : null,
       };
+
+      // Thêm log để kiểm tra dữ liệu gửi lên
+      console.log("Vaccine data gửi lên:", vaccineData);
+
+      // Kiểm tra các trường bắt buộc
+      if (
+        !vaccineData.name ||
+        !vaccineData.requirement ||
+        !vaccineData.expiredDate ||
+        !vaccineData.dose
+      ) {
+        message.error("Vui lòng nhập đầy đủ các trường bắt buộc!");
+        return;
+      }
 
       let success = false;
       if (selectedVaccine) {
@@ -307,11 +322,8 @@ const VaccineManagement = () => {
           rowKey="id"
           loading={loading}
           pagination={{
-            pageSize: 10,
+            pageSize: 5,
             showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} vaccine`,
           }}
         />
       </Card>

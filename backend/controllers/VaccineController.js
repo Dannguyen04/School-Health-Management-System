@@ -29,7 +29,7 @@ const createVaccine = async (req, res) => {
     });
   }
 
-  const existedVaccine = await prisma.vaccination.findUnique({
+  const existedVaccine = await prisma.vaccination.findFirst({
     where: { name },
   });
 
@@ -149,20 +149,20 @@ const getAllOptionalVaccine = async (req, res) => {
 
 //get vaccine
 const getVaccines = async (req, res) => {
-    try {
-        const vaccines = await getAllVaccine();
-        if (!vaccines)
-            return res
-                .status(404)
-                .json({ success: false, error: "Không tìm thấy vaccine" });
-        res.status(200).json({ success: true, data: vaccines });
-    } catch (error) {
-        console.log(error);
-        return res.status(500).json({
-            success: false,
-            error: error.message,
-        });
-    }
+  try {
+    const vaccines = await getAllVaccine();
+    if (!vaccines)
+      return res
+        .status(404)
+        .json({ success: false, error: "Không tìm thấy vaccine" });
+    res.status(200).json({ success: true, data: vaccines });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
 };
 
 const updateVaccine = async (req, res) => {
@@ -180,7 +180,7 @@ const updateVaccine = async (req, res) => {
     }
 
     if (name && name !== existedVaccine.name) {
-      const nameExists = await prisma.vaccination.findUnique({
+      const nameExists = await prisma.vaccination.findFirst({
         where: { name },
       });
       if (nameExists) {
@@ -248,5 +248,6 @@ export {
   getAllOptionalVaccine,
   getAllRequiredVaccine,
   getAllVaccine,
+  getVaccines,
   updateVaccine,
 };

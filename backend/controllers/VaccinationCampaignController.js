@@ -80,20 +80,7 @@ const createVaccinationCampaign = async (req, res) => {
 
 const getAllVaccinationCampaigns = async (req, res) => {
   try {
-    const campaigns = await prisma.vaccinationCampaign.findMany({
-      include: {
-        vaccine: {
-          select: {
-            id: true,
-            name: true,
-            requirement: true,
-          },
-        },
-      },
-      orderBy: {
-        scheduledDate: "desc",
-      },
-    });
+    const campaigns = await prisma.vaccinationCampaign.findMany();
     res.status(200).json({ success: true, data: campaigns });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -114,7 +101,7 @@ const updateVaccinationCampaign = async (req, res) => {
     }
 
     if (name && name !== existed.name) {
-      const nameExists = await prisma.vaccinationCampaign.findUnique({
+      const nameExists = await prisma.vaccinationCampaign.findFirst({
         where: { name },
       });
       if (nameExists) {
@@ -163,29 +150,9 @@ const deleteVaccinationCampaign = async (req, res) => {
   }
 };
 
-// Lấy danh sách vaccine cho dropdown
-const getAllVaccines = async (req, res) => {
-  try {
-    const vaccines = await prisma.vaccination.findMany({
-      select: {
-        id: true,
-        name: true,
-        requirement: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
-    res.status(200).json({ success: true, data: vaccines });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
 export {
   createVaccinationCampaign,
   deleteVaccinationCampaign,
   getAllVaccinationCampaigns,
-  getAllVaccines,
   updateVaccinationCampaign,
 };

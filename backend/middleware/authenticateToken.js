@@ -12,12 +12,10 @@ if (!process.env.JWT_SECRET) {
 
 // Middleware to authenticate JWT and attach user data
 const authenticateToken = async (req, res, next) => {
-  console.log("authenticateToken middleware called");
   const authHeader = req.headers["authorization"];
   const token = authHeader && authHeader.split(" ")[1]; // Bearer <token>
 
   if (!token) {
-    console.log("No token provided");
     return res
       .status(401)
       .json({ success: false, error: "Access token required" });
@@ -26,7 +24,6 @@ const authenticateToken = async (req, res, next) => {
   try {
     // Verify JWT
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    console.log("Token decoded, userId:", decoded.userId);
 
     const user = await prisma.users.findUnique({
       where: { id: decoded.userId },
@@ -41,11 +38,9 @@ const authenticateToken = async (req, res, next) => {
     });
 
     if (!user) {
-      console.log("User not found");
       return res.status(401).json({ success: false, error: "User not found" });
     }
 
-    console.log("User found, role:", user.role);
     // Attach user data to request
     req.user = user;
     next();

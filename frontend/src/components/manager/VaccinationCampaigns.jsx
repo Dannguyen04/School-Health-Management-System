@@ -22,6 +22,7 @@ import {
   Tooltip,
 } from "antd";
 import axios from "axios";
+import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
@@ -47,7 +48,32 @@ const VaccinationCampaigns = () => {
     Authorization: `Bearer ${getAuthToken()}`,
   });
 
-  // Fetch all campaigns
+  // Fetch all vaccines for dropdown
+  const fetchVaccines = async () => {
+    try {
+      const response = await axios.get(
+        "/api/manager/vaccination-campaigns/vaccines",
+        {
+          headers: getHeaders(),
+        }
+      );
+      if (response.data.success && Array.isArray(response.data.data)) {
+        setVaccines(response.data.data);
+      } else if (
+        response.data.success &&
+        Array.isArray(response.data.vaccines)
+      ) {
+        setVaccines(response.data.vaccines);
+      } else {
+        setVaccines([]);
+      }
+    } catch (error) {
+      console.error("Error fetching vaccines:", error);
+      setVaccines([]);
+    }
+  };
+
+  // Fetch campaigns
   const fetchCampaigns = async () => {
     setLoading(true);
     try {
@@ -55,6 +81,7 @@ const VaccinationCampaigns = () => {
         headers: getHeaders(),
       });
       if (response.data.success) {
+        // Không cần map vaccine nữa, backend đã trả về luôn vaccine
         setAllCampaigns(response.data.data || []);
         setCampaigns(response.data.data || []);
       } else {
@@ -67,23 +94,6 @@ const VaccinationCampaigns = () => {
       message.error("Không thể tải danh sách chiến dịch");
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Fetch all vaccines for dropdown
-  const fetchVaccines = async () => {
-    try {
-      const response = await axios.get(
-        "/api/manager/vaccination-campaigns/vaccines",
-        {
-          headers: getHeaders(),
-        }
-      );
-      if (response.data.success) {
-        setVaccines(response.data.data || []);
-      }
-    } catch (error) {
-      console.error("Error fetching vaccines:", error);
     }
   };
 
@@ -165,8 +175,11 @@ const VaccinationCampaigns = () => {
 
   // Load data on component mount
   useEffect(() => {
-    fetchCampaigns();
-    fetchVaccines();
+    const fetchAll = async () => {
+      await fetchVaccines();
+      await fetchCampaigns();
+    };
+    fetchAll();
   }, []);
 
   const getStatusColor = (status) => {
@@ -283,8 +296,8 @@ const VaccinationCampaigns = () => {
     setSelectedCampaign(record);
     campaignForm.setFieldsValue({
       ...record,
-      startDate: record.scheduledDate ? new Date(record.scheduledDate) : null,
-      endDate: record.deadline ? new Date(record.deadline) : null,
+      startDate: record.scheduledDate ? dayjs(record.scheduledDate) : null,
+      endDate: record.deadline ? dayjs(record.deadline) : null,
       vaccineName: record.vaccine?.name,
     });
     setIsModalVisible(true);
@@ -318,20 +331,24 @@ const VaccinationCampaigns = () => {
   const handleSubmit = async () => {
     try {
       const values = await campaignForm.validateFields();
-
-      const campaignData = {
-        ...values,
-        startDate: values.startDate ? values.startDate.toISOString() : null,
-        endDate: values.endDate ? values.endDate.toISOString() : null,
-      };
-
       let success = false;
       if (selectedCampaign) {
-        success = await updateCampaign(selectedCampaign.id, campaignData);
+        // Chỉ gửi các trường hợp lệ khi update
+        const updateData = {
+          name: values.name,
+          description: values.description,
+          status: values.status,
+        };
+        success = await updateCampaign(selectedCampaign.id, updateData);
       } else {
+        // Khi tạo mới, gửi đầy đủ
+        const campaignData = {
+          ...values,
+          startDate: values.startDate ? values.startDate.toISOString() : null,
+          endDate: values.endDate ? values.endDate.toISOString() : null,
+        };
         success = await createCampaign(campaignData);
       }
-
       if (success) {
         setIsModalVisible(false);
         campaignForm.resetFields();
