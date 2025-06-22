@@ -1,11 +1,11 @@
 import express from "express";
 import {
     createVaccine,
-    getAllVaccine,
     getAllRequiredVaccine,
     getAllOptionalVaccine,
     updateVaccine,
     deleteVaccine,
+    getVaccines,
 } from "../controllers/VaccineController.js";
 import {
     authenticateToken,
@@ -16,7 +16,7 @@ const router = express.Router();
 
 router.post("/", createVaccine);
 
-router.get("/", authenticateToken, verifyManager, getAllVaccine);
+router.get("/", authenticateToken, verifyManager, getVaccines);
 
 router.get(
     "/required",

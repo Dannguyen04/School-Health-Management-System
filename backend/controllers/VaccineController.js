@@ -252,4 +252,5 @@ export {
     getAllOptionalVaccine,
     updateVaccine,
     deleteVaccine,
+    getVaccines,
 };
