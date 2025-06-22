@@ -31,7 +31,7 @@ const createVaccine = async (req, res) => {
         });
     }
 
-    const existedVaccine = await prisma.vaccination.findUnique({
+    const existedVaccine = await prisma.vaccination.findFirst({
         where: { name },
     });
 
@@ -183,7 +183,7 @@ const updateVaccine = async (req, res) => {
         }
 
         if (name && name !== existedVaccine.name) {
-            const nameExists = await prisma.vaccination.findUnique({
+            const nameExists = await prisma.vaccination.findFirst({
                 where: { name },
             });
             if (nameExists) {
