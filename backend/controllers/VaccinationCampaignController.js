@@ -101,7 +101,7 @@ const updateVaccinationCampaign = async (req, res) => {
         }
 
         if (name && name !== existed.name) {
-            const nameExists = await prisma.vaccinationCampaign.findUnique({
+            const nameExists = await prisma.vaccinationCampaign.findFirst({
                 where: { name },
             });
             if (nameExists) {
