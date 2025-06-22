@@ -50,9 +50,10 @@ const HealthProfile = () => {
     try {
       setLoading(true);
       const response = await parentAPI.getChildren();
-      setChildren(response.data.data);
-      if (response.data.data && response.data.data.length > 0) {
-        setSelectedStudent(response.data.data[0].id);
+      const studentData = response.data?.data || [];
+      setChildren(studentData);
+      if (studentData.length > 0) {
+        setSelectedStudent(studentData[0].id);
       }
     } catch (error) {
       message.error(
