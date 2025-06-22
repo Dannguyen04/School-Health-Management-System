@@ -8,6 +8,7 @@ import NurseRoutes from "./routes/NurseRoutes.js";
 import UserRoutes from "./routes/UserRoutes.js";
 import VaccinationCampaignRoutes from "./routes/VaccinationCampaignRoutes.js";
 import VaccinationRoutes from "./routes/VaccinationRoutes.js";
+import parentRouter from "./routes/parentRoutes.js";
 // import parentRouter from "./routes/ParentRoutes.js";
 
 dotenv.config();
@@ -30,6 +31,7 @@ app.use("/nurse", NurseRoutes);
 app.use("/users", UserRoutes);
 app.use("/manager/vaccination-campaigns", VaccinationCampaignRoutes);
 app.use("/manager/vaccination", VaccinationRoutes);
+app.use("/api/parents", parentRouter);
 // app.use("/parent", parentRouter);
 
 // 404 handler
