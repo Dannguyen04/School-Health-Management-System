@@ -11,7 +11,7 @@ import {
     authenticateToken,
     verifyManager,
 } from "../middleware/authenticateToken.js";
-
+import VaccinationRoutes from "./VaccinationRoutes.js";
 const router = express.Router();
 
 router.post("/", createVaccine);

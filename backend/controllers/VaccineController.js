@@ -146,6 +146,25 @@ const getAllOptionalVaccine = async (req, res) => {
     });
   }
 };
+
+//get vaccine
+const getVaccines = async (req, res) => {
+    try {
+        const vaccines = await getAllVaccine();
+        if (!vaccines)
+            return res
+                .status(404)
+                .json({ success: false, error: "Không tìm thấy vaccine" });
+        res.status(200).json({ success: true, data: vaccines });
+    } catch (error) {
+        console.log(error);
+        return res.status(500).json({
+            success: false,
+            error: error.message,
+        });
+    }
+};
+
 const updateVaccine = async (req, res) => {
   const { id } = req.params;
   const { name, requirement, expiredDate, dose, sideEffects, notes } = req.body;
