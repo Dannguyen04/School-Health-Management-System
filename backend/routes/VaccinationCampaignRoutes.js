@@ -9,8 +9,11 @@ import {
     authenticateToken,
     verifyManager,
 } from "../middleware/authenticateToken.js";
+import VaccinationRoutes from "./VaccinationRoutes.js";
 
 const router = express.Router();
+
+router.use("/vaccines", authenticateToken, verifyManager, VaccinationRoutes);
 
 router.post("/", authenticateToken, verifyManager, createVaccinationCampaign);
 
@@ -24,5 +27,7 @@ router.delete(
     verifyManager,
     deleteVaccinationCampaign
 );
+
+router.use();
 
 export default router;
