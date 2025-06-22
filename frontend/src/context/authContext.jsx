@@ -9,42 +9,36 @@ export const AuthProvider = ({ children }) => {
 
     useEffect(() => {
         const verifyUser = async () => {
-            try {
-                const token = localStorage.getItem('token');
-                if (token) {
-                    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                    const response = await api.get('/auth/profile');
-                    if (response.data.success) {
-                        setUser(response.data.user);
-                    } else {
-                        localStorage.removeItem('token');
-                        setUser(null);
-                    }
+            const token = localStorage.getItem("token");
+            if (token) {
+                try {
+                    const response = await api.get("/auth/profile");
+                    setUser(response.data.user);
+                } catch (error) {
+                    localStorage.removeItem("token");
+                    setUser(null);
                 }
-            } catch (error) {
-                localStorage.removeItem('token');
-                setUser(null);
-            } finally {
-                setLoading(false);
             }
+            setLoading(false);
         };
+
         verifyUser();
     }, []);
 
     const login = (userData, token) => {
         setUser(userData);
-        localStorage.setItem('token', token);
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        localStorage.setItem("token", token);
+        api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     };
 
     const logout = () => {
         setUser(null);
-        localStorage.removeItem('token');
-        delete api.defaults.headers.common['Authorization'];
+        localStorage.removeItem("token");
+        delete api.defaults.headers.common["Authorization"];
     };
 
     return (
-        <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, loading }}>
             {children}
         </AuthContext.Provider>
     );

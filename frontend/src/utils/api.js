@@ -4,7 +4,7 @@ const API_BASE_URL = "/api"; // Use relative path for proxy
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: "/api",
   headers: {
     "Content-Type": "application/json",
   },
