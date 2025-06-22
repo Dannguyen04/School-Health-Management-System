@@ -77,6 +77,12 @@ enum DoseType {
   BOOSTER   // Liều nhắc lại (liều tăng cường)
 }
 
+enum CampaignStatus {
+  ACTIVE
+  FINISHED
+  CANCELLED
+}
+
 
 // Main Models
 model users {
@@ -346,16 +352,18 @@ model VaccinationCampaign {
   id           String   @id @default(auto()) @map("_id") @db.ObjectId
   name         String
   description  String?
-  vaccineName  String
+  vaccineId    String   @db.ObjectId
   targetGrades String[] // Array of grades like ["1", "2", "3"]
   scheduledDate DateTime
   deadline     DateTime
   isActive     Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  status       CampaignStatus @default(ACTIVE)
 
   // Relations
   notifications Notification[]
+  vaccine       Vaccination      @relation(fields: [vaccineId], references: [id])
 
   @@map("vaccination_campaigns")
 }
@@ -365,17 +373,17 @@ model Vaccination {
   name        String
   requirement VaccineRequirement
   expiredDate DateTime
-  status       VaccinationStatus @default(UNSCHEDULED)
   administeredDate DateTime?
   dose         DoseType?           // "first", "second", "booster" (total dose you need)
   sideEffects  String?           // Any side effects observed
   notes        String? 
-  
   parentConsent Boolean?          @default(false)
   consentDate   DateTime?
-  
   createdAt    DateTime          @default(now())
   updatedAt    DateTime          @updatedAt
+
+  // Relations
+  campaigns    VaccinationCampaign[]
 
   @@map("vaccinations")
 }
