@@ -548,3 +548,377 @@ export const updateMedicalEventStatus = async (req, res) => {
         });
     }
 };
+
+// Lấy tất cả sự kiện y tế
+export const getAllMedicalEvents = async (req, res) => {
+    try {
+        const events = await prisma.medicalEvent.findMany({
+            orderBy: {
+                occurredAt: "desc",
+            },
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        studentCode: true,
+                        grade: true,
+                        class: true,
+                        bloodType: true,
+                        emergencyContact: true,
+                        emergencyPhone: true,
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+                nurse: {
+                    select: {
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+                createdBy: {
+                    select: {
+                        fullName: true,
+                    },
+                },
+            },
+        });
+
+        const formattedEvents = events.map((event) => ({
+            id: event.id,
+            studentId: event.student.id,
+            studentName: event.student.user.fullName,
+            studentCode: event.student.studentCode,
+            grade: `${event.student.grade}${event.student.class}`,
+            title: event.title,
+            description: event.description,
+            type: event.type,
+            status: event.status,
+            severity: event.severity,
+            location: event.location,
+            symptoms: event.symptoms,
+            treatment: event.treatment,
+            outcome: event.outcome,
+            occurredAt: event.occurredAt,
+            resolvedAt: event.resolvedAt,
+            createdAt: event.createdAt,
+            nurseName: event.nurse?.user?.fullName || "Chưa phân công",
+            createdByName: event.createdBy.fullName,
+        }));
+
+        res.json({
+            success: true,
+            data: formattedEvents,
+        });
+    } catch (error) {
+        console.error("Error getting all medical events:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error getting medical events",
+        });
+    }
+};
+
+// Tạo sự kiện y tế mới
+export const createMedicalEvent = async (req, res) => {
+    try {
+        const {
+            studentId,
+            title,
+            description,
+            type,
+            severity,
+            status,
+            location,
+            symptoms,
+            treatment,
+            outcome,
+            occurredAt,
+            resolvedAt,
+        } = req.body;
+
+        const nurseId = req.user.nurseProfile?.id;
+        const createdById = req.user.id;
+
+        const newEvent = await prisma.medicalEvent.create({
+            data: {
+                studentId,
+                nurseId,
+                createdById,
+                title,
+                description,
+                type,
+                severity,
+                status,
+                location,
+                symptoms: symptoms || [],
+                treatment,
+                outcome,
+                occurredAt: new Date(occurredAt),
+                resolvedAt: resolvedAt ? new Date(resolvedAt) : null,
+            },
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        studentCode: true,
+                        grade: true,
+                        class: true,
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+                nurse: {
+                    select: {
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        const formattedEvent = {
+            id: newEvent.id,
+            studentId: newEvent.student.id,
+            studentName: newEvent.student.user.fullName,
+            studentCode: newEvent.student.studentCode,
+            grade: `${newEvent.student.grade}${newEvent.student.class}`,
+            title: newEvent.title,
+            description: newEvent.description,
+            type: newEvent.type,
+            status: newEvent.status,
+            severity: newEvent.severity,
+            location: newEvent.location,
+            symptoms: newEvent.symptoms,
+            treatment: newEvent.treatment,
+            outcome: newEvent.outcome,
+            occurredAt: newEvent.occurredAt,
+            resolvedAt: newEvent.resolvedAt,
+            createdAt: newEvent.createdAt,
+            nurseName: newEvent.nurse?.user?.fullName || "Chưa phân công",
+        };
+
+        res.status(201).json({
+            success: true,
+            data: formattedEvent,
+            message: "Medical event created successfully",
+        });
+    } catch (error) {
+        console.error("Error creating medical event:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error creating medical event",
+        });
+    }
+};
+
+// Cập nhật sự kiện y tế
+export const updateMedicalEvent = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+        const {
+            title,
+            description,
+            type,
+            severity,
+            status,
+            location,
+            symptoms,
+            treatment,
+            outcome,
+            occurredAt,
+            resolvedAt,
+        } = req.body;
+
+        const updatedEvent = await prisma.medicalEvent.update({
+            where: { id: eventId },
+            data: {
+                title,
+                description,
+                type,
+                severity,
+                status,
+                location,
+                symptoms: symptoms || [],
+                treatment,
+                outcome,
+                occurredAt: new Date(occurredAt),
+                resolvedAt: resolvedAt ? new Date(resolvedAt) : null,
+            },
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        studentCode: true,
+                        grade: true,
+                        class: true,
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+                nurse: {
+                    select: {
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        const formattedEvent = {
+            id: updatedEvent.id,
+            studentId: updatedEvent.student.id,
+            studentName: updatedEvent.student.user.fullName,
+            studentCode: updatedEvent.student.studentCode,
+            grade: `${updatedEvent.student.grade}${updatedEvent.student.class}`,
+            title: updatedEvent.title,
+            description: updatedEvent.description,
+            type: updatedEvent.type,
+            status: updatedEvent.status,
+            severity: updatedEvent.severity,
+            location: updatedEvent.location,
+            symptoms: updatedEvent.symptoms,
+            treatment: updatedEvent.treatment,
+            outcome: updatedEvent.outcome,
+            occurredAt: updatedEvent.occurredAt,
+            resolvedAt: updatedEvent.resolvedAt,
+            createdAt: updatedEvent.createdAt,
+            nurseName: updatedEvent.nurse?.user?.fullName || "Chưa phân công",
+        };
+
+        res.json({
+            success: true,
+            data: formattedEvent,
+            message: "Medical event updated successfully",
+        });
+    } catch (error) {
+        console.error("Error updating medical event:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error updating medical event",
+        });
+    }
+};
+
+// Xóa sự kiện y tế
+export const deleteMedicalEvent = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+
+        await prisma.medicalEvent.delete({
+            where: { id: eventId },
+        });
+
+        res.json({
+            success: true,
+            message: "Medical event deleted successfully",
+        });
+    } catch (error) {
+        console.error("Error deleting medical event:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error deleting medical event",
+        });
+    }
+};
+
+// Lấy chi tiết sự kiện y tế
+export const getMedicalEventById = async (req, res) => {
+    try {
+        const { eventId } = req.params;
+
+        const event = await prisma.medicalEvent.findUnique({
+            where: { id: eventId },
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        studentCode: true,
+                        grade: true,
+                        class: true,
+                        bloodType: true,
+                        emergencyContact: true,
+                        emergencyPhone: true,
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+                nurse: {
+                    select: {
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+                createdBy: {
+                    select: {
+                        fullName: true,
+                    },
+                },
+            },
+        });
+
+        if (!event) {
+            return res.status(404).json({
+                success: false,
+                error: "Medical event not found",
+            });
+        }
+
+        const formattedEvent = {
+            id: event.id,
+            studentId: event.student.id,
+            studentName: event.student.user.fullName,
+            studentCode: event.student.studentCode,
+            grade: `${event.student.grade}${event.student.class}`,
+            title: event.title,
+            description: event.description,
+            type: event.type,
+            status: event.status,
+            severity: event.severity,
+            location: event.location,
+            symptoms: event.symptoms,
+            treatment: event.treatment,
+            outcome: event.outcome,
+            occurredAt: event.occurredAt,
+            resolvedAt: event.resolvedAt,
+            createdAt: event.createdAt,
+            nurseName: event.nurse?.user?.fullName || "Chưa phân công",
+            createdByName: event.createdBy.fullName,
+        };
+
+        res.json({
+            success: true,
+            data: formattedEvent,
+        });
+    } catch (error) {
+        console.error("Error getting medical event:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error getting medical event",
+        });
+    }
+};

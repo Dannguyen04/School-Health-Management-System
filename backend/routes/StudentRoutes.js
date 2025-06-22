@@ -2,9 +2,9 @@ import express from "express";
 import {
     addStudent,
     deleteUser,
+    filterStudents,
     getAllStudents,
     updateStudent,
-    filterStudents,
 } from "../controllers/AdminController.js";
 import {
     authenticateToken,

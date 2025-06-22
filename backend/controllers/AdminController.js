@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
+import bodyParser from "body-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import bodyParser from "body-parser";
 import validator from "validator";
 
 dotenv.config();
@@ -219,6 +219,9 @@ const createAuditLog = async (
 
 const addStudent = async (req, res) => {
     try {
+        console.log("📝 Bắt đầu tạo học sinh mới...");
+        console.log("📋 Dữ liệu nhận được:", req.body);
+
         const {
             fullName,
             password,
@@ -287,10 +290,12 @@ const addStudent = async (req, res) => {
             });
         }
 
-        if (!VALID_GENDERS.includes(gender.toUpperCase())) {
+        // Validate gender
+        const validGenders = ["male", "female", "other"];
+        if (!validGenders.includes(gender.toLowerCase())) {
             return res.status(422).json({
                 success: false,
-                error: `Giới tính phải là: ${VALID_GENDERS.join(", ")}`,
+                error: `Giới tính phải là: ${validGenders.join(", ")}`,
             });
         }
 
@@ -303,6 +308,8 @@ const addStudent = async (req, res) => {
             });
         }
 
+        console.log("✅ Validation thành công, bắt đầu tạo học sinh...");
+
         const result = await prisma.$transaction(async (tx) => {
             const user = await tx.users.create({
                 data: {
@@ -310,16 +317,19 @@ const addStudent = async (req, res) => {
                     email: email.toLowerCase().trim(),
                     password: password,
                     role: "STUDENT",
+                    phone: phone?.trim(),
                     isActive: true,
                 },
             });
+
+            console.log("✅ Tạo user thành công:", user.id);
 
             const student = await tx.student.create({
                 data: {
                     userId: user.id,
                     studentCode: await generateStudentCode(),
                     dateOfBirth: new Date(dateOfBirth),
-                    gender: gender.toUpperCase(),
+                    gender: gender.toLowerCase(),
                     grade: grade.toString(),
                     class: studentClass.trim(),
                     emergencyContact: emergencyContact?.trim(),
@@ -327,6 +337,8 @@ const addStudent = async (req, res) => {
                     ...(bloodType && { bloodType: bloodType.trim() }),
                 },
             });
+
+            console.log("✅ Tạo student profile thành công:", student.id);
 
             const parentResult = await assignParentToStudent(
                 student.id,
@@ -337,7 +349,8 @@ const addStudent = async (req, res) => {
             );
 
             if (!parentResult.success) {
-                throw new Error(parentResult.error);
+                console.log("⚠️ Không thể gán phụ huynh:", parentResult.error);
+                // Không throw error, chỉ log warning
             }
 
             await createAuditLog(
@@ -360,9 +373,11 @@ const addStudent = async (req, res) => {
             return { user, student, parent: parentResult.data };
         });
 
+        console.log("🎉 Tạo học sinh thành công!");
+
         return res.status(201).json({
             success: true,
-            message: "Tạo học sinh và gán phụ huynh thành công",
+            message: "Tạo học sinh thành công",
             data: {
                 id: result.student.id,
                 fullName: result.user.fullName,
@@ -372,7 +387,7 @@ const addStudent = async (req, res) => {
             },
         });
     } catch (error) {
-        console.error("Lỗi khi tạo học sinh:", error);
+        console.error("❌ Lỗi khi tạo học sinh:", error);
         res.status(500).json({
             success: false,
             error: error.message || "Lỗi máy chủ nội bộ",
@@ -509,6 +524,8 @@ const getAllUsers = async (req, res) => {
 };
 const getAllStudents = async (req, res) => {
     try {
+        console.log("🔍 Đang tìm tất cả học sinh...");
+
         const students = await prisma.users.findMany({
             where: {
                 role: "STUDENT",
@@ -517,16 +534,22 @@ const getAllStudents = async (req, res) => {
                 studentProfile: true,
             },
         });
+
+        console.log(`📊 Tìm thấy ${students.length} học sinh`);
+
         if (!students || students.length === 0) {
             return res.status(404).json({
                 success: false,
                 error: "Không có học sinh nào trong hệ thống",
             });
         }
+
         const cleanedStudents = students.map(cleanUserProfiles);
+        console.log("✅ Dữ liệu học sinh đã được xử lý");
+
         res.status(200).json({ success: true, data: cleanedStudents });
     } catch (error) {
-        console.log(error.message);
+        console.error("❌ Lỗi khi lấy danh sách học sinh:", error);
         return res.status(500).json({ success: false, error: error.message });
     }
 };
@@ -661,7 +684,6 @@ const updateRole = async (req, res) => {
 const updateStudent = async (req, res) => {
     const { id } = req.params;
     const {
-        studentCode,
         fullName,
         email,
         phone,
@@ -676,7 +698,6 @@ const updateStudent = async (req, res) => {
 
     try {
         const requiredFields = [
-            "studentCode",
             "fullName",
             "email",
             "dateOfBirth",
@@ -718,10 +739,12 @@ const updateStudent = async (req, res) => {
             });
         }
 
-        if (!VALID_GENDERS.includes(gender.toUpperCase())) {
+        // Validate gender
+        const validGenders = ["male", "female", "other"];
+        if (!validGenders.includes(gender.toLowerCase())) {
             return res.status(422).json({
                 success: false,
-                error: `Giới tính phải là: ${VALID_GENDERS.join(", ")}`,
+                error: `Giới tính phải là: ${validGenders.join(", ")}`,
             });
         }
 
@@ -759,16 +782,6 @@ const updateStudent = async (req, res) => {
             });
         }
 
-        const existingStudent = await prisma.student.findUnique({
-            where: { studentCode },
-        });
-        if (existingStudent && existingStudent.userId !== id) {
-            return res.status(400).json({
-                success: false,
-                error: "Mã học sinh đã được sử dụng",
-            });
-        }
-
         const updatedUser = await prisma.$transaction(async (tx) => {
             const userUpdate = await tx.users.update({
                 where: { id },
@@ -792,9 +805,8 @@ const updateStudent = async (req, res) => {
             await tx.student.update({
                 where: { userId: id },
                 data: {
-                    studentCode: studentCode.trim(),
                     dateOfBirth: new Date(dateOfBirth),
-                    gender: gender.toUpperCase(),
+                    gender: gender.toLowerCase(),
                     class: studentClass.trim(),
                     grade: grade.toString(),
                     ...(emergencyContact && {
@@ -818,7 +830,6 @@ const updateStudent = async (req, res) => {
                     changes: {
                         fullName,
                         email,
-                        studentCode,
                         dateOfBirth,
                         gender,
                         class: studentClass,
@@ -858,6 +869,8 @@ const deleteUser = async (req, res) => {
     const { id } = req.params;
 
     try {
+        console.log(`🗑️ Bắt đầu xóa user với ID: ${id}`);
+
         const user = await prisma.users.findUnique({
             where: { id },
             include: {
@@ -870,42 +883,169 @@ const deleteUser = async (req, res) => {
         });
 
         if (!user) {
+            console.log(`❌ Không tìm thấy user với ID: ${id}`);
             return res.status(404).json({
                 success: false,
                 error: "Không tìm thấy người dùng",
             });
         }
 
+        console.log(`📋 Tìm thấy user: ${user.fullName} (${user.role})`);
+
+        // Nếu là student, xóa tất cả dữ liệu liên quan trước
+        if (user.role === "STUDENT" && user.studentProfile) {
+            console.log(
+                `🎓 Xóa tất cả dữ liệu liên quan đến student: ${user.studentProfile.studentCode}`
+            );
+
+            const studentId = user.studentProfile.id;
+
+            try {
+                // Xóa tất cả dữ liệu liên quan đến student
+                await prisma.$transaction(async (tx) => {
+                    // Xóa StudentParent relationships
+                    await tx.studentParent.deleteMany({
+                        where: { studentId: studentId },
+                    });
+                    console.log("✅ Đã xóa StudentParent relationships");
+
+                    // Xóa StudentMedication
+                    await tx.studentMedication.deleteMany({
+                        where: { studentId: studentId },
+                    });
+                    console.log("✅ Đã xóa StudentMedication");
+
+                    // Xóa MedicalEvent
+                    await tx.medicalEvent.deleteMany({
+                        where: { studentId: studentId },
+                    });
+                    console.log("✅ Đã xóa MedicalEvent");
+
+                    // Xóa MedicalCheck
+                    await tx.medicalCheck.deleteMany({
+                        where: { studentId: studentId },
+                    });
+                    console.log("✅ Đã xóa MedicalCheck");
+
+                    // Xóa HealthProfile
+                    await tx.healthProfile.deleteMany({
+                        where: { studentId: studentId },
+                    });
+                    console.log("✅ Đã xóa HealthProfile");
+
+                    // Xóa Vaccination
+                    await tx.vaccination.deleteMany({
+                        where: { studentId: studentId },
+                    });
+                    console.log("✅ Đã xóa Vaccination");
+                });
+            } catch (studentError) {
+                console.log(
+                    "⚠️ Lỗi khi xóa dữ liệu student, tiếp tục xóa user:",
+                    studentError.message
+                );
+            }
+        }
+
+        // Xóa user và profile
         await prisma.$transaction(async (tx) => {
-            const tableName = roleToTable[user.role];
-            if (tableName && user[roleToModel[user.role]]) {
-                await tx[tableName].delete({ where: { userId: id } });
+            // Tạo audit log trước khi xóa user
+            try {
+                await createAuditLog(
+                    tx,
+                    req.user.id, // Sử dụng ID của admin đang thực hiện xóa
+                    "delete",
+                    "user",
+                    id,
+                    {
+                        role: user.role,
+                        email: user.email,
+                        fullName: user.fullName,
+                    },
+                    req
+                );
+                console.log("✅ Đã tạo audit log");
+            } catch (auditError) {
+                console.log("⚠️ Lỗi khi tạo audit log:", auditError.message);
+                // Không throw error vì vẫn tiếp tục xóa user
             }
 
+            // Xóa tất cả audit logs liên quan đến user này trước
+            try {
+                console.log("🗑️ Xóa audit logs liên quan");
+                await tx.auditLog.deleteMany({
+                    where: { userId: id },
+                });
+                console.log("✅ Đã xóa audit logs");
+            } catch (auditDeleteError) {
+                console.log(
+                    "⚠️ Lỗi khi xóa audit logs:",
+                    auditDeleteError.message
+                );
+                // Tiếp tục xóa user
+            }
+
+            // Xóa profile tương ứng với role
+            const tableName = roleToTable[user.role];
+            if (tableName && user[roleToModel[user.role]]) {
+                console.log(`🗑️ Xóa ${tableName} profile`);
+                await tx[tableName].delete({ where: { userId: id } });
+                console.log(`✅ Đã xóa ${tableName} profile`);
+            }
+
+            // Xóa user cuối cùng
+            console.log("🗑️ Xóa user record");
             await tx.users.delete({
                 where: { id: id },
             });
-
-            await createAuditLog(
-                tx,
-                id,
-                "delete",
-                "user",
-                id,
-                { role: user.role, email: user.email, fullName: user.fullName },
-                req
-            );
+            console.log("✅ Đã xóa user record");
         });
+
+        console.log(`✅ Xóa user ${user.fullName} thành công`);
 
         res.status(200).json({
             success: true,
             message: "Xóa người dùng thành công",
         });
     } catch (error) {
-        console.error("Lỗi khi xóa người dùng:", error);
+        console.error("❌ Lỗi khi xóa người dùng:", error);
+        console.error("❌ Error details:", {
+            code: error.code,
+            message: error.message,
+            meta: error.meta,
+        });
+
+        // Xử lý các lỗi cụ thể
+        if (error.code === "P2025") {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy bản ghi cần xóa",
+                code: error.code,
+            });
+        } else if (error.code === "P2003") {
+            return res.status(400).json({
+                success: false,
+                error: "Không thể xóa do có dữ liệu liên quan",
+                code: error.code,
+            });
+        } else if (error.code === "P2014") {
+            return res.status(400).json({
+                success: false,
+                error: "Không thể xóa do vi phạm ràng buộc quan hệ bắt buộc",
+                code: error.code,
+            });
+        } else if (error.code === "P2034") {
+            return res.status(409).json({
+                success: false,
+                error: "Xung đột dữ liệu. Vui lòng thử lại sau.",
+                code: error.code,
+            });
+        }
+
         res.status(500).json({
             success: false,
             error: "Lỗi máy chủ nội bộ",
+            code: error.code || "UNKNOWN",
         });
     }
 };
@@ -981,6 +1121,237 @@ const filterStudents = async (req, res) => {
     }
 };
 
+// Dashboard statistics functions
+const getDashboardStats = async (req, res) => {
+    try {
+        // Get user statistics
+        const totalUsers = await prisma.users.count({
+            where: { isActive: true },
+        });
+
+        const activeUsers = await prisma.users.count({
+            where: { isActive: true },
+        });
+
+        const nurses = await prisma.users.count({
+            where: {
+                role: "SCHOOL_NURSE",
+                isActive: true,
+            },
+        });
+
+        const parents = await prisma.users.count({
+            where: {
+                role: "PARENT",
+                isActive: true,
+            },
+        });
+
+        const students = await prisma.users.count({
+            where: {
+                role: "STUDENT",
+                isActive: true,
+            },
+        });
+
+        // Get medication statistics from StudentMedication table
+        const totalMedications = await prisma.studentMedication.count();
+        const activeMedications = await prisma.studentMedication.count({
+            where: {
+                status: "ACTIVE",
+                endDate: {
+                    gte: new Date(),
+                },
+            },
+        });
+        const completedMedications = await prisma.studentMedication.count({
+            where: {
+                status: "ACTIVE",
+                endDate: {
+                    lt: new Date(),
+                },
+            },
+        });
+
+        // Get medical events statistics
+        const totalMedicalEvents = await prisma.medicalEvent.count();
+        const resolvedMedicalEvents = await prisma.medicalEvent.count({
+            where: { status: "RESOLVED" },
+        });
+        const pendingMedicalEvents = await prisma.medicalEvent.count({
+            where: { status: "PENDING" },
+        });
+        const inProgressMedicalEvents = await prisma.medicalEvent.count({
+            where: { status: "IN_PROGRESS" },
+        });
+
+        // Get vaccination campaign statistics
+        const totalVaccinationCampaigns =
+            await prisma.vaccinationCampaign.count({
+                where: { isActive: true },
+            });
+        const upcomingVaccinationCampaigns =
+            await prisma.vaccinationCampaign.count({
+                where: {
+                    isActive: true,
+                    scheduledDate: {
+                        gte: new Date(),
+                    },
+                },
+            });
+
+        // Get form statistics (using StudentMedication as forms for now)
+        const totalForms = await prisma.studentMedication.count();
+        const approvedForms = await prisma.studentMedication.count({
+            where: { status: "APPROVED" },
+        });
+        const pendingForms = await prisma.studentMedication.count({
+            where: { status: "PENDING_APPROVAL" },
+        });
+        const rejectedForms = await prisma.studentMedication.count({
+            where: { status: "REJECTED" },
+        });
+
+        // Get user growth trend (last 6 months)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
+        const userGrowthData = [];
+        for (let i = 0; i < 6; i++) {
+            const date = new Date();
+            date.setMonth(date.getMonth() - (5 - i));
+            const monthYear = date.toISOString().slice(0, 7); // YYYY-MM format
+
+            const userCount = await prisma.users.count({
+                where: {
+                    createdAt: {
+                        lte: date,
+                    },
+                    isActive: true,
+                },
+            });
+
+            userGrowthData.push({
+                date: monthYear,
+                users: userCount,
+            });
+        }
+
+        // Get form status distribution
+        const formStatusData = [
+            { status: "Đã duyệt", count: approvedForms },
+            { status: "Đang chờ", count: pendingForms },
+            { status: "Từ chối", count: rejectedForms },
+        ];
+
+        // Get medical event status distribution
+        const medicalEventStatusData = [
+            { status: "Đã giải quyết", count: resolvedMedicalEvents },
+            { status: "Đang chờ", count: pendingMedicalEvents },
+            { status: "Đang xử lý", count: inProgressMedicalEvents },
+        ];
+
+        const stats = {
+            userStats: {
+                total: totalUsers,
+                active: activeUsers,
+                nurses,
+                parents,
+                students,
+            },
+            formStats: {
+                total: totalForms,
+                approved: approvedForms,
+                pending: pendingForms,
+                rejected: rejectedForms,
+            },
+            medicationStats: {
+                total: totalMedications,
+                active: activeMedications,
+                completed: completedMedications,
+            },
+            medicalEventStats: {
+                total: totalMedicalEvents,
+                resolved: resolvedMedicalEvents,
+                pending: pendingMedicalEvents,
+                inProgress: inProgressMedicalEvents,
+            },
+            vaccinationCampaignStats: {
+                total: totalVaccinationCampaigns,
+                upcoming: upcomingVaccinationCampaigns,
+            },
+            userGrowthData,
+            formStatusData,
+            medicalEventStatusData,
+        };
+
+        res.status(200).json({
+            success: true,
+            data: stats,
+        });
+    } catch (error) {
+        console.error("Lỗi khi lấy thống kê dashboard:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi máy chủ nội bộ",
+        });
+    }
+};
+
+// Lấy tất cả học sinh cho y tá chọn
+const getAllStudentsForNurse = async (req, res) => {
+    try {
+        const students = await prisma.users.findMany({
+            where: {
+                role: "STUDENT",
+                isActive: true,
+            },
+            include: {
+                studentProfile: {
+                    select: {
+                        id: true,
+                        studentCode: true,
+                        grade: true,
+                        class: true,
+                        gender: true,
+                        dateOfBirth: true,
+                        bloodType: true,
+                        emergencyContact: true,
+                        emergencyPhone: true,
+                    },
+                },
+            },
+            orderBy: {
+                fullName: "asc",
+            },
+        });
+
+        const formattedStudents = students.map((student) => ({
+            id: student.studentProfile.id,
+            studentCode: student.studentProfile.studentCode,
+            fullName: student.fullName,
+            grade: `${student.studentProfile.grade}${student.studentProfile.class}`,
+            class: student.studentProfile.class,
+            gender: student.studentProfile.gender,
+            dateOfBirth: student.studentProfile.dateOfBirth,
+            bloodType: student.studentProfile.bloodType,
+            emergencyContact: student.studentProfile.emergencyContact,
+            emergencyPhone: student.studentProfile.emergencyPhone,
+        }));
+
+        res.json({
+            success: true,
+            data: formattedStudents,
+        });
+    } catch (error) {
+        console.error("Error getting students for nurse:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error getting students",
+        });
+    }
+};
+
 process.on("SIGTERM", async () => {
     console.log("Shutting down AdminController...");
     await prisma.$disconnect();
@@ -994,13 +1365,15 @@ process.on("SIGINT", async () => {
 });
 
 export {
+    addRole,
     addStudent,
+    deleteUser,
+    filterStudents,
+    filterUsers,
     getAllStudents,
     getAllUsers,
-    addRole,
+    getDashboardStats,
     updateRole,
     updateStudent,
-    deleteUser,
-    filterUsers,
-    filterStudents,
+    getAllStudentsForNurse,
 };

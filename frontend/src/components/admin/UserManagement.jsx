@@ -12,12 +12,14 @@ import {
   Input,
   message,
   Modal,
+  Popconfirm,
   Row,
   Select,
   Space,
   Spin,
   Table,
   Tag,
+  Tooltip,
 } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -31,8 +33,6 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
   const [addEditLoading, setAddEditLoading] = useState(false);
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null);
   const [filteredUsers, setFilteredUsers] = useState([]);
 
   const [searchForm] = Form.useForm();
@@ -158,16 +158,26 @@ const UserManagement = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            Sửa
-          </Button>
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
+          <Tooltip title="Sửa">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              type="primary"
+              size="small"
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xác nhận xóa người dùng"
+            description={`Bạn có chắc chắn muốn xóa người dùng "${record.name}"?`}
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okType="danger"
           >
-            Xóa
-          </Button>
+            <Tooltip title="Xóa">
+              <Button danger icon={<DeleteOutlined />} size="small" />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -185,24 +195,16 @@ const UserManagement = () => {
     setIsModalVisible(true);
   };
 
-  const handleDelete = (userId) => {
-    setUserToDelete(userId);
-    setIsDeleteModalVisible(true);
-  };
-
-  const confirmDelete = async () => {
-    if (!userToDelete) return;
-
+  const handleDelete = async (userId) => {
     setTableLoading(true);
     try {
       const authToken = localStorage.getItem("token");
       if (!authToken) {
         message.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
         setTableLoading(false);
-        setIsDeleteModalVisible(false);
         return;
       }
-      await axios.delete(`/api/admin/users/${userToDelete}`, {
+      await axios.delete(`/api/admin/users/${userId}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -214,8 +216,6 @@ const UserManagement = () => {
       console.error("Lỗi khi xóa người dùng:", error);
     } finally {
       setTableLoading(false);
-      setIsDeleteModalVisible(false);
-      setUserToDelete(null);
     }
   };
 
@@ -260,7 +260,7 @@ const UserManagement = () => {
           message.success("Cập nhật người dùng thành công");
         } else {
           // Add new user
-          await axios.post("/api/admin/users/addRole", formattedValues, {
+          await axios.post("/api/admin/users", formattedValues, {
             headers: {
               Authorization: `Bearer ${authToken}`,
             },
@@ -345,25 +345,9 @@ const UserManagement = () => {
         columns={columns}
         dataSource={filteredUsers}
         rowKey="id"
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 5, showQuickJumper: true }}
         loading={tableLoading}
       />
-
-      <Modal
-        title="Xác nhận xóa người dùng"
-        open={isDeleteModalVisible}
-        onOk={confirmDelete}
-        onCancel={() => {
-          setIsDeleteModalVisible(false);
-          setUserToDelete(null);
-        }}
-        okText="Xóa"
-        okType="danger"
-        cancelText="Hủy"
-        confirmLoading={tableLoading} // Use tableLoading for delete confirmation as well
-      >
-        <p>Bạn có chắc chắn muốn xóa người dùng này?</p>
-      </Modal>
 
       <Modal
         title={editingUser ? "Sửa người dùng" : "Thêm người dùng"}

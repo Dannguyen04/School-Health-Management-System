@@ -47,6 +47,12 @@ const Services = () => {
           des="Gửi thuốc cho học sinh"
           to="/user/medicine-info"
         />
+        <ServicesCard
+          icon={icon3}
+          title="Đơn đồng ý"
+          des="Đơn xác nhận tiêm vaccine"
+          to="/user/consent-forms"
+        />
       </div>
     </div>
   );

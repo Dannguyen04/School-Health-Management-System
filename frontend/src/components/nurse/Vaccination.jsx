@@ -1,4 +1,4 @@
-import { PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import { SearchOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -13,7 +13,7 @@ import {
   Table,
   Tag,
 } from "antd";
-import React, { useState } from "react";
+import { useState } from "react";
 import { vaccinations } from "../../mock/nurseData";
 
 const { TextArea } = Input;
@@ -120,13 +120,13 @@ const Vaccination = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Hồ sơ tiêm chủng</h1>
-        <Button
+        {/* <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => setIsModalVisible(true)}
         >
           Thêm hồ sơ
-        </Button>
+        </Button> */}
       </div>
 
       <Card>

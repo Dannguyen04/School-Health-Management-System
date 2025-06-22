@@ -1,11 +1,4 @@
-import {
-  EditOutlined,
-  FacebookOutlined,
-  InstagramOutlined,
-  LinkedinOutlined,
-  TwitterOutlined,
-  UserOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, UserOutlined } from "@ant-design/icons";
 import {
   Avatar,
   Button,
@@ -14,31 +7,63 @@ import {
   Divider,
   Form,
   Input,
+  message,
   Row,
   Space,
+  Spin,
   Typography,
 } from "antd";
 import React from "react";
+import { useAuth } from "../../context/authContext";
+import { userAPI } from "../../utils/api";
 
 const { Title, Text } = Typography;
 
 const UserProfile = () => {
+  const { user, login } = useAuth();
   const [isEditingBasicInfo, setIsEditingBasicInfo] = React.useState(false);
   const [isEditingPersonalInfo, setIsEditingPersonalInfo] =
     React.useState(false);
+  const [loading, setLoading] = React.useState(false);
   const [basicInfoForm] = Form.useForm();
   const [personalInfoForm] = Form.useForm();
 
   const [userData, setUserData] = React.useState({
-    firstName: "Musharaf",
-    lastName: "Chowdhury",
-    role: "Team Manager",
-    email: "randomuser@pimjo.com",
-    phone: "+09 363 398 46",
-    location: "Arizona, United States",
-    avatar: "https://i.imgur.com/8Y1H3bK.jpeg", // Replace with an actual avatar URL
-    bio: "Team Manager",
+    fullName: "",
+    role: "",
+    email: "",
+    phone: "",
+    address: "",
+    avatar: "",
   });
+
+  // Fetch user profile data
+  React.useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        setLoading(true);
+        const response = await userAPI.getProfile();
+        if (response.data.success) {
+          const profileData = response.data.user;
+          setUserData({
+            fullName: profileData.fullName || "",
+            role: profileData.role || "",
+            email: profileData.email || "",
+            phone: profileData.phone || "",
+            address: profileData.address || "",
+            avatar: profileData.avatar || "",
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        message.error("Failed to load user profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const handleEditBasicInfo = () => {
     setIsEditingBasicInfo(true);
@@ -47,12 +72,28 @@ const UserProfile = () => {
 
   const handleSaveBasicInfo = async (values) => {
     try {
-      // Simulate API call
-      console.log("Updated Basic Info:", values);
-      setUserData((prev) => ({ ...prev, ...values }));
-      setIsEditingBasicInfo(false);
+      setLoading(true);
+      const response = await userAPI.updateProfile({
+        fullName: values.fullName,
+        address: values.address,
+        avatar: values.avatar,
+      });
+
+      if (response.data.success) {
+        setUserData((prev) => ({ ...prev, ...values }));
+        setIsEditingBasicInfo(false);
+        message.success("Profile updated successfully");
+
+        // Update auth context with new user data
+        if (user) {
+          login({ ...user, ...values }, localStorage.getItem("token"));
+        }
+      }
     } catch (error) {
       console.error("Error updating basic profile:", error);
+      message.error("Failed to update profile");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -63,14 +104,49 @@ const UserProfile = () => {
 
   const handleSavePersonalInfo = async (values) => {
     try {
-      // Simulate API call
-      console.log("Updated Personal Info:", values);
-      setUserData((prev) => ({ ...prev, ...values }));
-      setIsEditingPersonalInfo(false);
+      setLoading(true);
+      const response = await userAPI.updateProfile({
+        fullName: values.fullName,
+        email: values.email,
+        phone: values.phone,
+      });
+
+      if (response.data.success) {
+        setUserData((prev) => ({ ...prev, ...values }));
+        setIsEditingPersonalInfo(false);
+        message.success("Profile updated successfully");
+
+        // Update auth context with new user data
+        if (user) {
+          login({ ...user, ...values }, localStorage.getItem("token"));
+        }
+      }
     } catch (error) {
       console.error("Error updating personal information:", error);
+      message.error("Failed to update profile");
+    } finally {
+      setLoading(false);
     }
   };
+
+  // Split full name into first and last name for display
+  const getFirstName = () => {
+    const names = userData.fullName.split(" ");
+    return names[0] || "";
+  };
+
+  const getLastName = () => {
+    const names = userData.fullName.split(" ");
+    return names.slice(1).join(" ") || "";
+  };
+
+  if (loading && !userData.fullName) {
+    return (
+      <div className="p-6 flex justify-center items-center h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6">
@@ -91,38 +167,19 @@ const UserProfile = () => {
             </Col>
             <Col flex="auto">
               <Title level={3} className="mb-0">
-                {userData.firstName} {userData.lastName}
+                {userData.fullName}
               </Title>
               <Text type="secondary" className="block">
-                {userData.role} | {userData.location}
+                {userData.role} | {userData.address || "No location set"}
               </Text>
             </Col>
             <Col>
               <Space>
                 <Button
-                  shape="circle"
-                  icon={<FacebookOutlined />}
-                  type="default"
-                />
-                <Button
-                  shape="circle"
-                  icon={<TwitterOutlined />}
-                  type="default"
-                />
-                <Button
-                  shape="circle"
-                  icon={<LinkedinOutlined />}
-                  type="default"
-                />
-                <Button
-                  shape="circle"
-                  icon={<InstagramOutlined />}
-                  type="default"
-                />
-                <Button
                   icon={<EditOutlined />}
                   onClick={handleEditBasicInfo}
                   type="default"
+                  loading={loading}
                 >
                   Edit
                 </Button>
@@ -136,45 +193,26 @@ const UserProfile = () => {
             onFinish={handleSaveBasicInfo}
             initialValues={userData}
           >
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <Form.Item
-                  name="firstName"
-                  label="First Name"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please input your first name!",
-                    },
-                  ]}
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="lastName"
-                  label="Last Name"
-                  rules={[
-                    { required: true, message: "Please input your last name!" },
-                  ]}
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-            </Row>
             <Form.Item
-              name="role"
-              label="Role"
-              rules={[{ required: true, message: "Please input your role!" }]}
+              name="fullName"
+              label="Full Name"
+              rules={[
+                {
+                  required: true,
+                  message: "Please input your full name!",
+                },
+              ]}
             >
               <Input />
             </Form.Item>
             <Form.Item
-              name="location"
+              name="address"
               label="Location"
               rules={[
-                { required: true, message: "Please input your location!" },
+                {
+                  required: true,
+                  message: "Please input your location!",
+                },
               ]}
             >
               <Input />
@@ -187,6 +225,7 @@ const UserProfile = () => {
                 type="primary"
                 htmlType="submit"
                 className="bg-blue-900 hover:bg-blue-800"
+                loading={loading}
               >
                 Save
               </Button>
@@ -208,6 +247,7 @@ const UserProfile = () => {
             icon={<EditOutlined />}
             onClick={handleEditPersonalInfo}
             type="default"
+            loading={loading}
           >
             Edit
           </Button>
@@ -218,32 +258,32 @@ const UserProfile = () => {
           <>
             <Row gutter={[16, 16]} className="mb-4">
               <Col span={12}>
-                <Text strong>First Name</Text>
+                <Text strong>Full Name</Text>
                 <br />
-                <Text>{userData.firstName}</Text>
+                <Text>{userData.fullName || "Not set"}</Text>
               </Col>
               <Col span={12}>
-                <Text strong>Last Name</Text>
+                <Text strong>Role</Text>
                 <br />
-                <Text>{userData.lastName}</Text>
+                <Text>{userData.role || "Not set"}</Text>
               </Col>
             </Row>
             <Row gutter={[16, 16]} className="mb-4">
               <Col span={12}>
                 <Text strong>Email address</Text>
                 <br />
-                <Text>{userData.email}</Text>
+                <Text>{userData.email || "Not set"}</Text>
               </Col>
               <Col span={12}>
                 <Text strong>Phone</Text>
                 <br />
-                <Text>{userData.phone}</Text>
+                <Text>{userData.phone || "Not set"}</Text>
               </Col>
             </Row>
             <div className="mb-4">
-              <Text strong>Bio</Text>
+              <Text strong>Location</Text>
               <br />
-              <Text>{userData.bio}</Text>
+              <Text>{userData.address || "Not set"}</Text>
             </div>
           </>
         ) : (
@@ -253,33 +293,18 @@ const UserProfile = () => {
             onFinish={handleSavePersonalInfo}
             initialValues={userData}
           >
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <Form.Item
-                  name="firstName"
-                  label="First Name"
-                  rules={[
-                    {
-                      required: true,
-                      message: "Please input your first name!",
-                    },
-                  ]}
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="lastName"
-                  label="Last Name"
-                  rules={[
-                    { required: true, message: "Please input your last name!" },
-                  ]}
-                >
-                  <Input />
-                </Form.Item>
-              </Col>
-            </Row>
+            <Form.Item
+              name="fullName"
+              label="Full Name"
+              rules={[
+                {
+                  required: true,
+                  message: "Please input your full name!",
+                },
+              ]}
+            >
+              <Input />
+            </Form.Item>
             <Form.Item
               name="email"
               label="Email address"
@@ -296,14 +321,12 @@ const UserProfile = () => {
             <Form.Item name="phone" label="Phone">
               <Input />
             </Form.Item>
-            <Form.Item name="bio" label="Bio">
-              <Input.TextArea rows={4} />
-            </Form.Item>
             <Space>
               <Button
                 type="primary"
                 htmlType="submit"
                 className="bg-blue-900 hover:bg-blue-800"
+                loading={loading}
               >
                 Save
               </Button>

@@ -11,15 +11,16 @@ import {
   DatePicker,
   Form,
   Input,
-  InputNumber,
   message,
   Modal,
+  Popconfirm,
   Row,
   Select,
   Space,
   Spin,
   Table,
   Tag,
+  Tooltip,
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -35,8 +36,6 @@ const StudentManagement = () => {
   const [students, setStudents] = useState([]); // State for real student data
   const [filteredStudents, setFilteredStudents] = useState([]); // State for filtered students
   const [tableLoading, setTableLoading] = useState(false); // Loading for table
-  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
-  const [studentToDelete, setStudentToDelete] = useState(null);
 
   const [searchForm] = Form.useForm();
 
@@ -78,7 +77,7 @@ const StudentManagement = () => {
         return;
       }
 
-      const response = await axios.get("/api/admin/students/all", {
+      const response = await axios.get("/api/admin/students", {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -157,16 +156,26 @@ const StudentManagement = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            Sửa
-          </Button>
-          <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.id)}
+          <Tooltip title="Sửa">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              type="primary"
+              size="small"
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xác nhận xóa học sinh"
+            description={`Bạn có chắc chắn muốn xóa học sinh "${record.name}"?`}
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okType="danger"
           >
-            Xóa
-          </Button>
+            <Tooltip title="Xóa">
+              <Button danger icon={<DeleteOutlined />} size="small" />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -181,6 +190,7 @@ const StudentManagement = () => {
   const handleEdit = (student) => {
     setEditingStudent(student);
     form.setFieldsValue({
+      studentCode: student.studentCode,
       name: student.name,
       email: student.email,
       dateOfBirth: dayjs(student.dateOfBirth),
@@ -196,19 +206,34 @@ const StudentManagement = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      const formattedValues = {
-        fullName: values.name,
-        email: values.email,
-        phone: values.emergencyPhone,
-        password: "defaultPassword123",
-        dateOfBirth: values.dateOfBirth.toISOString(),
-        gender: values.gender,
-        grade: parseInt(values.grade),
-        class: values.class,
-        emergencyContact: values.emergencyContact,
-        emergencyPhone: values.emergencyPhone,
-        parentName: values.parentName,
-      };
+      const formattedValues = editingStudent
+        ? {
+            studentCode: values.studentCode,
+            fullName: values.name,
+            email: values.email,
+            phone: values.emergencyPhone,
+            password: "defaultPassword123",
+            dateOfBirth: values.dateOfBirth.toISOString(),
+            gender: values.gender,
+            grade: parseInt(values.grade),
+            class: values.class,
+            emergencyContact: values.emergencyContact,
+            emergencyPhone: values.emergencyPhone,
+            parentName: values.parentName,
+          }
+        : {
+            fullName: values.name,
+            email: values.email,
+            phone: values.emergencyPhone,
+            password: "defaultPassword123",
+            dateOfBirth: values.dateOfBirth.toISOString(),
+            gender: values.gender,
+            grade: parseInt(values.grade),
+            class: values.class,
+            emergencyContact: values.emergencyContact,
+            emergencyPhone: values.emergencyPhone,
+            parentName: values.parentName,
+          };
 
       if (editingStudent) {
         // Update student
@@ -225,6 +250,7 @@ const StudentManagement = () => {
           }
 
           const updateValues = {
+            studentCode: values.studentCode,
             fullName: values.name,
             email: values.email,
             phone: values.emergencyPhone,
@@ -246,7 +272,7 @@ const StudentManagement = () => {
             }
           );
           message.success("Cập nhật học sinh thành công");
-          fetchStudents(); // Refresh data after update
+          fetchStudents();
         } catch (error) {
           message.error(
             error.response?.data?.error || "Không thể cập nhật học sinh"
@@ -268,18 +294,14 @@ const StudentManagement = () => {
             return;
           }
 
-          await axios.post(
-            "http://localhost:5000/api/admin/students",
-            formattedValues,
-            {
-              headers: {
-                Authorization: `Bearer ${authToken}`,
-              },
-            }
-          );
+          await axios.post("/api/admin/students", formattedValues, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          });
 
           message.success("Thêm học sinh thành công");
-          fetchStudents(); // Refresh data after adding a new student
+          fetchStudents();
         } catch (error) {
           message.error(
             error.response?.data?.error || "Không thể thêm học sinh"
@@ -295,26 +317,17 @@ const StudentManagement = () => {
     }
   };
 
-  const handleDelete = (studentId) => {
-    setStudentToDelete(studentId);
-    setIsDeleteModalVisible(true);
-    console.log("isDeleteModalVisible set to:", true);
-  };
-
-  const confirmDelete = async () => {
-    if (!studentToDelete) return;
-
-    setTableLoading(true); // Indicate loading for the table/delete action
+  const handleDelete = async (studentId) => {
+    setTableLoading(true);
     try {
       const authToken = localStorage.getItem("token");
       if (!authToken) {
         message.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
         setTableLoading(false);
-        setIsDeleteModalVisible(false);
         return;
       }
       // Call deleteUser endpoint for students
-      await axios.delete(`/api/admin/users/${studentToDelete}`, {
+      await axios.delete(`/api/admin/users/${studentId}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -326,8 +339,6 @@ const StudentManagement = () => {
       console.error("Lỗi khi xóa học sinh:", error);
     } finally {
       setTableLoading(false);
-      setIsDeleteModalVisible(false);
-      setStudentToDelete(null);
     }
   };
 
@@ -387,26 +398,9 @@ const StudentManagement = () => {
         columns={columns}
         dataSource={filteredStudents}
         rowKey="id"
-        pagination={{ pageSize: 5 }}
+        pagination={{ pageSize: 5, showQuickJumper: true }}
         loading={tableLoading}
       />
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        title="Xác nhận xóa học sinh"
-        open={isDeleteModalVisible}
-        onOk={confirmDelete}
-        onCancel={() => {
-          setIsDeleteModalVisible(false);
-          setStudentToDelete(null);
-        }}
-        okText="Xóa"
-        okType="danger"
-        cancelText="Hủy"
-        confirmLoading={tableLoading}
-      >
-        <p>Bạn có chắc chắn muốn xóa học sinh này?</p>
-      </Modal>
 
       <Modal
         title={editingStudent ? "Sửa thông tin học sinh" : "Thêm học sinh mới"}
@@ -418,6 +412,17 @@ const StudentManagement = () => {
       >
         <Spin spinning={loading}>
           <Form form={form} layout="vertical">
+            {editingStudent && (
+              <Form.Item
+                name="studentCode"
+                label="Mã học sinh"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã học sinh!" },
+                ]}
+              >
+                <Input disabled />
+              </Form.Item>
+            )}
             <Form.Item
               name="name"
               label="Họ và tên"
@@ -448,9 +453,8 @@ const StudentManagement = () => {
               rules={[{ required: true, message: "Vui lòng chọn giới tính!" }]}
             >
               <Select>
-                <Option value="male">Nam</Option>
-                <Option value="female">Nữ</Option>
-                <Option value="other">Khác</Option>
+                <Option value="Nam">Nam</Option>
+                <Option value="Nữ">Nữ</Option>
               </Select>
             </Form.Item>
             <Form.Item
@@ -458,7 +462,13 @@ const StudentManagement = () => {
               label="Khối"
               rules={[{ required: true, message: "Vui lòng nhập khối!" }]}
             >
-              <InputNumber min={1} max={12} style={{ width: "100%" }} />
+              <Select>
+                <Option value="1">1</Option>
+                <Option value="2">2</Option>
+                <Option value="3">3</Option>
+                <Option value="4">4</Option>
+                <Option value="5">5</Option>
+              </Select>
             </Form.Item>
             <Form.Item
               name="class"

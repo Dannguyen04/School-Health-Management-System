@@ -3,7 +3,9 @@ import dotenv from "dotenv";
 import express from "express";
 import connectToDatabase from "./db/db.js";
 import router from "./routes/auth.js";
+import AdminRoutes from "./routes/AdminRoutes.js";
 import NurseRoutes from "./routes/NurseRoutes.js";
+import UserRoutes from "./routes/UserRoutes.js";
 
 dotenv.config();
 
@@ -20,7 +22,9 @@ app.use(
 );
 app.use(express.json());
 app.use("/auth", router);
+app.use("/admin", AdminRoutes);
 app.use("/nurse", NurseRoutes);
+app.use("/users", UserRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {
