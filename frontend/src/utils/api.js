@@ -4,15 +4,7 @@ const API_BASE_URL = "/api"; // Use relative path for proxy
 
 // Create axios instance with default config
 const api = axios.create({
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-    baseURL: API_BASE_URL,
-=======
     baseURL: "/api",
->>>>>>> Stashed changes
-=======
-    baseURL: "/api",
->>>>>>> Stashed changes
     headers: {
         "Content-Type": "application/json",
     },
@@ -104,44 +96,37 @@ export const adminAPI = {
 export const parentAPI = {
     // Get children of logged-in parent
     getChildren: () => api.get("/parents/my-children"),
-    
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
+
     // Get student details by ID
     getStudentById: (studentId) => api.get(`/parents/students/${studentId}`),
-    
+
     // Health profile operations
-    getHealthProfile: (studentId) => api.get(`/parents/health-profile/${studentId}`),
-    upsertHealthProfile: (studentId, data) => api.post(`/parents/health-profile/${studentId}`, data),
-    
+    getHealthProfile: (studentId) =>
+        api.get(`/parents/health-profile/${studentId}`),
+    upsertHealthProfile: (studentId, data) =>
+        api.post(`/parents/health-profile/${studentId}`, data),
+
     // Medicine operations
-    getStudentMedicines: (studentId) => api.get(`/parents/students/${studentId}/medicines`),
-    requestMedication: (studentId, data) => api.post(`/parents/request-medication/${studentId}`, data),
-    
+    getStudentMedicines: (studentId) =>
+        api.get(`/parents/students/${studentId}/medicines`),
+    requestMedication: (studentId, data) =>
+        api.post(`/parents/request-medication/${studentId}`, data),
+
     // Get students by parent ID (for non-authenticated access)
-    getStudentsByParentId: (parentId) => api.get(`/parents/students?parentId=${parentId}`),
+    getStudentsByParentId: (parentId) =>
+        api.get(`/parents/students?parentId=${parentId}`),
 };
 
 // Auth API functions
 export const authAPI = {
     login: async (credentials) => {
-        const response = await api.post('/auth/login', credentials);
+        const response = await api.post("/auth/login", credentials);
         return response.data;
     },
     verify: async () => {
-        const response = await api.get('/auth/verify');
+        const response = await api.get("/auth/verify");
         return response.data;
-    }
-=======
-    // Health profile operations
-    getHealthProfile: (studentId) => api.get(`/parents/health-profile/${studentId}`),
-    upsertHealthProfile: (studentId, data) => api.post(`/parents/health-profile/${studentId}`, data),
->>>>>>> Stashed changes
-=======
-    // Health profile operations
-    getHealthProfile: (studentId) => api.get(`/parents/health-profile/${studentId}`),
-    upsertHealthProfile: (studentId, data) => api.post(`/parents/health-profile/${studentId}`, data),
->>>>>>> Stashed changes
+    },
 };
 
 export default api;

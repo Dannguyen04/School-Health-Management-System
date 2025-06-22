@@ -24,13 +24,15 @@ app.use(
     })
 );
 app.use(express.json());
-app.use("/auth", authRouter);
-app.use("/admin", AdminRoutes);
-app.use("/nurse", NurseRoutes);
-app.use("/users", UserRoutes);
-app.use("/manager/vaccination-campaigns", VaccinationCampaignRoutes);
-app.use("/manager/vaccination", VaccinationRoutes);
-// app.use("/parent", parentRouter);
+
+// Mount all routes under /api prefix
+app.use("/api/auth", authRouter);
+app.use("/api/admin", AdminRoutes);
+app.use("/api/nurse", NurseRoutes);
+app.use("/api/users", UserRoutes);
+app.use("/api/manager/vaccination-campaigns", VaccinationCampaignRoutes);
+app.use("/api/manager/vaccination", VaccinationRoutes);
+// app.use("/api/parent", parentRouter);
 
 // 404 handler
 app.use("*", (req, res) => {
