@@ -28,6 +28,4 @@ router.delete(
   deleteVaccinationCampaign
 );
 
-router.use();
-
 export default router;
