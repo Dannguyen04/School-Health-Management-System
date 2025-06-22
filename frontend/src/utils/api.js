@@ -5,7 +5,11 @@ const API_BASE_URL = "/api"; // Use relative path for proxy
 // Create axios instance with default config
 const api = axios.create({
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     baseURL: API_BASE_URL,
+=======
+    baseURL: "/api",
+>>>>>>> Stashed changes
 =======
     baseURL: "/api",
 >>>>>>> Stashed changes
@@ -102,6 +106,7 @@ export const parentAPI = {
     getChildren: () => api.get("/parents/my-children"),
     
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     // Get student details by ID
     getStudentById: (studentId) => api.get(`/parents/students/${studentId}`),
     
@@ -127,6 +132,11 @@ export const authAPI = {
         const response = await api.get('/auth/verify');
         return response.data;
     }
+=======
+    // Health profile operations
+    getHealthProfile: (studentId) => api.get(`/parents/health-profile/${studentId}`),
+    upsertHealthProfile: (studentId, data) => api.post(`/parents/health-profile/${studentId}`, data),
+>>>>>>> Stashed changes
 =======
     // Health profile operations
     getHealthProfile: (studentId) => api.get(`/parents/health-profile/${studentId}`),

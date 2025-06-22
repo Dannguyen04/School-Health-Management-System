@@ -79,7 +79,11 @@ const HealthProfile = () => {
       setHealthProfile(response.data.healthProfile);
     } catch (error) {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       setHealthProfile(null); // Clear profile on error
+=======
+      setHealthProfile(null);
+>>>>>>> Stashed changes
 =======
       setHealthProfile(null);
 >>>>>>> Stashed changes
@@ -236,6 +240,7 @@ const HealthProfile = () => {
           )}
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           {!selectedStudent && (
             <Alert
               message="Vui lòng chọn học sinh để xem hồ sơ sức khỏe"
@@ -257,6 +262,8 @@ const HealthProfile = () => {
             />
           )}
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
           {healthProfile && (
