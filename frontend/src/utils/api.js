@@ -1,8 +1,10 @@
 import axios from "axios";
 
-// Create axios instance with base configuration
+const API_BASE_URL = "/api"; // Use relative path for proxy
+
+// Create axios instance with default config
 const api = axios.create({
-  baseURL: "http://localhost:5000",
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
@@ -87,6 +89,43 @@ export const userAPI = {
 export const adminAPI = {
   // Dashboard statistics
   getDashboardStats: () => api.get("/admin/dashboard/stats"),
+};
+
+// Parent API endpoints
+export const parentAPI = {
+  // Get children of logged-in parent
+  getChildren: () => api.get("/parents/my-children"),
+
+  // Get student details by ID
+  getStudentById: (studentId) => api.get(`/parents/students/${studentId}`),
+
+  // Health profile operations
+  getHealthProfile: (studentId) =>
+    api.get(`/parents/health-profile/${studentId}`),
+  upsertHealthProfile: (studentId, data) =>
+    api.post(`/parents/health-profile/${studentId}`, data),
+
+  // Medicine operations
+  getStudentMedicines: (studentId) =>
+    api.get(`/parents/students/${studentId}/medicines`),
+  requestMedication: (studentId, data) =>
+    api.post(`/parents/request-medication/${studentId}`, data),
+
+  // Get students by parent ID (for non-authenticated access)
+  getStudentsByParentId: (parentId) =>
+    api.get(`/parents/students?parentId=${parentId}`),
+};
+
+// Auth API functions
+export const authAPI = {
+  login: async (credentials) => {
+    const response = await api.post("/auth/login", credentials);
+    return response.data;
+  },
+  verify: async () => {
+    const response = await api.get("/auth/verify");
+    return response.data;
+  },
 };
 
 export default api;

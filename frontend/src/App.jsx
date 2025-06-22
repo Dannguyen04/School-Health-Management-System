@@ -1,4 +1,4 @@
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import { Route, BrowserRouter as Router, Routes, Navigate } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
 import AdminDashboard from "./components/admin/Dashboard";
 import StudentManagement from "./components/admin/StudentManagement";
@@ -33,6 +33,11 @@ import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
+import Blog from './components/user/Blog';
+import MyChildren from './components/user/MyChildren';
+import About from "./components/parent/About";
+import Services from "./components/parent/Services";
+import Doctors from "./components/parent/Doctors";
 
 const App = () => {
   return (
@@ -121,18 +126,18 @@ const App = () => {
             </PrivateRoutes>
           }
         >
-          {/* <Route index element={<UserDashboard />} /> */}
-          <Route
-            path="vaccination-schedule"
-            element={<VaccinationSchedule />}
-          />
-          <Route
-            path="health-checkup-results"
-            element={<HealthCheckupResults />}
-          />
-          <Route path="consent-forms" element={<VaccineConsentForm />} />
+          <Route index element={<Navigate to="my-children" />} />
+          <Route path="home" element={<Homepage />} />
+          <Route path="about" element={<About />} />
+          <Route path="services" element={<Services />} />
+          <Route path="doctors" element={<Doctors />} />
+          <Route path="blog" element={<Blog />} />
+          <Route path="my-children" element={<MyChildren />} />
           <Route path="health-profile" element={<HealthProfile />} />
           <Route path="medicine-info" element={<MedicineInfo />} />
+          <Route path="consent-forms" element={<VaccineConsentForm />} />
+          <Route path="health-checkup-results" element={<HealthCheckupResults />} />
+          <Route path="vaccination-schedule" element={<VaccinationSchedule />} />
           <Route path="profile" element={<UserProfile />} />
         </Route>
       </Routes>

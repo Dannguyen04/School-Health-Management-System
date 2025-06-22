@@ -2,6 +2,7 @@ import { UserOutlined } from "@ant-design/icons";
 import { Avatar, Dropdown } from "antd";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 const Navbar = () => {
   const [menu, setMenu] = useState(false);
@@ -47,36 +48,12 @@ const Navbar = () => {
             </span>
           </div>
           <nav className=" hidden lg:flex flex-row items-center text-lg font-medium gap-8">
-            <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("home")}
-            >
-              Trang chủ
-            </span>
-            <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("about")}
-            >
-              Giới thiệu
-            </span>
-            <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("services")}
-            >
-              Dịch vụ
-            </span>
-            <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("doctors")}
-            >
-              Đội ngũ bác sĩ
-            </span>
-            <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("blog")}
-            >
-              Tin tức
-            </span>
+            <Link to="/user/home" className="hover:text-brightColor transition-all cursor-pointer">Trang chủ</Link>
+            <Link to="/user/about" className="hover:text-brightColor transition-all cursor-pointer">Về chúng tôi</Link>
+            <Link to="/user/services" className="hover:text-brightColor transition-all cursor-pointer">Dịch vụ</Link>
+            <Link to="/user/doctors" className="hover:text-brightColor transition-all cursor-pointer">Đội ngũ bác sĩ</Link>
+            <Link to="/user/blog" className="hover:text-brightColor transition-all cursor-pointer">Tin tức</Link>
+            <Link to="/user/my-children" className="hover:text-brightColor transition-all cursor-pointer">Các con của tôi</Link>
             <Dropdown
               menu={{ items: userMenuItems }}
               placement="bottomRight"
@@ -91,36 +68,12 @@ const Navbar = () => {
             menu ? "translate-x-0" : "-translate-x-full"
           } lg:hidden flex flex-col absolute bg-backgroundColor text-white left-0 top-16 font-semibold text-2xl text-center pt-8 pb-4 gap-8 w-full h-fit transition-transform duration-300`}
         >
-          <span
-            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-            onClick={() => handleNav("home")}
-          >
-            Trang chủ
-          </span>
-          <span
-            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-            onClick={() => handleNav("about")}
-          >
-            Giới thiệu
-          </span>
-          <span
-            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-            onClick={() => handleNav("services")}
-          >
-            Dịch vụ
-          </span>
-          <span
-            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-            onClick={() => handleNav("doctors")}
-          >
-            Đội ngũ bác sĩ
-          </span>
-          <span
-            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-            onClick={() => handleNav("blog")}
-          >
-            Tin tức
-          </span>
+          <Link to="/user/home" className="hover:text-brightColor transition-all cursor-pointer">Trang chủ</Link>
+          <Link to="/user/about" className="hover:text-brightColor transition-all cursor-pointer">Về chúng tôi</Link>
+          <Link to="/user/services" className="hover:text-brightColor transition-all cursor-pointer">Dịch vụ</Link>
+          <Link to="/user/doctors" className="hover:text-brightColor transition-all cursor-pointer">Đội ngũ bác sĩ</Link>
+          <Link to="/user/blog" className="hover:text-brightColor transition-all cursor-pointer">Tin tức</Link>
+          <Link to="/user/my-children" className="hover:text-brightColor transition-all cursor-pointer">Các con của tôi</Link>
 
           <Dropdown
             menu={{ items: userMenuItems }}
