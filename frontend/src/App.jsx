@@ -1,6 +1,12 @@
-import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
+import {
+  Navigate,
+  Route,
+  BrowserRouter as Router,
+  Routes,
+} from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
 import AdminDashboard from "./components/admin/Dashboard";
+import ParentManagement from "./components/admin/ParentManagement";
 import StudentManagement from "./components/admin/StudentManagement";
 import UserManagement from "./components/admin/UserManagement";
 import AlertsAndEvents from "./components/manager/AlertsAndEvents";
@@ -9,16 +15,21 @@ import HealthCheckupCampaigns from "./components/manager/HealthCheckupCampaigns"
 import HealthReports from "./components/manager/HealthReports";
 import StudentList from "./components/manager/StudentList";
 import VaccinationCampaigns from "./components/manager/VaccinationCampaigns";
-import Campaigns from "./components/nurse/Campaigns";
+import VaccineManagement from "./components/manager/VaccineManagement";
 import ConfirmedMedicines from "./components/nurse/ConfirmedMedicines";
 import Dashboard from "./components/nurse/Dashboard";
 import HealthCheckups from "./components/nurse/HealthCheckups";
 import MedicalEventReport from "./components/nurse/MedicalEventReport";
 import MedicalInventory from "./components/nurse/MedicalInventory";
+import StudentHealthProfile from "./components/nurse/StudentHealthProfile";
 import StudentTreatment from "./components/nurse/StudentTreatment";
 import Vaccination from "./components/nurse/Vaccination";
+import About from "./components/parent/About";
+import Doctors from "./components/parent/Doctors";
+import Services from "./components/parent/Services";
 import ScrollToTop from "./components/ScrollToTop";
 import UserProfile from "./components/shared/UserProfile";
+import Blog from "./components/user/Blog";
 import VaccineConsentForm from "./components/user/ConsentForms";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
@@ -52,7 +63,10 @@ const App = () => {
           }
         >
           <Route index element={<Dashboard />} />
-          <Route path="campaigns" element={<Campaigns />} />
+          <Route
+            path="student-health-profile"
+            element={<StudentHealthProfile />}
+          />
           <Route path="medical-inventory" element={<MedicalInventory />} />
           <Route path="student-treatment" element={<StudentTreatment />} />
           <Route path="vaccination" element={<Vaccination />} />
@@ -76,6 +90,7 @@ const App = () => {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="students" element={<StudentManagement />} />
+          <Route path="parents" element={<ParentManagement />} />
           <Route path="profile" element={<UserProfile />} />
         </Route>
 
@@ -97,6 +112,7 @@ const App = () => {
             path="vaccination-campaigns"
             element={<VaccinationCampaigns />}
           />
+          <Route path="vaccination" element={<VaccineManagement />} />
           <Route
             path="health-checkup-campaigns"
             element={<HealthCheckupCampaigns />}
@@ -116,18 +132,23 @@ const App = () => {
             </PrivateRoutes>
           }
         >
-          {/* <Route index element={<UserDashboard />} /> */}
-          <Route
-            path="vaccination-schedule"
-            element={<VaccinationSchedule />}
-          />
+          <Route index element={<Navigate to="home" />} />
+          <Route path="home" element={<Homepage />} />
+          <Route path="about" element={<About />} />
+          <Route path="services" element={<Services />} />
+          <Route path="doctors" element={<Doctors />} />
+          <Route path="blog" element={<Blog />} />
+          <Route path="health-profile" element={<HealthProfile />} />
+          <Route path="medicine-info" element={<MedicineInfo />} />
+          <Route path="consent-forms" element={<VaccineConsentForm />} />
           <Route
             path="health-checkup-results"
             element={<HealthCheckupResults />}
           />
-          <Route path="consent-forms" element={<VaccineConsentForm />} />
-          <Route path="health-profile" element={<HealthProfile />} />
-          <Route path="medicine-info" element={<MedicineInfo />} />
+          <Route
+            path="vaccination-schedule"
+            element={<VaccinationSchedule />}
+          />
           <Route path="profile" element={<UserProfile />} />
         </Route>
       </Routes>

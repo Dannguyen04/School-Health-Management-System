@@ -1,35 +1,35 @@
 import express from "express";
 import {
-    createVaccine,
-    getAllVaccine,
-    getAllRequiredVaccine,
-    getAllOptionalVaccine,
-    updateVaccine,
-    deleteVaccine,
+  createVaccine,
+  deleteVaccine,
+  getAllOptionalVaccine,
+  getAllRequiredVaccine,
+  getVaccines,
+  updateVaccine,
 } from "../controllers/VaccineController.js";
 import {
-    authenticateToken,
-    verifyManager,
+  authenticateToken,
+  verifyManager,
 } from "../middleware/authenticateToken.js";
 
 const router = express.Router();
 
 router.post("/", createVaccine);
 
-router.get("/", authenticateToken, verifyManager, getAllVaccine);
+router.get("/", authenticateToken, verifyManager, getVaccines);
 
 router.get(
-    "/required",
-    authenticateToken,
-    verifyManager,
-    getAllRequiredVaccine
+  "/required",
+  authenticateToken,
+  verifyManager,
+  getAllRequiredVaccine
 );
 
 router.get(
-    "/optional",
-    authenticateToken,
-    verifyManager,
-    getAllOptionalVaccine
+  "/optional",
+  authenticateToken,
+  verifyManager,
+  getAllOptionalVaccine
 );
 
 router.put("/:id", authenticateToken, verifyManager, updateVaccine);

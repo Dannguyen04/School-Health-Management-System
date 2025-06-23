@@ -20,12 +20,12 @@ export const getDashboardStats = async (req, res) => {
         });
 
         // Lấy số tiêm chủng sắp tới
-        const upcomingVaccinations = await prisma.vaccination.count({
+        const upcomingVaccinations = await prisma.vaccinationCampaign.count({
             where: {
                 scheduledDate: {
                     gte: today,
                 },
-                status: "SCHEDULED",
+                status: "ACTIVE",
             },
         });
 

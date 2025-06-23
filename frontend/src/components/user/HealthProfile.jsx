@@ -57,10 +57,14 @@ const HealthProfile = () => {
   const fetchChildren = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/parents/children");
-      setChildren(response.data.data);
-      if (response.data.data.length > 0) {
-        setSelectedStudent(response.data.data[0].studentId);
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/parents/my-children", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const studentData = response.data?.data || [];
+      setChildren(studentData);
+      if (studentData.length > 0) {
+        setSelectedStudent(studentData[0].studentId);
       }
     } catch (error) {
       message.error(
@@ -75,16 +79,23 @@ const HealthProfile = () => {
   useEffect(() => {
     if (selectedStudent) {
       fetchHealthProfile();
+    } else {
+      setHealthProfile(null);
     }
 
   const fetchHealthProfile = async () => {
     try {
       setLoading(true);
+      const token = localStorage.getItem("token");
       const response = await axios.get(
-        `/api/parents/health-profile/${selectedStudent}`
+        `/api/parents/health-profile/${selectedStudent}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
-      setHealthProfile(response.data.data.healthProfile);
+      setHealthProfile(response.data.data?.healthProfile);
     } catch (error) {
+      setHealthProfile(null);
       message.error(
         error.response?.data?.error || "Không thể tải hồ sơ sức khỏe"
       );
@@ -128,15 +139,19 @@ const HealthProfile = () => {
         notes: values.notes === "" ? null : values.notes,
       };
 
-      const response = await axios.put(
+      const token = localStorage.getItem("token");
+      const response = await axios.post(
         `/api/parents/health-profile/${selectedStudent}`,
-        transformedValues
+        transformedValues,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
       );
       console.log("Health profile upserted successfully:", response.data);
       message.success("Cập nhật hồ sơ sức khỏe thành công");
       setIsEditModalVisible(false);
       setShowSuccess(true);
-      fetchHealthProfile(); // Refresh health profile after update
+      fetchHealthProfile();
     } catch (error) {
       message.error(
         error.response?.data?.error || "Có lỗi xảy ra khi cập nhật hồ sơ"
@@ -146,7 +161,6 @@ const HealthProfile = () => {
     }
   };
 
-  // Helper function to get initial values for the form
   const getInitialValues = () => ({
     allergies: healthProfile?.allergies?.join(", ") || "",
     chronicDiseases: healthProfile?.chronicDiseases?.join(", ") || "",
@@ -229,7 +243,7 @@ const HealthProfile = () => {
                       key={child.studentId}
                       value={child.studentId}
                     >
-                      {child.fullName} - {child.studentCode}
+                      {child.fullName}
                     </Select.Option>
                   ))}
                 </Select>
@@ -256,17 +270,42 @@ const HealthProfile = () => {
             />
           )}
 
-          {healthProfile ? (
+          {!selectedStudent && (
+            <Alert
+              message="Vui lòng chọn học sinh để xem hồ sơ sức khỏe"
+              type="info"
+              showIcon
+            />
+          )}
+
+          {selectedStudent && !healthProfile && !loading && (
+            <Alert
+              message="Học sinh này chưa có hồ sơ sức khỏe."
+              type="warning"
+              showIcon
+              action={
+                <Button
+                  size="small"
+                  type="primary"
+                  onClick={() => setIsEditModalVisible(true)}
+                >
+                  Tạo hồ sơ
+                </Button>
+              }
+            />
+          )}
+
+          {healthProfile && (
             <Card
               className="rounded-xl border-0 shadow-none"
               style={{ marginBottom: 24 }}
             >
               <Descriptions title="Thông tin cơ bản" bordered>
                 <Descriptions.Item label="Dị ứng" span={3}>
-                  {healthProfile.allergies}
+                  {healthProfile.allergies?.join(", ")}
                 </Descriptions.Item>
                 <Descriptions.Item label="Bệnh nền" span={3}>
-                  {healthProfile.chronicDiseases}
+                  {healthProfile.chronicDiseases?.join(", ")}
                 </Descriptions.Item>
                 <Descriptions.Item label="Thị lực">
                   {healthProfile.vision}
@@ -274,11 +313,11 @@ const HealthProfile = () => {
                 <Descriptions.Item label="Thính lực">
                   {healthProfile.hearing}
                 </Descriptions.Item>
-                <Descriptions.Item label="Chiều cao">
-                  {healthProfile.height} cm
+                <Descriptions.Item label="Chiều cao (cm)">
+                  {healthProfile.height}
                 </Descriptions.Item>
-                <Descriptions.Item label="Cân nặng">
-                  {healthProfile.weight} kg
+                <Descriptions.Item label="Cân nặng (kg)">
+                  {healthProfile.weight}
                 </Descriptions.Item>
               </Descriptions>
 
@@ -287,24 +326,16 @@ const HealthProfile = () => {
                 bordered
                 style={{ marginTop: 24 }}
               >
+                <Descriptions.Item label="Ghi chú" span={3}>
+                  {healthProfile.notes}
+                </Descriptions.Item>
                 <Descriptions.Item label="Thuốc đang dùng" span={3}>
-                  {healthProfile.medications}
+                  {healthProfile.medications?.join(", ")}
                 </Descriptions.Item>
                 <Descriptions.Item label="Lịch sử điều trị" span={3}>
                   {healthProfile.treatmentHistory}
                 </Descriptions.Item>
-                <Descriptions.Item label="Ghi chú" span={3}>
-                  {healthProfile.notes}
-                </Descriptions.Item>
               </Descriptions>
-            </Card>
-          ) : (
-            <Card className="rounded-xl border-0 shadow-none">
-              <div style={{ textAlign: "center", padding: "24px" }}>
-                <Text type="secondary">
-                  Vui lòng chọn học sinh để xem hồ sơ sức khỏe
-                </Text>
-              </div>
             </Card>
           )}
 

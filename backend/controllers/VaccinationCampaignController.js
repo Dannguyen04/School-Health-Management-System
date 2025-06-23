@@ -1,8 +1,8 @@
 import { PrismaClient } from "@prisma/client";
+import bodyParser from "body-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
-import bodyParser from "body-parser";
 
 dotenv.config();
 
@@ -80,7 +80,11 @@ const createVaccinationCampaign = async (req, res) => {
 
 const getAllVaccinationCampaigns = async (req, res) => {
     try {
-        const campaigns = await prisma.vaccinationCampaign.findMany();
+        const campaigns = await prisma.vaccinationCampaign.findMany({
+            include: {
+                vaccine: true,
+            },
+        });
         res.status(200).json({ success: true, data: campaigns });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -101,7 +105,7 @@ const updateVaccinationCampaign = async (req, res) => {
         }
 
         if (name && name !== existed.name) {
-            const nameExists = await prisma.vaccinationCampaign.findUnique({
+            const nameExists = await prisma.vaccinationCampaign.findFirst({
                 where: { name },
             });
             if (nameExists) {
@@ -119,6 +123,7 @@ const updateVaccinationCampaign = async (req, res) => {
             ["FINISHED", "CANCELLED"].includes(status)
         )
             data.status = status;
+        data.isActive = status === "ACTIVE";
         const updated = await prisma.vaccinationCampaign.update({
             where: { id },
             data,
@@ -152,7 +157,7 @@ const deleteVaccinationCampaign = async (req, res) => {
 
 export {
     createVaccinationCampaign,
+    deleteVaccinationCampaign,
     getAllVaccinationCampaigns,
     updateVaccinationCampaign,
-    deleteVaccinationCampaign,
 };

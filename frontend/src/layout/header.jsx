@@ -61,7 +61,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
         <Dropdown menu={{ items: menuItems }} placement="bottomRight" arrow>
           <Space className="cursor-pointer">
             <Avatar icon={<UserOutlined />} />
-            <span>{user?.fullName || "User"}</span>
+            <span>{user?.name || "User"}</span>
           </Space>
         </Dropdown>
       </div>

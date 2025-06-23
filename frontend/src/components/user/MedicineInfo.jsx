@@ -69,8 +69,12 @@ const MedicineInfo = () => {
   const fetchChildren = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/parents/children");
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/parents/my-children", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.data.success) {
+        console.log(response.data.data);
         setChildren(response.data.data);
         if (response.data.data.length > 0) {
           setSelectedStudent(response.data.data[0].studentId);
@@ -91,17 +95,21 @@ const MedicineInfo = () => {
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       setLoading(true);
+      const token = localStorage.getItem("token");
       const response = await axios.post(
-        `/api/parents/students/${values.studentId}/medications`,
+        `/api/parents/request-medication/${values.studentId}`,
         {
           medicationName: values.medicationName,
           dosage: values.dosage,
           frequency: values.frequency,
           instructions: values.instructions,
-          startDate: values.startDate.toISOString(),
+          startDate: values.startDate ? values.startDate.toISOString() : null,
           endDate: values.endDate ? values.endDate.toISOString() : null,
           description: values.description,
           unit: values.unit,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 
@@ -185,50 +193,85 @@ const MedicineInfo = () => {
   };
   
   return (
-    <div className="max-w-6xl mx-auto p-4 pt-24">
-      <Card className="rounded-xl shadow-md p-4">
-        {/* Header Section */}
-        <div className="pb-4 border-b mb-6">
-          <Title level={2} className="text-gray-800 !m-0">Quản lý thuốc</Title>
-          <Text type="secondary">Xem và gửi yêu cầu sử dụng thuốc cho học sinh tại trường.</Text>
-        </div>
-
-        {/* Controls Section */}
-        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <Text strong>Chọn học sinh:</Text>
-            <Select
-              style={{ width: 250 }}
-              value={selectedStudentId}
-              onChange={setSelectedStudentId}
-              placeholder="-- Vui lòng chọn --"
-              loading={loading && children.length === 0}
-              disabled={children.length === 0}
-            >
-              {children.map((child) => (
-                <Select.Option key={child.studentId} value={child.studentId}>
-                  {child.fullName}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => setIsModalVisible(true)}
-            disabled={!selectedStudentId}
+    <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
+      <div className="w-full max-w-3xl">
+        <Card
+          className="rounded-3xl shadow-lg border-0 mt-12"
+          style={{
+            background: "#fff",
+            borderRadius: "1.5rem",
+            boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
+            padding: "2rem",
+            marginTop: "3rem",
+          }}
+        >
+          <div
+            style={{
+              marginBottom: 24,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
           >
-            Yêu cầu thuốc mới
-          </Button>
-        </div>
-        
-        <Divider />
+            <div>
+              <Title level={2} className="!text-[#36ae9a] !mb-0">
+                Thông tin thuốc
+              </Title>
+              <Text type="secondary">Quản lý thông tin thuốc của học sinh</Text>
+            </div>
+            <div style={{ display: "flex", gap: "16px" }}>
+              {children && children.length > 0 ? (
+                <Select
+                  style={{ width: 200 }}
+                  value={selectedStudent}
+                  onChange={handleStudentChange}
+                  placeholder="Chọn học sinh"
+                >
+                  {children.map((child) => (
+                    <Select.Option
+                      key={child.studentId}
+                      value={child.studentId}
+                    >
+                      {child.fullName}
+                    </Select.Option>
+                  ))}
+                </Select>
+              ) : (
+                <Text type="secondary">Không có học sinh nào</Text>
+              )}
+              <Button
+                type="primary"
+                icon={<EditOutlined />}
+                onClick={() => setIsEditModalVisible(true)}
+                disabled={!selectedStudent}
+              >
+                Thêm thuốc mới
+              </Button>
+            </div>
+          </div>
 
-        {/* Content Section */}
-        <div className="mt-6">
-          {renderContent()}
-        </div>
-      </Card>
+          {showSuccess && (
+            <Alert
+              message="Thông tin thuốc đã được gửi thành công!"
+              type="success"
+              showIcon
+              style={{ marginBottom: 24 }}
+            />
+          )}
+
+          {selectedStudent && currentUserId ? (
+            <NotificationDisplay userId={currentUserId} type="medication" />
+          ) : (
+            <Card className="rounded-xl border-0 shadow-none">
+              <div style={{ textAlign: "center", padding: "24px" }}>
+                <Text type="secondary">
+                  Vui lòng chọn học sinh để xem thông báo thuốc
+                </Text>
+              </div>
+            </Card>
+          )}
 
       {/* Modal for adding new medicine request */}
       <Modal

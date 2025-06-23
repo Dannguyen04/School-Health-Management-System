@@ -5,11 +5,11 @@ import connectToDatabase from "./db/db.js";
 import AdminRoutes from "./routes/AdminRoutes.js";
 import authRouter from "./routes/auth.js";
 import NurseRoutes from "./routes/NurseRoutes.js";
+import parentRoutes from "./routes/parentRoutes.js";
 import UserRoutes from "./routes/UserRoutes.js";
 import VaccinationCampaignRoutes from "./routes/VaccinationCampaignRoutes.js";
 import VaccinationRoutes from "./routes/VaccinationRoutes.js";
-import parentRouter from "./routes/parentRoutes.js";
-// import parentRouter from "./routes/ParentRoutes.js";
+import ManagerStudentRoutes from "./routes/ManagerStudentRoutes.js";
 
 dotenv.config();
 
@@ -25,14 +25,16 @@ app.use(
     })
 );
 app.use(express.json());
+
+// Mount all routes under /api prefix
 app.use("/api/auth", authRouter);
 app.use("/api/admin", AdminRoutes);
 app.use("/api/nurse", NurseRoutes);
 app.use("/api/users", UserRoutes);
 app.use("/api/manager/vaccination-campaigns", VaccinationCampaignRoutes);
 app.use("/api/manager/vaccination", VaccinationRoutes);
-app.use("/api/parents", parentRouter);
-// app.use("/parent", parentRouter);
+app.use("/api/parents", parentRoutes);
+app.use("/api/manager/students", ManagerStudentRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {
