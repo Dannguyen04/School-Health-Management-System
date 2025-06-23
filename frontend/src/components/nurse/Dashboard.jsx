@@ -222,6 +222,45 @@ const Dashboard = () => {
                 />
             )}
 
+            {(() => {
+                const expiredItems = medicalInventory.filter(
+                    (item) =>
+                        item.expiryDate &&
+                        new Date(item.expiryDate) < new Date()
+                );
+                return expiredItems.length > 0 ? (
+                    <Alert
+                        message="Cảnh báo vật tư hết hạn"
+                        description={`${expiredItems.length} vật tư đã hết hạn sử dụng cần được xử lý ngay`}
+                        type="error"
+                        showIcon
+                        icon={<ExclamationCircleOutlined />}
+                        className="mb-4"
+                    />
+                ) : null;
+            })()}
+
+            {(() => {
+                const expiringSoonItems = medicalInventory.filter((item) => {
+                    if (!item.expiryDate) return false;
+                    const daysUntilExpiry = Math.ceil(
+                        (new Date(item.expiryDate) - new Date()) /
+                            (1000 * 60 * 60 * 24)
+                    );
+                    return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
+                });
+                return expiringSoonItems.length > 0 ? (
+                    <Alert
+                        message="Cảnh báo vật tư sắp hết hạn"
+                        description={`${expiringSoonItems.length} vật tư sẽ hết hạn trong vòng 30 ngày tới cần được chú ý`}
+                        type="info"
+                        showIcon
+                        icon={<ExclamationCircleOutlined />}
+                        className="mb-4"
+                    />
+                ) : null;
+            })()}
+
             {/* Low Stock Items Table */}
             {lowStockItems.length > 0 ? (
                 <Card
