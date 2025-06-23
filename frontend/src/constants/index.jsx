@@ -3,8 +3,10 @@ import {
   BarChart2,
   FileText,
   FlaskConical,
+  Heart,
   LayoutDashboard,
   Package,
+  Syringe,
   User,
   Users,
 } from "lucide-react";
@@ -33,18 +35,13 @@ export const managerNavbarLinks = [
     ],
   },
   {
-    title: "Quản lý",
+    title: "Quản Lý",
     links: [
       { label: "Danh Sách Học Sinh", path: "/manager/students", icon: Users },
       {
         label: "Báo Cáo Sức Khỏe",
         path: "/manager/health-reports",
         icon: FileText,
-      },
-      {
-        label: "Tiêm Chủng",
-        path: "/manager/vaccination-campaigns",
-        icon: Package,
       },
       {
         label: "Khám Sức Khỏe",
@@ -55,6 +52,21 @@ export const managerNavbarLinks = [
         label: "Cảnh Báo & Sự Kiện",
         path: "/manager/alerts-events",
         icon: AlertCircle,
+      },
+    ],
+  },
+  {
+    title: "Tiêm Chủng",
+    links: [
+      {
+        label: "Chiến dịch",
+        path: "/manager/vaccination-campaigns",
+        icon: Package,
+      },
+      {
+        label: "Quản lý",
+        path: "/manager/vaccination",
+        icon: Syringe,
       },
     ],
   },
@@ -78,6 +90,11 @@ export const nurseNavbarLinks = [
       },
       { label: "Tiêm Chủng", path: "/nurse/vaccination", icon: FlaskConical },
       { label: "Khám Sức Khỏe", path: "/nurse/health-checkups", icon: User },
+      {
+        label: "Hồ Sơ Sức Khỏe",
+        path: "/nurse/student-health-profile",
+        icon: Heart,
+      },
       {
         label: "Xác Nhận Thuốc",
         path: "/nurse/confirmed-medicines",

@@ -1,13 +1,13 @@
 import express from "express";
 import {
-    createVaccinationCampaign,
-    getAllVaccinationCampaigns,
-    updateVaccinationCampaign,
-    deleteVaccinationCampaign,
+  createVaccinationCampaign,
+  deleteVaccinationCampaign,
+  getAllVaccinationCampaigns,
+  updateVaccinationCampaign,
 } from "../controllers/VaccinationCampaignController.js";
 import {
-    authenticateToken,
-    verifyManager,
+  authenticateToken,
+  verifyManager,
 } from "../middleware/authenticateToken.js";
 import VaccinationRoutes from "./VaccinationRoutes.js";
 
@@ -22,10 +22,10 @@ router.get("/", authenticateToken, verifyManager, getAllVaccinationCampaigns);
 router.put("/:id", authenticateToken, verifyManager, updateVaccinationCampaign);
 
 router.delete(
-    "/:id",
-    authenticateToken,
-    verifyManager,
-    deleteVaccinationCampaign
+  "/:id",
+  authenticateToken,
+  verifyManager,
+  deleteVaccinationCampaign
 );
 
 export default router;
