@@ -51,7 +51,7 @@ const createVaccine = async (req, res) => {
         notes,
       },
     });
-    res.status(200).json({
+    res.status(201).json({
       success: true,
       data: vaccine,
     });
@@ -237,12 +237,12 @@ const deleteVaccine = async (req, res) => {
   }
 };
 
-export {
+export default {
   createVaccine,
-  deleteVaccine,
-  getAllOptionalVaccine,
-  getAllRequiredVaccine,
   getAllVaccine,
-  getVaccines,
+  getAllRequiredVaccine,
+  getAllOptionalVaccine,
   updateVaccine,
+  deleteVaccine,
+  getVaccines,
 };
