@@ -291,7 +291,7 @@ const addStudent = async (req, res) => {
         }
 
         // Validate gender
-        const validGenders = ["male", "female", "other"];
+        const validGenders = ["male", "female", "other", "nam", "nu"];
         if (!validGenders.includes(gender.toLowerCase())) {
             return res.status(422).json({
                 success: false,
@@ -1349,6 +1349,158 @@ const getAllStudentsForNurse = async (req, res) => {
             success: false,
             error: "Error getting students",
         });
+    }
+};
+
+// Lấy danh sách phụ huynh
+export const getAllParents = async (req, res) => {
+    try {
+        const parents = await prisma.parent.findMany({
+            include: {
+                user: true,
+            },
+        });
+        const data = parents.map((parent) => ({
+            id: parent.id,
+            fullName: parent.user.fullName,
+            email: parent.user.email,
+            phone: parent.user.phone,
+            isActive: parent.user.isActive,
+        }));
+        res.json({ success: true, data });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// Thêm phụ huynh mới
+export const addParent = async (req, res) => {
+    try {
+        const { name, email, phone } = req.body;
+        if (!name || !email || !phone) {
+            return res
+                .status(400)
+                .json({ success: false, error: "Thiếu thông tin bắt buộc" });
+        }
+        if (!validateEmail(email)) {
+            return res
+                .status(400)
+                .json({ success: false, error: "Email không hợp lệ" });
+        }
+        const existingUser = await prisma.users.findUnique({
+            where: { email },
+        });
+        if (existingUser) {
+            return res
+                .status(400)
+                .json({ success: false, error: "Email đã tồn tại" });
+        }
+        // Tạo user và parent profile
+        const user = await prisma.users.create({
+            data: {
+                fullName: name.trim(),
+                email: email.toLowerCase().trim(),
+                phone: phone.trim(),
+                password: "12345678", // Có thể random hoặc gửi mail sau
+                role: "PARENT",
+                isActive: true,
+            },
+        });
+        const parent = await prisma.parent.create({
+            data: {
+                userId: user.id,
+            },
+        });
+        res.status(201).json({
+            success: true,
+            data: {
+                id: parent.id,
+                fullName: user.fullName,
+                email: user.email,
+                phone: user.phone,
+                isActive: user.isActive,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// Sửa thông tin phụ huynh
+export const updateParent = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, email, phone } = req.body;
+        if (!name || !email || !phone) {
+            return res
+                .status(400)
+                .json({ success: false, error: "Thiếu thông tin bắt buộc" });
+        }
+        if (!validateEmail(email)) {
+            return res
+                .status(400)
+                .json({ success: false, error: "Email không hợp lệ" });
+        }
+        // Tìm parent và user liên quan
+        const parent = await prisma.parent.findUnique({
+            where: { id },
+            include: { user: true },
+        });
+        if (!parent) {
+            return res
+                .status(404)
+                .json({ success: false, error: "Không tìm thấy phụ huynh" });
+        }
+        // Kiểm tra email trùng
+        if (email !== parent.user.email) {
+            const existingUser = await prisma.users.findUnique({
+                where: { email },
+            });
+            if (existingUser) {
+                return res
+                    .status(400)
+                    .json({ success: false, error: "Email đã tồn tại" });
+            }
+        }
+        // Cập nhật user
+        const updatedUser = await prisma.users.update({
+            where: { id: parent.userId },
+            data: {
+                fullName: name.trim(),
+                email: email.toLowerCase().trim(),
+                phone: phone.trim(),
+            },
+        });
+        res.json({
+            success: true,
+            data: {
+                id: parent.id,
+                fullName: updatedUser.fullName,
+                email: updatedUser.email,
+                phone: updatedUser.phone,
+                isActive: updatedUser.isActive,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// Xóa phụ huynh
+export const deleteParent = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const parent = await prisma.parent.findUnique({ where: { id } });
+        if (!parent) {
+            return res
+                .status(404)
+                .json({ success: false, error: "Không tìm thấy phụ huynh" });
+        }
+        // Xóa user sẽ cascade xóa parent profile
+        await prisma.users.delete({ where: { id: parent.userId } });
+        res.json({ success: true, message: "Xóa phụ huynh thành công" });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
 };
 
