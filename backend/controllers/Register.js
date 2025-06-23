@@ -1,22 +1,12 @@
-import express from "express";
-import jwt from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
-import cors from "cors";
+import bcrypt from "bcrypt";
 import dotenv from "dotenv";
+import jwt from "jsonwebtoken";
 import validator from "validator";
 
 dotenv.config();
 
-const app = express();
 const prisma = new PrismaClient();
-
-app.use(express.json());
-app.use(
-    cors({
-        origin: "http://localhost:5173",
-        credentials: true,
-    })
-);
 
 const handleRegister = async (req, res) => {
     try {
@@ -54,6 +44,10 @@ const handleRegister = async (req, res) => {
                 success: false,
                 error: "User already exists",
             });
+        
+        // Hash password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
 
         // Create user and parent in transaction
         const result = await prisma.$transaction(async (tx) => {
@@ -62,7 +56,7 @@ const handleRegister = async (req, res) => {
                 data: {
                     fullName: name.trim(),
                     email: email.toLowerCase(),
-                    password: password,
+                    password: hashedPassword, // Use hashed password
                     role: "PARENT",
                 },
             });

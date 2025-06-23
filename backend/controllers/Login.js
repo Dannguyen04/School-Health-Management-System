@@ -1,14 +1,11 @@
 import { PrismaClient } from "@prisma/client";
-import cors from "cors";
-import dotenv from "dotenv";
-import express from "express";
-import session from "express-session";
 import jwt from "jsonwebtoken";
 import validator from "validator";
+import bcrypt from "bcrypt";
+import dotenv from "dotenv";
 
 dotenv.config();
 
-const app = express();
 const prisma = new PrismaClient();
 
 app.use(
@@ -117,4 +114,4 @@ const handleLogout = (req, res) => {
         .json({ success: true, message: "Logout successful" });
 };
 
-export { getUserProfile, handleLogin, handleLogout };
+export { handleLogin, getUserProfile, handleLogout };

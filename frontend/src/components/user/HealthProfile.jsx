@@ -5,6 +5,7 @@ import {
   Card,
   Col,
   Descriptions,
+  Divider,
   Form,
   Input,
   message,
@@ -14,34 +15,41 @@ import {
   Spin,
   Typography,
 } from "antd";
-import axios from "axios";
 import { Formik } from "formik";
 import { useEffect, useState } from "react";
 import * as Yup from "yup";
+import api from "../../utils/api";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
+// Validation schema for the form
 const validationSchema = Yup.object().shape({
-  allergies: Yup.string().required("Vui lòng nhập thông tin dị ứng"),
-  chronicDiseases: Yup.string().required("Vui lòng nhập thông tin bệnh nền"),
-  medications: Yup.string().required("Vui lòng nhập thông tin thuốc đang dùng"),
-  treatmentHistory: Yup.string(),
-  vision: Yup.string(),
-  hearing: Yup.string(),
-  height: Yup.number().nullable(),
-  weight: Yup.number().nullable(),
-  notes: Yup.string(),
+  allergies: Yup.string().trim(),
+  chronicDiseases: Yup.string().trim(),
+  medications: Yup.string().trim(),
+  treatmentHistory: Yup.string().trim(),
+  vision: Yup.string().trim(),
+  hearing: Yup.string().trim(),
+  height: Yup.number()
+    .nullable()
+    .typeError("Chiều cao phải là một con số")
+    .positive("Chiều cao phải là số dương"),
+  weight: Yup.number()
+    .nullable()
+    .typeError("Cân nặng phải là một con số")
+    .positive("Cân nặng phải là số dương"),
+  notes: Yup.string().trim(),
 });
 
 const HealthProfile = () => {
-  const [showSuccess, setShowSuccess] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [children, setChildren] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [healthProfile, setHealthProfile] = useState(null);
 
+  // Fetch children on component mount
   useEffect(() => {
     fetchChildren();
   }, []);
@@ -63,11 +71,11 @@ const HealthProfile = () => {
     }
   };
 
+  // Fetch health profile when a student is selected
   useEffect(() => {
     if (selectedStudent) {
       fetchHealthProfile();
     }
-  }, [selectedStudent]);
 
   const fetchHealthProfile = async () => {
     try {
@@ -86,7 +94,7 @@ const HealthProfile = () => {
   };
 
   const handleStudentChange = (studentId) => {
-    setSelectedStudent(studentId);
+    setSelectedStudentId(studentId);
   };
 
   const handleSubmit = async (values, { setSubmitting }) => {
@@ -130,7 +138,6 @@ const HealthProfile = () => {
       setShowSuccess(true);
       fetchHealthProfile(); // Refresh health profile after update
     } catch (error) {
-      console.error("Error updating health profile:", error);
       message.error(
         error.response?.data?.error || "Có lỗi xảy ra khi cập nhật hồ sơ"
       );
@@ -147,57 +154,73 @@ const HealthProfile = () => {
     treatmentHistory: healthProfile?.treatmentHistory || "",
     vision: healthProfile?.vision || "",
     hearing: healthProfile?.hearing || "",
-    height: healthProfile?.height || null,
-    weight: healthProfile?.weight || null,
+    height: healthProfile?.height || "",
+    weight: healthProfile?.weight || "",
     notes: healthProfile?.notes || "",
   });
 
-  if (loading) {
+  const renderContent = () => {
+    if (loading) {
+      return <div style={{ textAlign: "center", padding: "50px" }}><Spin size="large" /></div>;
+    }
+
+    if (!selectedStudentId) {
+      return <Alert message="Vui lòng chọn một học sinh để xem hoặc cập nhật hồ sơ sức khỏe." type="info" showIcon />;
+    }
+
+    if (!healthProfile) {
+      return (
+        <Alert
+          message="Học sinh này chưa có hồ sơ sức khỏe."
+          description="Bạn có muốn tạo một hồ sơ mới không?"
+          type="info"
+          showIcon
+          action={
+            <Button size="small" type="primary" onClick={() => setIsEditModalVisible(true)}>
+              Tạo hồ sơ
+            </Button>
+          }
+        />
+      );
+    }
+
     return (
-      <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
-        <div className="w-full max-w-3xl">
-          <div style={{ padding: "24px", textAlign: "center" }}>
-            <Spin size="large" />
-          </div>
-        </div>
-      </div>
+      <Descriptions bordered column={1} title="Chi tiết hồ sơ sức khỏe">
+        <Descriptions.Item label="Dị ứng">{healthProfile.allergies?.join(', ') || 'Không có'}</Descriptions.Item>
+        <Descriptions.Item label="Bệnh nền">{healthProfile.chronicDiseases?.join(', ') || 'Không có'}</Descriptions.Item>
+        <Descriptions.Item label="Thuốc đang sử dụng">{healthProfile.medications?.join(', ') || 'Không có'}</Descriptions.Item>
+        <Descriptions.Item label="Lịch sử điều trị">{healthProfile.treatmentHistory || 'Không có'}</Descriptions.Item>
+        <Descriptions.Item label="Thị lực">{healthProfile.vision || 'Chưa cập nhật'}</Descriptions.Item>
+        <Descriptions.Item label="Thính lực">{healthProfile.hearing || 'Chưa cập nhật'}</Descriptions.Item>
+        <Descriptions.Item label="Chiều cao">{healthProfile.height ? `${healthProfile.height} cm` : 'Chưa cập nhật'}</Descriptions.Item>
+        <Descriptions.Item label="Cân nặng">{healthProfile.weight ? `${healthProfile.weight} kg` : 'Chưa cập nhật'}</Descriptions.Item>
+        <Descriptions.Item label="Ghi chú">{healthProfile.notes || 'Không có'}</Descriptions.Item>
+      </Descriptions>
     );
-  }
+  };
 
   return (
-    <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
-      <div className="w-full max-w-3xl">
-        <Card
-          className="rounded-3xl shadow-lg border-0 mt-12"
-          style={{
-            background: "#fff",
-            borderRadius: "1.5rem",
-            boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
-            padding: "2rem",
-            marginTop: "3rem",
-          }}
-        >
-          <div
-            style={{
-              marginBottom: 24,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
-          >
-            <div>
-              <Title level={2} className="!text-[#36ae9a] !mb-0">
-                Hồ sơ sức khỏe
-              </Title>
-              <Text type="secondary">Thông tin sức khỏe của học sinh</Text>
-            </div>
-            <div style={{ display: "flex", gap: "16px" }}>
-              {children && children.length > 0 ? (
+    <div className="max-w-4xl mx-auto p-4 pt-24">
+      <Card
+        className="rounded-xl shadow-md p-4"
+      >
+        {/* Header Section */}
+        <div className="pb-4 border-b mb-6">
+            <Title level={2} className="text-gray-800 !m-0">
+                Hồ sơ sức khỏe học sinh
+            </Title>
+            <Text type="secondary">
+                Chọn một học sinh để xem, tạo mới hoặc cập nhật hồ sơ sức khỏe.
+            </Text>
+        </div>
+
+        {/* Controls Section */}
+        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+                <Text strong>Chọn học sinh:</Text>
                 <Select
-                  style={{ width: 200 }}
-                  value={selectedStudent}
+                  style={{ width: 250 }}
+                  value={selectedStudentId}
                   onChange={handleStudentChange}
                   placeholder="Chọn học sinh"
                 >
@@ -285,189 +308,87 @@ const HealthProfile = () => {
             </Card>
           )}
 
-          <Modal
-            title="Cập nhật hồ sơ sức khỏe"
-            open={isEditModalVisible}
-            onCancel={() => setIsEditModalVisible(false)}
-            footer={null}
-            width={800}
-          >
-            <Formik
-              initialValues={getInitialValues()}
-              validationSchema={validationSchema}
-              onSubmit={handleSubmit}
-              enableReinitialize={true}
-            >
-              {({
-                values,
-                errors,
-                touched,
-                handleChange,
-                handleBlur,
-                handleSubmit,
-                isSubmitting,
-              }) => (
-                <Form layout="vertical" onFinish={handleSubmit}>
-                  <Title level={4}>Thông tin cơ bản</Title>
-                  <Row gutter={24}>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Dị ứng"
-                        validateStatus={
-                          touched.allergies && errors.allergies ? "error" : ""
-                        }
-                        help={touched.allergies && errors.allergies}
-                      >
-                        <TextArea
-                          name="allergies"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.allergies}
-                          placeholder="Nhập thông tin dị ứng (nếu có)"
-                          rows={4}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Bệnh nền"
-                        validateStatus={
-                          touched.chronicDiseases && errors.chronicDiseases
-                            ? "error"
-                            : ""
-                        }
-                        help={touched.chronicDiseases && errors.chronicDiseases}
-                      >
-                        <TextArea
-                          name="chronicDiseases"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.chronicDiseases}
-                          placeholder="Nhập thông tin bệnh nền (nếu có)"
-                          rows={4}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item name="vision" label="Thị lực">
-                        <Input
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.vision}
-                          placeholder="Nhập thị lực"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item name="hearing" label="Thính lực">
-                        <Input
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.hearing}
-                          placeholder="Nhập thính lực"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item name="height" label="Chiều cao (cm)">
-                        <Input
-                          type="number"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.height}
-                          placeholder="Nhập chiều cao"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item name="weight" label="Cân nặng (kg)">
-                        <Input
-                          type="number"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.weight}
-                          placeholder="Nhập cân nặng"
-                        />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-
-                  <Title level={4} style={{ marginTop: 24 }}>
-                    Thông tin bổ sung
-                  </Title>
-                  <Row gutter={24}>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Thuốc đang dùng"
-                        validateStatus={
-                          touched.medications && errors.medications
-                            ? "error"
-                            : ""
-                        }
-                        help={touched.medications && errors.medications}
-                      >
-                        <TextArea
-                          name="medications"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.medications}
-                          placeholder="Nhập thông tin thuốc đang dùng (nếu có)"
-                          rows={4}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        name="treatmentHistory"
-                        label="Lịch sử điều trị"
-                      >
-                        <TextArea
-                          name="treatmentHistory"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.treatmentHistory}
-                          placeholder="Nhập lịch sử điều trị (nếu có)"
-                          rows={4}
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={24}>
-                      <Form.Item name="notes" label="Ghi chú">
-                        <TextArea
-                          name="notes"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.notes}
-                          placeholder="Thêm ghi chú (nếu có)"
-                          rows={4}
-                        />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-
-                  <Form.Item>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        marginTop: 24,
-                      }}
-                    >
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={isSubmitting}
-                      >
-                        Lưu thông tin
-                      </Button>
-                    </div>
+      <Modal
+        title={healthProfile ? "Cập nhật hồ sơ sức khỏe" : "Tạo hồ sơ sức khỏe mới"}
+        open={isEditModalVisible}
+        onCancel={() => setIsEditModalVisible(false)}
+        footer={null}
+        width={700}
+        destroyOnClose
+      >
+        <Formik
+          initialValues={getInitialValues()}
+          validationSchema={validationSchema}
+          onSubmit={handleSubmit}
+          enableReinitialize
+        >
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            handleSubmit,
+            isSubmitting,
+          }) => (
+            <Form layout="vertical" onFinish={handleSubmit}>
+              <p className="text-gray-500 mb-4">Các trường có dấu (*) là tùy chọn. Với các mục có nhiều giá trị, vui lòng ngăn cách bằng dấu phẩy (vd: Mèo, Chó).</p>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Dị ứng" help={touched.allergies && errors.allergies} validateStatus={touched.allergies && errors.allergies ? 'error' : ''}>
+                    <TextArea rows={2} name="allergies" value={values.allergies} onChange={handleChange} onBlur={handleBlur} placeholder="Dị ứng phấn hoa, dị ứng hải sản..." />
                   </Form.Item>
-                </Form>
-              )}
-            </Formik>
-          </Modal>
-        </Card>
-      </div>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Bệnh nền" help={touched.chronicDiseases && errors.chronicDiseases} validateStatus={touched.chronicDiseases && errors.chronicDiseases ? 'error' : ''}>
+                    <TextArea rows={2} name="chronicDiseases" value={values.chronicDiseases} onChange={handleChange} onBlur={handleBlur} placeholder="Hen suyễn, tiểu đường..." />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item label="Thuốc đang sử dụng" help={touched.medications && errors.medications} validateStatus={touched.medications && errors.medications ? 'error' : ''}>
+                    <TextArea rows={2} name="medications" value={values.medications} onChange={handleChange} onBlur={handleBlur} placeholder="Paracetamol, Amoxicillin..." />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item label="Lịch sử điều trị" help={touched.treatmentHistory && errors.treatmentHistory} validateStatus={touched.treatmentHistory && errors.treatmentHistory ? 'error' : ''}>
+                    <TextArea rows={3} name="treatmentHistory" value={values.treatmentHistory} onChange={handleChange} onBlur={handleBlur} placeholder="Mô tả các lần điều trị, phẫu thuật trước đây..." />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Thị lực" help={touched.vision && errors.vision} validateStatus={touched.vision && errors.vision ? 'error' : ''}>
+                    <Input name="vision" value={values.vision} onChange={handleChange} onBlur={handleBlur} placeholder="Mắt trái 8/10, Mắt phải 9/10" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Thính lực" help={touched.hearing && errors.hearing} validateStatus={touched.hearing && errors.hearing ? 'error' : ''}>
+                    <Input name="hearing" value={values.hearing} onChange={handleChange} onBlur={handleBlur} placeholder="Bình thường" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Chiều cao (cm)" help={touched.height && errors.height} validateStatus={touched.height && errors.height ? 'error' : ''}>
+                    <Input name="height" value={values.height} onChange={handleChange} onBlur={handleBlur} placeholder="165" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Cân nặng (kg)" help={touched.weight && errors.weight} validateStatus={touched.weight && errors.weight ? 'error' : ''}>
+                    <Input name="weight" value={values.weight} onChange={handleChange} onBlur={handleBlur} placeholder="55.5" />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item label="Ghi chú thêm" help={touched.notes && errors.notes} validateStatus={touched.notes && errors.notes ? 'error' : ''}>
+                    <TextArea rows={3} name="notes" value={values.notes} onChange={handleChange} onBlur={handleBlur} />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" loading={isSubmitting} block>
+                  {healthProfile ? "Lưu thay đổi" : "Tạo hồ sơ"}
+                </Button>
+              </Form.Item>
+            </Form>
+          )}
+        </Formik>
+      </Modal>
     </div>
   );
 };

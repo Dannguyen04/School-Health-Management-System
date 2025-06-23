@@ -1,51 +1,68 @@
-import { EditOutlined } from "@ant-design/icons";
+import { PlusOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
   Card,
   Col,
   DatePicker,
+  Divider,
   Form,
   Input,
   message,
   Modal,
   Row,
   Select,
-  Space,
   Spin,
-  Typography,
+  Table,
+  Tag,
+  Typography
 } from "antd";
-import axios from "axios";
 import { Formik } from "formik";
+import moment from "moment";
 import { useEffect, useState } from "react";
 import * as Yup from "yup";
-import { useAuth } from "../../context/authContext.jsx";
-import NotificationDisplay from "../shared/NotificationDisplay.jsx";
+import api from "../../utils/api";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
+// --- Validation Schema ---
 const validationSchema = Yup.object().shape({
-  studentId: Yup.string().required("Vui lòng chọn học sinh"),
   medicationName: Yup.string().required("Vui lòng nhập tên thuốc"),
   dosage: Yup.string().required("Vui lòng nhập liều lượng"),
-  frequency: Yup.string().required("Vui lòng nhập tần suất sử dụng"),
-  instructions: Yup.string().required("Vui lòng nhập hướng dẫn sử dụng"),
-  startDate: Yup.date().required("Vui lòng chọn ngày bắt đầu"),
-  endDate: Yup.date().required("Vui lòng chọn ngày kết thúc"),
+  frequency: Yup.string().required("Vui lòng nhập tần suất"),
+  instructions: Yup.string().required("Vui lòng nhập hướng dẫn"),
+  startDate: Yup.date().required("Vui lòng chọn ngày bắt đầu").nullable(),
+  endDate: Yup.date().nullable().min(Yup.ref('startDate'), "Ngày kết thúc phải sau ngày bắt đầu"),
   description: Yup.string(),
   unit: Yup.string(),
 });
 
+// --- Component ---
 const MedicineInfo = () => {
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [children, setChildren] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const { user } = useAuth();
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [studentMedicines, setStudentMedicines] = useState([]);
 
+  // --- Data Fetching ---
   useEffect(() => {
+    const fetchChildren = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get("/parents/my-children");
+        const childrenData = response.data.data || [];
+        setChildren(childrenData);
+        if (childrenData.length > 0) {
+          setSelectedStudentId(childrenData[0].studentId);
+        }
+      } catch (error) {
+        message.error("Không thể tải danh sách học sinh");
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchChildren();
   }, []);
 
@@ -67,10 +84,10 @@ const MedicineInfo = () => {
     }
   };
 
-  const handleStudentChange = (studentId) => {
-    setSelectedStudent(studentId);
-  };
+    fetchMedicines();
+  }, [selectedStudentId]);
 
+  // --- Handlers ---
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       setLoading(true);
@@ -97,322 +114,192 @@ const MedicineInfo = () => {
         message.error(response.data.error || "Có lỗi xảy ra khi gửi thông tin");
       }
     } catch (error) {
-      console.error("Error submitting medication:", error);
-      message.error(
-        error.response?.data?.error || "Có lỗi xảy ra khi gửi thông tin"
-      );
+      message.error(error.response?.data?.error || "Có lỗi xảy ra khi gửi yêu cầu");
     } finally {
       setSubmitting(false);
-      setLoading(false);
     }
   };
 
-  if (loading) {
+  // --- UI Components ---
+  const columns = [
+    {
+      title: 'Tên thuốc',
+      dataIndex: ['medication', 'name'],
+      key: 'name',
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: status => {
+        const color = {
+          PENDING_APPROVAL: 'gold',
+          APPROVED: 'green',
+          REJECTED: 'red',
+          ACTIVE: 'blue',
+          EXPIRED: 'default',
+        }[status];
+        return <Tag color={color}>{status.replace('_', ' ')}</Tag>;
+      },
+    },
+    {
+      title: 'Liều lượng',
+      dataIndex: 'dosage',
+      key: 'dosage',
+    },
+    {
+      title: 'Tần suất',
+      dataIndex: 'frequency',
+      key: 'frequency',
+    },
+    {
+      title: 'Ngày bắt đầu',
+      dataIndex: 'startDate',
+      key: 'startDate',
+      render: (text) => moment(text).format('DD/MM/YYYY'),
+    },
+    {
+      title: 'Ngày kết thúc',
+      dataIndex: 'endDate',
+      key: 'endDate',
+      render: (text) => text ? moment(text).format('DD/MM/YYYY') : 'N/A',
+    },
+  ];
+
+  const renderContent = () => {
+    if (loading && studentMedicines.length === 0) {
+      return <div style={{ textAlign: "center", padding: "50px" }}><Spin size="large" /></div>;
+    }
+    if (!selectedStudentId) {
+      return <Alert message="Vui lòng chọn một học sinh để quản lý thông tin thuốc." type="info" showIcon />;
+    }
     return (
-      <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
-        <div className="w-full max-w-3xl">
-          <div style={{ padding: "24px", textAlign: "center" }}>
-            <Spin size="large" />
-          </div>
-        </div>
-      </div>
+      <Table
+        columns={columns}
+        dataSource={studentMedicines}
+        rowKey="id"
+        loading={loading}
+        pagination={{ pageSize: 5 }}
+      />
     );
-  }
-
-  const currentUserId = user?.id;
-
+  };
+  
   return (
-    <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
-      <div className="w-full max-w-3xl">
-        <Card
-          className="rounded-3xl shadow-lg border-0 mt-12"
-          style={{
-            background: "#fff",
-            borderRadius: "1.5rem",
-            boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
-            padding: "2rem",
-            marginTop: "3rem",
-          }}
-        >
-          <div
-            style={{
-              marginBottom: 24,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
-          >
-            <div>
-              <Title level={2} className="!text-[#36ae9a] !mb-0">
-                Thông tin thuốc
-              </Title>
-              <Text type="secondary">Quản lý thông tin thuốc của học sinh</Text>
-            </div>
-            <div style={{ display: "flex", gap: "16px" }}>
-              {children && children.length > 0 ? (
-                <Select
-                  style={{ width: 200 }}
-                  value={selectedStudent}
-                  onChange={handleStudentChange}
-                  placeholder="Chọn học sinh"
-                >
-                  {children.map((child) => (
-                    <Select.Option
-                      key={child.studentId}
-                      value={child.studentId}
-                    >
-                      {child.fullName} - {child.studentCode}
-                    </Select.Option>
-                  ))}
-                </Select>
-              ) : (
-                <Text type="secondary">Không có học sinh nào</Text>
-              )}
-              <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={() => setIsEditModalVisible(true)}
-                disabled={!selectedStudent}
-              >
-                Thêm thuốc mới
-              </Button>
-            </div>
-          </div>
+    <div className="max-w-6xl mx-auto p-4 pt-24">
+      <Card className="rounded-xl shadow-md p-4">
+        {/* Header Section */}
+        <div className="pb-4 border-b mb-6">
+          <Title level={2} className="text-gray-800 !m-0">Quản lý thuốc</Title>
+          <Text type="secondary">Xem và gửi yêu cầu sử dụng thuốc cho học sinh tại trường.</Text>
+        </div>
 
-          {showSuccess && (
-            <Alert
-              message="Thông tin thuốc đã được gửi thành công!"
-              type="success"
-              showIcon
-              style={{ marginBottom: 24 }}
-            />
-          )}
-
-          {selectedStudent && currentUserId ? (
-            <NotificationDisplay userId={currentUserId} type="medication" />
-          ) : (
-            <Card className="rounded-xl border-0 shadow-none">
-              <div style={{ textAlign: "center", padding: "24px" }}>
-                <Text type="secondary">
-                  Vui lòng chọn học sinh để xem thông báo thuốc
-                </Text>
-              </div>
-            </Card>
-          )}
-
-          <Modal
-            title="Thêm thuốc mới"
-            open={isEditModalVisible}
-            onCancel={() => setIsEditModalVisible(false)}
-            footer={null}
-            width={800}
-          >
-            <Formik
-              initialValues={{
-                studentId: selectedStudent,
-                medicationName: "",
-                dosage: "",
-                frequency: "",
-                instructions: "",
-                startDate: null,
-                endDate: null,
-                description: "",
-                unit: "",
-              }}
-              validationSchema={validationSchema}
-              onSubmit={handleSubmit}
-              enableReinitialize={true}
+        {/* Controls Section */}
+        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <Text strong>Chọn học sinh:</Text>
+            <Select
+              style={{ width: 250 }}
+              value={selectedStudentId}
+              onChange={setSelectedStudentId}
+              placeholder="-- Vui lòng chọn --"
+              loading={loading && children.length === 0}
+              disabled={children.length === 0}
             >
-              {({
-                values,
-                errors,
-                touched,
-                handleChange,
-                handleBlur,
-                handleSubmit,
-                isSubmitting,
-                setFieldValue,
-              }) => (
-                <Form layout="vertical" onFinish={handleSubmit}>
-                  <Row gutter={24}>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Tên thuốc"
-                        validateStatus={
-                          touched.medicationName && errors.medicationName
-                            ? "error"
-                            : ""
-                        }
-                        help={touched.medicationName && errors.medicationName}
-                      >
-                        <Input
-                          name="medicationName"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.medicationName}
-                          placeholder="Nhập tên thuốc"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Liều lượng"
-                        validateStatus={
-                          touched.dosage && errors.dosage ? "error" : ""
-                        }
-                        help={touched.dosage && errors.dosage}
-                      >
-                        <Input
-                          name="dosage"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.dosage}
-                          placeholder="Ví dụ: 1 viên/lần"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Tần suất sử dụng"
-                        validateStatus={
-                          touched.frequency && errors.frequency ? "error" : ""
-                        }
-                        help={touched.frequency && errors.frequency}
-                      >
-                        <Select
-                          name="frequency"
-                          onChange={(value) =>
-                            setFieldValue("frequency", value)
-                          }
-                          onBlur={handleBlur}
-                          value={values.frequency}
-                          placeholder="Chọn tần suất"
-                        >
-                          <Select.Option value="once">1 lần/ngày</Select.Option>
-                          <Select.Option value="twice">
-                            2 lần/ngày
-                          </Select.Option>
-                          <Select.Option value="three">
-                            3 lần/ngày
-                          </Select.Option>
-                          <Select.Option value="four">4 lần/ngày</Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Mô tả"
-                        validateStatus={
-                          touched.description && errors.description
-                            ? "error"
-                            : ""
-                        }
-                        help={touched.description && errors.description}
-                      >
-                        <Input
-                          name="description"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.description}
-                          placeholder="Nhập mô tả thuốc"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Đơn vị"
-                        validateStatus={
-                          touched.unit && errors.unit ? "error" : ""
-                        }
-                        help={touched.unit && errors.unit}
-                      >
-                        <Input
-                          name="unit"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.unit}
-                          placeholder="Ví dụ: viên, ml, mg"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Thời gian sử dụng"
-                        validateStatus={
-                          (touched.startDate && errors.startDate) ||
-                          (touched.endDate && errors.endDate)
-                            ? "error"
-                            : ""
-                        }
-                        help={
-                          (touched.startDate && errors.startDate) ||
-                          (touched.endDate && errors.endDate)
-                        }
-                      >
-                        <Space>
-                          <DatePicker
-                            placeholder="Ngày bắt đầu"
-                            onChange={(date) =>
-                              setFieldValue("startDate", date)
-                            }
-                            value={values.startDate}
-                          />
-                          <span>-</span>
-                          <DatePicker
-                            placeholder="Ngày kết thúc"
-                            onChange={(date) => setFieldValue("endDate", date)}
-                            value={values.endDate}
-                          />
-                        </Space>
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24}>
-                      <Form.Item
-                        label="Hướng dẫn sử dụng"
-                        validateStatus={
-                          touched.instructions && errors.instructions
-                            ? "error"
-                            : ""
-                        }
-                        help={touched.instructions && errors.instructions}
-                      >
-                        <TextArea
-                          name="instructions"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.instructions}
-                          placeholder="Nhập hướng dẫn sử dụng chi tiết"
-                          rows={4}
-                        />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+              {children.map((child) => (
+                <Select.Option key={child.studentId} value={child.studentId}>
+                  {child.fullName}
+                </Select.Option>
+              ))}
+            </Select>
+          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setIsModalVisible(true)}
+            disabled={!selectedStudentId}
+          >
+            Yêu cầu thuốc mới
+          </Button>
+        </div>
+        
+        <Divider />
 
-                  <Form.Item>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        marginTop: 24,
-                      }}
-                    >
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={isSubmitting}
-                      >
-                        Gửi thông tin
-                      </Button>
-                    </div>
+        {/* Content Section */}
+        <div className="mt-6">
+          {renderContent()}
+        </div>
+      </Card>
+
+      {/* Modal for adding new medicine request */}
+      <Modal
+        title="Tạo yêu cầu sử dụng thuốc mới"
+        open={isModalVisible}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
+        width={700}
+        destroyOnClose
+      >
+        <Formik
+          initialValues={{
+            medicationName: "",
+            dosage: "",
+            frequency: "",
+            instructions: "",
+            startDate: null,
+            endDate: null,
+            description: "",
+            unit: "",
+          }}
+          validationSchema={validationSchema}
+          onSubmit={handleSubmit}
+        >
+          {({ values, errors, touched, handleChange, handleBlur, handleSubmit, isSubmitting, setFieldValue }) => (
+            <Form layout="vertical" onFinish={handleSubmit}>
+               <Form.Item label="Tên thuốc" required help={touched.medicationName && errors.medicationName} validateStatus={touched.medicationName && errors.medicationName ? 'error' : ''}>
+                    <Input name="medicationName" value={values.medicationName} onChange={handleChange} onBlur={handleBlur} />
+                </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Liều lượng" required help={touched.dosage && errors.dosage} validateStatus={touched.dosage && errors.dosage ? 'error' : ''}>
+                    <Input name="dosage" value={values.dosage} onChange={handleChange} onBlur={handleBlur} placeholder="Ví dụ: 1 viên"/>
                   </Form.Item>
-                </Form>
-              )}
-            </Formik>
-          </Modal>
-        </Card>
-      </div>
+                </Col>
+                <Col span={12}>
+                   <Form.Item label="Đơn vị" help={touched.unit && errors.unit} validateStatus={touched.unit && errors.unit ? 'error' : ''}>
+                    <Input name="unit" value={values.unit} onChange={handleChange} onBlur={handleBlur} placeholder="Ví dụ: mg, ml" />
+                  </Form.Item>
+                </Col>
+              </Row>
+                <Form.Item label="Tần suất" required help={touched.frequency && errors.frequency} validateStatus={touched.frequency && errors.frequency ? 'error' : ''}>
+                    <Input name="frequency" value={values.frequency} onChange={handleChange} onBlur={handleBlur} placeholder="Ví dụ: 2 lần/ngày, sau bữa ăn" />
+                </Form.Item>
+                <Form.Item label="Hướng dẫn sử dụng" required help={touched.instructions && errors.instructions} validateStatus={touched.instructions && errors.instructions ? 'error' : ''}>
+                    <TextArea rows={3} name="instructions" value={values.instructions} onChange={handleChange} onBlur={handleBlur} />
+                </Form.Item>
+                 <Form.Item label="Mô tả thêm về thuốc" help={touched.description && errors.description} validateStatus={touched.description && errors.description ? 'error' : ''}>
+                    <TextArea rows={2} name="description" value={values.description} onChange={handleChange} onBlur={handleBlur} />
+                </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item label="Ngày bắt đầu" required help={touched.startDate && errors.startDate} validateStatus={touched.startDate && errors.startDate ? 'error' : ''}>
+                    <DatePicker style={{ width: '100%' }} name="startDate" value={values.startDate} onChange={(date) => setFieldValue('startDate', date)} onBlur={handleBlur} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item label="Ngày kết thúc" help={touched.endDate && errors.endDate} validateStatus={touched.endDate && errors.endDate ? 'error' : ''}>
+                    <DatePicker style={{ width: '100%' }} name="endDate" value={values.endDate} onChange={(date) => setFieldValue('endDate', date)} onBlur={handleBlur} />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" loading={isSubmitting} block>
+                  Gửi yêu cầu
+                </Button>
+              </Form.Item>
+            </Form>
+          )}
+        </Formik>
+      </Modal>
     </div>
   );
 };

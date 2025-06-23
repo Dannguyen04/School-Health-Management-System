@@ -16,7 +16,7 @@ dotenv.config();
 const app = express();
 
 // Connect to database
-connectToDatabase();
+// connectToDatabase();
 
 app.use(
     cors({

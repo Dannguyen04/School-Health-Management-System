@@ -301,22 +301,22 @@ export const requestMedication = async (req, res) => {
             },
         });
 
-        console.log(
-            "Medication request submitted successfully:",
-            studentMedication
-        );
-        res.json({
-            success: true,
-            data: studentMedication,
-            message: "Medication request submitted successfully",
-        });
-    } catch (error) {
-        console.error("Error requesting medication:", error.message, error.stack);
-        res.status(500).json({
-            success: false,
-            error: "Internal server error",
-        });
-    }
+    console.log(
+      "Medication request submitted successfully:",
+      studentMedication
+    );
+    res.json({
+      success: true,
+      data: studentMedication,
+      message: "Medication request submitted successfully",
+    });
+  } catch (error) {
+    console.error("Error requesting medication:", error.message, error.stack);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
 };
 
 export const getMyChildren = async (req, res) => {
@@ -428,3 +428,26 @@ export const getStudentMedicines = async (req, res) => {
         });
     }
 };
+
+export const getVaccinationCampaignsForParent = async (req, res) => {
+        try {
+          if (!req.user.parentProfile) {
+            return res.status(403).json({
+              success: false,
+              error: "You must be a parent to access this resource",
+            });
+          }
+          const campaigns = await prisma.vaccinationCampaign.findMany({
+            where: {
+              isActive: true,
+            },
+            include: { vaccine: true },
+            orderBy: { scheduledDate: "asc" },
+          });
+          res.status(200).json({ success: true, data: campaigns });
+        } catch (error) {
+          console.error("Error fetching vaccination campaigns for parent:", error);
+          res.status(500).json({ success: false, error: "Internal server error" });
+        }
+};
+
