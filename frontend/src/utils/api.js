@@ -128,4 +128,13 @@ export const authAPI = {
   },
 };
 
+export const managerAPI = {
+  getAllManagerStudents: () => api.get("/manager/students"),
+  addManagerStudent: (data) => api.post("/manager/students", data),
+  updateManagerStudent: (id, data) => api.put(`/manager/students/${id}`, data),
+  deleteManagerStudent: (id) => api.delete(`/manager/students/${id}`),
+  filterManagerStudents: (params) =>
+    api.get("/manager/students/filter", { params }),
+};
+
 export default api;

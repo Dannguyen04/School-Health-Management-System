@@ -13,6 +13,10 @@ import {
     updateStudent,
     filterStudents,
     getAllStudentsForNurse,
+    getAllParents,
+    addParent,
+    updateParent,
+    deleteParent,
 } from "../controllers/AdminController.js";
 import {
     authenticateToken,
@@ -57,5 +61,11 @@ router.get("/filter", authenticateToken, verifyAdmin, filterStudents);
 
 // Route cho y tá lấy danh sách học sinh
 router.get("/students-for-nurse", authenticateToken, getAllStudentsForNurse);
+
+// Quản lý phụ huynh
+router.get("/parents", authenticateToken, verifyAdmin, getAllParents);
+router.post("/parents", authenticateToken, verifyAdmin, addParent);
+router.put("/parents/:id", authenticateToken, verifyAdmin, updateParent);
+router.delete("/parents/:id", authenticateToken, verifyAdmin, deleteParent);
 
 export default router;

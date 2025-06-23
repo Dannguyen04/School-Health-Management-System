@@ -6,6 +6,7 @@ import {
 } from "react-router-dom";
 import "react-toastify/dist/ReactToastify.css";
 import AdminDashboard from "./components/admin/Dashboard";
+import ParentManagement from "./components/admin/ParentManagement";
 import StudentManagement from "./components/admin/StudentManagement";
 import UserManagement from "./components/admin/UserManagement";
 import AlertsAndEvents from "./components/manager/AlertsAndEvents";
@@ -89,6 +90,7 @@ const App = () => {
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<UserManagement />} />
           <Route path="students" element={<StudentManagement />} />
+          <Route path="parents" element={<ParentManagement />} />
           <Route path="profile" element={<UserProfile />} />
         </Route>
 
@@ -130,7 +132,7 @@ const App = () => {
             </PrivateRoutes>
           }
         >
-          <Route index element={<Navigate to="my-children" />} />
+          <Route index element={<Navigate to="home" />} />
           <Route path="home" element={<Homepage />} />
           <Route path="about" element={<About />} />
           <Route path="services" element={<Services />} />
