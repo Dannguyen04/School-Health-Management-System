@@ -32,7 +32,7 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             // Handle unauthorized access
             localStorage.removeItem("token");
-            window.location.href = "/login";
+            window.location.href = "/auth";
         }
         return Promise.reject(error);
     }
@@ -93,29 +93,29 @@ export const adminAPI = {
     getDashboardStats: () => api.get("/admin/dashboard/stats"),
 };
 
-// Parent API endpoints
 export const parentAPI = {
     // Get children of logged-in parent
-    getChildren: () => api.get("/parents/my-children"),
+    getChildren: () => api.get("/api/parents/my-children"),
 
     // Get student details by ID
-    getStudentById: (studentId) => api.get(`/parents/students/${studentId}`),
+    getStudentById: (studentId) =>
+        api.get(`/api/parents/students/${studentId}`),
 
     // Health profile operations
     getHealthProfile: (studentId) =>
-        api.get(`/parents/health-profile/${studentId}`),
+        api.get(`/api/parents/health-profile/${studentId}`),
     upsertHealthProfile: (studentId, data) =>
-        api.post(`/parents/health-profile/${studentId}`, data),
+        api.post(`/api/parents/health-profile/${studentId}`, data),
 
     // Medicine operations
     getStudentMedicines: (studentId) =>
-        api.get(`/parents/students/${studentId}/medicines`),
+        api.get(`/api/parents/students/${studentId}/medicines`),
     requestMedication: (studentId, data) =>
-        api.post(`/parents/request-medication/${studentId}`, data),
+        api.post(`/api/parents/request-medication/${studentId}`, data),
 
     // Get students by parent ID (for non-authenticated access)
     getStudentsByParentId: (parentId) =>
-        api.get(`/parents/students?parentId=${parentId}`),
+        api.get(`/api/parents/students?parentId=${parentId}`),
 };
 
 // Auth API functions
@@ -128,6 +128,16 @@ export const authAPI = {
         const response = await api.get("/auth/verify");
         return response.data;
     },
+};
+
+export const managerAPI = {
+    getAllManagerStudents: () => api.get("/manager/students"),
+    addManagerStudent: (data) => api.post("/manager/students", data),
+    updateManagerStudent: (id, data) =>
+        api.put(`/manager/students/${id}`, data),
+    deleteManagerStudent: (id) => api.delete(`/manager/students/${id}`),
+    filterManagerStudents: (params) =>
+        api.get("/manager/students/filter", { params }),
 };
 
 export default api;

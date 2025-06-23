@@ -52,7 +52,10 @@ const MedicineInfo = () => {
   const fetchChildren = async () => {
     try {
       setLoading(true);
-      const response = await axios.get("/api/parents/children");
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/parents/my-children", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (response.data.success) {
         setChildren(response.data.data);
         if (response.data.data.length > 0) {
@@ -74,17 +77,21 @@ const MedicineInfo = () => {
   const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
       setLoading(true);
+      const token = localStorage.getItem("token");
       const response = await axios.post(
-        `/api/parents/students/${values.studentId}/medications`,
+        `/api/parents/request-medication/${values.studentId}`,
         {
           medicationName: values.medicationName,
           dosage: values.dosage,
           frequency: values.frequency,
           instructions: values.instructions,
-          startDate: values.startDate.toISOString(),
+          startDate: values.startDate ? values.startDate.toISOString() : null,
           endDate: values.endDate ? values.endDate.toISOString() : null,
           description: values.description,
           unit: values.unit,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
         }
       );
 

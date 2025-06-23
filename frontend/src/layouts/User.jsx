@@ -23,9 +23,9 @@ const User = () => {
   }, [isLandingPage, location]);
 
   return (
-    <div>
+    <div className="min-h-screen flex flex-col">
       <Navbar />
-      <main>
+      <main className="flex-1">
         {isLandingPage ? (
           <>
             <div id="home">
