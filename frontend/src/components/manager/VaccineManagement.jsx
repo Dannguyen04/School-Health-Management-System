@@ -186,9 +186,10 @@ const VaccineManagement = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            Sửa
-          </Button>
+          <Button
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          ></Button>
           <Popconfirm
             title="Xóa vaccine"
             description={`Bạn có chắc chắn muốn xóa vaccine ${record.name}?`}
@@ -197,9 +198,7 @@ const VaccineManagement = () => {
             cancelText="Hủy"
             okType="danger"
           >
-            <Button danger icon={<DeleteOutlined />}>
-              Xóa
-            </Button>
+            <Button danger icon={<DeleteOutlined />}></Button>
           </Popconfirm>
         </Space>
       ),

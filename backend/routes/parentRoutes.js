@@ -1,38 +1,49 @@
-// import express from "express";
-// import {
-//   deleteHealthProfile,
-//   getHealthProfile,
-//   getStudents,
-//   upsertHealthProfile,
-// } from "../controllers/parentController.js";
-// import {
-//   authenticateToken,
-//   verifyRole,
-// } from "../middleware/authenticateToken.js";
+import express from "express";
+import {
+  deleteHealthProfile,
+  getHealthProfile,
+  getMyChildren,
+  getStudentMedicines,
+  requestMedication,
+  upsertHealthProfile,
+} from "../controllers/parentController.js";
+import { authenticateToken } from "../middleware/authenticateToken.js";
 
-// const router = express.Router();
+const router = express.Router();
 
-// // Get list of students for parent
-// router.get("/students", authenticateToken, verifyRole(["PARENT"]), getStudents);
+// Route to get all children of a parent
+router.get("/my-children", authenticateToken, getMyChildren);
 
-// // Health Profile routes
-// router.get(
-//   "/health-profile/:studentId",
-//   authenticateToken,
-//   verifyRole(["PARENT"]),
-//   getHealthProfile
-// );
-// router.put(
-//   "/health-profile/:studentId",
-//   authenticateToken,
-//   verifyRole(["PARENT"]),
-//   upsertHealthProfile
-// );
-// router.delete(
-//   "/health-profile/:studentId",
-//   authenticateToken,
-//   verifyRole(["PARENT"]),
-//   deleteHealthProfile
-// );
+// Routes for health profiles
+router.get("/health-profile/:studentId", authenticateToken, getHealthProfile);
+router.post(
+  "/health-profile/:studentId",
+  authenticateToken,
+  upsertHealthProfile
+);
+router.put(
+  "/health-profile/:studentId",
+  authenticateToken,
+  upsertHealthProfile
+);
+router.delete(
+  "/health-profile/:studentId",
+  authenticateToken,
+  deleteHealthProfile
+);
 
-// export default router;
+// Route for medication requests
+router.post(
+  "/request-medication/:studentId",
+  authenticateToken,
+  requestMedication
+);
+
+// Route to get student medicines
+router.get(
+  "/students/:studentId/medicines",
+  authenticateToken,
+  getStudentMedicines
+);
+
+export default router;

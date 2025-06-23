@@ -23,8 +23,12 @@ import MedicalInventory from "./components/nurse/MedicalInventory";
 import StudentHealthProfile from "./components/nurse/StudentHealthProfile";
 import StudentTreatment from "./components/nurse/StudentTreatment";
 import Vaccination from "./components/nurse/Vaccination";
+import About from "./components/parent/About";
+import Doctors from "./components/parent/Doctors";
+import Services from "./components/parent/Services";
 import ScrollToTop from "./components/ScrollToTop";
 import UserProfile from "./components/shared/UserProfile";
+import Blog from "./components/user/Blog";
 import VaccineConsentForm from "./components/user/ConsentForms";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
@@ -38,11 +42,6 @@ import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
-import Blog from "./components/user/Blog";
-import MyChildren from "./components/user/MyChildren";
-import About from "./components/parent/About";
-import Services from "./components/parent/Services";
-import Doctors from "./components/parent/Doctors";
 import ParentManagement from "./components/admin/ParentManagement";
 
 const App = () => {
@@ -148,13 +147,12 @@ const App = () => {
                         </PrivateRoutes>
                     }
                 >
-                    <Route index element={<Navigate to="my-children" />} />
+                    <Route index element={<Navigate to="home" />} />
                     <Route path="home" element={<Homepage />} />
                     <Route path="about" element={<About />} />
                     <Route path="services" element={<Services />} />
                     <Route path="doctors" element={<Doctors />} />
                     <Route path="blog" element={<Blog />} />
-                    <Route path="my-children" element={<MyChildren />} />
                     <Route path="health-profile" element={<HealthProfile />} />
                     <Route path="medicine-info" element={<MedicineInfo />} />
                     <Route
