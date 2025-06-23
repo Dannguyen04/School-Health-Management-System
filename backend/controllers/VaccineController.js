@@ -237,12 +237,12 @@ const deleteVaccine = async (req, res) => {
   }
 };
 
-export default {
+export {
   createVaccine,
-  getAllVaccine,
-  getAllRequiredVaccine,
-  getAllOptionalVaccine,
-  updateVaccine,
   deleteVaccine,
+  getAllOptionalVaccine,
+  getAllRequiredVaccine,
+  getAllVaccine,
   getVaccines,
+  updateVaccine,
 };
