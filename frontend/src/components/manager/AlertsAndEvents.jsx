@@ -1,9 +1,4 @@
-import {
-  CheckCircleOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
-} from "@ant-design/icons";
+import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -11,10 +6,12 @@ import {
   Form,
   Input,
   Modal,
+  Popconfirm,
   Select,
   Space,
   Table,
   Tag,
+  Tooltip,
 } from "antd";
 import { useState } from "react";
 
@@ -171,26 +168,26 @@ const AlertsAndEvents = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          {record.status === "Đang diễn ra" && (
-            <Button type="primary" size="small" icon={<CheckCircleOutlined />}>
-              Xác nhận
-            </Button>
-          )}
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
+          <Tooltip title="Sửa">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              type="primary"
+              size="small"
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xác nhận xóa học sinh"
+            description={`Bạn có chắc chắn muốn xóa học sinh "${record.name}"?`}
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okType="danger"
           >
-            Sửa
-          </Button>
-          <Button
-            type="link"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
-          >
-            Xóa
-          </Button>
+            <Tooltip title="Xóa">
+              <Button danger icon={<DeleteOutlined />} size="small" />
+            </Tooltip>
+          </Popconfirm>
         </Space>
       ),
     },

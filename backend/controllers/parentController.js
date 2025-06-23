@@ -425,3 +425,25 @@ export const getStudentMedicines = async (req, res) => {
     });
   }
 };
+
+export const getVaccinationCampaignsForParent = async (req, res) => {
+  try {
+    if (!req.user.parentProfile) {
+      return res.status(403).json({
+        success: false,
+        error: "You must be a parent to access this resource",
+      });
+    }
+    const campaigns = await prisma.vaccinationCampaign.findMany({
+      where: {
+        isActive: true,
+      },
+      include: { vaccine: true },
+      orderBy: { scheduledDate: "asc" },
+    });
+    res.status(200).json({ success: true, data: campaigns });
+  } catch (error) {
+    console.error("Error fetching vaccination campaigns for parent:", error);
+    res.status(500).json({ success: false, error: "Internal server error" });
+  }
+};
