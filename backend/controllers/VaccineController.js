@@ -43,22 +43,17 @@ const createVaccine = async (req, res) => {
     }
 
     try {
-        const vaccine = await prisma.$transaction({
-            async createVaccine() {
-                const createVaccine = await prisma.vaccination.create({
-                    data: {
-                        name,
-                        requirement,
-                        expiredDate,
-                        dose,
-                        sideEffects,
-                        notes,
-                    },
-                });
-                return createVaccine;
+        const vaccine = await prisma.vaccination.create({
+            data: {
+                name,
+                requirement,
+                expiredDate,
+                dose,
+                sideEffects,
+                notes,
             },
         });
-        res.status(400).json({
+        res.status(201).json({
             success: true,
             data: vaccine,
         });
@@ -245,7 +240,7 @@ const deleteVaccine = async (req, res) => {
     }
 };
 
-export {
+export default {
     createVaccine,
     getAllVaccine,
     getAllRequiredVaccine,

@@ -123,6 +123,7 @@ const updateVaccinationCampaign = async (req, res) => {
             ["FINISHED", "CANCELLED"].includes(status)
         )
             data.status = status;
+        data.isActive = status === "ACTIVE";
         const updated = await prisma.vaccinationCampaign.update({
             where: { id },
             data,
