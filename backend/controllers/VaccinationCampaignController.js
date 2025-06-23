@@ -80,7 +80,11 @@ const createVaccinationCampaign = async (req, res) => {
 
 const getAllVaccinationCampaigns = async (req, res) => {
     try {
-        const campaigns = await prisma.vaccinationCampaign.findMany();
+        const campaigns = await prisma.vaccinationCampaign.findMany({
+            include: {
+                vaccine: true,
+            },
+        });
         res.status(200).json({ success: true, data: campaigns });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
