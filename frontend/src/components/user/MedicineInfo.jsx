@@ -57,6 +57,7 @@ const MedicineInfo = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
+        console.log(response.data.data);
         setChildren(response.data.data);
         if (response.data.data.length > 0) {
           setSelectedStudent(response.data.data[0].studentId);
@@ -170,7 +171,7 @@ const MedicineInfo = () => {
                       key={child.studentId}
                       value={child.studentId}
                     >
-                      {child.fullName} - {child.studentCode}
+                      {child.fullName}
                     </Select.Option>
                   ))}
                 </Select>

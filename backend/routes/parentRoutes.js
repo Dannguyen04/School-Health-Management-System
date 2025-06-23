@@ -4,6 +4,7 @@ import {
   getHealthProfile,
   getMyChildren,
   getStudentMedicines,
+  getVaccinationCampaignsForParent,
   requestMedication,
   upsertHealthProfile,
 } from "../controllers/parentController.js";
@@ -44,6 +45,13 @@ router.get(
   "/students/:studentId/medicines",
   authenticateToken,
   getStudentMedicines
+);
+
+// Route to get all vaccination campaigns for parent's children
+router.get(
+  "/vaccination-campaigns",
+  authenticateToken,
+  getVaccinationCampaignsForParent
 );
 
 export default router;
