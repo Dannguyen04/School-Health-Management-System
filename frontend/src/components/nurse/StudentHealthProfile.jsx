@@ -1,4 +1,5 @@
 import {
+  DeleteOutlined,
   EditOutlined,
   EyeOutlined,
   ReloadOutlined,
@@ -17,6 +18,7 @@ import {
   Input,
   InputNumber,
   Modal,
+  Popconfirm,
   Row,
   Select,
   Space,
@@ -180,6 +182,11 @@ const StudentHealthProfile = () => {
     }
   };
 
+  // Xóa học sinh
+  const handleDeleteStudent = (studentId) => {
+    setStudents((prev) => prev.filter((s) => s.id !== studentId));
+  };
+
   const columns = [
     {
       title: "Mã học sinh",
@@ -282,6 +289,16 @@ const StudentHealthProfile = () => {
             icon={<EditOutlined />}
             onClick={() => handleEditProfile(record)}
           ></Button>
+          <Popconfirm
+            title="Xóa học sinh"
+            description="Bạn có chắc chắn muốn xóa học sinh này?"
+            onConfirm={() => handleDeleteStudent(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okType="danger"
+          >
+            <Button danger size="small" icon={<DeleteOutlined />}></Button>
+          </Popconfirm>
         </Space>
       ),
     },

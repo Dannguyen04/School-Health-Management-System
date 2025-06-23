@@ -33,6 +33,7 @@ const VaccineManagement = () => {
   const [loading, setLoading] = useState(false);
   const [searchForm] = Form.useForm();
   const [vaccineForm] = Form.useForm();
+  const [filteredVaccines, setFilteredVaccines] = useState([]);
 
   // Get auth token
   const getAuthToken = () => {
@@ -54,6 +55,7 @@ const VaccineManagement = () => {
       });
       if (response.data.success) {
         setVaccines(response.data.data || []);
+        setFilteredVaccines(response.data.data || []);
       } else {
         message.error(response.data.error || "Không thể tải danh sách vaccine");
       }
@@ -135,6 +137,11 @@ const VaccineManagement = () => {
     fetchVaccines();
   }, []);
 
+  // Đảm bảo khi vaccines thay đổi (fetch lại), filteredVaccines cũng cập nhật
+  useEffect(() => {
+    setFilteredVaccines(vaccines);
+  }, [vaccines]);
+
   const columns = [
     {
       title: "Tên vaccine",
@@ -213,8 +220,23 @@ const VaccineManagement = () => {
   };
 
   const handleSearch = (values) => {
-    console.log("Search values:", values);
-    // Implement search functionality if needed
+    const { name, requirement } = values;
+    let filtered = vaccines;
+    if (name) {
+      filtered = filtered.filter((v) =>
+        v.name.toLowerCase().includes(name.toLowerCase())
+      );
+    }
+    if (requirement) {
+      filtered = filtered.filter((v) => v.requirement === requirement);
+    }
+    setFilteredVaccines(filtered);
+  };
+
+  // Xóa bộ lọc
+  const handleResetFilters = () => {
+    searchForm.resetFields();
+    setFilteredVaccines(vaccines);
   };
 
   const handleSubmit = async () => {
@@ -295,21 +317,19 @@ const VaccineManagement = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name="dose" label="Liều lượng">
-                <Input placeholder="Nhập liều lượng" />
-              </Form.Item>
-            </Col>
           </Row>
           <Row>
             <Col span={24} className="text-right">
-              <Button
-                type="primary"
-                icon={<SearchOutlined />}
-                htmlType="submit"
-              >
-                Tìm kiếm
-              </Button>
+              <Space>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  htmlType="submit"
+                >
+                  Tìm kiếm
+                </Button>
+                <Button onClick={handleResetFilters}>Xóa bộ lọc</Button>
+              </Space>
             </Col>
           </Row>
         </Form>
@@ -317,13 +337,13 @@ const VaccineManagement = () => {
 
       <Card>
         <Table
-          dataSource={vaccines}
+          dataSource={filteredVaccines}
           columns={columns}
           rowKey="id"
           loading={loading}
           pagination={{
             pageSize: 5,
-            showSizeChanger: true,
+            showQuickJumper: true,
           }}
         />
       </Card>
