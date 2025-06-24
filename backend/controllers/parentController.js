@@ -2,49 +2,50 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 export const getMyChildren = async (req, res) => {
-  try {
-    if (!req.user.parentProfile) {
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
-    }
+    try {
+        if (!req.user.parentProfile) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'You must be a parent to access this resource' 
+            });
+        }
 
-    const parentId = req.user.parentProfile.id;
+        const parentId = req.user.parentProfile.id;
 
-    const childrenRelations = await prisma.studentParent.findMany({
-      where: {
-        parentId: parentId,
-      },
-      include: {
-        student: {
-          include: {
-            user: {
-              select: {
-                fullName: true,
-              },
+        const childrenRelations = await prisma.studentParent.findMany({
+            where: {
+                parentId: parentId
             },
-          },
-        },
-      },
-    });
+            include: {
+                student: {
+                    include: {
+                        user: {
+                            select: {
+                                fullName: true
+                            }
+                        }
+                    }
+                }
+            }
+        });
 
-    const children = childrenRelations.map((rel) => ({
-      studentId: rel.student.id,
-      fullName: rel.student.user.fullName,
-    }));
+        const children = childrenRelations.map(rel => ({
+            studentId: rel.student.id,
+            fullName: rel.student.user.fullName
+        }));
 
-    res.json({
-      success: true,
-      data: children,
-    });
-  } catch (error) {
-    console.error("Error fetching children:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
+        res.json({
+            success: true,
+            data: children
+        });
+
+    } catch (error) {
+        console.error('Error fetching children:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Internal server error' 
+        });
+    }
 };
 
 export const getHealthProfile = async (req, res) => {
@@ -259,191 +260,173 @@ export const deleteHealthProfile = async (req, res) => {
   }
 };
 
-export const requestMedication = async (req, res) => {
-  try {
-    console.log("Requesting medication with body:", req.body);
-    const { studentId } = req.params;
-    const {
-      medicationName,
-      dosage,
-      frequency,
-      instructions,
-      startDate,
-      endDate,
-      description,
-      unit,
-    } = req.body;
-
-    // Check if user has parent profile
-    if (!req.user.parentProfile) {
-      console.log("User is not a parent.");
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
-    }
-
-    const parentId = req.user.parentProfile.id;
-
-    // Verify parent-student relationship
-    const studentParent = await prisma.studentParent.findFirst({
-      where: {
-        parentId: parentId,
-        studentId: studentId,
-      },
-    });
-
-    if (!studentParent) {
-      console.log("Parent-student relationship not found.");
-      return res.status(403).json({
-        success: false,
-        error: "You are not authorized to request medication for this student",
-      });
-    }
-
-    // Find or create medication based on name
-    let medication = await prisma.medication.findFirst({
-      where: {
-        name: medicationName,
-      },
-    });
-
-    if (!medication) {
-      console.log("Medication not found, creating new one.");
-      medication = await prisma.medication.create({
-        data: {
-          name: medicationName,
-          description: description || "",
-          dosage: dosage || "",
-          unit: unit || "",
-        },
-      });
-    }
-
-    // Create medication request using the found/created medication's ID
-    const studentMedication = await prisma.studentMedication.create({
-      data: {
-        studentId,
-        parentId,
-        medicationId: medication.id,
-        dosage,
-        frequency,
-        instructions,
-        startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
-        status: "PENDING_APPROVAL",
-      },
-      include: {
-        medication: true,
-        student: {
-          include: {
-            user: {
-              select: {
-                fullName: true,
+    export const requestMedication = async (req, res) => {
+        try {
+          console.log("Requesting medication with body:", req.body);
+          const { studentId } = req.params;
+          const {
+            medicationName,
+            dosage,
+            frequency,
+            instructions,
+            startDate,
+            endDate,
+            description,
+            unit,
+          } = req.body;
+      
+          // Check if user has parent profile
+          if (!req.user.parentProfile) {
+            console.log("User is not a parent.");
+            return res.status(403).json({
+              success: false,
+              error: "You must be a parent to access this resource",
+            });
+          }
+      
+          const parentId = req.user.parentProfile.id;
+      
+          // Verify parent-student relationship
+          const studentParent = await prisma.studentParent.findFirst({
+            where: {
+              parentId: parentId,
+              studentId: studentId,
+            },
+          });
+      
+          if (!studentParent) {
+            console.log("Parent-student relationship not found.");
+            return res.status(403).json({
+              success: false,
+              error: "You are not authorized to request medication for this student",
+            });
+          }
+      
+          // Find or create medication based on name
+          let medication = await prisma.medication.findFirst({
+            where: {
+              name: medicationName,
+            },
+          });
+      
+          if (!medication) {
+            console.log("Medication not found, creating new one.");
+            medication = await prisma.medication.create({
+              data: {
+                name: medicationName,
+                description: description || "",
+                dosage: dosage || "",
+                unit: unit || "",
+              },
+            });
+          }
+      
+          // Create medication request using the found/created medication's ID
+          const studentMedication = await prisma.studentMedication.create({
+            data: {
+              studentId,
+              parentId,
+              medicationId: medication.id,
+              dosage,
+              frequency,
+              instructions,
+              startDate: new Date(startDate),
+              endDate: endDate ? new Date(endDate) : null,
+              status: "PENDING_APPROVAL",
+            },
+            include: {
+              medication: true,
+              student: {
+                include: {
+                  user: {
+                    select: {
+                      fullName: true,
+                    },
+                  },
+                },
               },
             },
-          },
-        },
-      },
-    });
-
-    console.log(
-      "Medication request submitted successfully:",
-      studentMedication
-    );
-    res.json({
-      success: true,
-      data: studentMedication,
-      message: "Medication request submitted successfully",
-    });
-  } catch (error) {
-    console.error("Error requesting medication:", error.message, error.stack);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
-};
+          });
+      
+          console.log(
+            "Medication request submitted successfully:",
+            studentMedication
+          );
+          res.json({
+            success: true,
+            data: studentMedication,
+            message: "Medication request submitted successfully",
+          });
+        } catch (error) {
+          console.error("Error requesting medication:", error.message, error.stack);
+          res.status(500).json({
+            success: false,
+            error: "Internal server error",
+          });
+        }
+      };
 
 export const getStudentMedicines = async (req, res) => {
-  try {
-    const { studentId } = req.params;
+    try {
+        const { studentId } = req.params;
+        
+        // Check if user has parent profile
+        if (!req.user.parentProfile) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'You must be a parent to access this resource' 
+            });
+        }
 
-    if (!req.user.parentProfile) {
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
-    }
+        const parentId = req.user.parentProfile.id;
 
-    const parentId = req.user.parentProfile.id;
+        // Verify parent-student relationship
+        const studentParent = await prisma.studentParent.findFirst({
+            where: {
+                parentId: parentId,
+                studentId: studentId
+            }
+        });
 
-    const studentParent = await prisma.studentParent.findFirst({
-      where: {
-        parentId: parentId,
-        studentId: studentId,
-      },
-    });
+        if (!studentParent) {
+            return res.status(403).json({ 
+                success: false, 
+                error: 'You are not authorized to view this student\'s medicines' 
+            });
+        }
 
-    if (!studentParent) {
-      return res.status(403).json({
-        success: false,
-        error: "You are not authorized to view this student's medicines",
-      });
-    }
-
-    const studentMedicines = await prisma.studentMedication.findMany({
-      where: {
-        studentId: studentId,
-      },
-      include: {
-        medication: true,
-        student: {
-          include: {
-            user: {
-              select: {
-                fullName: true,
-              },
+        // Get student medicines
+        const studentMedicines = await prisma.studentMedication.findMany({
+            where: {
+                studentId: studentId
             },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+            include: {
+                medication: true,
+                student: {
+                    include: {
+                        user: {
+                            select: {
+                                fullName: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
 
-    res.json({
-      success: true,
-      data: studentMedicines,
-    });
-  } catch (error) {
-    console.error("Error fetching student medicines:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
-};
+        res.json({
+            success: true,
+            data: studentMedicines
+        });
 
-export const getVaccinationCampaignsForParent = async (req, res) => {
-  try {
-    if (!req.user.parentProfile) {
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
+    } catch (error) {
+        console.error('Error fetching student medicines:', error);
+        res.status(500).json({ 
+            success: false, 
+            error: 'Internal server error' 
+        });
     }
-    const campaigns = await prisma.vaccinationCampaign.findMany({
-      where: {
-        isActive: true,
-      },
-      include: { vaccine: true },
-      orderBy: { scheduledDate: "asc" },
-    });
-    res.status(200).json({ success: true, data: campaigns });
-  } catch (error) {
-    console.error("Error fetching vaccination campaigns for parent:", error);
-    res.status(500).json({ success: false, error: "Internal server error" });
-  }
 };

@@ -95,7 +95,7 @@ const HealthProfile = () => {
       );
       setHealthProfile(response.data.data?.healthProfile);
     } catch (error) {
-      setHealthProfile(null);
+      setHealthProfile(null); // Clear profile on error
       message.error(
         error.response?.data?.error || "Không thể tải hồ sơ sức khỏe"
       );

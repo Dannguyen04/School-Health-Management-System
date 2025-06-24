@@ -1,14 +1,11 @@
 import axios from "axios";
 
-// Use environment variable for production, fallback to proxy for development
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
-
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
+    baseURL: "/api",
+    headers: {
+        "Content-Type": "application/json",
+    },
 });
 
 // Request interceptor to add auth token
@@ -27,15 +24,15 @@ api.interceptors.request.use(
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      // Handle unauthorized access
-      localStorage.removeItem("token");
-      window.location.href = "/auth";
+    (response) => response,
+    (error) => {
+        if (error.response?.status === 401) {
+            // Handle unauthorized access
+            localStorage.removeItem("token");
+            window.location.href = "/auth";
+        }
+        return Promise.reject(error);
     }
-    return Promise.reject(error);
-  }
 );
 
 // Nurse API endpoints
@@ -93,48 +90,34 @@ export const adminAPI = {
 };
 
 export const parentAPI = {
-  // Get children of logged-in parent
-  getChildren: () => api.get("/api/parents/my-children"),
-
-  // Get student details by ID
-  getStudentById: (studentId) => api.get(`/api/parents/students/${studentId}`),
-
-  // Health profile operations
-  getHealthProfile: (studentId) =>
-    api.get(`/api/parents/health-profile/${studentId}`),
-  upsertHealthProfile: (studentId, data) =>
-    api.post(`/api/parents/health-profile/${studentId}`, data),
-
-  // Medicine operations
-  getStudentMedicines: (studentId) =>
-    api.get(`/api/parents/students/${studentId}/medicines`),
-  requestMedication: (studentId, data) =>
-    api.post(`/api/parents/request-medication/${studentId}`, data),
-
-  // Get students by parent ID (for non-authenticated access)
-  getStudentsByParentId: (parentId) =>
-    api.get(`/api/parents/students?parentId=${parentId}`),
+    // Get children of logged-in parent
+    getChildren: () => api.get("/parents/my-children"),
+    
+    // Get student details by ID
+    getStudentById: (studentId) => api.get(`/parents/students/${studentId}`),
+    
+    // Health profile operations
+    getHealthProfile: (studentId) => api.get(`/parents/health-profile/${studentId}`),
+    upsertHealthProfile: (studentId, data) => api.post(`/parents/health-profile/${studentId}`, data),
+    
+    // Medicine operations
+    getStudentMedicines: (studentId) => api.get(`/parents/students/${studentId}/medicines`),
+    requestMedication: (studentId, data) => api.post(`/parents/request-medication/${studentId}`, data),
+    
+    // Get students by parent ID (for non-authenticated access)
+    getStudentsByParentId: (parentId) => api.get(`/parents/students?parentId=${parentId}`),
 };
 
 // Auth API functions
 export const authAPI = {
-  login: async (credentials) => {
-    const response = await api.post("/auth/login", credentials);
-    return response.data;
-  },
-  verify: async () => {
-    const response = await api.get("/auth/verify");
-    return response.data;
-  },
-};
-
-export const managerAPI = {
-  getAllManagerStudents: () => api.get("/manager/students"),
-  addManagerStudent: (data) => api.post("/manager/students", data),
-  updateManagerStudent: (id, data) => api.put(`/manager/students/${id}`, data),
-  deleteManagerStudent: (id) => api.delete(`/manager/students/${id}`),
-  filterManagerStudents: (params) =>
-    api.get("/manager/students/filter", { params }),
+    login: async (credentials) => {
+        const response = await api.post('/auth/login', credentials);
+        return response.data;
+    },
+    verify: async () => {
+        const response = await api.get('/auth/verify');
+        return response.data;
+    }
 };
 
 export default api;
