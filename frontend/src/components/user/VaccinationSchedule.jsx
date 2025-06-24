@@ -134,10 +134,10 @@ const VaccinationSchedule = () => {
   }, []);
 
   return (
-    <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
-      <div className="w-full max-w-5xl">
+    <div className="min-h-screen flex justify-center items-start bg-[#f6fcfa] py-10">
+      <div className="w-full max-w-5xl mx-auto px-4">
         <Card
-          className="rounded-3xl shadow-lg border-0 mt-12"
+          className="w-full rounded-3xl shadow-lg border-0 mt-12"
           style={{
             background: "#fff",
             borderRadius: "1.5rem",
@@ -145,6 +145,7 @@ const VaccinationSchedule = () => {
             padding: "2rem",
             marginTop: "3rem",
             width: "100%",
+            maxWidth: "100%",
           }}
         >
           <h2 className="text-2xl font-bold text-[#36ae9a] mb-6 text-center">
