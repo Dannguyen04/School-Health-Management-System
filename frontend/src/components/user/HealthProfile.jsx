@@ -199,39 +199,48 @@ const HealthProfile = () => {
     }
 
     return (
-      <Descriptions bordered column={1} title="Chi tiết hồ sơ sức khỏe">
-        <Descriptions.Item label="Dị ứng">{healthProfile.allergies?.join(', ') || 'Không có'}</Descriptions.Item>
-        <Descriptions.Item label="Bệnh nền">{healthProfile.chronicDiseases?.join(', ') || 'Không có'}</Descriptions.Item>
-        <Descriptions.Item label="Thuốc đang sử dụng">{healthProfile.medications?.join(', ') || 'Không có'}</Descriptions.Item>
-        <Descriptions.Item label="Lịch sử điều trị">{healthProfile.treatmentHistory || 'Không có'}</Descriptions.Item>
-        <Descriptions.Item label="Thị lực">{healthProfile.vision || 'Chưa cập nhật'}</Descriptions.Item>
-        <Descriptions.Item label="Thính lực">{healthProfile.hearing || 'Chưa cập nhật'}</Descriptions.Item>
-        <Descriptions.Item label="Chiều cao">{healthProfile.height ? `${healthProfile.height} cm` : 'Chưa cập nhật'}</Descriptions.Item>
-        <Descriptions.Item label="Cân nặng">{healthProfile.weight ? `${healthProfile.weight} kg` : 'Chưa cập nhật'}</Descriptions.Item>
-        <Descriptions.Item label="Ghi chú">{healthProfile.notes || 'Không có'}</Descriptions.Item>
-      </Descriptions>
+      <div className="min-h-screen flex justify-center items-start bg-[#f6fcfa] py-10">
+        <div className="w-full max-w-5xl mx-auto px-4">
+          <div style={{ padding: "24px", textAlign: "center" }}>
+            <Spin size="large" />
+          </div>
+        </div>
+      </div>
     );
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 pt-24">
-      <Card
-        className="rounded-xl shadow-md p-4"
-      >
-        {/* Header Section */}
-        <div className="pb-4 border-b mb-6">
-            <Title level={2} className="text-gray-800 !m-0">
-                Hồ sơ sức khỏe học sinh
-            </Title>
-            <Text type="secondary">
-                Chọn một học sinh để xem, tạo mới hoặc cập nhật hồ sơ sức khỏe.
-            </Text>
-        </div>
-
-        {/* Controls Section */}
-        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
-            <div className="flex items-center gap-3">
-                <Text strong>Chọn học sinh:</Text>
+    <div className="min-h-screen flex justify-center items-start bg-[#f6fcfa] py-10">
+      <div className="w-full max-w-5xl mx-auto px-4">
+        <Card
+          className="w-full rounded-3xl shadow-lg border-0 mt-12"
+          style={{
+            background: "#fff",
+            borderRadius: "1.5rem",
+            boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
+            padding: "2rem",
+            marginTop: "3rem",
+            maxWidth: "100%",
+          }}
+        >
+          <div
+            style={{
+              marginBottom: 24,
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "16px",
+            }}
+          >
+            <div>
+              <Title level={2} className="!text-[#36ae9a] !mb-0">
+                Hồ sơ sức khỏe
+              </Title>
+              <Text type="secondary">Thông tin sức khỏe của học sinh</Text>
+            </div>
+            <div style={{ display: "flex", gap: "16px" }}>
+              {children && children.length > 0 ? (
                 <Select
                   style={{ width: 250 }}
                   value={selectedStudentId}
