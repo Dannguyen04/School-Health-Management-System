@@ -3,7 +3,6 @@ import { Button, Modal } from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
-import api from "../../utils/api";
 import { Input } from "../Input";
 import cn from "classnames";
 import {
