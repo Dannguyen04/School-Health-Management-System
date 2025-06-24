@@ -1,17 +1,35 @@
 import { PrismaClient } from "@prisma/client";
+import cors from "cors";
+import dotenv from "dotenv";
+import express from "express";
+import session from "express-session";
 import jwt from "jsonwebtoken";
 import validator from "validator";
-import bcrypt from "bcrypt";
-import dotenv from "dotenv";
 
 dotenv.config();
 
+const app = express();
 const prisma = new PrismaClient();
 
-export const handleLogin = async (req, res) => {
-    try {
-        console.log("Login request body:", req.body);
-        const { email, password } = req.body;
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+    credentials: true,
+  })
+);
+
+app.use(express.json());
+app.use(
+  session({
+    secret: "mySecretKey",
+    resave: true,
+    saveUninitialized: false,
+  })
+);
+
+const handleLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
     // Basic input validation
     if (!email || !password) {
@@ -36,15 +54,16 @@ export const handleLogin = async (req, res) => {
       },
     });
 
-        if (!user) {
-            return res.status(401).json({ success: false, error: "Invalid credentials" });
-        }
-
-        const isMatch = await bcrypt.compare(password, user.password);
-
-        if (!isMatch) {
-            return res.status(401).json({ success: false, error: "Invalid credentials" });
-        }
+    if (!user || user.password !== password) {
+      console.error(
+        !user
+          ? `User not found: ${email}`
+          : `Invalid password for user: ${email}`
+      );
+      return res
+        .status(401)
+        .json({ success: false, error: "Invalid credentials" });
+    }
 
     // Generate JWT
     const token = jwt.sign(
@@ -76,10 +95,10 @@ export const handleLogin = async (req, res) => {
 };
 
 // Get user profile (protected route)
-export const getUserProfile = async (req, res) => {
-    try {
-        // User data is already attached by authenticateToken
-        const user = req.user;
+const getUserProfile = async (req, res) => {
+  try {
+    // User data is already attached by authenticateToken
+    const user = req.user;
 
     return res.status(200).json({ success: true, user });
   } catch (error) {
@@ -91,9 +110,9 @@ export const getUserProfile = async (req, res) => {
 };
 
 // Logout handler
-export const handleLogout = (req, res) => {
-    req.session.destroy();
-    return res
-        .status(200)
-        .json({ success: true, message: "Logout successful" });
+const handleLogout = (req, res) => {
+  req.session.destroy();
+  return res.status(200).json({ success: true, message: "Logout successful" });
 };
+
+export { getUserProfile, handleLogin, handleLogout };
