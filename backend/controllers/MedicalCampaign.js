@@ -3,13 +3,21 @@ const prisma = new PrismaClient();
 
 // Tạo campaign mới
 export const createMedicalCampaign = async (req, res) => {
-    const { name, checkTypes, scheduledDate, deadline, description } = req.body;
-    if (!name || !checkTypes || !scheduledDate || !deadline) {
+    const {
+        name,
+        checkTypes,
+        scheduledDate,
+        deadline,
+        description,
+        targetGrades,
+    } = req.body;
+    if (!name || !checkTypes || !targetGrades || !scheduledDate || !deadline) {
         return res.status(400).json({
             success: false,
             error: "Thiếu trường dữ liệu bắt buộc",
         });
     }
+    // Kiểm tra deadline phải cách scheduledDate ít nhất 1 tuần
     const start = new Date(scheduledDate);
     const end = new Date(deadline);
     if (end - start < 7 * 24 * 60 * 60 * 1000) {
@@ -31,10 +39,13 @@ export const createMedicalCampaign = async (req, res) => {
         const campaign = await prisma.medicalCheckCampaign.create({
             data: {
                 name,
+                description: description || null,
                 checkTypes,
+                targetGrades,
                 scheduledDate: start,
                 deadline: end,
-                description: description || "",
+                status: status || "ACTIVE",
+                isActive: typeof isActive === "boolean" ? isActive : true,
             },
         });
         res.status(201).json({
@@ -49,7 +60,11 @@ export const createMedicalCampaign = async (req, res) => {
 // Lấy tất cả campaign
 export const getAllMedicalCampaigns = async (req, res) => {
     try {
-        const campaigns = await prisma.medicalCheckCampaign.findMany();
+        const campaigns = await prisma.medicalCheckCampaign.findMany({
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
         res.status(200).json({ success: true, data: campaigns });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
@@ -78,7 +93,7 @@ export const getMedicalCampaignById = async (req, res) => {
 // Cập nhật campaign
 export const updateMedicalCampaign = async (req, res) => {
     const { id } = req.params;
-    const { name, checkTypes, scheduledDate, deadline, description } = req.body;
+    const { name, description, targetGrades, status } = req.body;
     try {
         const campaign = await prisma.medicalCheckCampaign.findUnique({
             where: { id },
@@ -104,12 +119,15 @@ export const updateMedicalCampaign = async (req, res) => {
             where: { id },
             data: {
                 ...(name && { name }),
+                ...(description !== undefined && { description }),
                 ...(checkTypes && { checkTypes }),
+                ...(targetGrades && { targetGrades }),
                 ...(scheduledDate && {
                     scheduledDate: new Date(scheduledDate),
                 }),
                 ...(deadline && { deadline: new Date(deadline) }),
-                ...(description !== undefined && { description }),
+                ...(status && { status }),
+                ...(typeof isActive === "boolean" && { isActive }),
             },
         });
         res.status(200).json({ success: true, data: updated });
