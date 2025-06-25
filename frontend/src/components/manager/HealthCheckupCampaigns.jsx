@@ -22,7 +22,9 @@ import {
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
+import { Formik } from "formik";
 import { useEffect, useState } from "react";
+import * as Yup from "yup";
 
 const { TextArea } = Input;
 
@@ -41,6 +43,31 @@ const HealthCheckupCampaigns = () => {
     Authorization: `Bearer ${getAuthToken()}`,
   });
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "ACTIVE":
+        return "blue";
+      case "FINISHED":
+        return "green";
+      case "CANCELLED":
+        return "red";
+      default:
+        return "default";
+    }
+  };
+  const getStatusText = (status) => {
+    switch (status) {
+      case "ACTIVE":
+        return "Đang diễn ra";
+      case "FINISHED":
+        return "Hoàn thành";
+      case "CANCELLED":
+        return "Đã hủy";
+      default:
+        return status;
+    }
+  };
+
   // Fetch all campaigns
   const fetchCampaigns = async () => {
     setLoading(true);
@@ -52,15 +79,12 @@ const HealthCheckupCampaigns = () => {
         const mapped = (res.data.data || []).map((c) => ({
           id: c.id,
           name: c.name,
-          type: Array.isArray(c.checkTypes)
-            ? c.checkTypes.join(", ")
-            : c.checkTypes,
-          startDate: c.scheduledDate
-            ? dayjs(c.scheduledDate).format("YYYY-MM-DD")
-            : "",
-          endDate: c.deadline ? dayjs(c.deadline).format("YYYY-MM-DD") : "",
-          status: getStatusFromDates(c.scheduledDate, c.deadline),
-          studentCount: c.studentCount || "-",
+          checkTypes: c.checkTypes,
+          targetGrades: c.targetGrades || [],
+          scheduledDate: c.scheduledDate,
+          deadline: c.deadline,
+          status: c.status,
+          isActive: c.isActive,
           description: c.description,
           raw: c,
         }));
@@ -74,16 +98,6 @@ const HealthCheckupCampaigns = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getStatusFromDates = (start, end) => {
-    const now = dayjs();
-    if (!start || !end) return "pending";
-    const s = dayjs(start);
-    const e = dayjs(end);
-    if (now.isBefore(s)) return "pending";
-    if (now.isAfter(e)) return "completed";
-    return "in_progress";
   };
 
   // Create campaign
@@ -101,7 +115,9 @@ const HealthCheckupCampaigns = () => {
         return false;
       }
     } catch (err) {
-      message.error(err.response?.data?.error || "Không thể thêm chiến dịch");
+      // Hiển thị lỗi trả về từ backend nếu có
+      const backendMsg = err.response?.data?.error;
+      message.error(backendMsg || "Không thể thêm chiến dịch");
       return false;
     }
   };
@@ -121,9 +137,9 @@ const HealthCheckupCampaigns = () => {
         return false;
       }
     } catch (err) {
-      message.error(
-        err.response?.data?.error || "Không thể cập nhật chiến dịch"
-      );
+      // Hiển thị lỗi trả về từ backend nếu có
+      const backendMsg = err.response?.data?.error;
+      message.error(backendMsg || "Không thể cập nhật chiến dịch");
       return false;
     }
   };
@@ -164,46 +180,52 @@ const HealthCheckupCampaigns = () => {
       key: "name",
     },
     {
+      title: "Khối áp dụng",
+      dataIndex: "targetGrades",
+      key: "targetGrades",
+      render: (grades) => (
+        <Space>
+          {(grades || []).map((g) => (
+            <Tag color="geekblue" key={g}>
+              {g}
+            </Tag>
+          ))}
+        </Space>
+      ),
+    },
+    {
       title: "Loại khám",
-      dataIndex: "type",
-      key: "type",
+      dataIndex: "checkTypes",
+      key: "checkTypes",
+      render: (types) => (
+        <Space>
+          {(types || []).map((t) => (
+            <Tag color="purple" key={t}>
+              {t}
+            </Tag>
+          ))}
+        </Space>
+      ),
     },
     {
       title: "Ngày bắt đầu",
-      dataIndex: "startDate",
-      key: "startDate",
+      dataIndex: "scheduledDate",
+      key: "scheduledDate",
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : ""),
     },
     {
       title: "Ngày kết thúc",
-      dataIndex: "endDate",
-      key: "endDate",
+      dataIndex: "deadline",
+      key: "deadline",
+      render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : ""),
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
-        <Tag
-          color={
-            status === "completed"
-              ? "green"
-              : status === "in_progress"
-              ? "blue"
-              : "orange"
-          }
-        >
-          {status === "completed"
-            ? "Hoàn thành"
-            : status === "in_progress"
-            ? "Đang diễn ra"
-            : "Chưa bắt đầu"}
-        </Tag>
+        <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
       ),
-    },
-    {
-      title: "Số học sinh",
-      dataIndex: "studentCount",
-      key: "studentCount",
     },
     {
       title: "Thao tác",
@@ -234,10 +256,9 @@ const HealthCheckupCampaigns = () => {
     setSelectedCampaign(record);
     campaignForm.setFieldsValue({
       name: record.name,
-      checkTypes: record.type ? record.type.split(", ") : [],
-      scheduledDate: record.startDate ? dayjs(record.startDate) : null,
-      deadline: record.endDate ? dayjs(record.endDate) : null,
       description: record.description,
+      targetGrades: record.targetGrades,
+      status: record.status,
     });
     setIsModalVisible(true);
   };
@@ -267,35 +288,6 @@ const HealthCheckupCampaigns = () => {
   const handleResetFilters = () => {
     searchForm.resetFields();
     setCampaigns(allCampaigns);
-  };
-
-  // Submit (add/edit)
-  const handleSubmit = async () => {
-    try {
-      const values = await campaignForm.validateFields();
-      const data = {
-        name: values.name,
-        checkTypes: values.checkTypes,
-        scheduledDate: values.scheduledDate
-          ? values.scheduledDate.toISOString()
-          : null,
-        deadline: values.deadline ? values.deadline.toISOString() : null,
-        description: values.description,
-      };
-      let success = false;
-      if (selectedCampaign) {
-        success = await updateCampaign(selectedCampaign.id, data);
-      } else {
-        success = await createCampaign(data);
-      }
-      if (success) {
-        setIsModalVisible(false);
-        campaignForm.resetFields();
-        setSelectedCampaign(null);
-      }
-    } catch {
-      message.error("Có lỗi xảy ra khi gửi dữ liệu!");
-    }
   };
 
   return (
@@ -337,10 +329,9 @@ const HealthCheckupCampaigns = () => {
             <Col xs={24} sm={8}>
               <Form.Item name="status" label="Trạng thái">
                 <Select placeholder="Chọn trạng thái" allowClear>
-                  <Select.Option value="completed">Hoàn thành</Select.Option>
-                  <Select.Option value="in_progress">
-                    Đang diễn ra
-                  </Select.Option>
+                  <Select.Option value="ACTIVE">Đang diễn ra</Select.Option>
+                  <Select.Option value="FINISHED">Hoàn thành</Select.Option>
+                  <Select.Option value="CANCELLED">Đã hủy</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -380,70 +371,276 @@ const HealthCheckupCampaigns = () => {
             : "Thêm chiến dịch khám sức khỏe"
         }
         open={isModalVisible}
-        onOk={handleSubmit}
         onCancel={() => {
           setIsModalVisible(false);
           campaignForm.resetFields();
           setSelectedCampaign(null);
         }}
         width={600}
-        okText={selectedCampaign ? "Cập nhật" : "Thêm"}
-        cancelText="Hủy"
+        footer={null}
       >
-        <Form form={campaignForm} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Tên chiến dịch"
-            rules={[
-              { required: true, message: "Vui lòng nhập tên chiến dịch" },
-            ]}
-          >
-            <Input placeholder="Nhập tên chiến dịch" />
-          </Form.Item>
-
-          <Form.Item
-            name="checkTypes"
-            label="Loại khám"
-            rules={[{ required: true, message: "Vui lòng chọn loại khám" }]}
-          >
-            <Select mode="multiple" placeholder="Chọn loại khám">
-              <Select.Option value="Khám tổng quát">
-                Khám tổng quát
-              </Select.Option>
-              <Select.Option value="Khám mắt">Khám mắt</Select.Option>
-              <Select.Option value="Khám răng">Khám răng</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
+        <Formik
+          initialValues={
+            selectedCampaign
+              ? {
+                  name: selectedCampaign.name,
+                  description: selectedCampaign.description,
+                  targetGrades: selectedCampaign.targetGrades || [],
+                  checkTypes: selectedCampaign.checkTypes || [],
+                  scheduledDate: selectedCampaign.scheduledDate
+                    ? dayjs(selectedCampaign.scheduledDate)
+                    : null,
+                  deadline: selectedCampaign.deadline
+                    ? dayjs(selectedCampaign.deadline)
+                    : null,
+                  status: selectedCampaign.status,
+                }
+              : {
+                  name: "",
+                  description: "",
+                  targetGrades: [],
+                  checkTypes: [],
+                  scheduledDate: null,
+                  deadline: null,
+                  status: "ACTIVE",
+                }
+          }
+          enableReinitialize
+          validationSchema={Yup.object({
+            name: Yup.string().required("Vui lòng nhập tên chiến dịch"),
+            description: Yup.string(),
+            targetGrades: Yup.array().min(1, "Vui lòng chọn khối áp dụng"),
+            checkTypes: Yup.array().min(1, "Vui lòng chọn loại khám"),
+            scheduledDate: Yup.date().required("Vui lòng chọn ngày bắt đầu"),
+            deadline: Yup.date()
+              .required("Vui lòng chọn ngày kết thúc")
+              .test(
+                "is-at-least-7-days",
+                "Ngày kết thúc phải cách ngày bắt đầu ít nhất 1 tuần",
+                function (value) {
+                  const { scheduledDate } = this.parent;
+                  if (!scheduledDate || !value) return true;
+                  const start = new Date(scheduledDate);
+                  const end = new Date(value);
+                  return end - start >= 7 * 24 * 60 * 60 * 1000;
+                }
+              ),
+            status: Yup.string().required("Vui lòng chọn trạng thái"),
+          })}
+          onSubmit={async (values, { setSubmitting }) => {
+            let data = {
+              name: values.name,
+              description: values.description,
+              targetGrades: values.targetGrades,
+              checkTypes: values.checkTypes,
+              scheduledDate: values.scheduledDate
+                ? typeof values.scheduledDate === "string"
+                  ? values.scheduledDate
+                  : values.scheduledDate.toISOString()
+                : "",
+              deadline: values.deadline
+                ? typeof values.deadline === "string"
+                  ? values.deadline
+                  : values.deadline.toISOString()
+                : "",
+              status: values.status,
+            };
+            let success = false;
+            if (selectedCampaign) {
+              success = await updateCampaign(selectedCampaign.id, data);
+            } else {
+              success = await createCampaign(data);
+            }
+            setSubmitting(false);
+            if (success) {
+              setIsModalVisible(false);
+              campaignForm.resetFields();
+              setSelectedCampaign(null);
+            }
+          }}
+        >
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            handleSubmit,
+            setFieldValue,
+            isSubmitting,
+          }) => (
+            <Form layout="vertical" onFinish={handleSubmit}>
               <Form.Item
-                name="scheduledDate"
-                label="Ngày bắt đầu"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày bắt đầu" },
-                ]}
+                label="Tên chiến dịch"
+                help={touched.name && errors.name ? errors.name : undefined}
+                validateStatus={
+                  touched.name && errors.name ? "error" : undefined
+                }
               >
-                <DatePicker style={{ width: "100%" }} />
+                <Input
+                  name="name"
+                  value={values.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  disabled={false}
+                />
               </Form.Item>
-            </Col>
-            <Col span={12}>
               <Form.Item
-                name="deadline"
-                label="Ngày kết thúc"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày kết thúc" },
-                ]}
+                label="Mô tả"
+                help={
+                  touched.description && errors.description
+                    ? errors.description
+                    : undefined
+                }
+                validateStatus={
+                  touched.description && errors.description
+                    ? "error"
+                    : undefined
+                }
               >
-                <DatePicker style={{ width: "100%" }} />
+                <TextArea
+                  name="description"
+                  value={values.description}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
               </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="description" label="Mô tả">
-            <TextArea rows={4} placeholder="Nhập mô tả chiến dịch (nếu có)" />
-          </Form.Item>
-        </Form>
+              <Form.Item
+                label="Khối áp dụng"
+                help={
+                  touched.targetGrades && errors.targetGrades
+                    ? errors.targetGrades
+                    : undefined
+                }
+                validateStatus={
+                  touched.targetGrades && errors.targetGrades
+                    ? "error"
+                    : undefined
+                }
+              >
+                <Select
+                  mode="multiple"
+                  value={values.targetGrades}
+                  onChange={(val) => setFieldValue("targetGrades", val)}
+                  onBlur={handleBlur}
+                  options={["1", "2", "3", "4", "5"].map((g) => ({
+                    label: g,
+                    value: g,
+                  }))}
+                />
+              </Form.Item>
+              <Form.Item
+                label="Loại khám"
+                help={
+                  touched.checkTypes && errors.checkTypes
+                    ? errors.checkTypes
+                    : undefined
+                }
+                validateStatus={
+                  touched.checkTypes && errors.checkTypes ? "error" : undefined
+                }
+              >
+                <Select
+                  mode="multiple"
+                  value={values.checkTypes}
+                  onChange={(val) => setFieldValue("checkTypes", val)}
+                  onBlur={handleBlur}
+                  options={[
+                    { label: "Khám tổng quát", value: "Khám tổng quát" },
+                    { label: "Khám mắt", value: "Khám mắt" },
+                    { label: "Khám răng", value: "Khám răng" },
+                  ]}
+                  disabled={!!selectedCampaign}
+                />
+              </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="Ngày bắt đầu"
+                    help={
+                      touched.scheduledDate && errors.scheduledDate
+                        ? errors.scheduledDate
+                        : undefined
+                    }
+                    validateStatus={
+                      touched.scheduledDate && errors.scheduledDate
+                        ? "error"
+                        : undefined
+                    }
+                  >
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      value={
+                        values.scheduledDate
+                          ? dayjs(values.scheduledDate)
+                          : null
+                      }
+                      onChange={(date) => setFieldValue("scheduledDate", date)}
+                      onBlur={handleBlur}
+                      disabled={!!selectedCampaign}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    label="Ngày kết thúc"
+                    help={
+                      touched.deadline && errors.deadline
+                        ? errors.deadline
+                        : undefined
+                    }
+                    validateStatus={
+                      touched.deadline && errors.deadline ? "error" : undefined
+                    }
+                  >
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      value={values.deadline ? dayjs(values.deadline) : null}
+                      onChange={(date) => setFieldValue("deadline", date)}
+                      onBlur={handleBlur}
+                      disabled={!!selectedCampaign}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item
+                label="Trạng thái"
+                help={
+                  touched.status && errors.status ? errors.status : undefined
+                }
+                validateStatus={
+                  touched.status && errors.status ? "error" : undefined
+                }
+              >
+                <Select
+                  value={values.status}
+                  onChange={(val) => setFieldValue("status", val)}
+                  onBlur={handleBlur}
+                  options={[
+                    { label: "Đang diễn ra", value: "ACTIVE" },
+                    { label: "Hoàn thành", value: "FINISHED" },
+                    { label: "Đã hủy", value: "CANCELLED" },
+                  ]}
+                />
+              </Form.Item>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" loading={isSubmitting}>
+                  {selectedCampaign ? "Cập nhật" : "Thêm"}
+                </Button>
+                <Button
+                  style={{ marginLeft: 8 }}
+                  onClick={() => {
+                    setIsModalVisible(false);
+                    campaignForm.resetFields();
+                    setSelectedCampaign(null);
+                  }}
+                >
+                  Hủy
+                </Button>
+              </Form.Item>
+            </Form>
+          )}
+        </Formik>
       </Modal>
     </div>
   );
