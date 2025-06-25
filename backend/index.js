@@ -4,6 +4,7 @@ import express from "express";
 import connectToDatabase from "./db/db.js";
 import AdminRoutes from "./routes/AdminRoutes.js";
 import authRouter from "./routes/auth.js";
+import NotificationRoutes from "./routes/NotificationRoutes.js";
 import NurseRoutes from "./routes/NurseRoutes.js";
 import parentRoutes from "./routes/parentRoutes.js";
 import UserRoutes from "./routes/UserRoutes.js";
@@ -35,6 +36,7 @@ app.use("/api/manager/vaccination-campaigns", VaccinationCampaignRoutes);
 app.use("/api/manager/vaccination", VaccinationRoutes);
 app.use("/api/parents", parentRoutes);
 app.use("/api/manager/students", ManagerStudentRoutes);
+app.use("/api/notifications", NotificationRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {

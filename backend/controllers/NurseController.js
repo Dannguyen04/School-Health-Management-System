@@ -689,6 +689,45 @@ export const createMedicalEvent = async (req, res) => {
             },
         });
 
+        // Tự động gửi thông báo cho phụ huynh
+        try {
+            // Lấy danh sách phụ huynh của học sinh
+            const studentParents = await prisma.studentParent.findMany({
+                where: {
+                    studentId: studentId,
+                },
+                include: {
+                    parent: {
+                        include: {
+                            user: {
+                                select: {
+                                    id: true,
+                                    fullName: true,
+                                },
+                            },
+                        },
+                    },
+                },
+            });
+
+            // Gửi thông báo cho từng phụ huynh
+            for (const studentParent of studentParents) {
+                await prisma.notification.create({
+                    data: {
+                        userId: studentParent.parent.user.id,
+                        title: `Sự kiện y tế - ${newEvent.student.user.fullName}`,
+                        message: `Học sinh ${newEvent.student.user.fullName} đã có sự kiện y tế: ${title}. Mức độ: ${severity}. Vui lòng liên hệ với nhà trường để biết thêm chi tiết.`,
+                        type: "medical_event",
+                        status: "SENT",
+                        sentAt: new Date(),
+                    },
+                });
+            }
+        } catch (notificationError) {
+            console.error("Error sending notifications:", notificationError);
+            // Không fail toàn bộ request nếu gửi thông báo thất bại
+        }
+
         const formattedEvent = {
             id: newEvent.id,
             studentId: newEvent.student.id,

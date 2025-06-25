@@ -64,6 +64,7 @@ enum NotificationStatus {
   DELIVERED
   READ
   EXPIRED
+  ARCHIVED
 }
 
 enum VaccineRequirement {
@@ -497,6 +498,7 @@ model Notification {
   scheduledAt           DateTime?
   sentAt                DateTime?
   readAt                DateTime?
+  archivedAt            DateTime?
   
   createdAt             DateTime           @default(now())
 
