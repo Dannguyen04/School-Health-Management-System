@@ -160,8 +160,6 @@ const StudentHealthProfile = () => {
 
   const handleSaveProfile = async (values) => {
     try {
-      // TODO: Replace with actual API call
-      // await nurseAPI.updateHealthProfile(selectedStudent.id, values);
       console.log("Saving health profile:", values);
 
       // Update local state

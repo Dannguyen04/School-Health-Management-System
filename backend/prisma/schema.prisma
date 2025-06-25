@@ -64,6 +64,7 @@ enum NotificationStatus {
   DELIVERED
   READ
   EXPIRED
+  ARCHIVED
 }
 
 enum VaccineRequirement {
@@ -396,6 +397,7 @@ model MedicalCheckCampaign {
   scheduledDate DateTime
   deadline     DateTime
   isActive     Boolean  @default(true)
+  status       CampaignStatus @default(ACTIVE)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -497,6 +499,7 @@ model Notification {
   scheduledAt           DateTime?
   sentAt                DateTime?
   readAt                DateTime?
+  archivedAt            DateTime?
   
   createdAt             DateTime           @default(now())
 

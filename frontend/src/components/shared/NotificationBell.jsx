@@ -1,65 +1,43 @@
 import {
-    Card,
+    Badge,
+    Dropdown,
     List,
+    Button,
     message,
     Spin,
-    Typography,
-    Button,
-    Space,
-    Badge,
     Modal,
     Descriptions,
     Tag,
+    Typography,
 } from "antd";
 import {
+    BellOutlined,
     CheckOutlined,
     DeleteOutlined,
     EyeOutlined,
-    InboxOutlined,
     UndoOutlined,
+    InboxOutlined,
 } from "@ant-design/icons";
 import moment from "moment";
 import React, { useEffect, useState } from "react";
 import { parentAPI } from "../../utils/api.js";
 
-const { Text, Title } = Typography;
+const { Text } = Typography;
+const { Title } = Typography;
 
-const NotificationDisplay = ({ userId, type, status }) => {
+const NotificationBell = () => {
     const [notifications, setNotifications] = useState([]);
-    const [loading, setLoading] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [loading, setLoading] = useState(false);
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState(null);
     const [medicalEventDetails, setMedicalEventDetails] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
     useEffect(() => {
-        if (userId) {
-            fetchNotifications();
-            if (!status || status !== "ARCHIVED") {
-                fetchUnreadCount();
-            }
-        }
-    }, [userId, type, status]);
-
-    const fetchNotifications = async () => {
-        try {
-            setLoading(true);
-            const params = {};
-            if (type) {
-                params.type = type;
-            }
-            const response = await parentAPI.getNotifications(params);
-            if (response.data.success) {
-                setNotifications(response.data.data);
-            }
-        } catch (error) {
-            console.error("Error fetching notifications:", error);
-            message.error("Không thể lấy danh sách thông báo");
-        } finally {
-            setLoading(false);
-        }
-    };
+        fetchUnreadCount();
+        fetchRecentNotifications();
+    }, []);
 
     const fetchUnreadCount = async () => {
         try {
@@ -72,38 +50,53 @@ const NotificationDisplay = ({ userId, type, status }) => {
         }
     };
 
-    const handleMarkAsRead = async (notificationId) => {
+    const fetchRecentNotifications = async () => {
         try {
-            const response = await parentAPI.updateNotificationStatus(
-                notificationId,
-                "READ"
-            );
+            setLoading(true);
+            const response = await parentAPI.getNotifications({ limit: 5 });
             if (response.data.success) {
-                message.success("Đã đánh dấu đã đọc");
-                fetchNotifications();
-                fetchUnreadCount();
+                setNotifications(response.data.data);
             }
         } catch (error) {
-            console.error("Error marking notification as read:", error);
-            message.error("Lỗi khi đánh dấu đã đọc");
+            console.error("Error fetching notifications:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
-    const handleDeleteNotification = async (notificationId) => {
+    const handleMarkAsRead = async (notificationId) => {
         try {
-            const response = await parentAPI.deleteNotification(notificationId);
-            if (response.data.success) {
-                message.success("Đã xóa thông báo");
-                fetchNotifications();
-                fetchUnreadCount();
-                if (selectedNotification?.id === notificationId) {
-                    setDetailModalVisible(false);
-                    setSelectedNotification(null);
-                }
-            }
+            await parentAPI.updateNotificationStatus(notificationId, "READ");
+            fetchUnreadCount();
+            fetchRecentNotifications();
         } catch (error) {
-            console.error("Error deleting notification:", error);
-            message.error("Lỗi khi xóa thông báo");
+            console.error("Error marking notification as read:", error);
+        }
+    };
+
+    const handleArchiveNotification = async (notificationId) => {
+        try {
+            await parentAPI.archiveNotification(notificationId);
+            setDetailModalVisible(false);
+            setSelectedNotification(null);
+            setMedicalEventDetails(null);
+            fetchUnreadCount();
+            fetchRecentNotifications();
+        } catch (error) {
+            console.error("Error archiving notification:", error);
+        }
+    };
+
+    const handleRestoreNotification = async (notificationId) => {
+        try {
+            await parentAPI.restoreNotification(notificationId);
+            setDetailModalVisible(false);
+            setSelectedNotification(null);
+            setMedicalEventDetails(null);
+            fetchUnreadCount();
+            fetchRecentNotifications();
+        } catch (error) {
+            console.error("Error restoring notification:", error);
         }
     };
 
@@ -154,21 +147,6 @@ const NotificationDisplay = ({ userId, type, status }) => {
                 return "💊";
             default:
                 return "📢";
-        }
-    };
-
-    const getSeverityColor = (severity) => {
-        switch (severity?.toLowerCase()) {
-            case "critical":
-                return "red";
-            case "high":
-                return "orange";
-            case "medium":
-                return "yellow";
-            case "low":
-                return "green";
-            default:
-                return "blue";
         }
     };
 
@@ -236,6 +214,21 @@ const NotificationDisplay = ({ userId, type, status }) => {
         }
     };
 
+    const getSeverityColor = (severity) => {
+        switch (severity?.toLowerCase()) {
+            case "critical":
+                return "red";
+            case "high":
+                return "orange";
+            case "medium":
+                return "yellow";
+            case "low":
+                return "green";
+            default:
+                return "blue";
+        }
+    };
+
     const getSeverityLabel = (severity) => {
         switch ((severity || "").toLowerCase()) {
             case "critical":
@@ -251,159 +244,171 @@ const NotificationDisplay = ({ userId, type, status }) => {
         }
     };
 
-    if (loading) {
-        return (
-            <div style={{ textAlign: "center", padding: "24px" }}>
-                <Spin size="large" />
-            </div>
-        );
-    }
-
-    return (
-        <>
-            <Card style={{ marginTop: 24 }}>
+    const notificationItems = [
+        {
+            key: "header",
+            label: (
                 <div
                     style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: 16,
+                        padding: "8px 16px",
+                        borderBottom: "1px solid #f0f0f0",
                     }}
                 >
-                    <Title level={4}>Thông báo của bạn</Title>
+                    <strong>Thông báo gần đây</strong>
                     {unreadCount > 0 && (
                         <Badge
                             count={unreadCount}
-                            style={{ backgroundColor: "#52c41a" }}
-                        >
-                            <span style={{ fontSize: "14px", color: "#666" }}>
-                                Chưa đọc
-                            </span>
-                        </Badge>
+                            style={{
+                                marginLeft: 8,
+                                backgroundColor: "#52c41a",
+                            }}
+                        />
                     )}
                 </div>
-
-                {notifications.length > 0 ? (
-                    <List
-                        itemLayout="horizontal"
-                        dataSource={notifications}
-                        renderItem={(item) => (
-                            <List.Item
+            ),
+            disabled: true,
+        },
+        ...notifications.map((notification) => ({
+            key: notification.id,
+            label: (
+                <div style={{ padding: "8px 16px", minWidth: 300 }}>
+                    <div
+                        style={{
+                            display: "flex",
+                            alignItems: "flex-start",
+                            gap: "8px",
+                        }}
+                    >
+                        <div style={{ fontSize: "20px", marginTop: "2px" }}>
+                            {getNotificationIcon(notification.type)}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <div
                                 style={{
-                                    backgroundColor:
-                                        item.status === "READ"
-                                            ? "#fafafa"
-                                            : "#fff",
-                                    border:
-                                        item.status === "READ"
-                                            ? "1px solid #f0f0f0"
-                                            : "1px solid #d9d9d9",
-                                    borderRadius: "8px",
-                                    marginBottom: "8px",
-                                    padding: "12px",
+                                    fontWeight:
+                                        notification.status !== "READ"
+                                            ? "bold"
+                                            : "normal",
+                                    marginBottom: "4px",
                                     cursor: "pointer",
                                 }}
-                                onClick={() => handleViewDetail(item)}
-                                actions={[
+                                onClick={() => handleViewDetail(notification)}
+                            >
+                                {notification.title}
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: "12px",
+                                    color: "#666",
+                                    marginBottom: "4px",
+                                    lineHeight: "1.4",
+                                }}
+                            >
+                                {notification.message}
+                            </div>
+                            <div
+                                style={{
+                                    fontSize: "11px",
+                                    color: "#999",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "center",
+                                }}
+                            >
+                                <span>
+                                    {moment(notification.createdAt).format(
+                                        "DD/MM HH:mm"
+                                    )}
+                                </span>
+                                <div>
                                     <Button
                                         type="text"
+                                        size="small"
                                         icon={<EyeOutlined />}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleViewDetail(item);
+                                            handleViewDetail(notification);
                                         }}
                                         title="Xem chi tiết"
-                                    />,
-                                    item.status !== "READ" && (
+                                    />
+                                    {notification.status !== "READ" && (
                                         <Button
                                             type="text"
+                                            size="small"
                                             icon={<CheckOutlined />}
                                             onClick={(e) => {
                                                 e.stopPropagation();
-                                                handleMarkAsRead(item.id);
+                                                handleMarkAsRead(
+                                                    notification.id
+                                                );
                                             }}
                                             title="Đánh dấu đã đọc"
                                         />
-                                    ),
+                                    )}
                                     <Button
                                         type="text"
+                                        size="small"
                                         icon={<DeleteOutlined />}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDeleteNotification(item.id);
+                                            handleDeleteNotification(
+                                                notification.id
+                                            );
                                         }}
                                         title="Xóa thông báo"
                                         danger
-                                    />,
-                                ].filter(Boolean)}
-                            >
-                                <List.Item.Meta
-                                    avatar={
-                                        <div style={{ fontSize: "24px" }}>
-                                            {getNotificationIcon(item.type)}
-                                        </div>
-                                    }
-                                    title={
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "8px",
-                                            }}
-                                        >
-                                            <Text
-                                                strong={item.status !== "READ"}
-                                            >
-                                                {item.title}
-                                            </Text>
-                                            {item.status !== "READ" && (
-                                                <Badge
-                                                    status="processing"
-                                                    text="Mới"
-                                                />
-                                            )}
-                                            <Tag
-                                                color={getStatusColor(
-                                                    item.status
-                                                )}
-                                            >
-                                                {item.status === "READ"
-                                                    ? "Đã đọc"
-                                                    : "Chưa đọc"}
-                                            </Tag>
-                                        </div>
-                                    }
-                                    description={
-                                        <div>
-                                            <Text>{item.message}</Text>
-                                            <br />
-                                            <Space style={{ marginTop: "8px" }}>
-                                                <Text
-                                                    type="secondary"
-                                                    style={{ fontSize: "12px" }}
-                                                >
-                                                    {moment(
-                                                        item.createdAt
-                                                    ).format(
-                                                        "DD/MM/YYYY HH:mm"
-                                                    )}
-                                                </Text>
-                                                <Tag color="blue">
-                                                    {getTypeLabel(item.type)}
-                                                </Tag>
-                                            </Space>
-                                        </div>
-                                    }
-                                />
-                            </List.Item>
-                        )}
-                    />
-                ) : (
-                    <div style={{ textAlign: "center", padding: "24px" }}>
-                        <Text type="secondary">Không có thông báo nào.</Text>
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                )}
-            </Card>
+                </div>
+            ),
+        })),
+        {
+            key: "empty",
+            label:
+                notifications.length === 0 ? (
+                    <div
+                        style={{
+                            padding: "16px",
+                            textAlign: "center",
+                            color: "#999",
+                        }}
+                    >
+                        {loading ? (
+                            <Spin size="small" />
+                        ) : (
+                            "Không có thông báo nào"
+                        )}
+                    </div>
+                ) : null,
+            disabled: true,
+        },
+    ].filter(Boolean);
+
+    return (
+        <>
+            <Dropdown
+                menu={{ items: notificationItems }}
+                placement="bottomRight"
+                trigger={["click"]}
+                overlayStyle={{ maxHeight: "400px", overflow: "auto" }}
+            >
+                <Badge count={unreadCount} size="small">
+                    <Button
+                        type="text"
+                        icon={<BellOutlined style={{ fontSize: "18px" }} />}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            width: "40px",
+                            height: "40px",
+                        }}
+                    />
+                </Badge>
+            </Dropdown>
 
             <Modal
                 title={
@@ -763,4 +768,4 @@ const NotificationDisplay = ({ userId, type, status }) => {
     );
 };
 
-export default NotificationDisplay;
+export default NotificationBell;

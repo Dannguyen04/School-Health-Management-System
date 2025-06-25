@@ -84,6 +84,9 @@ const getAllVaccinationCampaigns = async (req, res) => {
             include: {
                 vaccine: true,
             },
+            orderBy: {
+                createdAt: "desc",
+            },
         });
         res.status(200).json({ success: true, data: campaigns });
     } catch (error) {

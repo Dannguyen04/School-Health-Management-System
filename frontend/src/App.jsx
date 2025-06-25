@@ -33,6 +33,7 @@ import VaccineConsentForm from "./components/user/ConsentForms";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
 import MedicineInfo from "./components/user/MedicineInfo";
+import Notifications from "./components/user/Notifications";
 import VaccinationSchedule from "./components/user/VaccinationSchedule";
 import AdminLayout from "./layouts/Admin";
 import ManagerLayout from "./layouts/Manager";
@@ -68,7 +69,7 @@ const App = () => {
           />
           <Route path="medical-inventory" element={<MedicalInventory />} />
           <Route path="student-treatment" element={<StudentTreatment />} />
-          <Route path="vaccination" element={<Vaccination />} />
+          <Route path="vaccination-report" element={<Vaccination />} />
           <Route path="health-checkups" element={<HealthCheckups />} />
           <Route path="confirmed-medicines" element={<ConfirmedMedicines />} />
           <Route path="medical-event" element={<MedicalEventReport />} />
@@ -147,6 +148,7 @@ const App = () => {
             path="vaccination-schedule"
             element={<VaccinationSchedule />}
           />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="profile" element={<UserProfile />} />
         </Route>
       </Routes>

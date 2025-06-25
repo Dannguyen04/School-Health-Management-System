@@ -84,7 +84,7 @@ const HealthCheckupResults = () => {
   };
 
   return (
-    <div className="min-h-screen flex justify-center items-start bg-[#f6fcfa] py-10">
+    <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa] ">
       <div className="w-full max-w-5xl mx-auto px-4">
         <Card
           className="w-full rounded-3xl shadow-lg border-0 mt-12"

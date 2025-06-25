@@ -2,6 +2,7 @@ import { UserOutlined } from "@ant-design/icons";
 import { Avatar, Dropdown } from "antd";
 import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import NotificationBell from "../shared/NotificationBell";
 
 const Navbar = () => {
   const [menu, setMenu] = useState(false);
@@ -31,6 +32,11 @@ const Navbar = () => {
       onClick: () => navigate("/user/profile"),
     },
     {
+      key: "notifications",
+      label: "Thông báo",
+      onClick: () => navigate("/user/notifications"),
+    },
+    {
       key: "logout",
       label: "Đăng xuất",
       onClick: handleLogout,
@@ -46,37 +52,38 @@ const Navbar = () => {
               <h1 className=" text-2xl font-semibold">Sức Khỏe Học Đường</h1>
             </span>
           </div>
-          <nav className=" hidden lg:flex flex-row items-center text-lg font-medium gap-8">
+          <nav className=" hidden lg:flex flex-row items-center text-lg font-medium gap-5 whitespace-nowrap">
             <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
+              className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
               onClick={() => handleNav("home")}
             >
               Trang chủ
             </span>
             <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
+              className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
               onClick={() => handleNav("about")}
             >
               Giới thiệu
             </span>
             <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
+              className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
               onClick={() => handleNav("services")}
             >
               Dịch vụ
             </span>
             <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("doctors")}
-            >
-              Đội ngũ bác sĩ
-            </span>
-            <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
+              className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
               onClick={() => handleNav("blog")}
             >
               Tin tức
             </span>
+            <span
+              className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
+              onClick={() => navigate("/user/notifications")}
+            >
+              Thông báo
+            </span>
+            <NotificationBell />
             <Dropdown
               menu={{ items: userMenuItems }}
               placement="bottomRight"
@@ -120,6 +127,12 @@ const Navbar = () => {
             onClick={() => handleNav("blog")}
           >
             Tin tức
+          </span>
+          <span
+            className=" hover:text-[#FFC000] transition-all cursor-pointer"
+            onClick={() => navigate("/user/notifications")}
+          >
+            Thông báo
           </span>
 
           <Dropdown

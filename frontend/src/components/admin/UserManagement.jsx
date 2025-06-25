@@ -16,47 +16,71 @@ import {
   Row,
   Select,
   Space,
-  Spin,
   Table,
   Tag,
   Tooltip,
 } from "antd";
 import axios from "axios";
+import { Formik } from "formik";
 import { useEffect, useState } from "react";
+import * as Yup from "yup";
 
 const { Option } = Select;
 
 const UserManagement = () => {
-  const [form] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [tableLoading, setTableLoading] = useState(false);
-  const [addEditLoading, setAddEditLoading] = useState(false);
   const [filteredUsers, setFilteredUsers] = useState([]);
 
   const [searchForm] = Form.useForm();
+
+  // Validation schema for user form
+  const userValidationSchema = Yup.object().shape({
+    name: Yup.string()
+      .required("Vui lòng nhập tên")
+      .min(2, "Tên phải có ít nhất 2 ký tự")
+      .max(50, "Tên không được quá 50 ký tự"),
+    email: Yup.string()
+      .required("Vui lòng nhập email")
+      .email("Email không hợp lệ"),
+    password: Yup.string().when("$isEditing", {
+      is: false,
+      then: (schema) =>
+        schema
+          .required("Vui lòng nhập mật khẩu")
+          .min(8, "Mật khẩu phải có ít nhất 8 ký tự"),
+      otherwise: (schema) => schema.optional(),
+    }),
+    role: Yup.string()
+      .required("Vui lòng chọn vai trò")
+      .oneOf(
+        ["ADMIN", "SCHOOL_NURSE", "PARENT", "MANAGER"],
+        "Vai trò không hợp lệ"
+      ),
+  });
 
   const handleSearch = (values) => {
     const { name, email, role } = values;
 
     let filtered = [...users];
 
-    if (name) {
+    if (name?.trim()) {
       filtered = filtered.filter((user) =>
-        user.name?.toLowerCase().includes(name.toLowerCase())
+        user.name?.toLowerCase().includes(name.trim().toLowerCase())
       );
     }
 
-    if (email) {
+    if (email?.trim()) {
       filtered = filtered.filter((user) =>
-        user.email?.toLowerCase().includes(email)
+        user.email?.toLowerCase().includes(email.trim().toLowerCase())
       );
     }
 
-    if (role) {
+    if (role?.trim()) {
       filtered = filtered.filter((user) =>
-        user.role.toLowerCase().includes(role.toLowerCase())
+        user.role.toLowerCase().includes(role.trim().toLowerCase())
       );
     }
 
@@ -185,13 +209,11 @@ const UserManagement = () => {
 
   const handleAdd = () => {
     setEditingUser(null);
-    form.resetFields();
     setIsModalVisible(true);
   };
 
   const handleEdit = (user) => {
     setEditingUser(user);
-    form.setFieldsValue(user);
     setIsModalVisible(true);
   };
 
@@ -219,67 +241,69 @@ const UserManagement = () => {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
     try {
-      const values = await form.validateFields();
-      const formattedValues = {
-        name: values.name,
-        email: values.email,
-        password: values.password,
-        role: values.role,
-      };
+      setTableLoading(true);
+      const authToken = localStorage.getItem("token");
+      if (!authToken) {
+        message.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+        setTableLoading(false);
+        setIsModalVisible(false);
+        return;
+      }
 
-      setAddEditLoading(true);
-      try {
-        const authToken = localStorage.getItem("token");
-        if (!authToken) {
-          message.error(
-            "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
-          );
-          setAddEditLoading(false);
-          setIsModalVisible(false);
-          return;
-        }
-
-        if (editingUser) {
-          // Update user
-          await axios.put(
-            `/api/admin/users/${editingUser.id}`,
-            {
-              fullName: values.name,
-              email: values.email,
-              role: values.role,
-              isActive: true,
-            },
-            {
-              headers: {
-                Authorization: `Bearer ${authToken}`,
-              },
-            }
-          );
-          message.success("Cập nhật người dùng thành công");
-        } else {
-          // Add new user
-          await axios.post("/api/admin/users", formattedValues, {
+      if (editingUser) {
+        // Update user
+        await axios.put(
+          `/api/admin/users/${editingUser.id}`,
+          {
+            fullName: values.name,
+            email: values.email,
+            role: values.role,
+            isActive: true,
+          },
+          {
             headers: {
               Authorization: `Bearer ${authToken}`,
             },
-          });
-          message.success("Thêm người dùng thành công");
-        }
-        fetchUsers();
-        setIsModalVisible(false);
-      } catch (error) {
-        message.error(
-          error.response?.data?.error || "Không thể thực hiện thao tác"
+          }
         );
-        console.error("Lỗi:", error);
-      } finally {
-        setAddEditLoading(false);
+        message.success("Cập nhật người dùng thành công");
+      } else {
+        // Add new user
+        await axios.post(
+          "/api/admin/users",
+          {
+            name: values.name,
+            email: values.email,
+            password: values.password,
+            role: values.role,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          }
+        );
+        message.success("Thêm người dùng thành công");
       }
+      fetchUsers();
+      setIsModalVisible(false);
+      resetForm();
     } catch (error) {
-      console.error("Lỗi xác thực:", error);
+      message.error(
+        error.response?.data?.error || "Không thể thực hiện thao tác"
+      );
+      console.error("Lỗi:", error);
+    } finally {
+      setSubmitting(false);
+      setTableLoading(false);
     }
+  };
+
+  const handleModalCancel = () => {
+    setIsModalVisible(false);
+    setEditingUser(null);
   };
 
   return (
@@ -352,56 +376,115 @@ const UserManagement = () => {
       <Modal
         title={editingUser ? "Sửa người dùng" : "Thêm người dùng"}
         open={isModalVisible}
-        onOk={handleSubmit}
-        onCancel={() => setIsModalVisible(false)}
-        okText={editingUser ? "Cập nhật" : "Thêm"}
-        confirmLoading={addEditLoading}
+        onCancel={handleModalCancel}
+        footer={null}
       >
-        <Spin spinning={addEditLoading}>
-          <Form form={form} layout="vertical">
-            <Form.Item
-              name="name"
-              label="Tên"
-              rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
-            >
-              <Input />
-            </Form.Item>
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[
-                { required: true, message: "Vui lòng nhập email!" },
-                { type: "email", message: "Email không hợp lệ!" },
-              ]}
-            >
-              <Input />
-            </Form.Item>
-            {!editingUser && (
+        <Formik
+          initialValues={
+            editingUser
+              ? {
+                  name: editingUser.name || "",
+                  email: editingUser.email || "",
+                  password: "",
+                  role: editingUser.role || "ADMIN",
+                }
+              : {
+                  name: "",
+                  email: "",
+                  password: "",
+                  role: "ADMIN",
+                }
+          }
+          validationSchema={userValidationSchema}
+          onSubmit={handleSubmit}
+          enableReinitialize
+          context={{ isEditing: !!editingUser }}
+        >
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            handleSubmit,
+            isSubmitting,
+            setFieldValue,
+          }) => (
+            <Form layout="vertical" onFinish={handleSubmit}>
               <Form.Item
-                name="password"
-                label="Mật khẩu"
-                rules={[
-                  { required: true, message: "Vui lòng nhập mật khẩu!" },
-                  { min: 8, message: "Mật khẩu phải có ít nhất 8 ký tự!" },
-                ]}
+                label="Tên"
+                validateStatus={touched.name && errors.name ? "error" : ""}
+                help={touched.name && errors.name}
               >
-                <Input.Password />
+                <Input
+                  name="name"
+                  value={values.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Nhập tên"
+                />
               </Form.Item>
-            )}
-            <Form.Item
-              name="role"
-              label="Vai trò"
-              rules={[{ required: true, message: "Vui lòng chọn vai trò!" }]}
-            >
-              <Select>
-                <Option value="ADMIN">Quản trị viên</Option>
-                <Option value="SCHOOL_NURSE">Y tá trường học</Option>
-                <Option value="PARENT">Phụ huynh</Option>
-                <Option value="MANAGER">Quản lý</Option>
-              </Select>
-            </Form.Item>
-          </Form>
-        </Spin>
+              <Form.Item
+                label="Email"
+                validateStatus={touched.email && errors.email ? "error" : ""}
+                help={touched.email && errors.email}
+              >
+                <Input
+                  name="email"
+                  value={values.email}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  placeholder="Nhập email"
+                />
+              </Form.Item>
+              {!editingUser && (
+                <Form.Item
+                  label="Mật khẩu"
+                  validateStatus={
+                    touched.password && errors.password ? "error" : ""
+                  }
+                  help={touched.password && errors.password}
+                >
+                  <Input.Password
+                    name="password"
+                    value={values.password}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Nhập mật khẩu"
+                  />
+                </Form.Item>
+              )}
+              <Form.Item
+                label="Vai trò"
+                validateStatus={touched.role && errors.role ? "error" : ""}
+                help={touched.role && errors.role}
+              >
+                <Select
+                  value={values.role}
+                  onChange={(value) => setFieldValue("role", value)}
+                  onBlur={handleBlur}
+                >
+                  <Option value="ADMIN">Quản trị viên</Option>
+                  <Option value="SCHOOL_NURSE">Y tá trường học</Option>
+                  <Option value="PARENT">Phụ huynh</Option>
+                  <Option value="MANAGER">Quản lý</Option>
+                </Select>
+              </Form.Item>
+              <div style={{ textAlign: "right", marginTop: 24 }}>
+                <Space>
+                  <Button onClick={handleModalCancel}>Hủy</Button>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={isSubmitting}
+                  >
+                    {editingUser ? "Cập nhật" : "Thêm"}
+                  </Button>
+                </Space>
+              </div>
+            </Form>
+          )}
+        </Formik>
       </Modal>
     </div>
   );
