@@ -95,27 +95,43 @@ export const adminAPI = {
 
 export const parentAPI = {
     // Get children of logged-in parent
-    getChildren: () => api.get("/api/parents/my-children"),
+    getChildren: () => api.get("/parents/my-children"),
 
     // Get student details by ID
-    getStudentById: (studentId) =>
-        api.get(`/api/parents/students/${studentId}`),
+    getStudentById: (studentId) => api.get(`/parents/students/${studentId}`),
 
     // Health profile operations
     getHealthProfile: (studentId) =>
-        api.get(`/api/parents/health-profile/${studentId}`),
+        api.get(`/parents/health-profile/${studentId}`),
     upsertHealthProfile: (studentId, data) =>
-        api.post(`/api/parents/health-profile/${studentId}`, data),
+        api.post(`/parents/health-profile/${studentId}`, data),
 
     // Medicine operations
     getStudentMedicines: (studentId) =>
-        api.get(`/api/parents/students/${studentId}/medicines`),
+        api.get(`/parents/students/${studentId}/medicines`),
     requestMedication: (studentId, data) =>
-        api.post(`/api/parents/request-medication/${studentId}`, data),
+        api.post(`/parents/request-medication/${studentId}`, data),
 
     // Get students by parent ID (for non-authenticated access)
     getStudentsByParentId: (parentId) =>
-        api.get(`/api/parents/students?parentId=${parentId}`),
+        api.get(`/parents/students?parentId=${parentId}`),
+
+    // Notification operations
+    getNotifications: (params) => api.get("/parents/notifications", { params }),
+    getNotificationById: (notificationId) =>
+        api.get(`/notifications/${notificationId}`),
+    updateNotificationStatus: (notificationId, status) =>
+        api.patch(`/parents/notifications/${notificationId}/status`, {
+            status,
+        }),
+    archiveNotification: (notificationId) =>
+        api.patch(`/parents/notifications/${notificationId}/archive`),
+    restoreNotification: (notificationId) =>
+        api.patch(`/parents/notifications/${notificationId}/restore`),
+    getUnreadNotificationCount: () =>
+        api.get("/parents/notifications/unread-count"),
+    deleteNotification: (notificationId) =>
+        api.delete(`/notifications/${notificationId}`),
 };
 
 // Auth API functions
