@@ -130,15 +130,15 @@ const UserProfile = () => {
   };
 
   // Split full name into first and last name for display
-  const getFirstName = () => {
-    const names = userData.fullName.split(" ");
-    return names[0] || "";
-  };
+  // const getFirstName = () => {
+  //   const names = userData.fullName.split(" ");
+  //   return names[0] || "";
+  // };
 
-  const getLastName = () => {
-    const names = userData.fullName.split(" ");
-    return names.slice(1).join(" ") || "";
-  };
+  // const getLastName = () => {
+  //   const names = userData.fullName.split(" ");
+  //   return names.slice(1).join(" ") || "";
+  // };
 
   if (loading && !userData.fullName) {
     return (

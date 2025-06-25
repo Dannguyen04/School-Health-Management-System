@@ -200,16 +200,17 @@ const VaccineConsentForm = () => {
   ];
 
   return (
-    <div className="min-h-[60vh] flex justify-center items-start bg-[#f6fcfa] py-10">
-      <div className="w-full max-w-6xl">
+    <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa] ">
+      <div className="w-full max-w-5xl mx-auto px-4">
         <Card
-          className="rounded-3xl shadow-lg border-0 mt-12"
+          className="w-full rounded-3xl shadow-lg border-0 mt-12"
           style={{
             background: "#fff",
             borderRadius: "1.5rem",
             boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
             padding: "2rem",
             marginTop: "3rem",
+            maxWidth: "100%",
           }}
         >
           <div

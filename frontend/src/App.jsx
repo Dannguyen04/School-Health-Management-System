@@ -29,7 +29,6 @@ import Doctors from "./components/parent/Doctors";
 import Services from "./components/parent/Services";
 import ScrollToTop from "./components/ScrollToTop";
 import UserProfile from "./components/shared/UserProfile";
-import Blog from "./components/user/Blog";
 import VaccineConsentForm from "./components/user/ConsentForms";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
@@ -137,7 +136,6 @@ const App = () => {
           <Route path="about" element={<About />} />
           <Route path="services" element={<Services />} />
           <Route path="doctors" element={<Doctors />} />
-          <Route path="blog" element={<Blog />} />
           <Route path="health-profile" element={<HealthProfile />} />
           <Route path="medicine-info" element={<MedicineInfo />} />
           <Route path="consent-forms" element={<VaccineConsentForm />} />
