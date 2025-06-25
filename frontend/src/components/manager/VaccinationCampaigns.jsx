@@ -23,7 +23,9 @@ import {
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
+import { Formik } from "formik";
 import { useEffect, useState } from "react";
+import * as Yup from "yup";
 
 const { TextArea } = Input;
 
@@ -328,37 +330,6 @@ const VaccinationCampaigns = () => {
     setCampaigns(allCampaigns);
   };
 
-  const handleSubmit = async () => {
-    try {
-      const values = await campaignForm.validateFields();
-      let success = false;
-      if (selectedCampaign) {
-        // Chỉ gửi các trường hợp lệ khi update
-        const updateData = {
-          name: values.name,
-          description: values.description,
-          status: values.status,
-        };
-        success = await updateCampaign(selectedCampaign.id, updateData);
-      } else {
-        // Khi tạo mới, gửi đầy đủ
-        const campaignData = {
-          ...values,
-          startDate: values.startDate ? values.startDate.toISOString() : null,
-          endDate: values.endDate ? values.endDate.toISOString() : null,
-        };
-        success = await createCampaign(campaignData);
-      }
-      if (success) {
-        setIsModalVisible(false);
-        campaignForm.resetFields();
-        setSelectedCampaign(null);
-      }
-    } catch (error) {
-      console.error("Form validation error:", error);
-    }
-  };
-
   const handleModalCancel = () => {
     setIsModalVisible(false);
     campaignForm.resetFields();
@@ -444,82 +415,235 @@ const VaccinationCampaigns = () => {
             : "Thêm chiến dịch tiêm chủng"
         }
         open={isModalVisible}
-        onOk={handleSubmit}
         onCancel={handleModalCancel}
         width={600}
-        okText={selectedCampaign ? "Cập nhật" : "Thêm"}
-        cancelText="Hủy"
+        footer={null}
       >
-        <Form form={campaignForm} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Tên chiến dịch"
-            rules={[
-              { required: true, message: "Vui lòng nhập tên chiến dịch" },
-            ]}
-          >
-            <Input placeholder="Nhập tên chiến dịch" />
-          </Form.Item>
-
-          <Form.Item
-            name="vaccineName"
-            label="Vắc xin"
-            rules={[{ required: true, message: "Vui lòng chọn vắc xin" }]}
-          >
-            <Select placeholder="Chọn vắc xin" disabled={!!selectedCampaign}>
-              {vaccines.map((vaccine) => (
-                <Select.Option key={vaccine.id} value={vaccine.name}>
-                  {vaccine.name}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
+        <Formik
+          initialValues={
+            selectedCampaign
+              ? {
+                  name: selectedCampaign.name,
+                  description: selectedCampaign.description,
+                  vaccineName: selectedCampaign.vaccine?.name || "",
+                  startDate: selectedCampaign.scheduledDate
+                    ? dayjs(selectedCampaign.scheduledDate)
+                    : null,
+                  endDate: selectedCampaign.deadline
+                    ? dayjs(selectedCampaign.deadline)
+                    : null,
+                  status: selectedCampaign.status,
+                }
+              : {
+                  name: "",
+                  description: "",
+                  vaccineName: "",
+                  startDate: null,
+                  endDate: null,
+                  status: "ACTIVE",
+                }
+          }
+          enableReinitialize
+          validationSchema={Yup.object({
+            name: Yup.string().required("Vui lòng nhập tên chiến dịch"),
+            vaccineName: Yup.string().required("Vui lòng chọn vắc xin"),
+            startDate: Yup.date().required("Vui lòng chọn ngày bắt đầu"),
+            endDate: Yup.date()
+              .required("Vui lòng chọn ngày kết thúc")
+              .test(
+                "is-at-least-7-days",
+                "Ngày kết thúc phải cách ngày bắt đầu ít nhất 1 tuần",
+                function (value) {
+                  const { startDate } = this.parent;
+                  if (!startDate || !value) return true;
+                  const start = new Date(startDate);
+                  const end = new Date(value);
+                  return end - start >= 7 * 24 * 60 * 60 * 1000;
+                }
+              ),
+            status: Yup.string().required("Vui lòng chọn trạng thái"),
+            description: Yup.string(),
+          })}
+          onSubmit={async (values, { setSubmitting }) => {
+            let data = {
+              name: values.name,
+              description: values.description,
+              vaccineName: values.vaccineName,
+              startDate: values.startDate
+                ? typeof values.startDate === "string"
+                  ? values.startDate
+                  : values.startDate.toISOString()
+                : null,
+              endDate: values.endDate
+                ? typeof values.endDate === "string"
+                  ? values.endDate
+                  : values.endDate.toISOString()
+                : null,
+              status: values.status,
+            };
+            let success = false;
+            if (selectedCampaign) {
+              success = await updateCampaign(selectedCampaign.id, data);
+            } else {
+              success = await createCampaign(data);
+            }
+            setSubmitting(false);
+            if (success) {
+              setIsModalVisible(false);
+              campaignForm.resetFields();
+              setSelectedCampaign(null);
+            }
+          }}
+        >
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            handleSubmit,
+            setFieldValue,
+            isSubmitting,
+          }) => (
+            <Form layout="vertical" onFinish={handleSubmit}>
               <Form.Item
-                name="startDate"
-                label="Ngày bắt đầu"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày bắt đầu" },
-                ]}
+                label="Tên chiến dịch"
+                help={touched.name && errors.name ? errors.name : undefined}
+                validateStatus={
+                  touched.name && errors.name ? "error" : undefined
+                }
               >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  disabled={!!selectedCampaign}
+                <Input
+                  name="name"
+                  value={values.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
                 />
               </Form.Item>
-            </Col>
-            <Col span={12}>
               <Form.Item
-                name="endDate"
-                label="Ngày kết thúc"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ngày kết thúc" },
-                ]}
+                label="Vắc xin"
+                help={
+                  touched.vaccineName && errors.vaccineName
+                    ? errors.vaccineName
+                    : undefined
+                }
+                validateStatus={
+                  touched.vaccineName && errors.vaccineName
+                    ? "error"
+                    : undefined
+                }
               >
-                <DatePicker
-                  style={{ width: "100%" }}
+                <Select
+                  value={values.vaccineName}
+                  onChange={(val) => setFieldValue("vaccineName", val)}
+                  onBlur={handleBlur}
                   disabled={!!selectedCampaign}
+                  placeholder="Chọn vắc xin"
+                >
+                  {vaccines.map((vaccine) => (
+                    <Select.Option key={vaccine.id} value={vaccine.name}>
+                      {vaccine.name}
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    label="Ngày bắt đầu"
+                    help={
+                      touched.startDate && errors.startDate
+                        ? errors.startDate
+                        : undefined
+                    }
+                    validateStatus={
+                      touched.startDate && errors.startDate
+                        ? "error"
+                        : undefined
+                    }
+                  >
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      value={values.startDate ? dayjs(values.startDate) : null}
+                      onChange={(date) => setFieldValue("startDate", date)}
+                      onBlur={handleBlur}
+                      disabled={!!selectedCampaign}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    label="Ngày kết thúc"
+                    help={
+                      touched.endDate && errors.endDate
+                        ? errors.endDate
+                        : undefined
+                    }
+                    validateStatus={
+                      touched.endDate && errors.endDate ? "error" : undefined
+                    }
+                  >
+                    <DatePicker
+                      style={{ width: "100%" }}
+                      value={values.endDate ? dayjs(values.endDate) : null}
+                      onChange={(date) => setFieldValue("endDate", date)}
+                      onBlur={handleBlur}
+                      disabled={!!selectedCampaign}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+              <Form.Item
+                label="Mô tả"
+                help={
+                  touched.description && errors.description
+                    ? errors.description
+                    : undefined
+                }
+                validateStatus={
+                  touched.description && errors.description
+                    ? "error"
+                    : undefined
+                }
+              >
+                <TextArea
+                  name="description"
+                  value={values.description}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
                 />
               </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="description" label="Mô tả">
-            <TextArea rows={4} placeholder="Nhập mô tả chiến dịch" />
-          </Form.Item>
-
-          {selectedCampaign && (
-            <Form.Item name="status" label="Trạng thái">
-              <Select placeholder="Chọn trạng thái">
-                <Select.Option value="ACTIVE">Đang diễn ra</Select.Option>
-                <Select.Option value="FINISHED">Hoàn thành</Select.Option>
-                <Select.Option value="CANCELLED">Đã hủy</Select.Option>
-              </Select>
-            </Form.Item>
+              <Form.Item
+                label="Trạng thái"
+                help={
+                  touched.status && errors.status ? errors.status : undefined
+                }
+                validateStatus={
+                  touched.status && errors.status ? "error" : undefined
+                }
+              >
+                <Select
+                  value={values.status}
+                  onChange={(val) => setFieldValue("status", val)}
+                  onBlur={handleBlur}
+                  placeholder="Chọn trạng thái"
+                >
+                  <Select.Option value="ACTIVE">Đang diễn ra</Select.Option>
+                  <Select.Option value="FINISHED">Hoàn thành</Select.Option>
+                  <Select.Option value="CANCELLED">Đã hủy</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" loading={isSubmitting}>
+                  {selectedCampaign ? "Cập nhật" : "Thêm"}
+                </Button>
+                <Button style={{ marginLeft: 8 }} onClick={handleModalCancel}>
+                  Hủy
+                </Button>
+              </Form.Item>
+            </Form>
           )}
-        </Form>
+        </Formik>
       </Modal>
     </div>
   );

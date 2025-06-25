@@ -22,7 +22,9 @@ import {
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
+import { Formik } from "formik";
 import { useEffect, useState } from "react";
+import * as Yup from "yup";
 
 const { TextArea } = Input;
 
@@ -238,49 +240,6 @@ const VaccineManagement = () => {
     setFilteredVaccines(vaccines);
   };
 
-  const handleSubmit = async () => {
-    try {
-      const values = await vaccineForm.validateFields();
-
-      // Format the data
-      const vaccineData = {
-        ...values,
-        expiredDate: values.expiredDate
-          ? values.expiredDate.toISOString()
-          : null,
-      };
-
-      // Thêm log để kiểm tra dữ liệu gửi lên
-      console.log("Vaccine data gửi lên:", vaccineData);
-
-      // Kiểm tra các trường bắt buộc
-      if (
-        !vaccineData.name ||
-        !vaccineData.requirement ||
-        !vaccineData.expiredDate ||
-        !vaccineData.dose
-      ) {
-        message.error("Vui lòng nhập đầy đủ các trường bắt buộc!");
-        return;
-      }
-
-      let success = false;
-      if (selectedVaccine) {
-        success = await updateVaccine(selectedVaccine.id, vaccineData);
-      } else {
-        success = await createVaccine(vaccineData);
-      }
-
-      if (success) {
-        setIsModalVisible(false);
-        vaccineForm.resetFields();
-        setSelectedVaccine(null);
-      }
-    } catch (error) {
-      console.error("Form validation error:", error);
-    }
-  };
-
   const handleModalCancel = () => {
     setIsModalVisible(false);
     vaccineForm.resetFields();
@@ -350,56 +309,183 @@ const VaccineManagement = () => {
       <Modal
         title={selectedVaccine ? "Sửa vaccine" : "Thêm vaccine"}
         open={isModalVisible}
-        onOk={handleSubmit}
         onCancel={handleModalCancel}
         width={600}
-        okText={selectedVaccine ? "Cập nhật" : "Thêm"}
-        cancelText="Hủy"
+        footer={null}
       >
-        <Form form={vaccineForm} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Tên vaccine"
-            rules={[{ required: true, message: "Vui lòng nhập tên vaccine" }]}
-          >
-            <Input placeholder="Nhập tên vaccine" />
-          </Form.Item>
-
-          <Form.Item
-            name="requirement"
-            label="Yêu cầu"
-            rules={[{ required: true, message: "Vui lòng chọn yêu cầu" }]}
-          >
-            <Select placeholder="Chọn yêu cầu">
-              <Select.Option value="REQUIRED">Bắt buộc</Select.Option>
-              <Select.Option value="OPTIONAL">Tùy chọn</Select.Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="dose"
-            label="Liều lượng"
-            rules={[{ required: true, message: "Vui lòng nhập liều lượng" }]}
-          >
-            <Input placeholder="Nhập liều lượng" />
-          </Form.Item>
-
-          <Form.Item
-            name="expiredDate"
-            label="Ngày hết hạn"
-            rules={[{ required: true, message: "Vui lòng chọn ngày hết hạn" }]}
-          >
-            <DatePicker style={{ width: "100%" }} />
-          </Form.Item>
-
-          <Form.Item name="sideEffects" label="Tác dụng phụ">
-            <TextArea rows={3} placeholder="Nhập tác dụng phụ (nếu có)" />
-          </Form.Item>
-
-          <Form.Item name="notes" label="Ghi chú">
-            <TextArea rows={3} placeholder="Nhập ghi chú (nếu có)" />
-          </Form.Item>
-        </Form>
+        <Formik
+          initialValues={
+            selectedVaccine
+              ? {
+                  name: selectedVaccine.name,
+                  requirement: selectedVaccine.requirement,
+                  dose: selectedVaccine.dose,
+                  expiredDate: selectedVaccine.expiredDate
+                    ? dayjs(selectedVaccine.expiredDate)
+                    : null,
+                  sideEffects: selectedVaccine.sideEffects || "",
+                  notes: selectedVaccine.notes || "",
+                }
+              : {
+                  name: "",
+                  requirement: "",
+                  dose: "",
+                  expiredDate: null,
+                  sideEffects: "",
+                  notes: "",
+                }
+          }
+          enableReinitialize
+          validationSchema={Yup.object({
+            name: Yup.string().required("Vui lòng nhập tên vaccine"),
+            requirement: Yup.string().required("Vui lòng chọn yêu cầu"),
+            dose: Yup.string().required("Vui lòng chọn liều lượng"),
+            expiredDate: Yup.date().required("Vui lòng chọn ngày hết hạn"),
+          })}
+          onSubmit={async (values, { setSubmitting }) => {
+            const data = {
+              name: values.name,
+              requirement: values.requirement,
+              dose: values.dose,
+              expiredDate: values.expiredDate
+                ? typeof values.expiredDate === "string"
+                  ? values.expiredDate
+                  : values.expiredDate.toISOString()
+                : null,
+              sideEffects: values.sideEffects,
+              notes: values.notes,
+            };
+            let success = false;
+            if (selectedVaccine) {
+              success = await updateVaccine(selectedVaccine.id, data);
+            } else {
+              success = await createVaccine(data);
+            }
+            setSubmitting(false);
+            if (success) {
+              setIsModalVisible(false);
+              vaccineForm.resetFields && vaccineForm.resetFields();
+              setSelectedVaccine(null);
+            }
+          }}
+        >
+          {({
+            values,
+            errors,
+            touched,
+            handleChange,
+            handleBlur,
+            handleSubmit,
+            setFieldValue,
+            isSubmitting,
+          }) => (
+            <Form layout="vertical" onFinish={handleSubmit}>
+              <Form.Item
+                label="Tên vaccine"
+                help={touched.name && errors.name ? errors.name : undefined}
+                validateStatus={
+                  touched.name && errors.name ? "error" : undefined
+                }
+              >
+                <Input
+                  name="name"
+                  value={values.name}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                />
+              </Form.Item>
+              <Form.Item
+                label="Yêu cầu"
+                help={
+                  touched.requirement && errors.requirement
+                    ? errors.requirement
+                    : undefined
+                }
+                validateStatus={
+                  touched.requirement && errors.requirement
+                    ? "error"
+                    : undefined
+                }
+              >
+                <Select
+                  value={values.requirement}
+                  onChange={(val) => setFieldValue("requirement", val)}
+                  onBlur={handleBlur}
+                  placeholder="Chọn yêu cầu"
+                >
+                  <Select.Option value="REQUIRED">Bắt buộc</Select.Option>
+                  <Select.Option value="OPTIONAL">Tùy chọn</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item
+                label="Liều lượng"
+                help={touched.dose && errors.dose ? errors.dose : undefined}
+                validateStatus={
+                  touched.dose && errors.dose ? "error" : undefined
+                }
+              >
+                <Select
+                  value={values.dose}
+                  onChange={(val) => setFieldValue("dose", val)}
+                  onBlur={handleBlur}
+                  placeholder="Chọn liều lượng"
+                >
+                  <Select.Option value="FIRST">Mũi 1</Select.Option>
+                  <Select.Option value="SECOND">Mũi 2</Select.Option>
+                  <Select.Option value="BOOSTER">Nhắc lại</Select.Option>
+                </Select>
+              </Form.Item>
+              <Form.Item
+                label="Ngày hết hạn"
+                help={
+                  touched.expiredDate && errors.expiredDate
+                    ? errors.expiredDate
+                    : undefined
+                }
+                validateStatus={
+                  touched.expiredDate && errors.expiredDate
+                    ? "error"
+                    : undefined
+                }
+              >
+                <DatePicker
+                  style={{ width: "100%" }}
+                  value={values.expiredDate ? dayjs(values.expiredDate) : null}
+                  onChange={(date) => setFieldValue("expiredDate", date)}
+                  onBlur={handleBlur}
+                />
+              </Form.Item>
+              <Form.Item label="Tác dụng phụ">
+                <TextArea
+                  name="sideEffects"
+                  value={values.sideEffects}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  rows={3}
+                  placeholder="Nhập tác dụng phụ (nếu có)"
+                />
+              </Form.Item>
+              <Form.Item label="Ghi chú">
+                <TextArea
+                  name="notes"
+                  value={values.notes}
+                  onChange={handleChange}
+                  onBlur={handleBlur}
+                  rows={3}
+                  placeholder="Nhập ghi chú (nếu có)"
+                />
+              </Form.Item>
+              <Form.Item>
+                <Button type="primary" htmlType="submit" loading={isSubmitting}>
+                  {selectedVaccine ? "Cập nhật" : "Thêm"}
+                </Button>
+                <Button style={{ marginLeft: 8 }} onClick={handleModalCancel}>
+                  Hủy
+                </Button>
+              </Form.Item>
+            </Form>
+          )}
+        </Formik>
       </Modal>
     </div>
   );
