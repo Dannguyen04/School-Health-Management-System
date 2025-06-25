@@ -11,14 +11,18 @@ import {
   DatePicker,
   Form,
   Input,
+  message,
   Modal,
+  Popconfirm,
   Row,
   Select,
   Space,
   Table,
   Tag,
 } from "antd";
-import React, { useState } from "react";
+import axios from "axios";
+import dayjs from "dayjs";
+import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
 
@@ -27,64 +31,132 @@ const HealthCheckupCampaigns = () => {
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [searchForm] = Form.useForm();
   const [campaignForm] = Form.useForm();
+  const [campaigns, setCampaigns] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [allCampaigns, setAllCampaigns] = useState([]);
 
-  // Mock data
-  const healthCheckupCampaigns = [
-    {
-      id: 1,
-      name: "Khám sức khỏe đầu năm học 2024",
-      type: "Khám tổng quát",
-      startDate: "2024-03-01",
-      endDate: "2024-03-15",
-      status: "completed",
-      studentCount: 1200,
-      description:
-        "Khám sức khỏe tổng quát cho toàn bộ học sinh đầu năm học mới",
-    },
-    {
-      id: 2,
-      name: "Khám mắt định kỳ",
-      type: "Khám mắt",
-      startDate: "2024-03-20",
-      endDate: "2024-03-25",
-      status: "in_progress",
-      studentCount: 800,
-      description: "Kiểm tra thị lực và các vấn đề về mắt cho học sinh",
-    },
-    {
-      id: 3,
-      name: "Khám răng miệng",
-      type: "Khám răng",
-      startDate: "2024-04-01",
-      endDate: "2024-04-05",
-      status: "pending",
-      studentCount: 1000,
-      description:
-        "Kiểm tra sức khỏe răng miệng và hướng dẫn vệ sinh răng miệng",
-    },
-    {
-      id: 4,
-      name: "Khám sức khỏe học sinh lớp 1",
-      type: "Khám tổng quát",
-      startDate: "2024-04-10",
-      endDate: "2024-04-12",
-      status: "pending",
-      studentCount: 200,
-      description: "Khám sức khỏe chi tiết cho học sinh lớp 1",
-    },
-    {
-      id: 5,
-      name: "Khám mắt cho học sinh cận thị",
-      type: "Khám mắt",
-      startDate: "2024-04-15",
-      endDate: "2024-04-16",
-      status: "pending",
-      studentCount: 150,
-      description:
-        "Kiểm tra và cập nhật độ cận cho học sinh đã được chẩn đoán cận thị",
-    },
-  ];
+  const getAuthToken = () => localStorage.getItem("token");
+  const getHeaders = () => ({
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${getAuthToken()}`,
+  });
 
+  // Fetch all campaigns
+  const fetchCampaigns = async () => {
+    setLoading(true);
+    try {
+      const res = await axios.get("/api/medical-campaigns", {
+        headers: getHeaders(),
+      });
+      if (res.data.success) {
+        const mapped = (res.data.data || []).map((c) => ({
+          id: c.id,
+          name: c.name,
+          type: Array.isArray(c.checkTypes)
+            ? c.checkTypes.join(", ")
+            : c.checkTypes,
+          startDate: c.scheduledDate
+            ? dayjs(c.scheduledDate).format("YYYY-MM-DD")
+            : "",
+          endDate: c.deadline ? dayjs(c.deadline).format("YYYY-MM-DD") : "",
+          status: getStatusFromDates(c.scheduledDate, c.deadline),
+          studentCount: c.studentCount || "-",
+          description: c.description,
+          raw: c,
+        }));
+        setCampaigns(mapped);
+        setAllCampaigns(mapped);
+      } else {
+        message.error(res.data.error || "Không thể tải danh sách chiến dịch");
+      }
+    } catch {
+      message.error("Không thể tải danh sách chiến dịch");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getStatusFromDates = (start, end) => {
+    const now = dayjs();
+    if (!start || !end) return "pending";
+    const s = dayjs(start);
+    const e = dayjs(end);
+    if (now.isBefore(s)) return "pending";
+    if (now.isAfter(e)) return "completed";
+    return "in_progress";
+  };
+
+  // Create campaign
+  const createCampaign = async (data) => {
+    try {
+      const res = await axios.post("/api/medical-campaigns", data, {
+        headers: getHeaders(),
+      });
+      if (res.data.success) {
+        message.success("Thêm chiến dịch thành công");
+        fetchCampaigns();
+        return true;
+      } else {
+        message.error(res.data.error || "Không thể thêm chiến dịch");
+        return false;
+      }
+    } catch (err) {
+      message.error(err.response?.data?.error || "Không thể thêm chiến dịch");
+      return false;
+    }
+  };
+
+  // Update campaign
+  const updateCampaign = async (id, data) => {
+    try {
+      const res = await axios.put(`/api/medical-campaigns/${id}`, data, {
+        headers: getHeaders(),
+      });
+      if (res.data.success) {
+        message.success("Cập nhật chiến dịch thành công");
+        fetchCampaigns();
+        return true;
+      } else {
+        message.error(res.data.error || "Không thể cập nhật chiến dịch");
+        return false;
+      }
+    } catch (err) {
+      message.error(
+        err.response?.data?.error || "Không thể cập nhật chiến dịch"
+      );
+      return false;
+    }
+  };
+
+  // Delete campaign
+  const deleteCampaign = async (id) => {
+    try {
+      const res = await axios.delete(`/api/medical-campaigns/${id}`, {
+        headers: getHeaders(),
+      });
+      if (res.data.success) {
+        message.success("Xóa chiến dịch thành công");
+        fetchCampaigns();
+        return true;
+      } else {
+        message.error(res.data.error || "Không thể xóa chiến dịch");
+        return false;
+      }
+    } catch (err) {
+      message.error(err.response?.data?.error || "Không thể xóa chiến dịch");
+      return false;
+    }
+  };
+
+  // Load data on mount
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
+
+  const normalizeString = (str) =>
+    str.replace(/\s+/g, " ").trim().toLowerCase();
+
+  // Table columns
   const columns = [
     {
       title: "Tên chiến dịch",
@@ -138,51 +210,92 @@ const HealthCheckupCampaigns = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
-          <Button icon={<EditOutlined />} onClick={() => handleEdit(record)}>
-            Sửa
-          </Button>
           <Button
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(record)}
+          ></Button>
+          <Popconfirm
+            title="Xóa chiến dịch"
+            description={`Bạn có chắc chắn muốn xóa chiến dịch ${record.name}?`}
+            onConfirm={() => deleteCampaign(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okType="danger"
           >
-            Xóa
-          </Button>
+            <Button danger icon={<DeleteOutlined />}></Button>
+          </Popconfirm>
         </Space>
       ),
     },
   ];
 
+  // Edit
   const handleEdit = (record) => {
     setSelectedCampaign(record);
-    campaignForm.setFieldsValue(record);
+    campaignForm.setFieldsValue({
+      name: record.name,
+      checkTypes: record.type ? record.type.split(", ") : [],
+      scheduledDate: record.startDate ? dayjs(record.startDate) : null,
+      deadline: record.endDate ? dayjs(record.endDate) : null,
+      description: record.description,
+    });
     setIsModalVisible(true);
   };
 
-  const handleDelete = (record) => {
-    Modal.confirm({
-      title: "Xóa chiến dịch",
-      content: `Bạn có chắc chắn muốn xóa chiến dịch ${record.name}?`,
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      onOk() {
-        console.log("Delete campaign:", record);
-      },
-    });
-  };
-
+  // Search
   const handleSearch = (values) => {
-    console.log("Search values:", values);
+    let filtered = allCampaigns;
+    if (values.name?.trim()) {
+      const searchName = normalizeString(values.name);
+      filtered = filtered.filter((c) =>
+        normalizeString(c.name).includes(searchName)
+      );
+    }
+    if (values.type) {
+      const searchType = normalizeString(values.type);
+      filtered = filtered.filter((c) =>
+        normalizeString(c.type || "").includes(searchType)
+      );
+    }
+    if (values.status) {
+      filtered = filtered.filter((c) => c.status === values.status);
+    }
+    setCampaigns(filtered);
   };
 
-  const handleSubmit = () => {
-    campaignForm.validateFields().then((values) => {
-      console.log("Campaign data:", values);
-      setIsModalVisible(false);
-      campaignForm.resetFields();
-      setSelectedCampaign(null);
-    });
+  // Xóa bộ lọc
+  const handleResetFilters = () => {
+    searchForm.resetFields();
+    setCampaigns(allCampaigns);
+  };
+
+  // Submit (add/edit)
+  const handleSubmit = async () => {
+    try {
+      const values = await campaignForm.validateFields();
+      const data = {
+        name: values.name,
+        checkTypes: values.checkTypes,
+        scheduledDate: values.scheduledDate
+          ? values.scheduledDate.toISOString()
+          : null,
+        deadline: values.deadline ? values.deadline.toISOString() : null,
+        description: values.description,
+      };
+      let success = false;
+      if (selectedCampaign) {
+        success = await updateCampaign(selectedCampaign.id, data);
+      } else {
+        success = await createCampaign(data);
+      }
+      if (success) {
+        setIsModalVisible(false);
+        campaignForm.resetFields();
+        setSelectedCampaign(null);
+      }
+    } catch {
+      message.error("Có lỗi xảy ra khi gửi dữ liệu!");
+    }
   };
 
   return (
@@ -192,7 +305,11 @@ const HealthCheckupCampaigns = () => {
         <Button
           type="primary"
           icon={<PlusOutlined />}
-          onClick={() => setIsModalVisible(true)}
+          onClick={() => {
+            setSelectedCampaign(null);
+            campaignForm.resetFields();
+            setIsModalVisible(true);
+          }}
         >
           Thêm chiến dịch
         </Button>
@@ -208,7 +325,7 @@ const HealthCheckupCampaigns = () => {
             </Col>
             <Col xs={24} sm={8}>
               <Form.Item name="type" label="Loại khám">
-                <Select placeholder="Chọn loại khám">
+                <Select placeholder="Chọn loại khám" allowClear>
                   <Select.Option value="Khám tổng quát">
                     Khám tổng quát
                   </Select.Option>
@@ -219,25 +336,27 @@ const HealthCheckupCampaigns = () => {
             </Col>
             <Col xs={24} sm={8}>
               <Form.Item name="status" label="Trạng thái">
-                <Select placeholder="Chọn trạng thái">
+                <Select placeholder="Chọn trạng thái" allowClear>
                   <Select.Option value="completed">Hoàn thành</Select.Option>
                   <Select.Option value="in_progress">
                     Đang diễn ra
                   </Select.Option>
-                  <Select.Option value="pending">Chưa bắt đầu</Select.Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
           <Row>
             <Col span={24} className="text-right">
-              <Button
-                type="primary"
-                icon={<SearchOutlined />}
-                htmlType="submit"
-              >
-                Tìm kiếm
-              </Button>
+              <Space>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  htmlType="submit"
+                >
+                  Tìm kiếm
+                </Button>
+                <Button onClick={handleResetFilters}>Xóa bộ lọc</Button>
+              </Space>
             </Col>
           </Row>
         </Form>
@@ -245,9 +364,12 @@ const HealthCheckupCampaigns = () => {
 
       <Card>
         <Table
-          dataSource={healthCheckupCampaigns}
+          dataSource={campaigns}
           columns={columns}
           rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 5, showQuickJumper: true }}
+          scroll={{ x: "max-content" }}
         />
       </Card>
 
@@ -265,6 +387,8 @@ const HealthCheckupCampaigns = () => {
           setSelectedCampaign(null);
         }}
         width={600}
+        okText={selectedCampaign ? "Cập nhật" : "Thêm"}
+        cancelText="Hủy"
       >
         <Form form={campaignForm} layout="vertical">
           <Form.Item
@@ -274,15 +398,15 @@ const HealthCheckupCampaigns = () => {
               { required: true, message: "Vui lòng nhập tên chiến dịch" },
             ]}
           >
-            <Input />
+            <Input placeholder="Nhập tên chiến dịch" />
           </Form.Item>
 
           <Form.Item
-            name="type"
+            name="checkTypes"
             label="Loại khám"
             rules={[{ required: true, message: "Vui lòng chọn loại khám" }]}
           >
-            <Select>
+            <Select mode="multiple" placeholder="Chọn loại khám">
               <Select.Option value="Khám tổng quát">
                 Khám tổng quát
               </Select.Option>
@@ -294,7 +418,7 @@ const HealthCheckupCampaigns = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="startDate"
+                name="scheduledDate"
                 label="Ngày bắt đầu"
                 rules={[
                   { required: true, message: "Vui lòng chọn ngày bắt đầu" },
@@ -305,7 +429,7 @@ const HealthCheckupCampaigns = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="endDate"
+                name="deadline"
                 label="Ngày kết thúc"
                 rules={[
                   { required: true, message: "Vui lòng chọn ngày kết thúc" },
@@ -317,7 +441,7 @@ const HealthCheckupCampaigns = () => {
           </Row>
 
           <Form.Item name="description" label="Mô tả">
-            <TextArea rows={4} />
+            <TextArea rows={4} placeholder="Nhập mô tả chiến dịch (nếu có)" />
           </Form.Item>
         </Form>
       </Modal>

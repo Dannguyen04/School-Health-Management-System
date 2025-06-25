@@ -13,14 +13,14 @@ import {
   Select,
   Space,
   Spin,
+  Table,
+  Tag,
   Typography,
 } from "antd";
 import axios from "axios";
 import { Formik } from "formik";
 import { useEffect, useState } from "react";
 import * as Yup from "yup";
-import { useAuth } from "../../context/authContext.jsx";
-import NotificationDisplay from "../shared/NotificationDisplay.jsx";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -37,17 +37,35 @@ const validationSchema = Yup.object().shape({
   unit: Yup.string(),
 });
 
+const statusColor = {
+  PENDING_APPROVAL: "orange",
+  APPROVED: "green",
+  REJECTED: "red",
+};
+const statusLabel = {
+  PENDING_APPROVAL: "Chờ duyệt",
+  APPROVED: "Đã duyệt",
+  REJECTED: "Từ chối",
+};
+
 const MedicineInfo = () => {
   const [showSuccess, setShowSuccess] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [children, setChildren] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const { user } = useAuth();
+  const [studentMedicines, setStudentMedicines] = useState([]);
+  const [loadingMedicines, setLoadingMedicines] = useState(false);
 
   useEffect(() => {
     fetchChildren();
   }, []);
+
+  useEffect(() => {
+    if (selectedStudent) {
+      fetchStudentMedicines(selectedStudent);
+    }
+  }, [selectedStudent]);
 
   const fetchChildren = async () => {
     try {
@@ -68,6 +86,28 @@ const MedicineInfo = () => {
       message.error("Không thể lấy danh sách học sinh");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStudentMedicines = async (studentId) => {
+    setLoadingMedicines(true);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get(
+        `/api/parents/students/${studentId}/medicines`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      if (response.data.success) {
+        setStudentMedicines(response.data.data || []);
+      } else {
+        setStudentMedicines([]);
+      }
+    } catch {
+      setStudentMedicines([]);
+    } finally {
+      setLoadingMedicines(false);
     }
   };
 
@@ -101,6 +141,7 @@ const MedicineInfo = () => {
         resetForm();
         setIsEditModalVisible(false);
         setShowSuccess(true);
+        fetchStudentMedicines(selectedStudent);
       } else {
         message.error(response.data.error || "Có lỗi xảy ra khi gửi thông tin");
       }
@@ -126,8 +167,6 @@ const MedicineInfo = () => {
       </div>
     );
   }
-
-  const currentUserId = user?.id;
 
   return (
     <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa]">
@@ -199,17 +238,60 @@ const MedicineInfo = () => {
             />
           )}
 
-          {selectedStudent && currentUserId ? (
-            <NotificationDisplay userId={currentUserId} type="medication" />
-          ) : (
-            <Card className="rounded-xl border-0 shadow-none">
-              <div style={{ textAlign: "center", padding: "24px" }}>
-                <Text type="secondary">
-                  Vui lòng chọn học sinh để xem thông báo thuốc
-                </Text>
-              </div>
-            </Card>
-          )}
+          <Table
+            dataSource={studentMedicines}
+            loading={loadingMedicines}
+            columns={[
+              {
+                title: "Tên thuốc",
+                dataIndex: ["medication", "name"],
+                key: "medicationName",
+                render: (text, record) => record.medication?.name || "",
+              },
+              {
+                title: "Liều lượng",
+                dataIndex: "dosage",
+                key: "dosage",
+              },
+              {
+                title: "Tần suất",
+                dataIndex: "frequency",
+                key: "frequency",
+              },
+              {
+                title: "Hướng dẫn",
+                dataIndex: "instructions",
+                key: "instructions",
+              },
+              {
+                title: "Ngày bắt đầu",
+                dataIndex: "startDate",
+                key: "startDate",
+                render: (date) =>
+                  date ? new Date(date).toLocaleDateString("vi-VN") : "",
+              },
+              {
+                title: "Ngày kết thúc",
+                dataIndex: "endDate",
+                key: "endDate",
+                render: (date) =>
+                  date ? new Date(date).toLocaleDateString("vi-VN") : "",
+              },
+              {
+                title: "Trạng thái",
+                dataIndex: "status",
+                key: "status",
+                render: (status) => (
+                  <Tag color={statusColor[status]}>
+                    {statusLabel[status] || status}
+                  </Tag>
+                ),
+              },
+            ]}
+            rowKey="id"
+            pagination={false}
+            style={{ marginTop: 24 }}
+          />
 
           <Modal
             title="Thêm thuốc mới"
