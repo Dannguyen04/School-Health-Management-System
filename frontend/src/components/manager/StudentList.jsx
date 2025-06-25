@@ -21,6 +21,8 @@ import {
     Table,
     Tag,
     Tooltip,
+    Radio,
+    Divider,
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -36,8 +38,48 @@ const StudentList = () => {
     const [students, setStudents] = useState([]); // State for real student data
     const [filteredStudents, setFilteredStudents] = useState([]); // State for filtered students
     const [tableLoading, setTableLoading] = useState(false); // Loading for table
+    const [parents, setParents] = useState([]); // State for parents
+    const [parentLoading, setParentLoading] = useState(false); // Loading for parents
+
+    // Parent modal states
+    const [isParentModalVisible, setIsParentModalVisible] = useState(false);
+    const [parentForm] = Form.useForm();
+    const [selectedParent, setSelectedParent] = useState(null);
+    const [parentModalLoading, setParentModalLoading] = useState(false);
+    const [parentSearchTerm, setParentSearchTerm] = useState(""); // Add search term state
 
     const [searchForm] = Form.useForm();
+
+    // Function to fetch parents
+    const fetchParents = async () => {
+        setParentLoading(true);
+        try {
+            const authToken = localStorage.getItem("token");
+            if (!authToken) {
+                message.error(
+                    "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
+                );
+                setParentLoading(false);
+                return;
+            }
+
+            const response = await axios.get("/api/manager/students/parents", {
+                headers: {
+                    Authorization: `Bearer ${authToken}`,
+                },
+            });
+
+            setParents(response.data.data);
+        } catch (error) {
+            message.error(
+                error.response?.data?.error ||
+                    "Không thể tải danh sách phụ huynh"
+            );
+            console.error("Lỗi khi tải danh sách phụ huynh:", error);
+        } finally {
+            setParentLoading(false);
+        }
+    };
 
     // Function to search
     const handleSearch = (values) => {
@@ -120,7 +162,87 @@ const StudentList = () => {
     // Fetch students on component mount
     useEffect(() => {
         fetchStudents();
+        fetchParents();
     }, []);
+
+    // Parent modal functions
+    const handleOpenParentModal = () => {
+        setIsParentModalVisible(true);
+        parentForm.resetFields();
+        setSelectedParent(null);
+        setParentSearchTerm(""); // Reset search term
+    };
+
+    const handleParentSelection = (parentId) => {
+        const parent = parents.find((p) => p.id === parentId);
+        setSelectedParent(parent);
+    };
+
+    // Filter parents based on search term
+    const filteredParents = parents.filter(
+        (parent) =>
+            parent.fullName
+                ?.toLowerCase()
+                .includes(parentSearchTerm.toLowerCase()) ||
+            parent.email
+                ?.toLowerCase()
+                .includes(parentSearchTerm.toLowerCase()) ||
+            parent.phone?.includes(parentSearchTerm)
+    );
+
+    const handleCreateNewParent = async () => {
+        try {
+            const values = await parentForm.validateFields();
+            setParentModalLoading(true);
+
+            const authToken = localStorage.getItem("token");
+            if (!authToken) {
+                message.error(
+                    "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
+                );
+                return;
+            }
+
+            const response = await axios.post(
+                "/api/manager/students/parents",
+                {
+                    name: values.newParentName,
+                    email: values.newParentEmail,
+                    phone: values.newParentPhone,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${authToken}`,
+                    },
+                }
+            );
+
+            const newParent = response.data.data;
+            setParents([...parents, newParent]);
+            setSelectedParent(newParent);
+            message.success("Tạo phụ huynh mới thành công");
+        } catch (error) {
+            message.error(
+                error.response?.data?.error || "Không thể tạo phụ huynh mới"
+            );
+            console.error("Lỗi khi tạo phụ huynh:", error);
+        } finally {
+            setParentModalLoading(false);
+        }
+    };
+
+    const handleConfirmParent = () => {
+        if (!selectedParent) {
+            message.error("Vui lòng chọn hoặc tạo phụ huynh");
+            return;
+        }
+        setIsParentModalVisible(false);
+        // Set the selected parent in the main form
+        form.setFieldsValue({
+            selectedParentId: selectedParent.id,
+            selectedParentName: selectedParent.fullName,
+        });
+    };
 
     const columns = [
         {
@@ -195,6 +317,7 @@ const StudentList = () => {
     const handleAdd = () => {
         setEditingStudent(null);
         form.resetFields();
+        setSelectedParent(null);
         setIsModalVisible(true);
     };
 
@@ -211,12 +334,20 @@ const StudentList = () => {
             emergencyContact: student.emergencyContact,
             emergencyPhone: student.emergencyPhone,
         });
+        setSelectedParent(null);
         setIsModalVisible(true);
     };
 
     const handleSubmit = async () => {
         try {
             const values = await form.validateFields();
+
+            // Get parent data from selected parent
+            let parentData = {};
+            if (values.selectedParentId) {
+                parentData.parentId = values.selectedParentId;
+            }
+
             const formattedValues = editingStudent
                 ? {
                       studentCode: values.studentCode,
@@ -230,7 +361,7 @@ const StudentList = () => {
                       class: values.class,
                       emergencyContact: values.emergencyContact,
                       emergencyPhone: values.emergencyPhone,
-                      parentName: values.parentName,
+                      ...parentData,
                   }
                 : {
                       fullName: values.name,
@@ -243,7 +374,7 @@ const StudentList = () => {
                       class: values.class,
                       emergencyContact: values.emergencyContact,
                       emergencyPhone: values.emergencyPhone,
-                      parentName: values.parentName,
+                      ...parentData,
                   };
 
             if (editingStudent) {
@@ -271,6 +402,7 @@ const StudentList = () => {
                         class: values.class,
                         emergencyContact: values.emergencyContact,
                         emergencyPhone: values.emergencyPhone,
+                        ...parentData,
                     };
 
                     await axios.put(
@@ -284,6 +416,7 @@ const StudentList = () => {
                     );
                     message.success("Cập nhật học sinh thành công");
                     fetchStudents();
+                    fetchParents(); // Refresh parents list in case new parent was created
                 } catch (error) {
                     message.error(
                         error.response?.data?.error ||
@@ -314,6 +447,7 @@ const StudentList = () => {
 
                     message.success("Thêm học sinh thành công");
                     fetchStudents();
+                    fetchParents(); // Refresh parents list in case new parent was created
                 } catch (error) {
                     message.error(
                         error.response?.data?.error || "Không thể thêm học sinh"
@@ -563,20 +697,218 @@ const StudentList = () => {
                         >
                             <Input />
                         </Form.Item>
+
                         <Form.Item
-                            name="parentName"
-                            label="Tên phụ huynh"
+                            name="selectedParentId"
+                            label="Phụ huynh"
                             rules={[
                                 {
                                     required: true,
-                                    message: "Vui lòng nhập tên phụ huynh!",
+                                    message: "Vui lòng chọn phụ huynh!",
                                 },
                             ]}
                         >
-                            <Input />
+                            <Input type="hidden" />
+                        </Form.Item>
+
+                        <Form.Item label="Chọn phụ huynh">
+                            <Space
+                                direction="vertical"
+                                style={{ width: "100%" }}
+                            >
+                                <Button
+                                    type="dashed"
+                                    onClick={handleOpenParentModal}
+                                    style={{ width: "100%" }}
+                                >
+                                    {selectedParent
+                                        ? `Đã chọn: ${selectedParent.fullName}`
+                                        : "Chọn hoặc tạo phụ huynh"}
+                                </Button>
+                                {selectedParent && (
+                                    <div
+                                        style={{
+                                            padding: "8px",
+                                            background: "#f5f5f5",
+                                            borderRadius: "4px",
+                                        }}
+                                    >
+                                        <div>
+                                            <strong>Tên:</strong>{" "}
+                                            {selectedParent.fullName}
+                                        </div>
+                                        <div>
+                                            <strong>Email:</strong>{" "}
+                                            {selectedParent.email}
+                                        </div>
+                                        <div>
+                                            <strong>SĐT:</strong>{" "}
+                                            {selectedParent.phone}
+                                        </div>
+                                    </div>
+                                )}
+                            </Space>
                         </Form.Item>
                     </Form>
                 </Spin>
+            </Modal>
+
+            {/* Parent Selection Modal */}
+            <Modal
+                title="Chọn hoặc tạo phụ huynh"
+                open={isParentModalVisible}
+                onCancel={() => setIsParentModalVisible(false)}
+                footer={[
+                    <Button
+                        key="cancel"
+                        onClick={() => setIsParentModalVisible(false)}
+                    >
+                        Hủy
+                    </Button>,
+                    <Button
+                        key="confirm"
+                        type="primary"
+                        onClick={handleConfirmParent}
+                        disabled={!selectedParent}
+                    >
+                        Xác nhận
+                    </Button>,
+                ]}
+                width={800}
+            >
+                <div style={{ marginBottom: 16 }}>
+                    <h4>Chọn phụ huynh hiện có:</h4>
+                    <Input.Search
+                        placeholder="Tìm kiếm theo tên, email hoặc số điện thoại..."
+                        value={parentSearchTerm}
+                        onChange={(e) => setParentSearchTerm(e.target.value)}
+                        style={{ marginBottom: 12 }}
+                        allowClear
+                    />
+                    <Select
+                        style={{ width: "100%" }}
+                        placeholder="Chọn phụ huynh từ danh sách"
+                        loading={parentLoading}
+                        onChange={handleParentSelection}
+                        value={selectedParent?.id}
+                        showSearch={false}
+                    >
+                        {filteredParents.length > 0 ? (
+                            filteredParents.map((parent) => (
+                                <Option key={parent.id} value={parent.id}>
+                                    {parent.fullName} - {parent.email} -{" "}
+                                    {parent.phone}
+                                </Option>
+                            ))
+                        ) : (
+                            <Option disabled value="">
+                                {parentSearchTerm
+                                    ? "Không tìm thấy phụ huynh phù hợp"
+                                    : "Không có phụ huynh nào"}
+                            </Option>
+                        )}
+                    </Select>
+                    {parentSearchTerm && (
+                        <div
+                            style={{
+                                marginTop: 8,
+                                fontSize: "12px",
+                                color: "#666",
+                            }}
+                        >
+                            Tìm thấy {filteredParents.length} phụ huynh phù hợp
+                        </div>
+                    )}
+                </div>
+
+                <Divider>Hoặc</Divider>
+
+                <div>
+                    <h4>Tạo phụ huynh mới:</h4>
+                    <Form form={parentForm} layout="vertical">
+                        <Row gutter={16}>
+                            <Col span={8}>
+                                <Form.Item
+                                    name="newParentName"
+                                    label="Tên phụ huynh"
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message:
+                                                "Vui lòng nhập tên phụ huynh!",
+                                        },
+                                    ]}
+                                >
+                                    <Input placeholder="Nhập tên phụ huynh" />
+                                </Form.Item>
+                            </Col>
+                            <Col span={8}>
+                                <Form.Item
+                                    name="newParentEmail"
+                                    label="Email phụ huynh"
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message:
+                                                "Vui lòng nhập email phụ huynh!",
+                                        },
+                                        {
+                                            type: "email",
+                                            message: "Email không hợp lệ!",
+                                        },
+                                    ]}
+                                >
+                                    <Input placeholder="Nhập email phụ huynh" />
+                                </Form.Item>
+                            </Col>
+                            <Col span={8}>
+                                <Form.Item
+                                    name="newParentPhone"
+                                    label="Số điện thoại"
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message:
+                                                "Vui lòng nhập số điện thoại!",
+                                        },
+                                    ]}
+                                >
+                                    <Input placeholder="Nhập số điện thoại" />
+                                </Form.Item>
+                            </Col>
+                        </Row>
+                        <Button
+                            type="primary"
+                            onClick={handleCreateNewParent}
+                            loading={parentModalLoading}
+                        >
+                            Tạo phụ huynh mới
+                        </Button>
+                    </Form>
+                </div>
+
+                {selectedParent && (
+                    <div
+                        style={{
+                            marginTop: 16,
+                            padding: 12,
+                            background: "#e6f7ff",
+                            borderRadius: 4,
+                        }}
+                    >
+                        <h4>Phụ huynh đã chọn:</h4>
+                        <p>
+                            <strong>Tên:</strong> {selectedParent.fullName}
+                        </p>
+                        <p>
+                            <strong>Email:</strong> {selectedParent.email}
+                        </p>
+                        <p>
+                            <strong>Số điện thoại:</strong>{" "}
+                            {selectedParent.phone}
+                        </p>
+                    </div>
+                )}
             </Modal>
         </div>
     );

@@ -234,6 +234,8 @@ const addStudent = async (req, res) => {
             emergencyContact,
             emergencyPhone,
             parentName,
+            parentId,
+            newParentData,
             bloodType,
         } = req.body;
 
@@ -247,7 +249,6 @@ const addStudent = async (req, res) => {
             "grade",
             "emergencyContact",
             "emergencyPhone",
-            "parentName",
         ];
 
         const missingFields = requiredFields.filter((field) => {
@@ -259,6 +260,13 @@ const addStudent = async (req, res) => {
             return res.status(422).json({
                 success: false,
                 error: `Thiếu trường bắt buộc: ${missingFields.join(", ")}`,
+            });
+        }
+
+        if (!parentId && !newParentData && !parentName) {
+            return res.status(422).json({
+                success: false,
+                error: "Phải chọn phụ huynh hiện có hoặc tạo phụ huynh mới",
             });
         }
 
@@ -290,7 +298,6 @@ const addStudent = async (req, res) => {
             });
         }
 
-        // Validate gender
         const validGenders = ["male", "female", "other", "nam", "nu"];
         if (!validGenders.includes(gender.toLowerCase())) {
             return res.status(422).json({
@@ -340,17 +347,104 @@ const addStudent = async (req, res) => {
 
             console.log("✅ Tạo student profile thành công:", student.id);
 
-            const parentResult = await assignParentToStudent(
-                student.id,
-                parentName,
-                "guardian",
-                true,
-                tx
-            );
+            let parentResult = null;
 
-            if (!parentResult.success) {
-                console.log("⚠️ Không thể gán phụ huynh:", parentResult.error);
-                // Không throw error, chỉ log warning
+            if (parentId) {
+                const existingParent = await tx.parent.findUnique({
+                    where: { id: parentId },
+                    include: { user: true },
+                });
+
+                if (!existingParent) {
+                    throw new Error("Không tìm thấy phụ huynh được chọn");
+                }
+
+                await tx.studentParent.create({
+                    data: {
+                        studentId: student.id,
+                        parentId: parentId,
+                        relationship: "guardian",
+                        isPrimary: true,
+                    },
+                });
+
+                parentResult = {
+                    success: true,
+                    data: {
+                        parentName: existingParent.user.fullName,
+                        parentEmail: existingParent.user.email,
+                        parentPhone: existingParent.user.phone,
+                        relationship: "guardian",
+                        isPrimary: true,
+                    },
+                };
+            } else if (newParentData) {
+                const { name, email, phone } = newParentData;
+
+                if (!name || !email || !phone) {
+                    throw new Error("Thiếu thông tin phụ huynh mới");
+                }
+
+                if (!validateEmail(email)) {
+                    throw new Error("Email phụ huynh không hợp lệ");
+                }
+
+                const existingParentUser = await tx.users.findUnique({
+                    where: { email: email.toLowerCase().trim() },
+                });
+
+                if (existingParentUser) {
+                    throw new Error("Email phụ huynh đã tồn tại");
+                }
+
+                const parentUser = await tx.users.create({
+                    data: {
+                        fullName: name.trim(),
+                        email: email.toLowerCase().trim(),
+                        phone: phone.trim(),
+                        password: "12345678",
+                        role: "PARENT",
+                        isActive: true,
+                    },
+                });
+
+                const parent = await tx.parent.create({
+                    data: {
+                        userId: parentUser.id,
+                    },
+                });
+
+                await tx.studentParent.create({
+                    data: {
+                        studentId: student.id,
+                        parentId: parent.id,
+                        relationship: "guardian",
+                        isPrimary: true,
+                    },
+                });
+
+                parentResult = {
+                    success: true,
+                    data: {
+                        parentName: parentUser.fullName,
+                        parentEmail: parentUser.email,
+                        parentPhone: parentUser.phone,
+                        relationship: "guardian",
+                        isPrimary: true,
+                    },
+                };
+            } else if (parentName) {
+                parentResult = await assignParentToStudent(
+                    student.id,
+                    parentName,
+                    "guardian",
+                    true,
+                    tx
+                );
+            }
+
+            if (!parentResult?.success) {
+                console.log("⚠️ Không thể gán phụ huynh:", parentResult?.error);
             }
 
             await createAuditLog(
@@ -370,10 +464,10 @@ const addStudent = async (req, res) => {
                 req
             );
 
-            return { user, student, parent: parentResult.data };
+            return { user, student, parent: parentResult?.data };
         });
 
-        console.log("🎉 Tạo học sinh thành công!");
+        console.log("✅ Tạo học sinh thành công!");
 
         return res.status(201).json({
             success: true,
@@ -694,6 +788,8 @@ const updateStudent = async (req, res) => {
         bloodType,
         emergencyContact,
         emergencyPhone,
+        parentId,
+        newParentData,
     } = req.body;
 
     try {
@@ -820,6 +916,99 @@ const updateStudent = async (req, res) => {
                 },
             });
 
+            // Handle parent update if provided
+            if (parentId || newParentData) {
+                const studentId = user.studentProfile.id;
+
+                // Remove existing primary parent relationship
+                await tx.studentParent.updateMany({
+                    where: {
+                        studentId: studentId,
+                        isPrimary: true,
+                    },
+                    data: { isPrimary: false },
+                });
+
+                if (parentId) {
+                    // Use existing parent
+                    const existingParent = await tx.parent.findUnique({
+                        where: { id: parentId },
+                        include: { user: true },
+                    });
+
+                    if (!existingParent) {
+                        throw new Error("Không tìm thấy phụ huynh được chọn");
+                    }
+
+                    // Create or update student-parent relationship
+                    await tx.studentParent.upsert({
+                        where: {
+                            studentId_parentId: {
+                                studentId: studentId,
+                                parentId: parentId,
+                            },
+                        },
+                        update: {
+                            isPrimary: true,
+                        },
+                        create: {
+                            studentId: studentId,
+                            parentId: parentId,
+                            relationship: "guardian",
+                            isPrimary: true,
+                        },
+                    });
+                } else if (newParentData) {
+                    // Create new parent
+                    const { name, email, phone } = newParentData;
+
+                    if (!name || !email || !phone) {
+                        throw new Error("Thiếu thông tin phụ huynh mới");
+                    }
+
+                    if (!validateEmail(email)) {
+                        throw new Error("Email phụ huynh không hợp lệ");
+                    }
+
+                    // Check if parent email already exists
+                    const existingParentUser = await tx.users.findUnique({
+                        where: { email: email.toLowerCase().trim() },
+                    });
+
+                    if (existingParentUser) {
+                        throw new Error("Email phụ huynh đã tồn tại");
+                    }
+
+                    // Create parent user and profile
+                    const parentUser = await tx.users.create({
+                        data: {
+                            fullName: name.trim(),
+                            email: email.toLowerCase().trim(),
+                            phone: phone.trim(),
+                            password: "12345678", // Default password
+                            role: "PARENT",
+                            isActive: true,
+                        },
+                    });
+
+                    const parent = await tx.parent.create({
+                        data: {
+                            userId: parentUser.id,
+                        },
+                    });
+
+                    // Create student-parent relationship
+                    await tx.studentParent.create({
+                        data: {
+                            studentId: studentId,
+                            parentId: parent.id,
+                            relationship: "guardian",
+                            isPrimary: true,
+                        },
+                    });
+                }
+            }
+
             await createAuditLog(
                 tx,
                 id,
@@ -837,6 +1026,7 @@ const updateStudent = async (req, res) => {
                         bloodType,
                         emergencyContact,
                         emergencyPhone,
+                        parentUpdated: !!(parentId || newParentData),
                     },
                 },
                 req
@@ -860,7 +1050,7 @@ const updateStudent = async (req, res) => {
         }
         return res.status(500).json({
             success: false,
-            error: "Lỗi máy chủ nội bộ",
+            error: error.message || "Lỗi máy chủ nội bộ",
         });
     }
 };
