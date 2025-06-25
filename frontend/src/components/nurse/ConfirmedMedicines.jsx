@@ -25,6 +25,7 @@ const { TextArea } = Input;
 const ConfirmedMedicines = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
+  const [data, setData] = useState(confirmedMedicines);
   const [searchForm] = Form.useForm();
   const [confirmationForm] = Form.useForm();
 
@@ -140,6 +141,11 @@ const ConfirmedMedicines = () => {
     console.log("Search values:", values);
   };
 
+  const handleResetFilters = () => {
+    searchForm.resetFields();
+    setData(confirmedMedicines);
+  };
+
   const handleSubmit = () => {
     confirmationForm.validateFields().then((values) => {
       console.log("Confirmation:", { ...selectedMedicine, ...values });
@@ -185,20 +191,23 @@ const ConfirmedMedicines = () => {
           </Row>
           <Row>
             <Col span={24} className="text-right">
-              <Button
-                type="primary"
-                icon={<SearchOutlined />}
-                htmlType="submit"
-              >
-                Tìm kiếm
-              </Button>
+              <Space>
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  htmlType="submit"
+                >
+                  Tìm kiếm
+                </Button>
+                <Button onClick={handleResetFilters}>Xóa bộ lọc</Button>
+              </Space>
             </Col>
           </Row>
         </Form>
       </Card>
 
       <Card>
-        <Table dataSource={confirmedMedicines} columns={columns} rowKey="id" />
+        <Table dataSource={data} columns={columns} rowKey="id" />
       </Card>
 
       <Modal

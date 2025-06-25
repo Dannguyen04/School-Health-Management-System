@@ -73,12 +73,6 @@ const Navbar = () => {
             </span>
             <span
               className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
-              onClick={() => handleNav("doctors")}
-            >
-              Đội ngũ bác sĩ
-            </span>
-            <span
-              className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
               onClick={() => handleNav("blog")}
             >
               Tin tức

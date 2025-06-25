@@ -69,7 +69,7 @@ const App = () => {
           />
           <Route path="medical-inventory" element={<MedicalInventory />} />
           <Route path="student-treatment" element={<StudentTreatment />} />
-          <Route path="vaccination" element={<Vaccination />} />
+          <Route path="vaccination-report" element={<Vaccination />} />
           <Route path="health-checkups" element={<HealthCheckups />} />
           <Route path="confirmed-medicines" element={<ConfirmedMedicines />} />
           <Route path="medical-event" element={<MedicalEventReport />} />

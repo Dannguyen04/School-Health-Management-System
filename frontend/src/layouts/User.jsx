@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import About from "../components/parent/About";
 import Blogs from "../components/parent/Blogs";
-import Doctors from "../components/parent/Doctors";
 import Footer from "../components/parent/Footer";
 import Home from "../components/parent/Home";
 import Navbar from "../components/parent/Navbar";
@@ -36,9 +35,6 @@ const User = () => {
             </div>
             <div id="services">
               <Services />
-            </div>
-            <div id="doctors">
-              <Doctors />
             </div>
             <div id="blog">
               <Blogs />
