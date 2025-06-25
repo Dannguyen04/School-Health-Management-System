@@ -29,7 +29,6 @@ import Doctors from "./components/parent/Doctors";
 import Services from "./components/parent/Services";
 import ScrollToTop from "./components/ScrollToTop";
 import UserProfile from "./components/shared/UserProfile";
-import Blog from "./components/user/Blog";
 import VaccineConsentForm from "./components/user/ConsentForms";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
@@ -39,11 +38,11 @@ import VaccinationSchedule from "./components/user/VaccinationSchedule";
 import AdminLayout from "./layouts/Admin";
 import ManagerLayout from "./layouts/Manager";
 import NurseLayout from "./layouts/Nurse";
-import User from "./layouts/User";
 import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
+import User from "./layouts/User";
 
 const App = () => {
     return (
@@ -153,7 +152,6 @@ const App = () => {
                     <Route path="about" element={<About />} />
                     <Route path="services" element={<Services />} />
                     <Route path="doctors" element={<Doctors />} />
-                    <Route path="blog" element={<Blog />} />
                     <Route path="health-profile" element={<HealthProfile />} />
                     <Route path="medicine-info" element={<MedicineInfo />} />
                     <Route

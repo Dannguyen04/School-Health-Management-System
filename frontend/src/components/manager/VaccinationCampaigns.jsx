@@ -309,9 +309,9 @@ const VaccinationCampaigns = () => {
 
   const handleSearch = (values) => {
     let filtered = allCampaigns;
-    if (values.name) {
+    if (values.name?.trim()) {
       filtered = filtered.filter((c) =>
-        c.name.toLowerCase().includes(values.name.toLowerCase())
+        c.name.trim().toLowerCase().includes(values.name.trim().toLowerCase())
       );
     }
     if (values.vaccineName) {
@@ -466,7 +466,7 @@ const VaccinationCampaigns = () => {
             label="Vắc xin"
             rules={[{ required: true, message: "Vui lòng chọn vắc xin" }]}
           >
-            <Select placeholder="Chọn vắc xin">
+            <Select placeholder="Chọn vắc xin" disabled={!!selectedCampaign}>
               {vaccines.map((vaccine) => (
                 <Select.Option key={vaccine.id} value={vaccine.name}>
                   {vaccine.name}
@@ -484,7 +484,10 @@ const VaccinationCampaigns = () => {
                   { required: true, message: "Vui lòng chọn ngày bắt đầu" },
                 ]}
               >
-                <DatePicker style={{ width: "100%" }} />
+                <DatePicker
+                  style={{ width: "100%" }}
+                  disabled={!!selectedCampaign}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -495,7 +498,10 @@ const VaccinationCampaigns = () => {
                   { required: true, message: "Vui lòng chọn ngày kết thúc" },
                 ]}
               >
-                <DatePicker style={{ width: "100%" }} />
+                <DatePicker
+                  style={{ width: "100%" }}
+                  disabled={!!selectedCampaign}
+                />
               </Form.Item>
             </Col>
           </Row>

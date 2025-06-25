@@ -223,7 +223,7 @@ const VaccineManagement = () => {
     let filtered = vaccines;
     if (name) {
       filtered = filtered.filter((v) =>
-        v.name.toLowerCase().includes(name.toLowerCase())
+        v.name?.trim().toLowerCase().includes(name.trim().toLowerCase())
       );
     }
     if (requirement) {
