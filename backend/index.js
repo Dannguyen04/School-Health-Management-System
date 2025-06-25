@@ -11,6 +11,8 @@ import UserRoutes from "./routes/UserRoutes.js";
 import VaccinationCampaignRoutes from "./routes/VaccinationCampaignRoutes.js";
 import VaccinationRoutes from "./routes/VaccinationRoutes.js";
 import ManagerStudentRoutes from "./routes/ManagerStudentRoutes.js";
+import MedicalCheckRoutes from "./routes/MedicalCheckRoutes.js";
+import MedicalCampaignRoutes from "./routes/MedicalCamapaignRoutes.js";
 
 dotenv.config();
 
@@ -37,6 +39,8 @@ app.use("/api/manager/vaccination", VaccinationRoutes);
 app.use("/api/parents", parentRoutes);
 app.use("/api/manager/students", ManagerStudentRoutes);
 app.use("/api/notifications", NotificationRoutes);
+app.use("/api/medical-checks", MedicalCheckRoutes);
+app.use("/api/medical-campaigns", MedicalCampaignRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {
