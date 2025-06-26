@@ -21,9 +21,15 @@ app.use(express.json());
 
 // Tạo chiến dịch tiêm chủng mới
 const createVaccinationCampaign = async (req, res) => {
-    const { name, description, startDate, endDate, vaccineName, status } =
+    const { name, description, startDate, endDate, vaccineName, targetGrades } =
         req.body;
-    if (!name || !startDate || !endDate || !vaccineName) {
+    if (
+        !name ||
+        !startDate ||
+        !endDate ||
+        !vaccineName ||
+        targetGrades.length === 0
+    ) {
         return res.status(400).json({
             success: false,
             error: "Thiếu trường dữ liệu bắt buộc",
@@ -69,7 +75,7 @@ const createVaccinationCampaign = async (req, res) => {
                 scheduledDate: scheduled,
                 deadline: deadlineDate,
                 vaccineId: vaccine.id,
-                status: status || undefined, // cho phép truyền status, mặc định là ACTIVE
+                targetGrades: targetGrades,
             },
         });
         res.status(201).json({ success: true, data: campaign });
@@ -96,7 +102,7 @@ const getAllVaccinationCampaigns = async (req, res) => {
 
 const updateVaccinationCampaign = async (req, res) => {
     const { id } = req.params;
-    const { name, description, status } = req.body;
+    const { name, description, status, targetGrades } = req.body;
     try {
         const existed = await prisma.vaccinationCampaign.findUnique({
             where: { id },
@@ -127,6 +133,13 @@ const updateVaccinationCampaign = async (req, res) => {
         )
             data.status = status;
         data.isActive = status === "ACTIVE";
+        if (
+            targetGrades !== undefined &&
+            Array.isArray(targetGrades) &&
+            targetGrades.length > 0 &&
+            targetGrades.every((g) => Number.isInteger(g) && g >= 1 && g <= 5)
+        )
+            data.targetGrades = targetGrades;
         const updated = await prisma.vaccinationCampaign.update({
             where: { id },
             data,
