@@ -1,12 +1,15 @@
 import {
   DeleteOutlined,
   EditOutlined,
+  EyeOutlined,
   PlusOutlined,
   SearchOutlined,
+  SendOutlined,
 } from "@ant-design/icons";
 import {
   Button,
   Card,
+  Checkbox,
   Col,
   DatePicker,
   Form,
@@ -34,10 +37,20 @@ const VaccinationCampaigns = () => {
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [allCampaigns, setAllCampaigns] = useState([]);
   const [campaigns, setCampaigns] = useState([]);
-  const [vaccines, setVaccines] = useState([]);
+  const [vaccinations, setVaccinations] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchForm] = Form.useForm();
-  const [campaignForm] = Form.useForm();
+  const [consentModal, setConsentModal] = useState({
+    visible: false,
+    campaign: null,
+  });
+  const [consentListModal, setConsentListModal] = useState({
+    visible: false,
+    campaign: null,
+    consents: [],
+  });
+  const [selectedGrades, setSelectedGrades] = useState([]);
+  const [allGrades, setAllGrades] = useState([]);
 
   // Get auth token
   const getAuthToken = () => {
@@ -50,8 +63,8 @@ const VaccinationCampaigns = () => {
     Authorization: `Bearer ${getAuthToken()}`,
   });
 
-  // Fetch all vaccines for dropdown
-  const fetchVaccines = async () => {
+  // Fetch all vaccinations for dropdown
+  const fetchVaccinations = async () => {
     try {
       const response = await axios.get(
         "/api/manager/vaccination-campaigns/vaccines",
@@ -60,18 +73,13 @@ const VaccinationCampaigns = () => {
         }
       );
       if (response.data.success && Array.isArray(response.data.data)) {
-        setVaccines(response.data.data);
-      } else if (
-        response.data.success &&
-        Array.isArray(response.data.vaccines)
-      ) {
-        setVaccines(response.data.vaccines);
+        setVaccinations(response.data.data);
       } else {
-        setVaccines([]);
+        setVaccinations([]);
       }
     } catch (error) {
-      console.error("Error fetching vaccines:", error);
-      setVaccines([]);
+      console.error("Error fetching vaccinations:", error);
+      setVaccinations([]);
     }
   };
 
@@ -83,7 +91,7 @@ const VaccinationCampaigns = () => {
         headers: getHeaders(),
       });
       if (response.data.success) {
-        console.log("Fetched campaigns:", response.data.data);
+        // Không cần map vaccine nữa, backend đã trả về luôn vaccine
         setAllCampaigns(response.data.data || []);
         setCampaigns(response.data.data || []);
       } else {
@@ -127,7 +135,6 @@ const VaccinationCampaigns = () => {
   // Update campaign
   const updateCampaign = async (id, data) => {
     try {
-      console.log("Sending update data:", data);
       const response = await axios.put(
         `/api/manager/vaccination-campaigns/${id}`,
         data,
@@ -137,11 +144,7 @@ const VaccinationCampaigns = () => {
       );
       if (response.data.success) {
         message.success("Cập nhật chiến dịch thành công");
-        console.log("Update response:", response.data);
-        // Add small delay to ensure backend has processed the update
-        setTimeout(() => {
-          fetchCampaigns();
-        }, 100);
+        fetchCampaigns();
         return true;
       } else {
         message.error(response.data.error || "Không thể cập nhật chiến dịch");
@@ -180,10 +183,99 @@ const VaccinationCampaigns = () => {
     }
   };
 
+  const handleSendConsentClick = async (campaign) => {
+    setConsentModal({ visible: true, campaign });
+    // Fetch all grades with student count when opening modal
+    try {
+      const res = await axios.get("/api/manager/students/grades-with-count", {
+        headers: getHeaders(),
+      });
+      if (res.data.success && Array.isArray(res.data.data)) {
+        setAllGrades(res.data.data);
+        // Mặc định chọn các khối có trong campaign.targetGrades nếu có, nếu không chọn hết
+        const defaultGrades =
+          Array.isArray(campaign.targetGrades) &&
+          campaign.targetGrades.length > 0
+            ? campaign.targetGrades
+            : res.data.data.map((g) => g.grade);
+        setSelectedGrades(defaultGrades);
+      } else {
+        setAllGrades([]);
+        setSelectedGrades([]);
+      }
+    } catch (err) {
+      setAllGrades([]);
+      setSelectedGrades([]);
+    }
+  };
+
+  const handleConsentModalOk = async () => {
+    if (!consentModal.campaign) return;
+    await sendConsent(consentModal.campaign.id, selectedGrades);
+    setConsentModal({ visible: false, campaign: null });
+  };
+
+  const handleConsentModalCancel = () => {
+    setConsentModal({ visible: false, campaign: null });
+  };
+
+  const handleGradeChange = (checkedValues) => {
+    setSelectedGrades(checkedValues);
+  };
+
+  const sendConsent = async (campaignId, grades) => {
+    try {
+      const response = await axios.post(
+        `/api/manager/vaccination-campaigns/${campaignId}/send-consent`,
+        { grades },
+        { headers: getHeaders() }
+      );
+      if (response.data.success) {
+        message.success(
+          response.data.message || "Đã gửi phiếu đồng ý thành công"
+        );
+      } else {
+        message.error(response.data.error || "Không thể gửi phiếu đồng ý");
+      }
+    } catch (error) {
+      message.error(
+        error.response?.data?.error || "Không thể gửi phiếu đồng ý"
+      );
+    }
+  };
+
+  const handleViewConsents = async (campaign) => {
+    try {
+      const response = await axios.get(
+        `/api/manager/vaccination-campaigns/${campaign.id}/consents`,
+        { headers: getHeaders() }
+      );
+      if (response.data.success) {
+        setConsentListModal({
+          visible: true,
+          campaign: response.data.data.campaign,
+          consents: response.data.data.consents,
+        });
+      } else {
+        message.error(
+          response.data.error || "Không thể tải danh sách phiếu đồng ý"
+        );
+      }
+    } catch (error) {
+      message.error(
+        error.response?.data?.error || "Không thể tải danh sách phiếu đồng ý"
+      );
+    }
+  };
+
+  const handleConsentListModalCancel = () => {
+    setConsentListModal({ visible: false, campaign: null, consents: [] });
+  };
+
   // Load data on component mount
   useEffect(() => {
     const fetchAll = async () => {
-      await fetchVaccines();
+      await fetchVaccinations();
       await fetchCampaigns();
     };
     fetchAll();
@@ -229,25 +321,9 @@ const VaccinationCampaigns = () => {
       ),
     },
     {
-      title: "Vắc xin",
-      dataIndex: ["vaccine", "name"],
-      key: "vaccineName",
-      width: 120,
-      align: "center",
-    },
-    {
-      title: "Khối áp dụng",
-      dataIndex: "targetGrades",
-      key: "targetGrades",
-      render: (grades) => (
-        <Space>
-          {(grades || []).map((g) => (
-            <Tag color="geekblue" key={g}>
-              {g}
-            </Tag>
-          ))}
-        </Space>
-      ),
+      title: "Loại vaccine",
+      dataIndex: ["vaccination", "name"],
+      key: "vaccinationName",
       width: 120,
       align: "center",
     },
@@ -292,7 +368,7 @@ const VaccinationCampaigns = () => {
     {
       title: "Thao tác",
       key: "actions",
-      width: 120,
+      width: 240,
       align: "center",
       render: (_, record) => (
         <Space>
@@ -310,6 +386,20 @@ const VaccinationCampaigns = () => {
           >
             <Button danger icon={<DeleteOutlined />}></Button>
           </Popconfirm>
+          <Button
+            icon={<SendOutlined />}
+            onClick={() => handleSendConsentClick(record)}
+            type="default"
+          >
+            Gửi phiếu đồng ý
+          </Button>
+          <Button
+            icon={<EyeOutlined />}
+            onClick={() => handleViewConsents(record)}
+            type="default"
+          >
+            Xem phiếu đồng ý
+          </Button>
         </Space>
       ),
     },
@@ -317,13 +407,6 @@ const VaccinationCampaigns = () => {
 
   const handleEdit = (record) => {
     setSelectedCampaign(record);
-    campaignForm.setFieldsValue({
-      ...record,
-      startDate: record.scheduledDate ? dayjs(record.scheduledDate) : null,
-      endDate: record.deadline ? dayjs(record.deadline) : null,
-      vaccineName: record.vaccine?.name,
-      targetGrades: record.targetGrades || [],
-    });
     setIsModalVisible(true);
   };
 
@@ -338,8 +421,10 @@ const VaccinationCampaigns = () => {
         c.name.trim().toLowerCase().includes(values.name.trim().toLowerCase())
       );
     }
-    if (values.vaccineName) {
-      filtered = filtered.filter((c) => c.vaccine?.name === values.vaccineName);
+    if (values.vaccinationName) {
+      filtered = filtered.filter(
+        (c) => c.vaccination?.name === values.vaccinationName
+      );
     }
     if (values.status) {
       filtered = filtered.filter((c) => c.status === values.status);
@@ -354,7 +439,6 @@ const VaccinationCampaigns = () => {
 
   const handleModalCancel = () => {
     setIsModalVisible(false);
-    campaignForm.resetFields();
     setSelectedCampaign(null);
   };
 
@@ -380,11 +464,14 @@ const VaccinationCampaigns = () => {
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
-              <Form.Item name="vaccineName" label="Vắc xin">
-                <Select placeholder="Chọn vắc xin">
-                  {vaccines.map((vaccine) => (
-                    <Select.Option key={vaccine.id} value={vaccine.name}>
-                      {vaccine.name}
+              <Form.Item name="vaccinationName" label="Loại vaccine">
+                <Select placeholder="Chọn loại vaccine">
+                  {vaccinations.map((vaccination) => (
+                    <Select.Option
+                      key={vaccination.id}
+                      value={vaccination.name}
+                    >
+                      {vaccination.name}
                     </Select.Option>
                   ))}
                 </Select>
@@ -447,7 +534,7 @@ const VaccinationCampaigns = () => {
               ? {
                   name: selectedCampaign.name,
                   description: selectedCampaign.description,
-                  vaccineName: selectedCampaign.vaccine?.name || "",
+                  vaccinationName: selectedCampaign.vaccination?.name || "",
                   startDate: selectedCampaign.scheduledDate
                     ? dayjs(selectedCampaign.scheduledDate)
                     : null,
@@ -455,37 +542,40 @@ const VaccinationCampaigns = () => {
                     ? dayjs(selectedCampaign.deadline)
                     : null,
                   status: selectedCampaign.status,
-                  targetGrades: selectedCampaign.targetGrades || [],
                 }
               : {
                   name: "",
                   description: "",
-                  vaccineName: "",
+                  vaccinationName: "",
                   startDate: null,
                   endDate: null,
                   status: "ACTIVE",
-                  targetGrades: [],
                 }
           }
           enableReinitialize
           validationSchema={Yup.object({
             name: Yup.string().required("Vui lòng nhập tên chiến dịch"),
-            vaccineName: Yup.string().required("Vui lòng chọn vắc xin"),
-            targetGrades: Yup.array().min(1, "Vui lòng chọn khối áp dụng"),
-            startDate: Yup.date().required("Vui lòng chọn ngày bắt đầu"),
-            endDate: Yup.date()
-              .required("Vui lòng chọn ngày kết thúc")
-              .test(
-                "is-at-least-7-days",
-                "Ngày kết thúc phải cách ngày bắt đầu ít nhất 1 tuần",
-                function (value) {
-                  const { startDate } = this.parent;
-                  if (!startDate || !value) return true;
-                  const start = new Date(startDate);
-                  const end = new Date(value);
-                  return end - start >= 7 * 24 * 60 * 60 * 1000;
-                }
-              ),
+            vaccinationName: selectedCampaign
+              ? Yup.string() // Optional when editing
+              : Yup.string().required("Vui lòng chọn loại vaccine"),
+            startDate: selectedCampaign
+              ? Yup.date() // Optional when editing
+              : Yup.date().required("Vui lòng chọn ngày bắt đầu"),
+            endDate: selectedCampaign
+              ? Yup.date() // Optional when editing
+              : Yup.date()
+                  .required("Vui lòng chọn ngày kết thúc")
+                  .test(
+                    "is-at-least-7-days",
+                    "Ngày kết thúc phải cách ngày bắt đầu ít nhất 1 tuần",
+                    function (value) {
+                      const { startDate } = this.parent;
+                      if (!startDate || !value) return true;
+                      const start = new Date(startDate);
+                      const end = new Date(value);
+                      return end - start >= 7 * 24 * 60 * 60 * 1000;
+                    }
+                  ),
             status: Yup.string().required("Vui lòng chọn trạng thái"),
             description: Yup.string(),
           })}
@@ -493,44 +583,49 @@ const VaccinationCampaigns = () => {
             let success = false;
 
             if (selectedCampaign) {
-              // For update, send data in the format backend expects
-              const updateData = {};
-              if (values.name) updateData.name = values.name;
-              if (values.description !== undefined)
-                updateData.description = values.description;
-              if (values.targetGrades && values.targetGrades.length > 0) {
-                // Keep as string values since Prisma schema expects string array
-                updateData.targetGrades = values.targetGrades;
-              }
-              if (values.status) updateData.status = values.status;
-
-              success = await updateCampaign(selectedCampaign.id, updateData);
-            } else {
-              // For create, send all required fields
-              const data = {
+              // For updates, only send the fields that the backend accepts
+              const updateData = {
                 name: values.name,
                 description: values.description,
-                vaccineName: values.vaccineName,
-                targetGrades: values.targetGrades,
-                startDate: values.startDate
+                status: values.status,
+                targetGrades: (
+                  selectedCampaign.targetGrades || ["1", "2", "3", "4", "5"]
+                ).map((grade) => String(grade)),
+              };
+              success = await updateCampaign(selectedCampaign.id, updateData);
+            } else {
+              // For creates, find the vaccine ID and send all required fields
+              const selectedVaccination = vaccinations.find(
+                (v) => v.name === values.vaccinationName
+              );
+              if (!selectedVaccination) {
+                message.error("Vui lòng chọn loại vaccine hợp lệ");
+                setSubmitting(false);
+                return;
+              }
+
+              const createData = {
+                name: values.name,
+                description: values.description,
+                vaccinationId: selectedVaccination.id,
+                targetGrades: ["1", "2", "3", "4", "5"],
+                scheduledDate: values.startDate
                   ? typeof values.startDate === "string"
                     ? values.startDate
                     : values.startDate.toISOString()
                   : null,
-                endDate: values.endDate
+                deadline: values.endDate
                   ? typeof values.endDate === "string"
                     ? values.endDate
                     : values.endDate.toISOString()
                   : null,
-                status: values.status,
               };
-              success = await createCampaign(data);
+              success = await createCampaign(createData);
             }
 
             setSubmitting(false);
             if (success) {
               setIsModalVisible(false);
-              campaignForm.resetFields();
               setSelectedCampaign(null);
             }
           }}
@@ -561,55 +656,34 @@ const VaccinationCampaigns = () => {
                 />
               </Form.Item>
               <Form.Item
-                label="Vắc xin"
+                label="Loại vaccine"
                 help={
-                  touched.vaccineName && errors.vaccineName
-                    ? errors.vaccineName
+                  touched.vaccinationName && errors.vaccinationName
+                    ? errors.vaccinationName
                     : undefined
                 }
                 validateStatus={
-                  touched.vaccineName && errors.vaccineName
+                  touched.vaccinationName && errors.vaccinationName
                     ? "error"
                     : undefined
                 }
               >
                 <Select
-                  value={values.vaccineName}
-                  onChange={(val) => setFieldValue("vaccineName", val)}
+                  value={values.vaccinationName}
+                  onChange={(val) => setFieldValue("vaccinationName", val)}
                   onBlur={handleBlur}
                   disabled={!!selectedCampaign}
-                  placeholder="Chọn vắc xin"
+                  placeholder="Chọn loại vaccine"
                 >
-                  {vaccines.map((vaccine) => (
-                    <Select.Option key={vaccine.id} value={vaccine.name}>
-                      {vaccine.name}
+                  {vaccinations.map((vaccination) => (
+                    <Select.Option
+                      key={vaccination.id}
+                      value={vaccination.name}
+                    >
+                      {vaccination.name}
                     </Select.Option>
                   ))}
                 </Select>
-              </Form.Item>
-              <Form.Item
-                label="Khối áp dụng"
-                help={
-                  touched.targetGrades && errors.targetGrades
-                    ? errors.targetGrades
-                    : undefined
-                }
-                validateStatus={
-                  touched.targetGrades && errors.targetGrades
-                    ? "error"
-                    : undefined
-                }
-              >
-                <Select
-                  mode="multiple"
-                  value={values.targetGrades}
-                  onChange={(val) => setFieldValue("targetGrades", val)}
-                  onBlur={handleBlur}
-                  options={["1", "2", "3", "4", "5"].map((g) => ({
-                    label: g,
-                    value: g,
-                  }))}
-                />
               </Form.Item>
               <Row gutter={16}>
                 <Col span={12}>
@@ -708,6 +782,180 @@ const VaccinationCampaigns = () => {
             </Form>
           )}
         </Formik>
+      </Modal>
+
+      {/* Modal xác nhận gửi phiếu đồng ý */}
+      <Modal
+        title="Xác nhận gửi phiếu đồng ý tiêm chủng"
+        open={consentModal.visible}
+        onOk={handleConsentModalOk}
+        onCancel={handleConsentModalCancel}
+        okText="Gửi phiếu"
+        cancelText="Hủy"
+      >
+        <div>
+          <p>Chọn các khối sẽ gửi phiếu đồng ý tiêm chủng:</p>
+          <Checkbox.Group
+            options={allGrades.map((g) => ({
+              label: `Khối ${g.grade} (${g.count} học sinh)`,
+              value: g.grade,
+              disabled: g.count === 0,
+            }))}
+            value={selectedGrades}
+            onChange={handleGradeChange}
+          />
+          <p style={{ marginTop: 16 }}>
+            Bạn có chắc chắn muốn gửi phiếu cho các khối đã chọn không?
+          </p>
+        </div>
+      </Modal>
+
+      {/* Modal xem danh sách phiếu đồng ý */}
+      <Modal
+        title={`Danh sách phiếu đồng ý - ${consentListModal.campaign?.name}`}
+        open={consentListModal.visible}
+        onCancel={handleConsentListModalCancel}
+        footer={[
+          <Button key="close" onClick={handleConsentListModalCancel}>
+            Đóng
+          </Button>,
+        ]}
+        width={800}
+      >
+        {/* Thống kê tổng quan */}
+        <div style={{ marginBottom: 16 }}>
+          <Row gutter={16}>
+            <Col span={6}>
+              <Card size="small" style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: "bold",
+                    color: "#1890ff",
+                  }}
+                >
+                  {consentListModal.consents.length}
+                </div>
+                <div style={{ fontSize: "12px", color: "#666" }}>Tổng số</div>
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small" style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: "bold",
+                    color: "#52c41a",
+                  }}
+                >
+                  {
+                    consentListModal.consents.filter((c) => c.consent === true)
+                      .length
+                  }
+                </div>
+                <div style={{ fontSize: "12px", color: "#666" }}>Đã đồng ý</div>
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small" style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: "bold",
+                    color: "#ff4d4f",
+                  }}
+                >
+                  {
+                    consentListModal.consents.filter((c) => c.consent === false)
+                      .length
+                  }
+                </div>
+                <div style={{ fontSize: "12px", color: "#666" }}>
+                  Đã từ chối
+                </div>
+              </Card>
+            </Col>
+            <Col span={6}>
+              <Card size="small" style={{ textAlign: "center" }}>
+                <div
+                  style={{
+                    fontSize: "24px",
+                    fontWeight: "bold",
+                    color: "#faad14",
+                  }}
+                >
+                  {consentListModal.consents.length > 0
+                    ? Math.round(
+                        (consentListModal.consents.filter(
+                          (c) => c.consent === true
+                        ).length /
+                          consentListModal.consents.length) *
+                          100
+                      )
+                    : 0}
+                  %
+                </div>
+                <div style={{ fontSize: "12px", color: "#666" }}>
+                  Tỷ lệ đồng ý
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        </div>
+
+        {Array.isArray(consentListModal.campaign?.vaccinations) &&
+          consentListModal.campaign.vaccinations.length > 0 && (
+            <div style={{ marginBottom: 8 }}>
+              <b>Loại vaccine:</b>{" "}
+              {consentListModal.campaign.vaccinations[0]?.name}
+            </div>
+          )}
+
+        <Table
+          dataSource={consentListModal.consents}
+          columns={[
+            {
+              title: "Học sinh",
+              dataIndex: ["student", "user", "fullName"],
+              key: "studentName",
+            },
+            {
+              title: "Phụ huynh",
+              dataIndex: ["parent", "user", "fullName"],
+              key: "parentName",
+            },
+            {
+              title: "Email phụ huynh",
+              dataIndex: ["parent", "user", "email"],
+              key: "parentEmail",
+            },
+            {
+              title: "Trạng thái",
+              dataIndex: "consent",
+              key: "consent",
+              render: (consent) => (
+                <Tag color={consent ? "success" : "error"}>
+                  {consent ? "Đã đồng ý" : "Đã từ chối"}
+                </Tag>
+              ),
+            },
+            {
+              title: "Ghi chú",
+              dataIndex: "notes",
+              key: "notes",
+              render: (notes) => notes || "Không có",
+            },
+            {
+              title: "Ngày gửi",
+              dataIndex: "submittedAt",
+              key: "submittedAt",
+              render: (date) => new Date(date).toLocaleDateString("vi-VN"),
+            },
+          ]}
+          rowKey="id"
+          pagination={false}
+          size="small"
+        />
       </Modal>
     </div>
   );

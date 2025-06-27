@@ -19,7 +19,7 @@ app.use(
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 
-const createVaccine = async (req, res) => {
+const createVaccination = async (req, res) => {
     const { name, requirement, expiredDate, dose, sideEffects, notes } =
         req.body;
 
@@ -30,23 +30,23 @@ const createVaccine = async (req, res) => {
         });
     }
 
-    const existedVaccine = await prisma.vaccination.findFirst({
+    const existedVaccination = await prisma.vaccinations.findFirst({
         where: { name },
     });
 
-    if (existedVaccine) {
+    if (existedVaccination) {
         return res.status(409).json({
             success: false,
-            error: "Vaccine đã tồn tại trong hệ thống",
+            error: "Loại vaccine đã tồn tại trong hệ thống",
         });
     }
 
     try {
-        const vaccine = await prisma.vaccination.create({
+        const vaccination = await prisma.vaccinations.create({
             data: {
                 name,
                 requirement,
-                expiredDate,
+                expiredDate: new Date(expiredDate),
                 dose,
                 sideEffects,
                 notes,
@@ -54,7 +54,7 @@ const createVaccine = async (req, res) => {
         });
         res.status(201).json({
             success: true,
-            data: vaccine,
+            data: vaccination,
         });
     } catch (error) {
         console.log(error);
@@ -65,40 +65,40 @@ const createVaccine = async (req, res) => {
     }
 };
 
-const getAllVaccine = async () => {
+const getAllVaccination = async () => {
     try {
-        const vaccine = await prisma.vaccination.findMany();
-        if (!vaccine) return "";
-        return vaccine;
+        const vaccination = await prisma.vaccinations.findMany();
+        if (!vaccination) return "";
+        return vaccination;
     } catch (error) {
         console.log(error);
         throw new Error(error.message);
     }
 };
 
-const getAllRequiredVaccine = async (req, res) => {
+const getAllRequiredVaccination = async (req, res) => {
     try {
-        const available = await getAllVaccine();
+        const available = await getAllVaccination();
         if (available.length === 0)
             return res.status(404).json({
                 success: false,
-                error: "Không có vaccine trong hệ thống",
+                error: "Không có loại vaccine trong hệ thống",
             });
 
-        const requireVaccine = await prisma.vaccination.findMany({
+        const requireVaccination = await prisma.vaccinations.findMany({
             where: { requirement: "REQUIRED" },
         });
 
-        if (!requireVaccine)
+        if (!requireVaccination)
             return res.status(404).json({
                 success: false,
-                error: "Không có vaccine bắt buộc nào trong hệ thống",
+                error: "Không có loại vaccine bắt buộc nào trong hệ thống",
             });
 
         res.status(200).json({
             success: true,
-            message: "Vaccine bắt buộc trả thành công",
-            data: requireVaccine,
+            message: "Loại vaccine bắt buộc trả thành công",
+            data: requireVaccination,
         });
     } catch (error) {
         console.log(error);
@@ -109,30 +109,29 @@ const getAllRequiredVaccine = async (req, res) => {
     }
 };
 
-//get all optional vaccine
-const getAllOptionalVaccine = async (req, res) => {
+const getAllOptionalVaccination = async (req, res) => {
     try {
-        const available = await getAllVaccine();
+        const available = await getAllVaccination();
         if (available.length === 0)
             return res.status(404).json({
                 success: false,
-                error: "Không có vaccine trong hệ thống",
+                error: "Không có loại vaccine trong hệ thống",
             });
 
-        const optionalVaccine = await prisma.vaccination.findMany({
+        const optionalVaccination = await prisma.vaccinations.findMany({
             where: { requirement: "OPTIONAL" },
         });
 
-        if (!optionalVaccine)
+        if (!optionalVaccination)
             return res.status(404).json({
                 success: false,
-                error: "Không có vaccine tuyển cho nào trong hệ thống",
+                error: "Không có loại vaccine tuyển cho nào trong hệ thống",
             });
 
         res.status(200).json({
             success: true,
-            message: "Vaccine tuyển cho trả thành công",
-            data: optionalVaccine,
+            message: "Loại vaccine tuyển cho trả thành công",
+            data: optionalVaccination,
         });
     } catch (error) {
         console.log(error);
@@ -143,15 +142,14 @@ const getAllOptionalVaccine = async (req, res) => {
     }
 };
 
-//get vaccine
-const getVaccines = async (req, res) => {
+const getVaccinations = async (req, res) => {
     try {
-        const vaccines = await getAllVaccine();
-        if (!vaccines)
+        const vaccinations = await getAllVaccination();
+        if (!vaccinations)
             return res
                 .status(404)
-                .json({ success: false, error: "Không tìm thấy vaccine" });
-        res.status(200).json({ success: true, data: vaccines });
+                .json({ success: false, error: "Không tìm thấy loại vaccine" });
+        res.status(200).json({ success: true, data: vaccinations });
     } catch (error) {
         console.log(error);
         return res.status(500).json({
@@ -161,38 +159,38 @@ const getVaccines = async (req, res) => {
     }
 };
 
-const updateVaccine = async (req, res) => {
+const updateVaccination = async (req, res) => {
     const { id } = req.params;
     const { name, requirement, expiredDate, dose, sideEffects, notes } =
         req.body;
     try {
-        const existedVaccine = await prisma.vaccination.findUnique({
+        const existedVaccination = await prisma.vaccinations.findUnique({
             where: { id },
         });
-        if (!existedVaccine) {
+        if (!existedVaccination) {
             return res.status(404).json({
                 success: false,
-                error: "Không tìm thấy vaccine để cập nhật",
+                error: "Không tìm thấy loại vaccine để cập nhật",
             });
         }
 
-        if (name && name !== existedVaccine.name) {
-            const nameExists = await prisma.vaccination.findFirst({
+        if (name && name !== existedVaccination.name) {
+            const nameExists = await prisma.vaccinations.findFirst({
                 where: { name },
             });
             if (nameExists) {
                 return res.status(409).json({
                     success: false,
-                    error: "Tên vaccine đã tồn tại trong hệ thống",
+                    error: "Tên loại vaccine đã tồn tại trong hệ thống",
                 });
             }
         }
-        const updated = await prisma.vaccination.update({
+        const updated = await prisma.vaccinations.update({
             where: { id },
             data: {
                 name,
                 requirement,
-                expiredDate,
+                expiredDate: expiredDate ? new Date(expiredDate) : undefined,
                 dose,
                 sideEffects,
                 notes,
@@ -200,7 +198,6 @@ const updateVaccine = async (req, res) => {
         });
         res.status(200).json({
             success: true,
-            message: "Cập nhật vaccine thành công",
             data: updated,
         });
     } catch (error) {
@@ -212,23 +209,22 @@ const updateVaccine = async (req, res) => {
     }
 };
 
-// Delete vaccine
-const deleteVaccine = async (req, res) => {
+const deleteVaccination = async (req, res) => {
     const { id } = req.params;
     try {
-        const existedVaccine = await prisma.vaccination.findUnique({
+        const existedVaccination = await prisma.vaccinations.findUnique({
             where: { id },
         });
-        if (!existedVaccine) {
+        if (!existedVaccination) {
             return res.status(404).json({
                 success: false,
-                error: "Không tìm thấy vaccine để xoá",
+                error: "Không tìm thấy loại vaccine để xoá",
             });
         }
-        await prisma.vaccination.delete({ where: { id } });
+        await prisma.vaccinations.delete({ where: { id } });
         res.status(200).json({
             success: true,
-            message: "Xoá vaccine thành công",
+            message: "Xoá loại vaccine thành công",
         });
     } catch (error) {
         console.log(error);
@@ -240,11 +236,11 @@ const deleteVaccine = async (req, res) => {
 };
 
 export {
-    createVaccine,
-    deleteVaccine,
-    getAllOptionalVaccine,
-    getAllRequiredVaccine,
-    getAllVaccine,
-    getVaccines,
-    updateVaccine,
+    createVaccination,
+    deleteVaccination,
+    getAllOptionalVaccination,
+    getAllRequiredVaccination,
+    getAllVaccination,
+    getVaccinations,
+    updateVaccination,
 };

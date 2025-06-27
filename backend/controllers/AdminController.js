@@ -1694,6 +1694,22 @@ export const deleteParent = async (req, res) => {
     }
 };
 
+// API: Lấy tất cả các khối và số lượng học sinh từng khối
+const getAllGradesWithStudentCount = async (req, res) => {
+    try {
+        const grades = ["1", "2", "3", "4", "5"];
+        const counts = await Promise.all(
+            grades.map(async (grade) => {
+                const count = await prisma.student.count({ where: { grade } });
+                return { grade, count };
+            })
+        );
+        res.json({ success: true, data: counts });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 process.on("SIGTERM", async () => {
     console.log("Shutting down AdminController...");
     await prisma.$disconnect();
@@ -1718,4 +1734,5 @@ export {
     updateRole,
     updateStudent,
     getAllStudentsForNurse,
+    getAllGradesWithStudentCount,
 };
