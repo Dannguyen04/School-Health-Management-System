@@ -83,6 +83,7 @@ const VaccinationCampaigns = () => {
         headers: getHeaders(),
       });
       if (response.data.success) {
+        console.log("Fetched campaigns:", response.data.data);
         setAllCampaigns(response.data.data || []);
         setCampaigns(response.data.data || []);
       } else {
@@ -126,6 +127,7 @@ const VaccinationCampaigns = () => {
   // Update campaign
   const updateCampaign = async (id, data) => {
     try {
+      console.log("Sending update data:", data);
       const response = await axios.put(
         `/api/manager/vaccination-campaigns/${id}`,
         data,
@@ -135,7 +137,11 @@ const VaccinationCampaigns = () => {
       );
       if (response.data.success) {
         message.success("Cập nhật chiến dịch thành công");
-        fetchCampaigns();
+        console.log("Update response:", response.data);
+        // Add small delay to ensure backend has processed the update
+        setTimeout(() => {
+          fetchCampaigns();
+        }, 100);
         return true;
       } else {
         message.error(response.data.error || "Không thể cập nhật chiến dịch");
@@ -230,6 +236,22 @@ const VaccinationCampaigns = () => {
       align: "center",
     },
     {
+      title: "Khối áp dụng",
+      dataIndex: "targetGrades",
+      key: "targetGrades",
+      render: (grades) => (
+        <Space>
+          {(grades || []).map((g) => (
+            <Tag color="geekblue" key={g}>
+              {g}
+            </Tag>
+          ))}
+        </Space>
+      ),
+      width: 120,
+      align: "center",
+    },
+    {
       title: "Ngày bắt đầu",
       dataIndex: "scheduledDate",
       key: "scheduledDate",
@@ -300,6 +322,7 @@ const VaccinationCampaigns = () => {
       startDate: record.scheduledDate ? dayjs(record.scheduledDate) : null,
       endDate: record.deadline ? dayjs(record.deadline) : null,
       vaccineName: record.vaccine?.name,
+      targetGrades: record.targetGrades || [],
     });
     setIsModalVisible(true);
   };
@@ -432,6 +455,7 @@ const VaccinationCampaigns = () => {
                     ? dayjs(selectedCampaign.deadline)
                     : null,
                   status: selectedCampaign.status,
+                  targetGrades: selectedCampaign.targetGrades || [],
                 }
               : {
                   name: "",
@@ -440,12 +464,14 @@ const VaccinationCampaigns = () => {
                   startDate: null,
                   endDate: null,
                   status: "ACTIVE",
+                  targetGrades: [],
                 }
           }
           enableReinitialize
           validationSchema={Yup.object({
             name: Yup.string().required("Vui lòng nhập tên chiến dịch"),
             vaccineName: Yup.string().required("Vui lòng chọn vắc xin"),
+            targetGrades: Yup.array().min(1, "Vui lòng chọn khối áp dụng"),
             startDate: Yup.date().required("Vui lòng chọn ngày bắt đầu"),
             endDate: Yup.date()
               .required("Vui lòng chọn ngày kết thúc")
@@ -464,28 +490,43 @@ const VaccinationCampaigns = () => {
             description: Yup.string(),
           })}
           onSubmit={async (values, { setSubmitting }) => {
-            let data = {
-              name: values.name,
-              description: values.description,
-              vaccineName: values.vaccineName,
-              startDate: values.startDate
-                ? typeof values.startDate === "string"
-                  ? values.startDate
-                  : values.startDate.toISOString()
-                : null,
-              endDate: values.endDate
-                ? typeof values.endDate === "string"
-                  ? values.endDate
-                  : values.endDate.toISOString()
-                : null,
-              status: values.status,
-            };
             let success = false;
+
             if (selectedCampaign) {
-              success = await updateCampaign(selectedCampaign.id, data);
+              // For update, send data in the format backend expects
+              const updateData = {};
+              if (values.name) updateData.name = values.name;
+              if (values.description !== undefined)
+                updateData.description = values.description;
+              if (values.targetGrades && values.targetGrades.length > 0) {
+                // Keep as string values since Prisma schema expects string array
+                updateData.targetGrades = values.targetGrades;
+              }
+              if (values.status) updateData.status = values.status;
+
+              success = await updateCampaign(selectedCampaign.id, updateData);
             } else {
+              // For create, send all required fields
+              const data = {
+                name: values.name,
+                description: values.description,
+                vaccineName: values.vaccineName,
+                targetGrades: values.targetGrades,
+                startDate: values.startDate
+                  ? typeof values.startDate === "string"
+                    ? values.startDate
+                    : values.startDate.toISOString()
+                  : null,
+                endDate: values.endDate
+                  ? typeof values.endDate === "string"
+                    ? values.endDate
+                    : values.endDate.toISOString()
+                  : null,
+                status: values.status,
+              };
               success = await createCampaign(data);
             }
+
             setSubmitting(false);
             if (success) {
               setIsModalVisible(false);
@@ -545,6 +586,30 @@ const VaccinationCampaigns = () => {
                     </Select.Option>
                   ))}
                 </Select>
+              </Form.Item>
+              <Form.Item
+                label="Khối áp dụng"
+                help={
+                  touched.targetGrades && errors.targetGrades
+                    ? errors.targetGrades
+                    : undefined
+                }
+                validateStatus={
+                  touched.targetGrades && errors.targetGrades
+                    ? "error"
+                    : undefined
+                }
+              >
+                <Select
+                  mode="multiple"
+                  value={values.targetGrades}
+                  onChange={(val) => setFieldValue("targetGrades", val)}
+                  onBlur={handleBlur}
+                  options={["1", "2", "3", "4", "5"].map((g) => ({
+                    label: g,
+                    value: g,
+                  }))}
+                />
               </Form.Item>
               <Row gutter={16}>
                 <Col span={12}>

@@ -119,21 +119,12 @@ export const updateMedicalCampaign = async (req, res) => {
     if (typeof name === "string" && name.trim() !== "") data.name = name;
     if (typeof description === "string") data.description = description;
     if (Array.isArray(targetGrades)) data.targetGrades = targetGrades;
+    if (status && ["ACTIVE", "FINISHED", "CANCELLED"].includes(status))
+      data.status = status;
+
     const updated = await prisma.medicalCheckCampaign.update({
       where: { id },
-      ...(name && { name }),
-      ...(description !== undefined && { description }),
-      ...(checkTypes && { checkTypes }),
-      ...(targetGrades && { targetGrades }),
-      ...(scheduledDate && {
-        scheduledDate: new Date(scheduledDate),
-      }),
-      ...(deadline && { deadline: new Date(deadline) }),
-      ...(status &&
-        ["ACTIVE", "FINISHED", "CANCELLED"].includes(status) && {
-          status,
-        }),
-      ...(typeof isActive === "boolean" && { isActive }),
+      data,
     });
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
