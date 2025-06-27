@@ -44,7 +44,6 @@ export const createMedicalCampaign = async (req, res) => {
         targetGrades,
         scheduledDate: start,
         deadline: end,
-        status: status || "ACTIVE",
         isActive: typeof isActive === "boolean" ? isActive : true,
       },
     });
@@ -120,15 +119,21 @@ export const updateMedicalCampaign = async (req, res) => {
     if (typeof name === "string" && name.trim() !== "") data.name = name;
     if (typeof description === "string") data.description = description;
     if (Array.isArray(targetGrades)) data.targetGrades = targetGrades;
-    if (
-      typeof status === "string" &&
-      ["ACTIVE", "FINISHED", "CANCELLED"].includes(status)
-    )
-      data.status = status;
-    data.isActive = status === "ACTIVE";
     const updated = await prisma.medicalCheckCampaign.update({
       where: { id },
-      data,
+      ...(name && { name }),
+      ...(description !== undefined && { description }),
+      ...(checkTypes && { checkTypes }),
+      ...(targetGrades && { targetGrades }),
+      ...(scheduledDate && {
+        scheduledDate: new Date(scheduledDate),
+      }),
+      ...(deadline && { deadline: new Date(deadline) }),
+      ...(status &&
+        ["ACTIVE", "FINISHED", "CANCELLED"].includes(status) && {
+          status,
+        }),
+      ...(typeof isActive === "boolean" && { isActive }),
     });
     res.status(200).json({ success: true, data: updated });
   } catch (error) {
