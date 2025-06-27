@@ -115,9 +115,8 @@ const HealthCheckupCampaigns = () => {
         return false;
       }
     } catch (err) {
-      // Hiển thị lỗi trả về từ backend nếu có
-      const backendMsg = err.response?.data?.error;
-      message.error(backendMsg || "Không thể thêm chiến dịch");
+      console.log("Error creating campaign", err);
+      message.error(err.response?.data?.error || "Không thể thêm chiến dịch");
       return false;
     }
   };
@@ -137,10 +136,8 @@ const HealthCheckupCampaigns = () => {
         return false;
       }
     } catch (err) {
-      // Hiển thị lỗi trả về từ backend nếu có
-      const backendMsg = err.response?.data?.error;
-      message.error(backendMsg || "Không thể cập nhật chiến dịch");
-      return false;
+      console.log("Không thể cập nhật chiến dịch", err);
+      message.error(err.response?.data?.err || "Không thể cập nhật chiến dịch");
     }
   };
 

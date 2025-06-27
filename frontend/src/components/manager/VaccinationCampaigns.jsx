@@ -83,7 +83,6 @@ const VaccinationCampaigns = () => {
         headers: getHeaders(),
       });
       if (response.data.success) {
-        // Không cần map vaccine nữa, backend đã trả về luôn vaccine
         setAllCampaigns(response.data.data || []);
         setCampaigns(response.data.data || []);
       } else {

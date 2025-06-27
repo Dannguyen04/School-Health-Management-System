@@ -10,7 +10,6 @@ export const createMedicalCampaign = async (req, res) => {
     deadline,
     description,
     targetGrades,
-    status,
   } = req.body;
   if (!name || !checkTypes || !targetGrades || !scheduledDate || !deadline) {
     return res.status(400).json({
