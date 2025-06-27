@@ -258,6 +258,7 @@ const HealthCheckupCampaigns = () => {
       name: record.name,
       description: record.description,
       targetGrades: record.targetGrades,
+      checkTypes: record.checkTypes,
       status: record.status,
     });
     setIsModalVisible(true);
@@ -428,29 +429,41 @@ const HealthCheckupCampaigns = () => {
             status: Yup.string().required("Vui lòng chọn trạng thái"),
           })}
           onSubmit={async (values, { setSubmitting }) => {
-            let data = {
-              name: values.name,
-              description: values.description,
-              targetGrades: values.targetGrades,
-              checkTypes: values.checkTypes,
-              scheduledDate: values.scheduledDate
-                ? typeof values.scheduledDate === "string"
-                  ? values.scheduledDate
-                  : values.scheduledDate.toISOString()
-                : "",
-              deadline: values.deadline
-                ? typeof values.deadline === "string"
-                  ? values.deadline
-                  : values.deadline.toISOString()
-                : "",
-              status: values.status,
-            };
             let success = false;
+
             if (selectedCampaign) {
-              success = await updateCampaign(selectedCampaign.id, data);
+              // Try sending data in a format that works with backend's incorrect Prisma usage
+              const updateData = {};
+              if (values.name) updateData.name = values.name;
+              if (values.description !== undefined)
+                updateData.description = values.description;
+              if (values.targetGrades)
+                updateData.targetGrades = values.targetGrades;
+              if (values.status) updateData.status = values.status;
+
+              success = await updateCampaign(selectedCampaign.id, updateData);
             } else {
+              // For create, send all required fields
+              const data = {
+                name: values.name,
+                description: values.description,
+                targetGrades: values.targetGrades,
+                checkTypes: values.checkTypes,
+                scheduledDate: values.scheduledDate
+                  ? typeof values.scheduledDate === "string"
+                    ? values.scheduledDate
+                    : values.scheduledDate.toISOString()
+                  : "",
+                deadline: values.deadline
+                  ? typeof values.deadline === "string"
+                    ? values.deadline
+                    : values.deadline.toISOString()
+                  : "",
+                status: values.status,
+              };
               success = await createCampaign(data);
             }
+
             setSubmitting(false);
             if (success) {
               setIsModalVisible(false);
