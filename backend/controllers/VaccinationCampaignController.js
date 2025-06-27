@@ -80,9 +80,22 @@ const getAllVaccinationCampaigns = async (req, res) => {
       },
     });
 
+    // Lấy tất cả vaccinationId
+    const vaccineIds = campaigns.map((c) => c.vaccinationId);
+    const vaccines = await prisma.vaccinations.findMany({
+      where: { id: { in: vaccineIds } },
+      select: { id: true, name: true },
+    });
+
+    // Map lại để mỗi campaign có trường vaccination (object)
+    const campaignsWithVaccine = campaigns.map((c) => ({
+      ...c,
+      vaccination: vaccines.find((v) => v.id === c.vaccinationId) || null,
+    }));
+
     res.status(200).json({
       success: true,
-      data: campaigns,
+      data: campaignsWithVaccine,
       total: campaigns.length,
     });
   } catch (error) {

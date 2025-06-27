@@ -91,7 +91,7 @@ const VaccinationCampaigns = () => {
         headers: getHeaders(),
       });
       if (response.data.success) {
-        // Không cần map vaccine nữa, backend đã trả về luôn vaccine
+        console.log(response.data.data);
         setAllCampaigns(response.data.data || []);
         setCampaigns(response.data.data || []);
       } else {
@@ -321,6 +321,20 @@ const VaccinationCampaigns = () => {
       ),
     },
     {
+      title: "Khối áp dụng",
+      dataIndex: "targetGrades",
+      key: "targetGrades",
+      render: (grades) => (
+        <Space>
+          {(grades || []).map((g) => (
+            <Tag color="geekblue" key={g}>
+              {g}
+            </Tag>
+          ))}
+        </Space>
+      ),
+    },
+    {
       title: "Loại vaccine",
       dataIndex: ["vaccination", "name"],
       key: "vaccinationName",
@@ -534,6 +548,7 @@ const VaccinationCampaigns = () => {
               ? {
                   name: selectedCampaign.name,
                   description: selectedCampaign.description,
+                  targetGrades: selectedCampaign.targetGrades || [],
                   vaccinationName: selectedCampaign.vaccination?.name || "",
                   startDate: selectedCampaign.scheduledDate
                     ? dayjs(selectedCampaign.scheduledDate)
@@ -547,6 +562,7 @@ const VaccinationCampaigns = () => {
                   name: "",
                   description: "",
                   vaccinationName: "",
+                  targetGrades: [],
                   startDate: null,
                   endDate: null,
                   status: "ACTIVE",
@@ -578,6 +594,7 @@ const VaccinationCampaigns = () => {
                   ),
             status: Yup.string().required("Vui lòng chọn trạng thái"),
             description: Yup.string(),
+            targetGrades: Yup.array().min(1, "Vui lòng chọn khối áp dụng"),
           })}
           onSubmit={async (values, { setSubmitting }) => {
             let success = false;
@@ -588,9 +605,7 @@ const VaccinationCampaigns = () => {
                 name: values.name,
                 description: values.description,
                 status: values.status,
-                targetGrades: (
-                  selectedCampaign.targetGrades || ["1", "2", "3", "4", "5"]
-                ).map((grade) => String(grade)),
+                targetGrades: values.targetGrades,
               };
               success = await updateCampaign(selectedCampaign.id, updateData);
             } else {
@@ -608,7 +623,7 @@ const VaccinationCampaigns = () => {
                 name: values.name,
                 description: values.description,
                 vaccinationId: selectedVaccination.id,
-                targetGrades: ["1", "2", "3", "4", "5"],
+                targetGrades: values.targetGrades,
                 scheduledDate: values.startDate
                   ? typeof values.startDate === "string"
                     ? values.startDate
@@ -684,6 +699,30 @@ const VaccinationCampaigns = () => {
                     </Select.Option>
                   ))}
                 </Select>
+              </Form.Item>
+              <Form.Item
+                label="Khối áp dụng"
+                help={
+                  touched.targetGrades && errors.targetGrades
+                    ? errors.targetGrades
+                    : undefined
+                }
+                validateStatus={
+                  touched.targetGrades && errors.targetGrades
+                    ? "error"
+                    : undefined
+                }
+              >
+                <Select
+                  mode="multiple"
+                  value={values.targetGrades}
+                  onChange={(val) => setFieldValue("targetGrades", val)}
+                  onBlur={handleBlur}
+                  options={["1", "2", "3", "4", "5"].map((g) => ({
+                    label: g,
+                    value: g,
+                  }))}
+                />
               </Form.Item>
               <Row gutter={16}>
                 <Col span={12}>

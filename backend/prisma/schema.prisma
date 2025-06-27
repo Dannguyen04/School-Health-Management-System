@@ -368,7 +368,7 @@ model VaccinationCampaign {
   // Relations
   notifications Notification[]
   consents      VaccinationConsent[]
-  vaccinations  vaccinations[]
+  vaccinations  vaccinations[] 
 
   @@map("vaccination_campaigns")
 }
