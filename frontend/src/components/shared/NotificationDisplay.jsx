@@ -20,6 +20,7 @@ import {
 } from "@ant-design/icons";
 import moment from "moment";
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { parentAPI } from "../../utils/api.js";
 
 const { Text, Title } = Typography;
@@ -32,6 +33,7 @@ const NotificationDisplay = ({ userId, type, status }) => {
     const [selectedNotification, setSelectedNotification] = useState(null);
     const [medicalEventDetails, setMedicalEventDetails] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         if (userId) {
@@ -148,6 +150,10 @@ const NotificationDisplay = ({ userId, type, status }) => {
                 return "🏥";
             case "vaccination":
                 return "💉";
+            case "vaccination_consent":
+                return "📋";
+            case "vaccination_consent_update":
+                return "✅";
             case "medical_check":
                 return "👨‍⚕️";
             case "medication":
@@ -191,12 +197,16 @@ const NotificationDisplay = ({ userId, type, status }) => {
                 return "Sự kiện y tế";
             case "vaccination":
                 return "Tiêm chủng";
+            case "vaccination_consent":
+                return "Phiếu đồng ý tiêm chủng";
+            case "vaccination_consent_update":
+                return "Cập nhật phiếu đồng ý";
             case "medical_check":
-                return "Kiểm tra y tế";
+                return "Khám sức khỏe";
             case "medication":
                 return "Thuốc";
             default:
-                return "Thông báo chung";
+                return "Thông báo";
         }
     };
 
@@ -248,6 +258,23 @@ const NotificationDisplay = ({ userId, type, status }) => {
                 return "Thấp";
             default:
                 return severity;
+        }
+    };
+
+    const handleNotificationClick = (notification) => {
+        if (notification.type === "vaccination_consent") {
+            navigate("/user/consent-forms");
+            if (notification.status !== "READ") {
+                handleMarkAsRead(notification.id);
+            }
+        } else if (notification.type === "vaccination_consent_update") {
+            // Navigate to vaccination campaigns page for managers
+            navigate("/manager/vaccination-campaigns");
+            if (notification.status !== "READ") {
+                handleMarkAsRead(notification.id);
+            }
+        } else {
+            handleViewDetail(notification);
         }
     };
 
@@ -303,14 +330,14 @@ const NotificationDisplay = ({ userId, type, status }) => {
                                     padding: "12px",
                                     cursor: "pointer",
                                 }}
-                                onClick={() => handleViewDetail(item)}
+                                onClick={() => handleNotificationClick(item)}
                                 actions={[
                                     <Button
                                         type="text"
                                         icon={<EyeOutlined />}
                                         onClick={(e) => {
                                             e.stopPropagation();
-                                            handleViewDetail(item);
+                                            handleNotificationClick(item);
                                         }}
                                         title="Xem chi tiết"
                                     />,

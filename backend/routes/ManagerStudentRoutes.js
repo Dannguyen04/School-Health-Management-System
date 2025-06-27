@@ -7,6 +7,7 @@ import {
     updateStudent,
     getAllParents,
     addParent,
+    getAllGradesWithStudentCount,
 } from "../controllers/AdminController.js";
 import {
     authenticateToken,
@@ -30,5 +31,12 @@ router.get("/parents", authenticateToken, verifyManager, getAllParents);
 
 // Add route for manager to create new parent
 router.post("/parents", authenticateToken, verifyManager, addParent);
+
+router.get(
+    "/grades-with-count",
+    authenticateToken,
+    verifyManager,
+    getAllGradesWithStudentCount
+);
 
 export default router;

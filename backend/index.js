@@ -18,6 +18,14 @@ dotenv.config();
 
 const app = express();
 
+// Log tất cả request để debug
+app.use((req, res, next) => {
+    console.log(
+        `[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`
+    );
+    next();
+});
+
 // Connect to database
 connectToDatabase();
 

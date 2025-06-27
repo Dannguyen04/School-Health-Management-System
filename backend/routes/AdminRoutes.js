@@ -17,6 +17,7 @@ import {
     addParent,
     updateParent,
     deleteParent,
+    getAllGradesWithStudentCount,
 } from "../controllers/AdminController.js";
 import {
     authenticateToken,
@@ -67,5 +68,12 @@ router.get("/parents", authenticateToken, verifyAdmin, getAllParents);
 router.post("/parents", authenticateToken, verifyAdmin, addParent);
 router.put("/parents/:id", authenticateToken, verifyAdmin, updateParent);
 router.delete("/parents/:id", authenticateToken, verifyAdmin, deleteParent);
+
+router.get(
+    "/grades-with-count",
+    authenticateToken,
+    verifyAdmin,
+    getAllGradesWithStudentCount
+);
 
 export default router;
