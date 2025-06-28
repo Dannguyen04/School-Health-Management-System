@@ -1071,7 +1071,7 @@ export const getStudentsForCampaign = async (req, res) => {
                 },
                 // Chỉ lấy những học sinh có user
                 user: {
-                    NOT: null,
+                    is: {},
                 },
             },
             include: {

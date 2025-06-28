@@ -84,6 +84,19 @@ enum CampaignStatus {
   CANCELLED
 }
 
+enum PhysicalClassification {
+  EXCELLENT // Xuất sắc
+  GOOD      // Tốt  
+  AVERAGE   // Trung bình
+  WEAK      // Yếu
+}
+
+enum OverallHealthStatus {
+  NORMAL           // Bình thường
+  NEEDS_ATTENTION  // Cần chú ý
+  REQUIRES_TREATMENT // Cần điều trị
+}
+
 // Main Models
 model users {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -423,7 +436,6 @@ model MedicalCheckCampaign {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   description   String?
-  checkTypes    String[] // Array of check types like ["vision", "hearing", "dental"]
   targetGrades  String[] // Array of grades
   scheduledDate DateTime
   deadline      DateTime
@@ -440,36 +452,53 @@ model MedicalCheckCampaign {
 }
 
 model MedicalCheck {
-  id         String  @id @default(auto()) @map("_id") @db.ObjectId
-  studentId  String  @db.ObjectId
-  campaignId String  @db.ObjectId
-  nurseId    String? @db.ObjectId
+  id            String              @id @default(auto()) @map("_id") @db.ObjectId
+  studentId     String              @db.ObjectId
+  campaignId    String              @db.ObjectId
+  nurseId       String?             @db.ObjectId
 
-  status        MedicalCheckStatus @default(SCHEDULED)
+  status        MedicalCheckStatus  @default(SCHEDULED)
   scheduledDate DateTime
   completedDate DateTime?
 
-  // Check results
-  visionResult  String? // "normal", "needs_glasses", "refer_specialist"
-  hearingResult String? // "normal", "impaired", "refer_specialist"
-  dentalResult  String? // "good", "needs_treatment", "refer_dentist"
-  heightWeight  Json? // {height: 120, weight: 25}
-  generalHealth String? // Overall health assessment
+  // Khám Thể Lực
+  height        Float?   // cm
+  weight        Float?   // kg
+  pulse         Int?     // Mạch (lần/phút)
+  systolicBP    Int      // Huyết áp tâm thu (mmHg)
+  diastolicBP   Int      // Huyết áp tâm trương (mmHg)
+  physicalClassification PhysicalClassification    // Phân loại thể lực (e.g., "Tốt", "Trung bình", "Yếu")
 
-  recommendations  String? // Recommendations for parents
-  requiresFollowUp Boolean   @default(false)
-  followUpDate     DateTime?
-  notes            String?
+  // Khám Lâm Sàng
+  visionRightNoGlasses Float      // Thị lực mắt phải không kính (e.g., 8/10)
+  visionLeftNoGlasses  Float      // Thị lực mắt trái không kính
+  visionRightWithGlasses Float    // Thị lực mắt phải có kính
+  visionLeftWithGlasses  Float    // Thị lực mắt trái có kính
+  hearingLeftNormal    Float      // Thính lực tai trái nói thường (m)
+  hearingLeftWhisper   Float      // Thính lực tai trái nói thầm (m)
+  hearingRightNormal   Float      // Thính lực tai phải nói thường (m)
+  hearingRightWhisper  Float      // Thính lực tai phải nói thầm (m)
+  dentalUpperJaw       String     // Kết quả khám hàm trên
+  dentalLowerJaw       String     // Kết quả khám hàm dưới
+  clinicalNotes        String     // Ghi chú các bệnh lý từ khám lâm sàng (nhi khoa, tuần hoàn, hô hấp, tiêu hóa, thận-tiết niệu, thần kinh, tâm thần, mắt, tai mũi họng, răng hàm mặt)
 
-  parentNotified Boolean @default(false)
-  parentResponse String? // Parent's response to results
+ 
+  // Kết Luận Chung
+  overallHealth        OverallHealthStatus  // Sức khỏe bình thường hoặc các vấn đề cần lưu ý
+  recommendations      String?     // Khuyến nghị cho phụ huynh
+  requiresFollowUp     Boolean     @default(false)
+  followUpDate         DateTime?
+  notes                String?     // Ghi chú tổng quát, bao gồm các bệnh lý khác
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  parentNotified       Boolean     @default(false)
+  parentResponse       String?     // Phản hồi của phụ huynh
 
-  student  Student              @relation(fields: [studentId], references: [id])
-  campaign MedicalCheckCampaign @relation(fields: [campaignId], references: [id])
-  nurse    SchoolNurse?         @relation(fields: [nurseId], references: [id])
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  student              Student              @relation(fields: [studentId], references: [id])
+  campaign             MedicalCheckCampaign @relation(fields: [campaignId], references: [id])
+  nurse                SchoolNurse   ?      @relation(fields: [nurseId], references: [id])
 
   @@map("medical_checks")
 }
