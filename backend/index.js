@@ -4,6 +4,7 @@ import express from "express";
 import connectToDatabase from "./db/db.js";
 import AdminRoutes from "./routes/AdminRoutes.js";
 import authRouter from "./routes/auth.js";
+import BlogRoutes from "./routes/BlogRoutes.js";
 import NotificationRoutes from "./routes/NotificationRoutes.js";
 import NurseRoutes from "./routes/NurseRoutes.js";
 import parentRoutes from "./routes/parentRoutes.js";
@@ -49,6 +50,7 @@ app.use("/api/manager/students", ManagerStudentRoutes);
 app.use("/api/notifications", NotificationRoutes);
 app.use("/api/medical-checks", MedicalCheckRoutes);
 app.use("/api/medical-campaigns", MedicalCampaignRoutes);
+app.use("/api/blogs", BlogRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {

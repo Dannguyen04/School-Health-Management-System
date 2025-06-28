@@ -76,6 +76,14 @@ export const nurseAPI = {
 
     // Students for nurse
     getStudentsForNurse: () => api.get("/admin/students-for-nurse"),
+
+    // Blog management
+    getBlogs: (params) => api.get(`/nurse/blogs?${params}`),
+    createBlog: (data) => api.post("/nurse/blogs", data),
+    getBlogById: (id) => api.get(`/nurse/blogs/${id}`),
+    updateBlog: (id, data) => api.put(`/nurse/blogs/${id}`, data),
+    deleteBlog: (id) => api.delete(`/nurse/blogs/${id}`),
+    getBlogCategories: () => api.get("/nurse/blogs/categories"),
 };
 
 // User API endpoints
@@ -159,3 +167,11 @@ export const managerAPI = {
 };
 
 export default api;
+
+// Public API endpoints (no authentication required)
+export const publicAPI = {
+    // Get published blog posts for homepage
+    getPublishedBlogs: (params) => api.get(`/blogs/published?${params}`),
+    getBlogCategories: () => api.get("/blogs/categories"),
+    getBlogById: (id) => api.get(`/blogs/${id}`),
+};

@@ -79,7 +79,7 @@ const verifyRole = (requiredRoles) => (req, res, next) => {
 // Specific role-based middleware
 const verifyAdmin = verifyRole(["ADMIN"]);
 const verifyManager = verifyRole(["MANAGER"]);
-const verifyUser = verifyRole(["ADMIN", "USER", "PARENTS", "SCHOOL-NURSE"]);
+const verifyUser = verifyRole(["ADMIN", "USER", "PARENTS", "SCHOOL_NURSE"]);
 
 function verifyNurse(req, res, next) {
     if (req.user && req.user.role === "SCHOOL_NURSE") {
