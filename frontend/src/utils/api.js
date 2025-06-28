@@ -93,6 +93,14 @@ export const userAPI = {
 
     // Update current user profile
     updateProfile: (data) => api.put("/auth/profile", data),
+
+    // Upload profile photo
+    uploadProfilePhoto: (formData) =>
+        api.post("/auth/profile/upload-photo", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        }),
 };
 
 // Admin API endpoints
