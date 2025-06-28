@@ -462,12 +462,11 @@ model MedicalCheck {
   completedDate DateTime?
 
   // Khám Thể Lực
-  height        Float?  @validate(gte: 50, lte: 250)  // cm
-  weight        Float?  @validate(gte: 10, lte: 200)  // kg
-  pulse         Int?    @validate(gte: 40, lte: 200)  // bpm
-  pulse         Int                // Mạch (lần/phút)
-  systolicBP    Int                 // Huyết áp tâm thu (mmHg)
-  diastolicBP   Int                 // Huyết áp tâm trương (mmHg)
+  height        Float?   // cm
+  weight        Float?   // kg
+  pulse         Int?     // Mạch (lần/phút)
+  systolicBP    Int      // Huyết áp tâm thu (mmHg)
+  diastolicBP   Int      // Huyết áp tâm trương (mmHg)
   physicalClassification PhysicalClassification    // Phân loại thể lực (e.g., "Tốt", "Trung bình", "Yếu")
 
   // Khám Lâm Sàng
