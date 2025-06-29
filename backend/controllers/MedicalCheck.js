@@ -309,12 +309,8 @@ const createMedicalCheck = async (req, res) => {
             },
             include: {
                 student: {
-                    select: {
-                        id: true,
-                        name: true,
-                        grade: true,
-                        class: true,
-                        studentCode: true,
+                    include: {
+                        user: true,
                     },
                 },
                 campaign: {
@@ -325,7 +321,7 @@ const createMedicalCheck = async (req, res) => {
                         deadline: true,
                     },
                 },
-                nurse: { select: { id: true, name: true } },
+                nurse: { include: { user: true } },
             },
         });
         res.status(201).json({
@@ -407,18 +403,14 @@ const updateMedicalCheckResults = async (req, res) => {
             data: updateData,
             include: {
                 student: {
-                    select: {
-                        id: true,
-                        name: true,
-                        grade: true,
-                        class: true,
-                        studentCode: true,
+                    include: {
+                        user: true,
                     },
                 },
                 campaign: {
                     select: { id: true, name: true, checkTypes: true },
                 },
-                nurse: { select: { id: true, name: true } },
+                nurse: { include: { user: true } },
             },
         });
         res.json({
@@ -440,12 +432,8 @@ const getMedicalChecksByCampaign = async (req, res) => {
             where: { campaignId },
             include: {
                 student: {
-                    select: {
-                        id: true,
-                        name: true,
-                        grade: true,
-                        class: true,
-                        studentCode: true,
+                    include: {
+                        user: true,
                     },
                 },
                 campaign: {
@@ -456,9 +444,8 @@ const getMedicalChecksByCampaign = async (req, res) => {
                     },
                 },
                 nurse: {
-                    select: {
-                        id: true,
-                        name: true,
+                    include: {
+                        user: true,
                     },
                 },
             },

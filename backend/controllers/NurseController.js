@@ -428,14 +428,6 @@ export const getInventoryCategories = async (req, res) => {
 export const getRecentMedicalEvents = async (req, res) => {
     try {
         const events = await prisma.medicalEvent.findMany({
-            where: {
-                // Chỉ lấy những event có student có user
-                student: {
-                    user: {
-                        NOT: null,
-                    },
-                },
-            },
             take: 5,
             orderBy: {
                 occurredAt: "desc",
@@ -560,14 +552,6 @@ export const updateMedicalEventStatus = async (req, res) => {
 export const getAllMedicalEvents = async (req, res) => {
     try {
         const events = await prisma.medicalEvent.findMany({
-            where: {
-                // Chỉ lấy những event có student có user
-                student: {
-                    user: {
-                        NOT: null,
-                    },
-                },
-            },
             orderBy: {
                 occurredAt: "desc",
             },
@@ -1163,17 +1147,6 @@ export const getEligibleStudentsForVaccination = async (req, res) => {
             where: {
                 campaignId: campaignId,
                 consent: true, // Chỉ lấy những consent đã đồng ý
-                // Chỉ lấy những consent có student và parent có user
-                student: {
-                    user: {
-                        NOT: null,
-                    },
-                },
-                parent: {
-                    user: {
-                        NOT: null,
-                    },
-                },
             },
             include: {
                 student: {
@@ -1591,10 +1564,6 @@ export const getVaccinationStats = async (req, res) => {
                 grade: {
                     in: campaign.targetGrades,
                 },
-                // Chỉ đếm những học sinh có user
-                user: {
-                    NOT: null,
-                },
             },
         });
 
@@ -1603,12 +1572,6 @@ export const getVaccinationStats = async (req, res) => {
             where: {
                 campaignId: campaignId,
                 consent: true,
-                // Chỉ đếm những consent có student có user
-                student: {
-                    user: {
-                        NOT: null,
-                    },
-                },
             },
         });
 
@@ -1617,12 +1580,6 @@ export const getVaccinationStats = async (req, res) => {
             where: {
                 campaignId: campaignId,
                 status: "COMPLETED",
-                // Chỉ đếm những vaccination có student có user
-                student: {
-                    user: {
-                        NOT: null,
-                    },
-                },
             },
         });
 
@@ -1631,12 +1588,6 @@ export const getVaccinationStats = async (req, res) => {
             where: {
                 campaignId: campaignId,
                 consent: false,
-                // Chỉ đếm những consent có student có user
-                student: {
-                    user: {
-                        NOT: null,
-                    },
-                },
             },
         });
 
@@ -1649,17 +1600,6 @@ export const getVaccinationStats = async (req, res) => {
             where: {
                 campaignId: campaignId,
                 status: "COMPLETED",
-                // Chỉ lấy những vaccination có student và nurse có user
-                student: {
-                    user: {
-                        NOT: null,
-                    },
-                },
-                nurse: {
-                    user: {
-                        NOT: null,
-                    },
-                },
             },
             take: 5,
             orderBy: {
