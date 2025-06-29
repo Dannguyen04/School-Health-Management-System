@@ -5,6 +5,12 @@ generator client {
   provider = "prisma-client-js"
 }
 
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "./ERD.md"
+  format   = "mermaid"
+}
+
 datasource db {
   provider = "mongodb"
   url      = env("DATABASE_URL")
