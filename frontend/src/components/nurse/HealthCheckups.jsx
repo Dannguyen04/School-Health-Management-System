@@ -1,9 +1,4 @@
-import {
-  EditOutlined,
-  FileTextOutlined,
-  PlusOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { EyeOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -16,37 +11,69 @@ import {
   message,
   Modal,
   Select,
-  Space,
-  Spin,
   Table,
   Tag,
   Typography,
 } from "antd";
 import axios from "axios";
+import dayjs from "dayjs";
+import { ErrorMessage, Formik } from "formik";
 import { useEffect, useState } from "react";
+import * as Yup from "yup";
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { Title } = Typography;
 
+// Yup schema validate
+const checkupSchema = Yup.object().shape({
+  scheduledDate: Yup.date().required("Vui lòng chọn ngày khám"),
+  height: Yup.number().min(50).max(250).required("Chiều cao 50-250cm"),
+  weight: Yup.number().min(10).max(200).required("Cân nặng 10-200kg"),
+  pulse: Yup.number().min(40).max(200).required("Mạch 40-200"),
+  systolicBP: Yup.number().min(60).max(250).required("Tâm thu 60-250"),
+  diastolicBP: Yup.number().min(30).max(150).required("Tâm trương 30-150"),
+  physicalClassification: Yup.string()
+    .oneOf(["EXCELLENT", "GOOD", "AVERAGE", "WEAK"])
+    .required("Chọn phân loại"),
+  visionRightNoGlasses: Yup.number().required(),
+  visionLeftNoGlasses: Yup.number().required(),
+  visionRightWithGlasses: Yup.number().required(),
+  visionLeftWithGlasses: Yup.number().required(),
+  hearingLeftNormal: Yup.number().required(),
+  hearingLeftWhisper: Yup.number().required(),
+  hearingRightNormal: Yup.number().required(),
+  hearingRightWhisper: Yup.number().required(),
+  dentalUpperJaw: Yup.string().required("Nhập kết quả răng hàm trên"),
+  dentalLowerJaw: Yup.string().required("Nhập kết quả răng hàm dưới"),
+  clinicalNotes: Yup.string().required("Nhập ghi chú lâm sàng"),
+  overallHealth: Yup.string()
+    .oneOf(["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"])
+    .required("Chọn trạng thái"),
+  recommendations: Yup.string().required("Nhập khuyến nghị"),
+  requiresFollowUp: Yup.boolean().required("Chọn"),
+  followUpDate: Yup.date().nullable(),
+  notes: Yup.string(),
+});
+
 const HealthCheckups = () => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [detail, setDetail] = useState(null);
-  const [detailModal, setDetailModal] = useState(false);
-  const [createModal, setCreateModal] = useState(false);
-  const [updateModal, setUpdateModal] = useState(false);
-  const [updateRecord, setUpdateRecord] = useState(null);
-  const [form] = Form.useForm();
-  const [updateForm] = Form.useForm();
-  const [campaignId, setCampaignId] = useState("");
   const [campaigns, setCampaigns] = useState([]);
   const [students, setStudents] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [checkupModal, setCheckupModal] = useState(false);
+  const [checkupStudent, setCheckupStudent] = useState(null);
+  const [checkupForm] = Form.useForm();
+  const [detailReport, setDetailReport] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editInitialValues, setEditInitialValues] = useState(null);
 
   // Fetch danh sách campaign khi vào trang
   useEffect(() => {
     const fetchCampaigns = async () => {
+      setLoading(true);
       try {
         const res = await axios.get("/api/medical-campaigns", {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -55,164 +82,150 @@ const HealthCheckups = () => {
       } catch {
         setCampaigns([]);
       }
+      setLoading(false);
     };
     fetchCampaigns();
   }, []);
 
-  // Fetch danh sách học sinh khi mở modal tạo lịch (nếu chưa có)
-  const fetchStudents = async () => {
-    if (students.length > 0) return;
-    try {
-      const res = await axios.get("/api/admin/students-for-nurse", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setStudents(res.data.data || []);
-    } catch {
-      setStudents([]);
-    }
-  };
-
-  // Lấy danh sách kiểm tra theo campaign
-  const fetchCheckups = async (cid = campaignId, params = {}) => {
-    if (!cid) return;
+  // Khi chọn campaign, fetch chi tiết campaign và danh sách học sinh phù hợp
+  const handleSelectCampaign = async (campaign) => {
     setLoading(true);
     try {
-      const res = await axios.get(`/api/medical-checks/campaign/${cid}`, {
-        params,
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setData(res.data.data || []);
-    } catch {
-      message.error("Không thể tải danh sách kiểm tra");
-    }
-    setLoading(false);
-  };
-
-  // Xem chi tiết
-  const handleViewDetail = async (record) => {
-    try {
-      const res = await axios.get(`/api/medical-checks/${record.id}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setDetail(res.data.data);
-      setDetailModal(true);
-    } catch {
-      message.error("Không thể tải chi tiết kiểm tra");
-    }
-  };
-
-  // Tạo lịch kiểm tra
-  const handleCreate = async (values) => {
-    try {
-      await axios.post(
-        `/api/medical-checks/create`,
-        { ...values, campaignId },
+      // Lấy chi tiết campaign
+      const resCampaign = await axios.get(
+        `/api/medical-campaigns/${campaign.id}`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
-      message.success("Tạo lịch kiểm tra thành công");
-      setCreateModal(false);
-      form.resetFields();
-      fetchCheckups();
-    } catch (err) {
-      message.error(err.response?.data?.error || "Tạo lịch kiểm tra thất bại");
-    }
-  };
+      const campaignDetail = resCampaign.data.data;
+      setSelectedCampaign(campaignDetail);
 
-  // Cập nhật kết quả kiểm tra
-  const handleUpdate = async (values) => {
-    try {
-      await axios.put(`/api/medical-checks/${updateRecord.id}`, values, {
+      // Lấy danh sách học sinh
+      const resStudents = await axios.get("/api/admin/students-for-nurse", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
-      message.success("Cập nhật kết quả thành công");
-      setUpdateModal(false);
-      updateForm.resetFields();
-      fetchCheckups();
-    } catch (err) {
-      message.error(err.response?.data?.error || "Cập nhật thất bại");
+      // Lọc theo targetGrades từ campaign chi tiết (ép kiểu về string để tránh lỗi)
+      const filtered = (resStudents.data.data || []).filter((s) =>
+        (campaignDetail.targetGrades || [])
+          .map(String)
+          .includes(String(s.grade))
+      );
+      setStudents(filtered);
+
+      // Lấy danh sách báo cáo khám sức khỏe của campaign này
+      const resReports = await axios.get(
+        `/api/medical-checks/campaign/${campaignDetail.id}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      setReports(resReports.data.data || []);
+    } catch {
+      setStudents([]);
+      setReports([]);
     }
+    setLoading(false);
   };
 
-  // Khi chọn campaign
-  useEffect(() => {
-    if (campaignId) {
-      fetchCheckups();
-    }
-    // eslint-disable-next-line
-  }, [campaignId]);
-
-  // Khi mở modal tạo lịch kiểm tra
-  useEffect(() => {
-    if (createModal) {
-      fetchStudents();
-    }
-    // eslint-disable-next-line
-  }, [createModal]);
-
-  // Tìm kiếm/filter
-  const handleSearch = (values) => {
-    fetchCheckups(campaignId, values);
+  // Khi bấm Khám sức khỏe
+  const handleCreateCheckup = (student) => {
+    setCheckupStudent(student);
+    setCheckupModal(true);
+    checkupForm.resetFields();
   };
 
-  const columns = [
-    {
-      title: "Mã học sinh",
-      dataIndex: ["student", "studentCode"],
-      key: "studentCode",
-    },
-    {
-      title: "Tên học sinh",
-      key: "studentName",
-      render: (_, record) => record.student?.user?.fullName || "-",
-    },
-    {
-      title: "Lớp",
-      dataIndex: ["student", "class"],
-      key: "class",
-    },
-    {
-      title: "Ngày khám",
-      dataIndex: "scheduledDate",
-      key: "scheduledDate",
-      render: (date) => date && new Date(date).toLocaleDateString(),
-    },
+  // Khi bấm xem chi tiết báo cáo
+  const handleViewDetail = (report) => {
+    setDetailReport(report);
+    setDetailModalVisible(true);
+  };
+
+  // Khi bấm chỉnh sửa báo cáo
+  const handleEditReport = (report) => {
+    setEditInitialValues({
+      scheduledDate: report.scheduledDate ? dayjs(report.scheduledDate) : null,
+      height: report.height,
+      weight: report.weight,
+      pulse: report.pulse,
+      systolicBP: report.systolicBP,
+      diastolicBP: report.diastolicBP,
+      physicalClassification: report.physicalClassification,
+      visionRightNoGlasses: report.visionRightNoGlasses,
+      visionLeftNoGlasses: report.visionLeftNoGlasses,
+      visionRightWithGlasses: report.visionRightWithGlasses,
+      visionLeftWithGlasses: report.visionLeftWithGlasses,
+      hearingLeftNormal: report.hearingLeftNormal,
+      hearingLeftWhisper: report.hearingLeftWhisper,
+      hearingRightNormal: report.hearingRightNormal,
+      hearingRightWhisper: report.hearingRightWhisper,
+      dentalUpperJaw: report.dentalUpperJaw,
+      dentalLowerJaw: report.dentalLowerJaw,
+      clinicalNotes: report.clinicalNotes,
+      overallHealth: report.overallHealth,
+      recommendations: report.recommendations,
+      requiresFollowUp: report.requiresFollowUp,
+      followUpDate: report.followUpDate ? dayjs(report.followUpDate) : null,
+      notes: report.notes,
+    });
+    setDetailModalVisible(false);
+    setEditModalVisible(true);
+  };
+
+  // Table columns chỉ cho students
+  const studentColumns = [
+    { title: "Mã học sinh", dataIndex: "studentCode", key: "studentCode" },
+    { title: "Tên học sinh", dataIndex: "fullName", key: "fullName" },
+    { title: "Lớp", dataIndex: "class", key: "class" },
+    { title: "Khối", dataIndex: "grade", key: "grade" },
     {
       title: "Trạng thái",
-      dataIndex: "status",
       key: "status",
-      render: (status) => (
-        <Tag color={status === "COMPLETED" ? "green" : "orange"}>{status}</Tag>
-      ),
+      render: (_, record) => {
+        const report = reports.find((r) => r.studentId === record.id);
+        if (report) {
+          return (
+            <Tag color={report.status === "COMPLETED" ? "green" : "orange"}>
+              {report.status === "COMPLETED" ? "Hoàn thành" : "Chưa hoàn thành"}
+            </Tag>
+          );
+        }
+        return <Tag color="default">Chưa khám</Tag>;
+      },
     },
     {
       title: "Thao tác",
       key: "actions",
-      render: (_, record) => (
-        <Space>
-          <Button
-            icon={<FileTextOutlined />}
-            onClick={() => handleViewDetail(record)}
-          >
-            Chi tiết
+      render: (_, record) => {
+        const report = reports.find((r) => r.studentId === record.id);
+        if (report) {
+          return (
+            <Button
+              type="default"
+              icon={<EyeOutlined />}
+              shape="round"
+              size="small"
+              style={{
+                color: "#1677ff",
+                borderColor: "#1677ff",
+                fontWeight: 500,
+              }}
+              onClick={() => handleViewDetail(report)}
+            >
+              Chi tiết
+            </Button>
+          );
+        }
+        return (
+          <Button type="primary" onClick={() => handleCreateCheckup(record)}>
+            Khám sức khỏe
           </Button>
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => {
-              setUpdateRecord(record);
-              updateForm.setFieldsValue(record);
-              setUpdateModal(true);
-            }}
-            disabled={record.status === "COMPLETED"}
-          >
-            Cập nhật
-          </Button>
-        </Space>
-      ),
+        );
+      },
     },
   ];
 
+  // Table columns cho campaign
   const campaignColumns = [
     { title: "Tên chiến dịch", dataIndex: "name", key: "name" },
     { title: "Mô tả", dataIndex: "description", key: "description" },
@@ -242,13 +255,7 @@ const HealthCheckups = () => {
       title: "Hành động",
       key: "actions",
       render: (_, record) => (
-        <Button
-          type="primary"
-          onClick={() => {
-            setSelectedCampaign(record);
-            setCampaignId(record.id);
-          }}
-        >
+        <Button type="primary" onClick={() => handleSelectCampaign(record)}>
           Chọn chiến dịch
         </Button>
       ),
@@ -258,7 +265,9 @@ const HealthCheckups = () => {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <Title level={2}>Thực hiện khám sức khỏe</Title>
+        <Typography.Title level={2}>
+          Demo lọc học sinh theo chiến dịch
+        </Typography.Title>
       </div>
       {!selectedCampaign ? (
         <Card title="Chọn chiến dịch kiểm tra sức khỏe">
@@ -275,14 +284,7 @@ const HealthCheckups = () => {
           <Card
             title={`Chiến dịch: ${selectedCampaign.name}`}
             extra={
-              <Button
-                onClick={() => {
-                  setSelectedCampaign(null);
-                  setCampaignId("");
-                }}
-              >
-                Đóng
-              </Button>
+              <Button onClick={() => setSelectedCampaign(null)}>Đóng</Button>
             }
           >
             <Descriptions bordered column={2}>
@@ -308,270 +310,1002 @@ const HealthCheckups = () => {
                     : "Đã kết thúc"}
                 </Tag>
               </Descriptions.Item>
+              <Descriptions.Item label="Khối áp dụng">
+                {(selectedCampaign.targetGrades || []).join(", ")}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
-          <div style={{ margin: "16px 0" }}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setCreateModal(true)}
-              style={{ marginRight: 8 }}
-            >
-              Tạo lịch kiểm tra
-            </Button>
-          </div>
-          <Card>
-            <Form form={form} onFinish={handleSearch} layout="inline">
-              <Form.Item name="studentId" label="Mã học sinh">
-                <Input placeholder="Nhập mã học sinh" />
-              </Form.Item>
-              <Form.Item name="grade" label="Khối">
-                <Select placeholder="Chọn khối" style={{ width: 120 }}>
-                  <Option value="1">1</Option>
-                  <Option value="2">2</Option>
-                  <Option value="3">3</Option>
-                  <Option value="4">4</Option>
-                  <Option value="5">5</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item name="status" label="Trạng thái">
-                <Select placeholder="Chọn trạng thái" style={{ width: 140 }}>
-                  <Option value="COMPLETED">Hoàn thành</Option>
-                  <Option value="IN_PROGRESS">Đang thực hiện</Option>
-                </Select>
-              </Form.Item>
-              <Form.Item>
-                <Button
-                  type="primary"
-                  icon={<SearchOutlined />}
-                  htmlType="submit"
-                >
-                  Tìm kiếm
-                </Button>
-              </Form.Item>
-            </Form>
-          </Card>
-          <Card>
+          <Card title="Danh sách học sinh phù hợp">
             <Table
-              dataSource={data}
-              columns={columns}
+              dataSource={students}
+              columns={studentColumns}
               rowKey="id"
               loading={loading}
-              pagination={{ pageSize: 10 }}
+              pagination={{ pageSize: 5 }}
             />
           </Card>
         </>
       )}
-
-      {/* Modal chi tiết */}
+      {/* Modal nhập báo cáo khám sức khỏe */}
       <Modal
-        title="Chi tiết kiểm tra sức khỏe"
-        open={detailModal}
-        onCancel={() => setDetailModal(false)}
-        footer={<Button onClick={() => setDetailModal(false)}>Đóng</Button>}
-        width={600}
+        title={`Khám sức khỏe: ${checkupStudent?.fullName || ""}`}
+        open={checkupModal}
+        onCancel={() => {
+          setCheckupModal(false);
+          setCheckupStudent(null);
+        }}
+        footer={null}
+        width={800}
       >
-        {detail ? (
-          <Card
-            bordered={false}
-            style={{ boxShadow: "0 2px 8px #f0f1f2", borderRadius: 12 }}
-          >
-            <Descriptions
-              title={
-                <span style={{ fontWeight: 700, fontSize: 18 }}>
-                  Thông tin kiểm tra
-                </span>
-              }
-              column={1}
-              size="middle"
-              labelStyle={{ fontWeight: 600, minWidth: 120 }}
-              contentStyle={{ fontSize: 16 }}
-            >
-              <Descriptions.Item label="Học sinh">
-                {detail.student?.name || detail.student?.user?.fullName || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Lớp">
-                {detail.student?.class || "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày khám">
-                {detail.scheduledDate
-                  ? new Date(detail.scheduledDate).toLocaleDateString()
-                  : "-"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái">
-                <Tag
-                  color={detail.status === "COMPLETED" ? "green" : "orange"}
-                  style={{ fontSize: 14, padding: "2px 12px" }}
+        <Formik
+          initialValues={{
+            scheduledDate: null,
+            height: undefined,
+            weight: undefined,
+            pulse: undefined,
+            systolicBP: undefined,
+            diastolicBP: undefined,
+            physicalClassification: undefined,
+            visionRightNoGlasses: undefined,
+            visionLeftNoGlasses: undefined,
+            visionRightWithGlasses: undefined,
+            visionLeftWithGlasses: undefined,
+            hearingLeftNormal: undefined,
+            hearingLeftWhisper: undefined,
+            hearingRightNormal: undefined,
+            hearingRightWhisper: undefined,
+            dentalUpperJaw: "",
+            dentalLowerJaw: "",
+            clinicalNotes: "",
+            overallHealth: undefined,
+            recommendations: "",
+            requiresFollowUp: false,
+            followUpDate: null,
+            notes: "",
+          }}
+          validationSchema={checkupSchema}
+          onSubmit={async (values, { setSubmitting, resetForm }) => {
+            if (!selectedCampaign || !checkupStudent) return;
+            try {
+              await axios.post(
+                "/api/medical-checks/create",
+                {
+                  ...values,
+                  studentId: checkupStudent.id,
+                  campaignId: selectedCampaign.id,
+                },
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                  },
+                }
+              );
+              message.success("Tạo báo cáo khám sức khỏe thành công");
+              setCheckupModal(false);
+              setCheckupStudent(null);
+              // Refetch lại danh sách báo cáo
+              const resReports = await axios.get(
+                `/api/medical-checks/campaign/${selectedCampaign.id}`,
+                {
+                  headers: {
+                    Authorization: `Bearer ${localStorage.getItem("token")}`,
+                  },
+                }
+              );
+              setReports(resReports.data.data || []);
+              resetForm();
+            } catch (err) {
+              message.error(
+                err.response?.data?.error || "Tạo báo cáo thất bại"
+              );
+            }
+            setSubmitting(false);
+          }}
+        >
+          {({ values, setFieldValue, isSubmitting, handleSubmit }) => (
+            <form onSubmit={handleSubmit}>
+              <Divider orientation="left">Thông tin cơ bản</Divider>
+              <Form.Item label="Ngày khám" required>
+                <DatePicker
+                  style={{ width: "100%" }}
+                  value={values.scheduledDate}
+                  onChange={(date) => setFieldValue("scheduledDate", date)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="scheduledDate"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Chiều cao (cm)" required>
+                <InputNumber
+                  min={50}
+                  max={250}
+                  style={{ width: "100%" }}
+                  value={values.height}
+                  onChange={(v) => setFieldValue("height", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="height"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Cân nặng (kg)" required>
+                <InputNumber
+                  min={10}
+                  max={200}
+                  style={{ width: "100%" }}
+                  value={values.weight}
+                  onChange={(v) => setFieldValue("weight", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="weight"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Mạch" required>
+                <InputNumber
+                  min={40}
+                  max={200}
+                  style={{ width: "100%" }}
+                  value={values.pulse}
+                  onChange={(v) => setFieldValue("pulse", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="pulse"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Huyết áp tâm thu" required>
+                <InputNumber
+                  min={60}
+                  max={250}
+                  style={{ width: "100%" }}
+                  value={values.systolicBP}
+                  onChange={(v) => setFieldValue("systolicBP", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="systolicBP"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Huyết áp tâm trương" required>
+                <InputNumber
+                  min={30}
+                  max={150}
+                  style={{ width: "100%" }}
+                  value={values.diastolicBP}
+                  onChange={(v) => setFieldValue("diastolicBP", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="diastolicBP"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Divider orientation="left">Thị lực</Divider>
+              <Form.Item label="Phải (không kính)" required>
+                <InputNumber
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  value={values.visionRightNoGlasses}
+                  onChange={(v) => setFieldValue("visionRightNoGlasses", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="visionRightNoGlasses"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Trái (không kính)" required>
+                <InputNumber
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  value={values.visionLeftNoGlasses}
+                  onChange={(v) => setFieldValue("visionLeftNoGlasses", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="visionLeftNoGlasses"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Phải (có kính)" required>
+                <InputNumber
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  value={values.visionRightWithGlasses}
+                  onChange={(v) => setFieldValue("visionRightWithGlasses", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="visionRightWithGlasses"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Trái (có kính)" required>
+                <InputNumber
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  value={values.visionLeftWithGlasses}
+                  onChange={(v) => setFieldValue("visionLeftWithGlasses", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="visionLeftWithGlasses"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Divider orientation="left">Thính lực</Divider>
+              <Form.Item label="Trái (bình thường)" required>
+                <InputNumber
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  value={values.hearingLeftNormal}
+                  onChange={(v) => setFieldValue("hearingLeftNormal", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="hearingLeftNormal"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Trái (thì thầm)" required>
+                <InputNumber
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  value={values.hearingLeftWhisper}
+                  onChange={(v) => setFieldValue("hearingLeftWhisper", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="hearingLeftWhisper"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Phải (bình thường)" required>
+                <InputNumber
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  value={values.hearingRightNormal}
+                  onChange={(v) => setFieldValue("hearingRightNormal", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="hearingRightNormal"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Phải (thì thầm)" required>
+                <InputNumber
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  value={values.hearingRightWhisper}
+                  onChange={(v) => setFieldValue("hearingRightWhisper", v)}
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="hearingRightWhisper"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Divider orientation="left">Răng miệng</Divider>
+              <Form.Item label="Răng hàm trên" required>
+                <Input
+                  value={values.dentalUpperJaw}
+                  onChange={(e) =>
+                    setFieldValue("dentalUpperJaw", e.target.value)
+                  }
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="dentalUpperJaw"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Răng hàm dưới" required>
+                <Input
+                  value={values.dentalLowerJaw}
+                  onChange={(e) =>
+                    setFieldValue("dentalLowerJaw", e.target.value)
+                  }
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="dentalLowerJaw"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Divider orientation="left">Đánh giá tổng thể</Divider>
+              <Form.Item label="Phân loại thể lực" required>
+                <Select
+                  value={values.physicalClassification}
+                  onChange={(v) => setFieldValue("physicalClassification", v)}
+                  disabled={true}
                 >
-                  {detail.status === "COMPLETED" ? "Hoàn thành" : detail.status}
+                  <Option value="EXCELLENT">Xuất sắc</Option>
+                  <Option value="GOOD">Tốt</Option>
+                  <Option value="AVERAGE">Trung bình</Option>
+                  <Option value="WEAK">Yếu</Option>
+                </Select>
+                <ErrorMessage
+                  name="physicalClassification"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Sức khỏe tổng thể" required>
+                <Select
+                  value={values.overallHealth}
+                  onChange={(v) => setFieldValue("overallHealth", v)}
+                >
+                  <Option value="NORMAL">Bình thường</Option>
+                  <Option value="NEEDS_ATTENTION">Cần chú ý</Option>
+                  <Option value="REQUIRES_TREATMENT">Cần điều trị</Option>
+                </Select>
+                <ErrorMessage
+                  name="overallHealth"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Cần theo dõi" required>
+                <Select
+                  value={values.requiresFollowUp}
+                  onChange={(v) => setFieldValue("requiresFollowUp", v)}
+                >
+                  <Option value={false}>Không</Option>
+                  <Option value={true}>Có</Option>
+                </Select>
+                <ErrorMessage
+                  name="requiresFollowUp"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Ngày theo dõi">
+                <DatePicker
+                  style={{ width: "100%" }}
+                  value={values.followUpDate}
+                  onChange={(date) => setFieldValue("followUpDate", date)}
+                />
+                <ErrorMessage
+                  name="followUpDate"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Khuyến nghị" required>
+                <Input.TextArea
+                  rows={2}
+                  value={values.recommendations}
+                  onChange={(e) =>
+                    setFieldValue("recommendations", e.target.value)
+                  }
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="recommendations"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Ghi chú lâm sàng" required>
+                <Input.TextArea
+                  rows={2}
+                  value={values.clinicalNotes}
+                  onChange={(e) =>
+                    setFieldValue("clinicalNotes", e.target.value)
+                  }
+                  disabled={true}
+                />
+                <ErrorMessage
+                  name="clinicalNotes"
+                  component="div"
+                  className="text-red-500 text-xs"
+                />
+              </Form.Item>
+              <Form.Item label="Ghi chú thêm">
+                <Input.TextArea
+                  rows={2}
+                  value={values.notes}
+                  onChange={(e) => setFieldValue("notes", e.target.value)}
+                />
+              </Form.Item>
+              <div className="flex justify-end">
+                <Button
+                  onClick={() => {
+                    setCheckupModal(false);
+                    setCheckupStudent(null);
+                  }}
+                  style={{ marginRight: 8 }}
+                >
+                  Hủy
+                </Button>
+                <Button type="primary" htmlType="submit" loading={isSubmitting}>
+                  Lưu báo cáo
+                </Button>
+              </div>
+            </form>
+          )}
+        </Formik>
+      </Modal>
+      {/* Modal xem chi tiết báo cáo khám sức khỏe */}
+      <Modal
+        title="Chi tiết báo cáo khám sức khỏe"
+        open={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        footer={
+          detailReport && detailReport.status !== "COMPLETED" ? (
+            <Button
+              type="primary"
+              onClick={() => handleEditReport(detailReport)}
+            >
+              Chỉnh sửa
+            </Button>
+          ) : null
+        }
+        width={800}
+      >
+        {detailReport && (
+          <div>
+            <Typography.Title level={4} style={{ marginBottom: 0 }}>
+              {detailReport.student?.user?.fullName ||
+                detailReport.student?.fullName ||
+                ""}
+            </Typography.Title>
+            <Typography.Text type="secondary">
+              Ngày khám:{" "}
+              {detailReport.scheduledDate
+                ? dayjs(detailReport.scheduledDate).format("DD/MM/YYYY")
+                : ""}
+            </Typography.Text>
+            <Divider orientation="left">Thông tin cơ bản</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Chiều cao">
+                {detailReport.height} cm
+              </Descriptions.Item>
+              <Descriptions.Item label="Cân nặng">
+                {detailReport.weight} kg
+              </Descriptions.Item>
+              <Descriptions.Item label="Mạch">
+                {detailReport.pulse}
+              </Descriptions.Item>
+              <Descriptions.Item label="Huyết áp tâm thu">
+                {detailReport.systolicBP}
+              </Descriptions.Item>
+              <Descriptions.Item label="Huyết áp tâm trương">
+                {detailReport.diastolicBP}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phân loại thể lực">
+                {detailReport.physicalClassification}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider orientation="left">Thị lực</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Phải (không kính)">
+                {detailReport.visionRightNoGlasses}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trái (không kính)">
+                {detailReport.visionLeftNoGlasses}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phải (có kính)">
+                {detailReport.visionRightWithGlasses}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trái (có kính)">
+                {detailReport.visionLeftWithGlasses}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider orientation="left">Thính lực</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Trái (bình thường)">
+                {detailReport.hearingLeftNormal}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trái (thì thầm)">
+                {detailReport.hearingLeftWhisper}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phải (bình thường)">
+                {detailReport.hearingRightNormal}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phải (thì thầm)">
+                {detailReport.hearingRightWhisper}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider orientation="left">Răng miệng</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Răng hàm trên">
+                {detailReport.dentalUpperJaw}
+              </Descriptions.Item>
+              <Descriptions.Item label="Răng hàm dưới">
+                {detailReport.dentalLowerJaw}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider orientation="left">Đánh giá tổng thể</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Sức khỏe tổng thể">
+                <Tag
+                  color={
+                    detailReport.overallHealth === "NORMAL"
+                      ? "green"
+                      : detailReport.overallHealth === "NEEDS_ATTENTION"
+                      ? "orange"
+                      : "red"
+                  }
+                >
+                  {detailReport.overallHealth}
                 </Tag>
               </Descriptions.Item>
-            </Descriptions>
-            <Divider />
-            <Descriptions
-              title={
-                <span style={{ fontWeight: 700, fontSize: 18 }}>
-                  Kết quả kiểm tra
-                </span>
-              }
-              column={1}
-              size="middle"
-              labelStyle={{ fontWeight: 600, minWidth: 120 }}
-              contentStyle={{ fontSize: 16 }}
-            >
-              <Descriptions.Item label="Thị lực">
-                {detail.visionResult || (
-                  <span style={{ color: "#aaa" }}>-</span>
-                )}
+              <Descriptions.Item label="Cần theo dõi">
+                {detailReport.requiresFollowUp ? "Có" : "Không"}
               </Descriptions.Item>
-              <Descriptions.Item label="Thính lực">
-                {detail.hearingResult || (
-                  <span style={{ color: "#aaa" }}>-</span>
-                )}
+              <Descriptions.Item label="Ngày theo dõi">
+                {detailReport.followUpDate
+                  ? dayjs(detailReport.followUpDate).format("DD/MM/YYYY")
+                  : ""}
               </Descriptions.Item>
-              <Descriptions.Item label="Răng miệng">
-                {detail.dentalResult || (
-                  <span style={{ color: "#aaa" }}>-</span>
-                )}
+              <Descriptions.Item label="Khuyến nghị">
+                <Typography.Text strong>
+                  {detailReport.recommendations}
+                </Typography.Text>
               </Descriptions.Item>
-              <Descriptions.Item label="Chiều cao / Cân nặng">
-                {detail.heightWeight ? (
-                  `${detail.heightWeight.height} cm / ${detail.heightWeight.weight} kg`
-                ) : (
-                  <span style={{ color: "#aaa" }}>-</span>
-                )}
+              <Descriptions.Item label="Ghi chú lâm sàng" span={2}>
+                {detailReport.clinicalNotes}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ghi chú thêm" span={2}>
+                {detailReport.notes}
               </Descriptions.Item>
             </Descriptions>
-            <Divider />
-            <Descriptions
-              title={
-                <span style={{ fontWeight: 700, fontSize: 18 }}>Ghi chú</span>
-              }
-              column={1}
-              size="middle"
-              labelStyle={{ fontWeight: 600, minWidth: 120 }}
-              contentStyle={{ fontSize: 16 }}
-            >
-              <Descriptions.Item label="">
-                {detail.notes ? (
-                  <span style={{ whiteSpace: "pre-line" }}>{detail.notes}</span>
-                ) : (
-                  <span style={{ color: "#aaa" }}>Không có ghi chú</span>
-                )}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-        ) : (
-          <Spin />
+          </div>
         )}
       </Modal>
-
-      {/* Modal tạo lịch kiểm tra */}
+      {/* Modal cập nhật báo cáo khám sức khỏe */}
       <Modal
-        title="Tạo lịch kiểm tra sức khỏe"
-        open={createModal}
-        onCancel={() => setCreateModal(false)}
+        title="Cập nhật báo cáo khám sức khỏe"
+        open={editModalVisible}
+        onCancel={() => setEditModalVisible(false)}
         footer={null}
-        width={500}
+        width={800}
       >
-        <Form form={form} layout="vertical" onFinish={handleCreate}>
-          <Form.Item
-            name="studentId"
-            label="Học sinh"
-            rules={[{ required: true, message: "Vui lòng chọn học sinh" }]}
-          >
-            <Select
-              showSearch
-              placeholder="Chọn học sinh"
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.children ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
+        {editInitialValues && (
+          <Formik
+            initialValues={editInitialValues}
+            validationSchema={checkupSchema}
+            enableReinitialize
+            onSubmit={async (values, { setSubmitting, resetForm }) => {
+              try {
+                await axios.put(
+                  `/api/medical-checks/${detailReport.id}`,
+                  values,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                  }
+                );
+                message.success("Cập nhật báo cáo thành công");
+                setEditModalVisible(false);
+                // Refetch lại danh sách báo cáo
+                const resReports = await axios.get(
+                  `/api/medical-checks/campaign/${selectedCampaign.id}`,
+                  {
+                    headers: {
+                      Authorization: `Bearer ${localStorage.getItem("token")}`,
+                    },
+                  }
+                );
+                setReports(resReports.data.data || []);
+                resetForm();
+              } catch (err) {
+                message.error(
+                  err.response?.data?.error || "Cập nhật báo cáo thất bại"
+                );
               }
-            >
-              {students.map((student) => (
-                <Option key={student.id} value={student.id}>
-                  {student.studentCode} - {student.fullName}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
-          <Form.Item
-            name="scheduledDate"
-            label="Ngày khám"
-            rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
+              setSubmitting(false);
+            }}
           >
-            <DatePicker style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item name="notes" label="Ghi chú">
-            <TextArea rows={3} />
-          </Form.Item>
-          <div className="flex justify-end">
-            <Button
-              onClick={() => setCreateModal(false)}
-              style={{ marginRight: 8 }}
-            >
-              Hủy
-            </Button>
-            <Button type="primary" htmlType="submit">
-              Tạo lịch
-            </Button>
-          </div>
-        </Form>
-      </Modal>
-
-      {/* Modal cập nhật kết quả */}
-      <Modal
-        title="Cập nhật kết quả kiểm tra"
-        open={updateModal}
-        onCancel={() => setUpdateModal(false)}
-        footer={null}
-        width={500}
-      >
-        <Form form={updateForm} layout="vertical" onFinish={handleUpdate}>
-          <Form.Item name="visionResult" label="Thị lực">
-            <Select allowClear>
-              <Option value="normal">Bình thường</Option>
-              <Option value="needs_glasses">Cần kính</Option>
-              <Option value="refer_specialist">Chuyển chuyên khoa</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="hearingResult" label="Thính lực">
-            <Select allowClear>
-              <Option value="normal">Bình thường</Option>
-              <Option value="impaired">Suy giảm</Option>
-              <Option value="refer_specialist">Chuyển chuyên khoa</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name="dentalResult" label="Răng miệng">
-            <Select allowClear>
-              <Option value="good">Tốt</Option>
-              <Option value="needs_treatment">Cần điều trị</Option>
-              <Option value="refer_dentist">Chuyển nha sĩ</Option>
-            </Select>
-          </Form.Item>
-          <Form.Item name={["heightWeight", "height"]} label="Chiều cao (cm)">
-            <InputNumber min={50} max={250} style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item name={["heightWeight", "weight"]} label="Cân nặng (kg)">
-            <InputNumber min={10} max={150} style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item name="notes" label="Ghi chú">
-            <TextArea rows={3} />
-          </Form.Item>
-          <div className="flex justify-end">
-            <Button
-              onClick={() => setUpdateModal(false)}
-              style={{ marginRight: 8 }}
-            >
-              Hủy
-            </Button>
-            <Button type="primary" htmlType="submit">
-              Cập nhật
-            </Button>
-          </div>
-        </Form>
+            {({ values, setFieldValue, isSubmitting, handleSubmit }) => (
+              <form onSubmit={handleSubmit}>
+                <Divider orientation="left">Thông tin cơ bản</Divider>
+                <Form.Item label="Ngày khám" required>
+                  <DatePicker
+                    style={{ width: "100%" }}
+                    value={values.scheduledDate}
+                    onChange={(date) => setFieldValue("scheduledDate", date)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="scheduledDate"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Chiều cao (cm)" required>
+                  <InputNumber
+                    min={50}
+                    max={250}
+                    style={{ width: "100%" }}
+                    value={values.height}
+                    onChange={(v) => setFieldValue("height", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="height"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Cân nặng (kg)" required>
+                  <InputNumber
+                    min={10}
+                    max={200}
+                    style={{ width: "100%" }}
+                    value={values.weight}
+                    onChange={(v) => setFieldValue("weight", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="weight"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Mạch" required>
+                  <InputNumber
+                    min={40}
+                    max={200}
+                    style={{ width: "100%" }}
+                    value={values.pulse}
+                    onChange={(v) => setFieldValue("pulse", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="pulse"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Huyết áp tâm thu" required>
+                  <InputNumber
+                    min={60}
+                    max={250}
+                    style={{ width: "100%" }}
+                    value={values.systolicBP}
+                    onChange={(v) => setFieldValue("systolicBP", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="systolicBP"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Huyết áp tâm trương" required>
+                  <InputNumber
+                    min={30}
+                    max={150}
+                    style={{ width: "100%" }}
+                    value={values.diastolicBP}
+                    onChange={(v) => setFieldValue("diastolicBP", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="diastolicBP"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Divider orientation="left">Thị lực</Divider>
+                <Form.Item label="Phải (không kính)" required>
+                  <InputNumber
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    style={{ width: "100%" }}
+                    value={values.visionRightNoGlasses}
+                    onChange={(v) => setFieldValue("visionRightNoGlasses", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="visionRightNoGlasses"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Trái (không kính)" required>
+                  <InputNumber
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    style={{ width: "100%" }}
+                    value={values.visionLeftNoGlasses}
+                    onChange={(v) => setFieldValue("visionLeftNoGlasses", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="visionLeftNoGlasses"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Phải (có kính)" required>
+                  <InputNumber
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    style={{ width: "100%" }}
+                    value={values.visionRightWithGlasses}
+                    onChange={(v) => setFieldValue("visionRightWithGlasses", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="visionRightWithGlasses"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Trái (có kính)" required>
+                  <InputNumber
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    style={{ width: "100%" }}
+                    value={values.visionLeftWithGlasses}
+                    onChange={(v) => setFieldValue("visionLeftWithGlasses", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="visionLeftWithGlasses"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Divider orientation="left">Thính lực</Divider>
+                <Form.Item label="Trái (bình thường)" required>
+                  <InputNumber
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    style={{ width: "100%" }}
+                    value={values.hearingLeftNormal}
+                    onChange={(v) => setFieldValue("hearingLeftNormal", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="hearingLeftNormal"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Trái (thì thầm)" required>
+                  <InputNumber
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    style={{ width: "100%" }}
+                    value={values.hearingLeftWhisper}
+                    onChange={(v) => setFieldValue("hearingLeftWhisper", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="hearingLeftWhisper"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Phải (bình thường)" required>
+                  <InputNumber
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    style={{ width: "100%" }}
+                    value={values.hearingRightNormal}
+                    onChange={(v) => setFieldValue("hearingRightNormal", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="hearingRightNormal"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Phải (thì thầm)" required>
+                  <InputNumber
+                    min={0}
+                    max={10}
+                    step={0.1}
+                    style={{ width: "100%" }}
+                    value={values.hearingRightWhisper}
+                    onChange={(v) => setFieldValue("hearingRightWhisper", v)}
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="hearingRightWhisper"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Divider orientation="left">Răng miệng</Divider>
+                <Form.Item label="Răng hàm trên" required>
+                  <Input
+                    value={values.dentalUpperJaw}
+                    onChange={(e) =>
+                      setFieldValue("dentalUpperJaw", e.target.value)
+                    }
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="dentalUpperJaw"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Răng hàm dưới" required>
+                  <Input
+                    value={values.dentalLowerJaw}
+                    onChange={(e) =>
+                      setFieldValue("dentalLowerJaw", e.target.value)
+                    }
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="dentalLowerJaw"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Divider orientation="left">Đánh giá tổng thể</Divider>
+                <Form.Item label="Phân loại thể lực" required>
+                  <Select
+                    value={values.physicalClassification}
+                    onChange={(v) => setFieldValue("physicalClassification", v)}
+                    disabled={true}
+                  >
+                    <Option value="EXCELLENT">Xuất sắc</Option>
+                    <Option value="GOOD">Tốt</Option>
+                    <Option value="AVERAGE">Trung bình</Option>
+                    <Option value="WEAK">Yếu</Option>
+                  </Select>
+                  <ErrorMessage
+                    name="physicalClassification"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Sức khỏe tổng thể" required>
+                  <Select
+                    value={values.overallHealth}
+                    onChange={(v) => setFieldValue("overallHealth", v)}
+                  >
+                    <Option value="NORMAL">Bình thường</Option>
+                    <Option value="NEEDS_ATTENTION">Cần chú ý</Option>
+                    <Option value="REQUIRES_TREATMENT">Cần điều trị</Option>
+                  </Select>
+                  <ErrorMessage
+                    name="overallHealth"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Cần theo dõi" required>
+                  <Select
+                    value={values.requiresFollowUp}
+                    onChange={(v) => setFieldValue("requiresFollowUp", v)}
+                  >
+                    <Option value={false}>Không</Option>
+                    <Option value={true}>Có</Option>
+                  </Select>
+                  <ErrorMessage
+                    name="requiresFollowUp"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Ngày theo dõi">
+                  <DatePicker
+                    style={{ width: "100%" }}
+                    value={values.followUpDate}
+                    onChange={(date) => setFieldValue("followUpDate", date)}
+                  />
+                  <ErrorMessage
+                    name="followUpDate"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Khuyến nghị" required>
+                  <Input.TextArea
+                    rows={2}
+                    value={values.recommendations}
+                    onChange={(e) =>
+                      setFieldValue("recommendations", e.target.value)
+                    }
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="recommendations"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Ghi chú lâm sàng" required>
+                  <Input.TextArea
+                    rows={2}
+                    value={values.clinicalNotes}
+                    onChange={(e) =>
+                      setFieldValue("clinicalNotes", e.target.value)
+                    }
+                    disabled={true}
+                  />
+                  <ErrorMessage
+                    name="clinicalNotes"
+                    component="div"
+                    className="text-red-500 text-xs"
+                  />
+                </Form.Item>
+                <Form.Item label="Ghi chú thêm">
+                  <Input.TextArea
+                    rows={2}
+                    value={values.notes}
+                    onChange={(e) => setFieldValue("notes", e.target.value)}
+                  />
+                </Form.Item>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => {
+                      setEditModalVisible(false);
+                    }}
+                    style={{ marginRight: 8 }}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={isSubmitting}
+                  >
+                    Lưu báo cáo
+                  </Button>
+                </div>
+              </form>
+            )}
+          </Formik>
+        )}
       </Modal>
     </div>
   );

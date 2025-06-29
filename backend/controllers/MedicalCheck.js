@@ -40,15 +40,16 @@ const checkNursePermission = async (req, res, next) => {
   try {
     // Lấy nurseId từ token (req.user)
     const user = req.user;
-    if (!user || user.role !== "nurse") {
+    if (!user || user.role !== "SCHOOL_NURSE") {
       return res.status(403).json({
         success: false,
         error: "Bạn không có quyền thực hiện chức năng này (chỉ dành cho y tá)",
       });
     }
     const nurseId = user.id; // hoặc user.nurseId nếu token lưu như vậy
-    const nurse = await prisma.schoolNurse.findUnique({
-      where: { id: nurseId },
+    const nurse = await prisma.schoolNurse.findFirst({
+      where: { userId: nurseId },
+      include: { user: true },
     });
     if (!nurse) {
       return res.status(404).json({
@@ -56,7 +57,7 @@ const checkNursePermission = async (req, res, next) => {
         error: "Không tìm thấy thông tin y tá",
       });
     }
-    if (!nurse.isActive) {
+    if (!nurse.user.isActive) {
       return res.status(403).json({
         success: false,
         error: "Tài khoản y tá không còn hoạt động",
@@ -76,7 +77,7 @@ const checkNursePermission = async (req, res, next) => {
 const createMedicalCheck = async (req, res) => {
   try {
     const user = req.user;
-    if (!user || user.role !== "nurse") {
+    if (!user || user.role !== "SCHOOL_NURSE") {
       return res.status(403).json({
         success: false,
         error: "Chỉ y tá mới được phép tạo báo cáo kiểm tra sức khỏe",
@@ -85,9 +86,10 @@ const createMedicalCheck = async (req, res) => {
     const nurseId = user.id;
     // Kiểm tra nurse tồn tại và active
     const nurse = await prisma.schoolNurse.findUnique({
-      where: { id: nurseId },
+      where: { userId: nurseId },
+      include: { user: true },
     });
-    if (!nurse || !nurse.isActive) {
+    if (!nurse || !nurse.user.isActive) {
       return res.status(403).json({
         success: false,
         error: "Tài khoản y tá không hợp lệ hoặc không còn hoạt động",
@@ -119,6 +121,8 @@ const createMedicalCheck = async (req, res) => {
       requiresFollowUp,
       followUpDate,
       notes,
+      parentNotified,
+      parentResponse,
     } = req.body;
     // Validate bắt buộc
     const requiredFields = [
@@ -308,7 +312,6 @@ const createMedicalCheck = async (req, res) => {
           select: {
             id: true,
             name: true,
-            checkTypes: true,
             deadline: true,
           },
         },
@@ -398,7 +401,7 @@ const updateMedicalCheckResults = async (req, res) => {
           },
         },
         campaign: {
-          select: { id: true, name: true, checkTypes: true },
+          select: { id: true, name: true },
         },
         nurse: { include: { user: true } },
       },
@@ -430,7 +433,6 @@ const getMedicalChecksByCampaign = async (req, res) => {
           select: {
             id: true,
             name: true,
-            checkTypes: true,
           },
         },
         nurse: {
