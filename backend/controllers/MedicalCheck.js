@@ -308,6 +308,7 @@ const createMedicalCheck = async (req, res) => {
           select: {
             id: true,
             name: true,
+            checkTypes: true,
             deadline: true,
           },
         },
@@ -397,7 +398,7 @@ const updateMedicalCheckResults = async (req, res) => {
           },
         },
         campaign: {
-          select: { id: true, name: true },
+          select: { id: true, name: true, checkTypes: true },
         },
         nurse: { include: { user: true } },
       },
@@ -429,6 +430,7 @@ const getMedicalChecksByCampaign = async (req, res) => {
           select: {
             id: true,
             name: true,
+            checkTypes: true,
           },
         },
         nurse: {

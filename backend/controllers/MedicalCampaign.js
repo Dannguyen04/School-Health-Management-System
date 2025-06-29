@@ -5,13 +5,13 @@ const prisma = new PrismaClient();
 export const createMedicalCampaign = async (req, res) => {
   const {
     name,
-    checkTypes,
+
     scheduledDate,
     deadline,
     description,
     targetGrades,
   } = req.body;
-  if (!name || !checkTypes || !targetGrades || !scheduledDate || !deadline) {
+  if (!name || !targetGrades || !scheduledDate || !deadline) {
     return res.status(400).json({
       success: false,
       error: "Thiếu trường dữ liệu bắt buộc",
@@ -40,7 +40,7 @@ export const createMedicalCampaign = async (req, res) => {
       data: {
         name,
         description: description || null,
-        checkTypes,
+
         targetGrades,
         scheduledDate: start,
         deadline: end,
