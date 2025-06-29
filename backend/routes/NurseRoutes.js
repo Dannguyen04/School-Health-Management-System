@@ -1,5 +1,14 @@
 import express from "express";
 import {
+  createBlogPost,
+  deleteBlogPost,
+  getAllBlogPosts,
+  getBlogCategories,
+  getBlogPostById,
+  getPublishedBlogPosts,
+  updateBlogPost,
+} from "../controllers/BlogController.js";
+import {
   approveMedicationRequest,
   createMedicalEvent,
   createMedicalInventory,
@@ -30,10 +39,6 @@ import {
   updateMedicalEventStatus,
   updateMedicalInventory,
 } from "../controllers/NurseController.js";
-import {
-  authenticateToken,
-  verifyNurse,
-} from "../middleware/authenticateToken.js";
 
 const router = express.Router();
 
@@ -69,6 +74,7 @@ router.get(
   verifyNurse,
   getEligibleStudentsForVaccination
 );
+router.get("/vaccination-campaigns/:campaignId/stats", getVaccinationStats);
 router.post("/vaccinations/perform", verifyNurse, performVaccination);
 router.post("/vaccinations/report", reportVaccinationResult);
 
@@ -89,5 +95,14 @@ router.get("/student-treatments", getStudentTreatments);
 router.post("/give-medicine/:studentMedicationId", giveMedicineToStudent);
 router.get("/medication-history/:studentMedicationId", getMedicationHistory);
 router.patch("/student-treatments/:id/stop", stopStudentTreatment);
+
+// Blog management routes
+router.get("/blogs", getAllBlogPosts);
+router.get("/blogs/published", getPublishedBlogPosts);
+router.get("/blogs/categories", getBlogCategories);
+router.post("/blogs", verifyNurse, createBlogPost);
+router.get("/blogs/:id", getBlogPostById);
+router.put("/blogs/:id", verifyNurse, updateBlogPost);
+router.delete("/blogs/:id", verifyNurse, deleteBlogPost);
 
 export default router;

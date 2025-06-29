@@ -40,15 +40,15 @@ const checkNursePermission = async (req, res, next) => {
   try {
     // Lấy nurseId từ token (req.user)
     const user = req.user;
-    if (!user || user.role !== "SCHOOL_NURSE") {
+    if (!user || user.role !== "nurse") {
       return res.status(403).json({
         success: false,
         error: "Bạn không có quyền thực hiện chức năng này (chỉ dành cho y tá)",
       });
     }
-    const nurse = await prisma.schoolNurse.findFirst({
-      where: { userId: user.userId },
-      include: { user: true },
+    const nurseId = user.id; // hoặc user.nurseId nếu token lưu như vậy
+    const nurse = await prisma.schoolNurse.findUnique({
+      where: { id: nurseId },
     });
     if (!nurse) {
       return res.status(404).json({
@@ -56,7 +56,7 @@ const checkNursePermission = async (req, res, next) => {
         error: "Không tìm thấy thông tin y tá",
       });
     }
-    if (!nurse.user.isActive) {
+    if (!nurse.isActive) {
       return res.status(403).json({
         success: false,
         error: "Tài khoản y tá không còn hoạt động",
@@ -72,68 +72,287 @@ const checkNursePermission = async (req, res, next) => {
   }
 };
 
-// Cập nhật kết quả kiểm tra (từng bước một cách cẩn thận)
-const updateMedicalCheckResults = async (req, res) => {
+// Tạo mới báo cáo kiểm tra sức khỏe (MedicalCheck)
+const createMedicalCheck = async (req, res) => {
   try {
-    const { id } = req.params;
+    const user = req.user;
+    if (!user || user.role !== "nurse") {
+      return res.status(403).json({
+        success: false,
+        error: "Chỉ y tá mới được phép tạo báo cáo kiểm tra sức khỏe",
+      });
+    }
+    const nurseId = user.id;
+    // Kiểm tra nurse tồn tại và active
+    const nurse = await prisma.schoolNurse.findUnique({
+      where: { id: nurseId },
+    });
+    if (!nurse || !nurse.isActive) {
+      return res.status(403).json({
+        success: false,
+        error: "Tài khoản y tá không hợp lệ hoặc không còn hoạt động",
+      });
+    }
     const {
-      visionResult,
-      hearingResult,
-      dentalResult,
-      heightWeight,
-      generalHealth,
+      studentId,
+      campaignId,
+      scheduledDate,
+      height,
+      weight,
+      pulse,
+      systolicBP,
+      diastolicBP,
+      physicalClassification,
+      visionRightNoGlasses,
+      visionLeftNoGlasses,
+      visionRightWithGlasses,
+      visionLeftWithGlasses,
+      hearingLeftNormal,
+      hearingLeftWhisper,
+      hearingRightNormal,
+      hearingRightWhisper,
+      dentalUpperJaw,
+      dentalLowerJaw,
+      clinicalNotes,
+      overallHealth,
       recommendations,
       requiresFollowUp,
       followUpDate,
       notes,
-      nurseId,
     } = req.body;
-
-    // Validate dữ liệu đầu vào
-    if (
-      visionResult &&
-      !["normal", "needs_glasses", "refer_specialist"].includes(visionResult)
-    ) {
+    // Validate bắt buộc
+    const requiredFields = [
+      studentId,
+      campaignId,
+      scheduledDate,
+      height,
+      weight,
+      pulse,
+      systolicBP,
+      diastolicBP,
+      physicalClassification,
+      visionRightNoGlasses,
+      visionLeftNoGlasses,
+      visionRightWithGlasses,
+      visionLeftWithGlasses,
+      hearingLeftNormal,
+      hearingLeftWhisper,
+      hearingRightNormal,
+      hearingRightWhisper,
+      dentalUpperJaw,
+      dentalLowerJaw,
+      clinicalNotes,
+      overallHealth,
+    ];
+    if (requiredFields.some((v) => v === undefined || v === null || v === "")) {
       return res.status(400).json({
         success: false,
-        error: "Kết quả kiểm tra thị lực không hợp lệ",
+        error:
+          "Thiếu thông tin bắt buộc cho báo cáo kiểm tra sức khỏe. Vui lòng nhập đầy đủ tất cả các trường khám thể lực và lâm sàng!",
       });
     }
-    if (
-      hearingResult &&
-      !["normal", "impaired", "refer_specialist"].includes(hearingResult)
-    ) {
+    // Validate kiểu dữ liệu và giá trị
+    if (typeof height !== "number" || height < 50 || height > 250)
       return res.status(400).json({
         success: false,
-        error: "Kết quả kiểm tra thính lực không hợp lệ",
+        error: "Chiều cao không hợp lệ (50-250cm)",
       });
-    }
-    if (
-      dentalResult &&
-      !["good", "needs_treatment", "refer_dentist"].includes(dentalResult)
-    ) {
+    if (typeof weight !== "number" || weight < 10 || weight > 200)
       return res.status(400).json({
         success: false,
-        error: "Kết quả kiểm tra răng miệng không hợp lệ",
+        error: "Cân nặng không hợp lệ (10-200kg)",
+      });
+    if (typeof pulse !== "number" || pulse < 40 || pulse > 200)
+      return res
+        .status(400)
+        .json({ success: false, error: "Mạch không hợp lệ (40-200)" });
+    if (typeof systolicBP !== "number" || systolicBP < 60 || systolicBP > 250)
+      return res.status(400).json({
+        success: false,
+        error: "Huyết áp tâm thu không hợp lệ (60-250)",
+      });
+    if (
+      typeof diastolicBP !== "number" ||
+      diastolicBP < 30 ||
+      diastolicBP > 150
+    )
+      return res.status(400).json({
+        success: false,
+        error: "Huyết áp tâm trương không hợp lệ (30-150)",
+      });
+    if (
+      !["EXCELLENT", "GOOD", "AVERAGE", "WEAK"].includes(physicalClassification)
+    )
+      return res.status(400).json({
+        success: false,
+        error: "Phân loại thể lực không hợp lệ",
+      });
+    // Validate các trường float lâm sàng
+    const floatFields = [
+      visionRightNoGlasses,
+      visionLeftNoGlasses,
+      visionRightWithGlasses,
+      visionLeftWithGlasses,
+      hearingLeftNormal,
+      hearingLeftWhisper,
+      hearingRightNormal,
+      hearingRightWhisper,
+    ];
+    if (floatFields.some((f) => typeof f !== "number"))
+      return res.status(400).json({
+        success: false,
+        error: "Các trường thị lực/thính lực phải là số",
+      });
+    if (
+      typeof dentalUpperJaw !== "string" ||
+      typeof dentalLowerJaw !== "string" ||
+      typeof clinicalNotes !== "string"
+    )
+      return res.status(400).json({
+        success: false,
+        error: "Kết quả khám hàm và ghi chú phải là chuỗi",
+      });
+    // Validate enum overallHealth
+    if (
+      !["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"].includes(
+        overallHealth
+      )
+    )
+      return res.status(400).json({
+        success: false,
+        error: "Trạng thái sức khỏe tổng thể không hợp lệ",
+      });
+    // Validate recommendations
+    if (typeof recommendations !== "string")
+      return res
+        .status(400)
+        .json({ success: false, error: "Khuyến nghị phải là chuỗi" });
+    // Validate campaign, student
+    const campaign = await prisma.medicalCheckCampaign.findUnique({
+      where: { id: campaignId },
+    });
+    if (!campaign || !campaign.isActive) {
+      return res.status(404).json({
+        success: false,
+        error: "Chiến dịch kiểm tra không tồn tại hoặc đã kết thúc",
       });
     }
-
-    const medicalCheck = await prisma.medicalCheck.findUnique({
-      where: { id },
+    const student = await prisma.student.findUnique({
+      where: { id: studentId },
+    });
+    if (!student) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Không tìm thấy học sinh" });
+    }
+    if (!campaign.targetGrades.includes(student.grade)) {
+      return res.status(400).json({
+        success: false,
+        error: `Học sinh lớp ${student.grade} không thuộc đối tượng kiểm tra của chiến dịch này`,
+      });
+    }
+    // Kiểm tra trùng lặp
+    const existingCheck = await prisma.medicalCheck.findFirst({
+      where: { studentId, campaignId },
+    });
+    if (existingCheck) {
+      return res.status(400).json({
+        success: false,
+        error: "Học sinh đã có báo cáo kiểm tra cho chiến dịch này",
+        existingCheck: {
+          id: existingCheck.id,
+          status: existingCheck.status,
+          scheduledDate: existingCheck.scheduledDate,
+        },
+      });
+    }
+    // Tạo mới
+    const medicalCheck = await prisma.medicalCheck.create({
+      data: {
+        studentId,
+        campaignId,
+        nurseId,
+        scheduledDate: new Date(scheduledDate),
+        height,
+        weight,
+        pulse,
+        systolicBP,
+        diastolicBP,
+        physicalClassification,
+        visionRightNoGlasses,
+        visionLeftNoGlasses,
+        visionRightWithGlasses,
+        visionLeftWithGlasses,
+        hearingLeftNormal,
+        hearingLeftWhisper,
+        hearingRightNormal,
+        hearingRightWhisper,
+        dentalUpperJaw,
+        dentalLowerJaw,
+        clinicalNotes,
+        overallHealth,
+        recommendations,
+        requiresFollowUp: requiresFollowUp || false,
+        followUpDate: followUpDate ? new Date(followUpDate) : undefined,
+        notes: notes || "",
+        parentNotified: parentNotified || false,
+        parentResponse: parentResponse || null,
+      },
       include: {
-        student: true,
-        campaign: true,
+        student: {
+          select: {
+            id: true,
+            name: true,
+            grade: true,
+            class: true,
+            studentCode: true,
+          },
+        },
+        campaign: {
+          select: {
+            id: true,
+            name: true,
+            checkTypes: true,
+            deadline: true,
+          },
+        },
+        nurse: { select: { id: true, name: true } },
       },
     });
+    res.status(201).json({
+      success: true,
+      message: `Đã tạo báo cáo kiểm tra cho học sinh ${student.name}`,
+      data: medicalCheck,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
 
+// Cập nhật kết quả kiểm tra: chỉ cho phép update notes, overallHealth, recommendations, requiresFollowUp, followUpDate, parentNotified, parentResponse
+const updateMedicalCheckResults = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      notes,
+      overallHealth,
+      recommendations,
+      requiresFollowUp,
+      followUpDate,
+      parentNotified,
+      parentResponse,
+    } = req.body;
+    // Không cho phép update các trường kết quả khám, nếu có sẽ bỏ qua hoặc trả về lỗi (ở đây sẽ bỏ qua)
+    const medicalCheck = await prisma.medicalCheck.findUnique({
+      where: { id },
+      include: { student: true, campaign: true },
+    });
     if (!medicalCheck) {
       return res.status(404).json({
         success: false,
         error: "Không tìm thấy báo cáo kiểm tra",
       });
     }
-
-    // Kiểm tra quyền cập nhật
     if (medicalCheck.status === "COMPLETED") {
       return res.status(400).json({
         success: false,
@@ -141,72 +360,38 @@ const updateMedicalCheckResults = async (req, res) => {
           "Báo cáo đã hoàn thành, không thể chỉnh sửa. Vui lòng liên hệ quản trị viên.",
       });
     }
-
-    // Validate height/weight nếu có
-    if (heightWeight) {
+    // Chỉ cho phép update các trường sau
+    const updateData = {};
+    if (notes !== undefined) updateData.notes = notes;
+    if (overallHealth !== undefined) {
       if (
-        heightWeight.height &&
-        (heightWeight.height < 50 || heightWeight.height > 250)
-      ) {
+        !["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"].includes(
+          overallHealth
+        )
+      )
         return res.status(400).json({
           success: false,
-          error: "Chiều cao không hợp lệ (50-250cm)",
+          error: "Trạng thái sức khỏe tổng thể không hợp lệ",
         });
-      }
-      if (
-        heightWeight.weight &&
-        (heightWeight.weight < 10 || heightWeight.weight > 150)
-      ) {
-        return res.status(400).json({
-          success: false,
-          error: "Cân nặng không hợp lệ (10-150kg)",
-        });
-      }
+      updateData.overallHealth = overallHealth;
     }
-
-    // Chuẩn bị dữ liệu cập nhật
-    const updateData = {
-      nurseId,
-      notes,
-    };
-
-    // Chỉ cập nhật kết quả nếu có dữ liệu
-    if (visionResult) updateData.visionResult = visionResult;
-    if (hearingResult) updateData.hearingResult = hearingResult;
-    if (dentalResult) updateData.dentalResult = dentalResult;
-    if (heightWeight) updateData.heightWeight = heightWeight;
-    if (generalHealth) updateData.generalHealth = generalHealth;
-    if (recommendations) updateData.recommendations = recommendations;
-
-    updateData.requiresFollowUp = requiresFollowUp || false;
-    if (followUpDate) updateData.followUpDate = new Date(followUpDate);
-
-    // Kiểm tra xem có đủ kết quả để hoàn thành không
-    const campaign = medicalCheck.campaign;
-    const hasAllResults = campaign.checkTypes.every((type) => {
-      switch (type) {
-        case "vision":
-          return visionResult || medicalCheck.visionResult;
-        case "hearing":
-          return hearingResult || medicalCheck.hearingResult;
-        case "dental":
-          return dentalResult || medicalCheck.dentalResult;
-        case "height_weight":
-          return heightWeight || medicalCheck.heightWeight;
-        case "general":
-          return generalHealth || medicalCheck.generalHealth;
-        default:
-          return true;
-      }
-    });
-
-    if (hasAllResults) {
-      updateData.status = "COMPLETED";
-      updateData.completedDate = new Date();
-    } else {
-      updateData.status = "IN_PROGRESS";
+    if (recommendations !== undefined)
+      updateData.recommendations = recommendations;
+    if (requiresFollowUp !== undefined)
+      updateData.requiresFollowUp = requiresFollowUp;
+    if (followUpDate !== undefined)
+      updateData.followUpDate = followUpDate ? new Date(followUpDate) : null;
+    if (parentNotified !== undefined)
+      updateData.parentNotified = parentNotified;
+    if (parentResponse !== undefined)
+      updateData.parentResponse = parentResponse;
+    // Nếu không có trường nào hợp lệ để update
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: "Không có trường nào hợp lệ để cập nhật",
+      });
     }
-
     const updatedCheck = await prisma.medicalCheck.update({
       where: { id },
       data: updateData,
@@ -214,10 +399,43 @@ const updateMedicalCheckResults = async (req, res) => {
         student: {
           select: {
             id: true,
-            studentCode: true,
+            name: true,
             grade: true,
             class: true,
-            user: { select: { fullName: true } },
+            studentCode: true,
+          },
+        },
+        campaign: {
+          select: { id: true, name: true, checkTypes: true },
+        },
+        nurse: { select: { id: true, name: true } },
+      },
+    });
+    res.json({
+      success: true,
+      message: `Cập nhật báo cáo kiểm tra cho học sinh ${updatedCheck.student.name} thành công`,
+      data: updatedCheck,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Lấy danh sách báo cáo kiểm tra theo campaign
+const getMedicalChecksByCampaign = async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+
+    const medicalChecks = await prisma.medicalCheck.findMany({
+      where: { campaignId },
+      include: {
+        student: {
+          select: {
+            id: true,
+            name: true,
+            grade: true,
+            class: true,
+            studentCode: true,
           },
         },
         campaign: {
@@ -230,101 +448,19 @@ const updateMedicalCheckResults = async (req, res) => {
         nurse: {
           select: {
             id: true,
-            user: { select: { fullName: true } },
+            name: true,
           },
         },
       },
+      orderBy: {
+        scheduledDate: "asc",
+      },
     });
-
-    // Log hoạt động (có thể thêm audit trail)
-    console.log(
-      `Medical check updated for student ${updatedCheck.student.fullName} by nurse ${nurseId}`
-    );
-
-    res.json({
-      success: true,
-      message: `Cập nhật kết quả kiểm tra cho học sinh ${updatedCheck.student.fullName} thành công`,
-      data: updatedCheck,
-      isCompleted: updateData.status === "COMPLETED",
-    });
-  } catch (error) {
-    console.error("Error updating medical check:", error);
-    res.status(500).json({
-      success: false,
-      error: "Lỗi hệ thống khi cập nhật kết quả kiểm tra",
-    });
-  }
-};
-
-// Lấy danh sách báo cáo kiểm tra theo campaign
-const getMedicalChecksByCampaign = async (req, res) => {
-  try {
-    const { campaignId } = req.params;
-    const { page = 1, limit = 10, status, grade } = req.query;
-
-    const skip = (page - 1) * limit;
-
-    const where = {
-      campaignId,
-    };
-
-    if (status) {
-      where.status = status;
-    }
-
-    // Filter by grade if provided
-    if (grade) {
-      where.student = {
-        grade: grade,
-      };
-    }
-
-    const [medicalChecks, total] = await Promise.all([
-      prisma.medicalCheck.findMany({
-        where,
-        include: {
-          student: {
-            select: {
-              id: true,
-              studentCode: true,
-              grade: true,
-              class: true,
-              user: { select: { fullName: true } },
-            },
-          },
-          campaign: {
-            select: {
-              id: true,
-              name: true,
-              checkTypes: true,
-            },
-          },
-          nurse: {
-            select: {
-              id: true,
-              user: { select: { fullName: true } },
-            },
-          },
-        },
-        orderBy: {
-          scheduledDate: "asc",
-        },
-        skip: parseInt(skip),
-        take: parseInt(limit),
-      }),
-      prisma.medicalCheck.count({ where }),
-    ]);
 
     res.json({
       success: true,
       message: "Lấy danh sách báo cáo thành công",
       data: medicalChecks,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total,
-        totalPages: Math.ceil(total / limit),
-      },
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -335,19 +471,11 @@ const getMedicalChecksByCampaign = async (req, res) => {
 const getStudentMedicalChecks = async (req, res) => {
   try {
     const { studentId } = req.params;
-    const { year } = req.query;
-
-    const where = { studentId };
-
-    if (year) {
-      where.scheduledDate = {
-        gte: new Date(`${year}-01-01`),
-        lt: new Date(`${parseInt(year) + 1}-01-01`),
-      };
-    }
 
     const medicalChecks = await prisma.medicalCheck.findMany({
-      where,
+      where: {
+        studentId,
+      },
       include: {
         campaign: {
           select: {
@@ -360,7 +488,7 @@ const getStudentMedicalChecks = async (req, res) => {
         nurse: {
           select: {
             id: true,
-            user: { select: { fullName: true } },
+            name: true,
           },
         },
       },
@@ -435,273 +563,13 @@ const updateParentNotification = async (req, res) => {
 };
 
 // Tạo lịch kiểm tra cho từng học sinh (từng cá nhân)
-const scheduleMedicalCheckForStudent = async (req, res) => {
-  try {
-    const { studentId, campaignId, scheduledDate, notes } = req.body;
-
-    // Kiểm tra campaign có tồn tại và đang active không
-    const campaign = await prisma.medicalCheckCampaign.findUnique({
-      where: { id: campaignId },
-    });
-
-    if (!campaign || !campaign.isActive) {
-      return res.status(404).json({
-        success: false,
-        error: "Chiến dịch kiểm tra không tồn tại hoặc đã kết thúc",
-      });
-    }
-
-    // Kiểm tra thông tin học sinh
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-    });
-
-    if (!student) {
-      return res
-        .status(404)
-        .json({ success: false, error: "Không tìm thấy học sinh" });
-    }
-
-    // Kiểm tra xem học sinh có thuộc grade target không
-    if (!campaign.targetGrades.includes(student.grade)) {
-      return res.status(400).json({
-        success: false,
-        error: `Học sinh lớp ${student.grade} không thuộc đối tượng kiểm tra của chiến dịch này`,
-      });
-    }
-
-    // Kiểm tra trùng lặp
-    const existingCheck = await prisma.medicalCheck.findFirst({
-      where: {
-        studentId,
-        campaignId,
-      },
-    });
-
-    if (existingCheck) {
-      return res.status(400).json({
-        success: false,
-        error: "Học sinh đã có lịch kiểm tra cho chiến dịch này",
-        existingCheck: {
-          id: existingCheck.id,
-          status: existingCheck.status,
-          scheduledDate: existingCheck.scheduledDate,
-        },
-      });
-    }
-
-    // Tạo lịch kiểm tra
-    const medicalCheck = await prisma.medicalCheck.create({
-      data: {
-        studentId,
-        campaignId,
-        scheduledDate: new Date(scheduledDate),
-        notes: notes || null,
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            studentCode: true,
-            grade: true,
-            class: true,
-            user: { select: { fullName: true } },
-          },
-        },
-        campaign: {
-          select: {
-            id: true,
-            name: true,
-            checkTypes: true,
-            deadline: true,
-          },
-        },
-      },
-    });
-
-    res.status(201).json({
-      success: true,
-      message: `Đã tạo lịch kiểm tra cho học sinh ${student.fullName}`,
-      data: medicalCheck,
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-// Tạo mới báo cáo kiểm tra sức khỏe (MedicalCheck)
-const createMedicalCheck = async (req, res) => {
-  try {
-    const user = req.user;
-    if (!user || user.role !== "SCHOOL_NURSE") {
-      return res.status(403).json({
-        success: false,
-        error: "Chỉ y tá mới được phép tạo báo cáo kiểm tra sức khỏe",
-      });
-    }
-    const nurseId = user.id;
-    // Kiểm tra nurse tồn tại và active
-    const nurse = await prisma.schoolNurse.findUnique({
-      where: { id: nurseId },
-    });
-    if (!nurse || !nurse.isActive) {
-      return res.status(403).json({
-        success: false,
-        error: "Tài khoản y tá không hợp lệ hoặc không còn hoạt động",
-      });
-    }
-    const { studentId, campaignId, scheduledDate, notes } = req.body;
-    // Validate bắt buộc
-    if (!studentId || !campaignId || !scheduledDate) {
-      return res.status(400).json({
-        success: false,
-        error: "Thiếu thông tin bắt buộc: studentId, campaignId, scheduledDate",
-      });
-    }
-    const campaign = await prisma.medicalCheckCampaign.findUnique({
-      where: { id: campaignId },
-    });
-    if (!campaign || !campaign.isActive) {
-      return res.status(404).json({
-        success: false,
-        error: "Chiến dịch kiểm tra không tồn tại hoặc đã kết thúc",
-      });
-    }
-    // Kiểm tra học sinh tồn tại
-    const student = await prisma.student.findUnique({
-      where: { id: studentId },
-    });
-    if (!student) {
-      return res.status(404).json({
-        success: false,
-        error: "Không tìm thấy học sinh",
-      });
-    }
-    // Kiểm tra học sinh có thuộc target grade không
-    if (!campaign.targetGrades.includes(student.grade)) {
-      return res.status(400).json({
-        success: false,
-        error: `Học sinh lớp ${student.grade} không thuộc đối tượng kiểm tra của chiến dịch này`,
-      });
-    }
-    // Kiểm tra trùng lặp
-    const existingCheck = await prisma.medicalCheck.findFirst({
-      where: { studentId, campaignId },
-    });
-    if (existingCheck) {
-      return res.status(400).json({
-        success: false,
-        error: "Học sinh đã có báo cáo kiểm tra cho chiến dịch này",
-        existingCheck: {
-          id: existingCheck.id,
-          status: existingCheck.status,
-          scheduledDate: existingCheck.scheduledDate,
-        },
-      });
-    }
-    // Tạo mới
-    const medicalCheck = await prisma.medicalCheck.create({
-      data: {
-        studentId,
-        campaignId,
-        nurseId,
-        scheduledDate: new Date(scheduledDate),
-        notes: notes || null,
-      },
-      include: {
-        student: {
-          select: {
-            id: true,
-            studentCode: true,
-            grade: true,
-            class: true,
-            user: { select: { fullName: true } },
-          },
-        },
-        campaign: {
-          select: {
-            id: true,
-            name: true,
-            checkTypes: true,
-            deadline: true,
-          },
-        },
-        nurse: {
-          select: {
-            id: true,
-            user: { select: { fullName: true } },
-          },
-        },
-      },
-    });
-    res.status(201).json({
-      success: true,
-      message: `Đã tạo báo cáo kiểm tra cho học sinh ${student.fullName}`,
-      data: medicalCheck,
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
-
-// Thống kê báo cáo theo campaign
-const getMedicalCheckStats = async (req, res) => {
-  try {
-    const { campaignId } = req.params;
-
-    const stats = await prisma.medicalCheck.groupBy({
-      by: ["status"],
-      where: {
-        campaignId,
-      },
-      _count: {
-        status: true,
-      },
-    });
-
-    // Thống kê kết quả kiểm tra
-    const resultStats = await prisma.medicalCheck.aggregate({
-      where: {
-        campaignId,
-        status: "COMPLETED",
-      },
-      _count: {
-        visionResult: true,
-        hearingResult: true,
-        dentalResult: true,
-      },
-    });
-
-    // Số lượng cần follow-up
-    const followUpCount = await prisma.medicalCheck.count({
-      where: {
-        campaignId,
-        requiresFollowUp: true,
-      },
-    });
-
-    res.json({
-      success: true,
-      message: "Lấy thống kê thành công",
-      data: {
-        statusStats: stats,
-        resultStats,
-        followUpCount,
-      },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
 
 export {
   checkNursePermission,
   createMedicalCheck,
   getMedicalCheckDetail,
   getMedicalChecksByCampaign,
-  getMedicalCheckStats,
   getStudentMedicalChecks,
-  scheduleMedicalCheckForStudent,
   updateMedicalCheckResults,
   updateParentNotification,
   validateMedicalCheckData,

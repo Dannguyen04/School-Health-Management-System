@@ -39,6 +39,11 @@ const Homepage = () => {
       <main className="flex-1">
         <div id="home">
           <Home />
+    <div className="min-h-screen flex flex-col bg-white">
+      <HomepageNavbar />
+      <main className="flex-1">
+        <div id="home">
+          <Home />
         </div>
         <div id="about">
           <About />
@@ -49,7 +54,18 @@ const Homepage = () => {
         </div>
         <div id="blog">
           <Blogs />
+        <div id="about">
+          <About />
         </div>
+        {/* Truyền prop để Services biết là ở homepage */}
+        <div id="services">
+          <Services onServiceClick={handleServiceClick} isHomepage />
+        </div>
+        <div id="blog">
+          <Blogs />
+        </div>
+      </main>
+      <Footer />
       </main>
       <Footer />
     </div>

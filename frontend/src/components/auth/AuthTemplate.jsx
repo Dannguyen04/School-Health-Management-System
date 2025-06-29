@@ -1,4 +1,3 @@
-import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { Button, Modal } from "antd";
 import cn from "classnames";
 import { useState } from "react";
@@ -111,40 +110,6 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
     }
   };
 
-  const handleGoogleSuccess = async (response) => {
-    try {
-      console.log("Google login response:", response);
-      const res = await api.post("/auth/google-login", {
-        credential: response.credential,
-      });
-
-      console.log("Backend response:", res.data);
-
-      if (res.data.success) {
-        const { user, token } = res.data;
-        login(user, token);
-        if (user.role === "ADMIN") {
-          navigate("/admin");
-        } else {
-          navigate("/");
-        }
-      }
-    } catch (error) {
-      console.error("Google login error:", error);
-      setErrors({
-        general:
-          error.response?.data?.error ||
-          error.message ||
-          "Đăng nhập bằng Google thất bại. Vui lòng thử lại.",
-      });
-    }
-  };
-
-  const handleGoogleError = (error) => {
-    console.error("Google login error:", error);
-    setErrors({ general: "Đăng nhập bằng Google thất bại. Vui lòng thử lại." });
-  };
-
   return (
     <Modal
       open={isOpen}
@@ -242,14 +207,6 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
             >
               Đăng nhập
             </Button>
-            <Paragraph>hoặc sử dụng tài khoản của bạn</Paragraph>
-            <GoogleOAuthProvider clientId="576568259129-taaehj1ll63so5u0eiqg6qaoria61d86.apps.googleusercontent.com">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                useOneTap
-              />
-            </GoogleOAuthProvider>
           </Form>
         </SignInContainer>
 
@@ -349,14 +306,6 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
             >
               Đăng ký
             </Button>
-            <Paragraph>hoặc sử dụng email để đăng ký</Paragraph>
-            <GoogleOAuthProvider clientId="576568259129-taaehj1ll63so5u0eiqg6qaoria61d86.apps.googleusercontent.com">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                useOneTap
-              />
-            </GoogleOAuthProvider>
           </Form>
         </SignUpContainer>
 

@@ -1,9 +1,12 @@
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
 import connectToDatabase from "./db/db.js";
 import AdminRoutes from "./routes/AdminRoutes.js";
 import authRouter from "./routes/auth.js";
+import BlogRoutes from "./routes/BlogRoutes.js";
 import NotificationRoutes from "./routes/NotificationRoutes.js";
 import NurseRoutes from "./routes/NurseRoutes.js";
 import parentRoutes from "./routes/parentRoutes.js";
@@ -13,6 +16,9 @@ import VaccinationRoutes from "./routes/VaccinationRoutes.js";
 import ManagerStudentRoutes from "./routes/ManagerStudentRoutes.js";
 import MedicalCheckRoutes from "./routes/MedicalCheckRoutes.js";
 import MedicalCampaignRoutes from "./routes/MedicalCamapaignRoutes.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 dotenv.config();
 
@@ -37,6 +43,9 @@ app.use(
 );
 app.use(express.json());
 
+// Serve static files from uploads directory
+app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));
+
 // Mount all routes under /api prefix
 app.use("/api/auth", authRouter);
 app.use("/api/admin", AdminRoutes);
@@ -49,6 +58,7 @@ app.use("/api/manager/students", ManagerStudentRoutes);
 app.use("/api/notifications", NotificationRoutes);
 app.use("/api/medical-checks", MedicalCheckRoutes);
 app.use("/api/medical-campaigns", MedicalCampaignRoutes);
+app.use("/api/blogs", BlogRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {

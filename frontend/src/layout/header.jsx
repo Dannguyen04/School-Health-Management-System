@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 
 import PropTypes from "prop-types";
 import { useAuth } from "../context/authContext";
-import NotificationBell from "../components/shared/NotificationBell";
+import NotificationCenter from "../components/shared/NotificationCenter";
 
 export const Header = ({ collapsed, setCollapsed }) => {
     const { user, logout } = useAuth();
@@ -59,8 +59,8 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 </button>
             </div>
             <div className="flex items-center gap-x-3">
-                {/* Hiển thị NotificationBell cho phụ huynh */}
-                {user?.role === "PARENT" && <NotificationBell />}
+                {/* Hiển thị NotificationCenter cho tất cả user roles */}
+                <NotificationCenter mode="bell" />
                 <Dropdown
                     menu={{ items: menuItems }}
                     placement="bottomRight"
