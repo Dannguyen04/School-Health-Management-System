@@ -3,14 +3,7 @@ const prisma = new PrismaClient();
 
 // Tạo campaign mới
 export const createMedicalCampaign = async (req, res) => {
-  const {
-    name,
-
-    scheduledDate,
-    deadline,
-    description,
-    targetGrades,
-  } = req.body;
+  const { name, scheduledDate, deadline, description, targetGrades } = req.body;
   if (!name || !targetGrades || !scheduledDate || !deadline) {
     return res.status(400).json({
       success: false,
