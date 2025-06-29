@@ -139,3 +139,49 @@ export const updateCurrentUserProfile = async (req, res) => {
         });
     }
 };
+
+// Upload profile photo
+export const uploadProfilePhoto = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                error: "No file uploaded",
+            });
+        }
+
+        const userId = req.user.id;
+
+        // Generate the file URL
+        const fileUrl = `/api/uploads/profile-photos/${req.file.filename}`;
+
+        // Update user's avatar in database
+        const user = await prisma.users.update({
+            where: { id: userId },
+            data: {
+                avatar: fileUrl,
+                updatedAt: new Date(),
+            },
+            include: {
+                studentProfile: true,
+                parentProfile: true,
+                nurseProfile: true,
+                managerProfile: true,
+                adminProfile: true,
+            },
+        });
+
+        res.json({
+            success: true,
+            message: "Profile photo uploaded successfully",
+            avatar: fileUrl,
+            user,
+        });
+    } catch (err) {
+        console.error("Profile photo upload error:", err);
+        res.status(500).json({
+            success: false,
+            error: err.message,
+        });
+    }
+};

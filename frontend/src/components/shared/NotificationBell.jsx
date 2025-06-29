@@ -20,85 +20,35 @@ import {
 } from "@ant-design/icons";
 import moment from "moment";
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/authContext";
+import { useNotifications } from "../../hooks/useNotifications";
 import { parentAPI } from "../../utils/api.js";
+import NotificationItem from "./NotificationItem.jsx";
 
 const { Text } = Typography;
 const { Title } = Typography;
 
 const NotificationBell = () => {
-    const [notifications, setNotifications] = useState([]);
-    const [unreadCount, setUnreadCount] = useState(0);
-    const [loading, setLoading] = useState(false);
+    const { user } = useAuth();
+    const navigate = useNavigate();
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState(null);
     const [medicalEventDetails, setMedicalEventDetails] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
 
-    useEffect(() => {
-        fetchUnreadCount();
-        fetchRecentNotifications();
-    }, []);
-
-    const fetchUnreadCount = async () => {
-        try {
-            const response = await parentAPI.getUnreadNotificationCount();
-            if (response.data.success) {
-                setUnreadCount(response.data.data.count);
-            }
-        } catch (error) {
-            console.error("Error fetching unread count:", error);
-        }
-    };
-
-    const fetchRecentNotifications = async () => {
-        try {
-            setLoading(true);
-            const response = await parentAPI.getNotifications({ limit: 5 });
-            if (response.data.success) {
-                setNotifications(response.data.data);
-            }
-        } catch (error) {
-            console.error("Error fetching notifications:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleMarkAsRead = async (notificationId) => {
-        try {
-            await parentAPI.updateNotificationStatus(notificationId, "READ");
-            fetchUnreadCount();
-            fetchRecentNotifications();
-        } catch (error) {
-            console.error("Error marking notification as read:", error);
-        }
-    };
-
-    const handleArchiveNotification = async (notificationId) => {
-        try {
-            await parentAPI.archiveNotification(notificationId);
-            setDetailModalVisible(false);
-            setSelectedNotification(null);
-            setMedicalEventDetails(null);
-            fetchUnreadCount();
-            fetchRecentNotifications();
-        } catch (error) {
-            console.error("Error archiving notification:", error);
-        }
-    };
-
-    const handleRestoreNotification = async (notificationId) => {
-        try {
-            await parentAPI.restoreNotification(notificationId);
-            setDetailModalVisible(false);
-            setSelectedNotification(null);
-            setMedicalEventDetails(null);
-            fetchUnreadCount();
-            fetchRecentNotifications();
-        } catch (error) {
-            console.error("Error restoring notification:", error);
-        }
-    };
+    const {
+        notifications,
+        unreadCount,
+        loading,
+        markAsRead,
+        deleteNotification,
+        archiveNotification,
+        restoreNotification,
+    } = useNotifications(user?.id, {
+        autoRefresh: true,
+        refreshInterval: 30000, // 30 seconds
+    });
 
     const handleViewDetail = async (notification) => {
         setSelectedNotification(notification);
@@ -108,7 +58,7 @@ const NotificationBell = () => {
             notification.status !== "READ" &&
             notification.status !== "ARCHIVED"
         ) {
-            handleMarkAsRead(notification.id);
+            markAsRead(notification.id);
         }
 
         if (notification.type === "medical_event") {
@@ -132,6 +82,43 @@ const NotificationBell = () => {
             }
         } else {
             setMedicalEventDetails(null);
+        }
+    };
+
+    const handleNotificationClick = (notification) => {
+        // Đánh dấu đã đọc nếu chưa đọc
+        if (
+            notification.status !== "READ" &&
+            notification.status !== "ARCHIVED"
+        ) {
+            markAsRead(notification.id);
+        }
+
+        // Navigation dựa trên loại thông báo
+        switch (notification.type) {
+            case "vaccination_consent":
+                navigate("/user/consent-forms");
+                break;
+            case "vaccination_consent_update":
+                navigate("/manager/vaccination-campaigns");
+                break;
+            case "vaccination":
+                navigate("/user/vaccination-schedule");
+                break;
+            case "medical_check":
+                navigate("/user/health-checkup-results");
+                break;
+            case "medication":
+                navigate("/user/medicine-info");
+                break;
+            case "medical_event":
+                // Mở modal chi tiết cho medical event
+                handleViewDetail(notification);
+                break;
+            default:
+                // Mở modal chi tiết cho các loại thông báo khác
+                handleViewDetail(notification);
+                break;
         }
     };
 
@@ -271,98 +258,16 @@ const NotificationBell = () => {
         ...notifications.map((notification) => ({
             key: notification.id,
             label: (
-                <div style={{ padding: "8px 16px", minWidth: 300 }}>
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "8px",
-                        }}
-                    >
-                        <div style={{ fontSize: "20px", marginTop: "2px" }}>
-                            {getNotificationIcon(notification.type)}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                            <div
-                                style={{
-                                    fontWeight:
-                                        notification.status !== "READ"
-                                            ? "bold"
-                                            : "normal",
-                                    marginBottom: "4px",
-                                    cursor: "pointer",
-                                }}
-                                onClick={() => handleViewDetail(notification)}
-                            >
-                                {notification.title}
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: "12px",
-                                    color: "#666",
-                                    marginBottom: "4px",
-                                    lineHeight: "1.4",
-                                }}
-                            >
-                                {notification.message}
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: "11px",
-                                    color: "#999",
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                }}
-                            >
-                                <span>
-                                    {moment(notification.createdAt).format(
-                                        "DD/MM HH:mm"
-                                    )}
-                                </span>
-                                <div>
-                                    <Button
-                                        type="text"
-                                        size="small"
-                                        icon={<EyeOutlined />}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleViewDetail(notification);
-                                        }}
-                                        title="Xem chi tiết"
-                                    />
-                                    {notification.status !== "READ" && (
-                                        <Button
-                                            type="text"
-                                            size="small"
-                                            icon={<CheckOutlined />}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleMarkAsRead(
-                                                    notification.id
-                                                );
-                                            }}
-                                            title="Đánh dấu đã đọc"
-                                        />
-                                    )}
-                                    <Button
-                                        type="text"
-                                        size="small"
-                                        icon={<DeleteOutlined />}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteNotification(
-                                                notification.id
-                                            );
-                                        }}
-                                        title="Xóa thông báo"
-                                        danger
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <NotificationItem
+                    notification={notification}
+                    onViewDetail={handleViewDetail}
+                    onMarkAsRead={markAsRead}
+                    onDelete={deleteNotification}
+                    onNotificationClick={handleNotificationClick}
+                    getNotificationIcon={getNotificationIcon}
+                    getStatusColor={getStatusColor}
+                    getTypeLabel={getTypeLabel}
+                />
             ),
         })),
         {
@@ -451,7 +356,7 @@ const NotificationBell = () => {
                                 type="primary"
                                 icon={<CheckOutlined />}
                                 onClick={() => {
-                                    handleMarkAsRead(selectedNotification.id);
+                                    markAsRead(selectedNotification.id);
                                     setDetailModalVisible(false);
                                     setSelectedNotification(null);
                                     setMedicalEventDetails(null);
@@ -467,9 +372,7 @@ const NotificationBell = () => {
                             type="primary"
                             icon={<UndoOutlined />}
                             onClick={() => {
-                                handleRestoreNotification(
-                                    selectedNotification.id
-                                );
+                                restoreNotification(selectedNotification.id);
                             }}
                         >
                             Khôi phục
@@ -480,7 +383,7 @@ const NotificationBell = () => {
                             icon={<InboxOutlined />}
                             onClick={() => {
                                 if (selectedNotification) {
-                                    handleArchiveNotification(
+                                    archiveNotification(
                                         selectedNotification.id
                                     );
                                 }

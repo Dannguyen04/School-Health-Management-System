@@ -32,7 +32,12 @@ api.interceptors.response.use(
         if (error.response?.status === 401) {
             // Handle unauthorized access
             localStorage.removeItem("token");
-            window.location.href = "/auth";
+            delete api.defaults.headers.common["Authorization"];
+
+            // Only redirect if not already on auth page
+            if (!window.location.pathname.includes("/auth")) {
+                window.location.href = "/auth";
+            }
         }
         return Promise.reject(error);
     }
@@ -93,6 +98,14 @@ export const userAPI = {
 
     // Update current user profile
     updateProfile: (data) => api.put("/auth/profile", data),
+
+    // Upload profile photo
+    uploadProfilePhoto: (formData) =>
+        api.post("/auth/profile/upload-photo", formData, {
+            headers: {
+                "Content-Type": "multipart/form-data",
+            },
+        }),
 };
 
 // Admin API endpoints

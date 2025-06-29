@@ -22,10 +22,11 @@ import moment from "moment";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { parentAPI } from "../../utils/api.js";
+import NotificationItem from "./NotificationItem.jsx";
 
 const { Text, Title } = Typography;
 
-const NotificationDisplay = ({ userId, type, status }) => {
+const NotificationDisplay = ({ userId, type, status, onUnreadCountChange }) => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
@@ -43,6 +44,12 @@ const NotificationDisplay = ({ userId, type, status }) => {
             }
         }
     }, [userId, type, status]);
+
+    useEffect(() => {
+        if (onUnreadCountChange) {
+            onUnreadCountChange(unreadCount);
+        }
+    }, [unreadCount, onUnreadCountChange]);
 
     const fetchNotifications = async () => {
         try {
@@ -262,19 +269,39 @@ const NotificationDisplay = ({ userId, type, status }) => {
     };
 
     const handleNotificationClick = (notification) => {
-        if (notification.type === "vaccination_consent") {
-            navigate("/user/consent-forms");
-            if (notification.status !== "READ") {
-                handleMarkAsRead(notification.id);
-            }
-        } else if (notification.type === "vaccination_consent_update") {
-            // Navigate to vaccination campaigns page for managers
-            navigate("/manager/vaccination-campaigns");
-            if (notification.status !== "READ") {
-                handleMarkAsRead(notification.id);
-            }
-        } else {
-            handleViewDetail(notification);
+        // Đánh dấu đã đọc nếu chưa đọc
+        if (
+            notification.status !== "READ" &&
+            notification.status !== "ARCHIVED"
+        ) {
+            handleMarkAsRead(notification.id);
+        }
+
+        // Navigation dựa trên loại thông báo
+        switch (notification.type) {
+            case "vaccination_consent":
+                navigate("/user/consent-forms");
+                break;
+            case "vaccination_consent_update":
+                navigate("/manager/vaccination-campaigns");
+                break;
+            case "vaccination":
+                navigate("/user/vaccination-schedule");
+                break;
+            case "medical_check":
+                navigate("/user/health-checkup-results");
+                break;
+            case "medication":
+                navigate("/user/medicine-info");
+                break;
+            case "medical_event":
+                // Mở modal chi tiết cho medical event
+                handleViewDetail(notification);
+                break;
+            default:
+                // Mở modal chi tiết cho các loại thông báo khác
+                handleViewDetail(notification);
+                break;
         }
     };
 
@@ -311,120 +338,21 @@ const NotificationDisplay = ({ userId, type, status }) => {
                 </div>
 
                 {notifications.length > 0 ? (
-                    <List
-                        itemLayout="horizontal"
-                        dataSource={notifications}
-                        renderItem={(item) => (
-                            <List.Item
-                                style={{
-                                    backgroundColor:
-                                        item.status === "READ"
-                                            ? "#fafafa"
-                                            : "#fff",
-                                    border:
-                                        item.status === "READ"
-                                            ? "1px solid #f0f0f0"
-                                            : "1px solid #d9d9d9",
-                                    borderRadius: "8px",
-                                    marginBottom: "8px",
-                                    padding: "12px",
-                                    cursor: "pointer",
-                                }}
-                                onClick={() => handleNotificationClick(item)}
-                                actions={[
-                                    <Button
-                                        type="text"
-                                        icon={<EyeOutlined />}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleNotificationClick(item);
-                                        }}
-                                        title="Xem chi tiết"
-                                    />,
-                                    item.status !== "READ" && (
-                                        <Button
-                                            type="text"
-                                            icon={<CheckOutlined />}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleMarkAsRead(item.id);
-                                            }}
-                                            title="Đánh dấu đã đọc"
-                                        />
-                                    ),
-                                    <Button
-                                        type="text"
-                                        icon={<DeleteOutlined />}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteNotification(item.id);
-                                        }}
-                                        title="Xóa thông báo"
-                                        danger
-                                    />,
-                                ].filter(Boolean)}
-                            >
-                                <List.Item.Meta
-                                    avatar={
-                                        <div style={{ fontSize: "24px" }}>
-                                            {getNotificationIcon(item.type)}
-                                        </div>
-                                    }
-                                    title={
-                                        <div
-                                            style={{
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "8px",
-                                            }}
-                                        >
-                                            <Text
-                                                strong={item.status !== "READ"}
-                                            >
-                                                {item.title}
-                                            </Text>
-                                            {item.status !== "READ" && (
-                                                <Badge
-                                                    status="processing"
-                                                    text="Mới"
-                                                />
-                                            )}
-                                            <Tag
-                                                color={getStatusColor(
-                                                    item.status
-                                                )}
-                                            >
-                                                {item.status === "READ"
-                                                    ? "Đã đọc"
-                                                    : "Chưa đọc"}
-                                            </Tag>
-                                        </div>
-                                    }
-                                    description={
-                                        <div>
-                                            <Text>{item.message}</Text>
-                                            <br />
-                                            <Space style={{ marginTop: "8px" }}>
-                                                <Text
-                                                    type="secondary"
-                                                    style={{ fontSize: "12px" }}
-                                                >
-                                                    {moment(
-                                                        item.createdAt
-                                                    ).format(
-                                                        "DD/MM/YYYY HH:mm"
-                                                    )}
-                                                </Text>
-                                                <Tag color="blue">
-                                                    {getTypeLabel(item.type)}
-                                                </Tag>
-                                            </Space>
-                                        </div>
-                                    }
-                                />
-                            </List.Item>
-                        )}
-                    />
+                    <div>
+                        {notifications.map((item) => (
+                            <NotificationItem
+                                key={item.id}
+                                notification={item}
+                                onViewDetail={handleViewDetail}
+                                onMarkAsRead={handleMarkAsRead}
+                                onDelete={handleDeleteNotification}
+                                onNotificationClick={handleNotificationClick}
+                                getNotificationIcon={getNotificationIcon}
+                                getStatusColor={getStatusColor}
+                                getTypeLabel={getTypeLabel}
+                            />
+                        ))}
+                    </div>
                 ) : (
                     <div style={{ textAlign: "center", padding: "24px" }}>
                         <Text type="secondary">Không có thông báo nào.</Text>
