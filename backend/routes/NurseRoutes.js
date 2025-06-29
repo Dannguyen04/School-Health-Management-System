@@ -31,6 +31,7 @@ import {
   getStudentTreatments,
   getUpcomingVaccinations,
   getVaccinationCampaigns,
+  getVaccinationStats,
   giveMedicineToStudent,
   performVaccination,
   reportVaccinationResult,
@@ -39,6 +40,10 @@ import {
   updateMedicalEventStatus,
   updateMedicalInventory,
 } from "../controllers/NurseController.js";
+import {
+  authenticateToken,
+  verifyNurse,
+} from "../middleware/authenticateToken.js";
 
 const router = express.Router();
 

@@ -1,5 +1,4 @@
 import {
-  BarChartOutlined,
   EditOutlined,
   FileTextOutlined,
   PlusOutlined,
@@ -8,7 +7,6 @@ import {
 import {
   Button,
   Card,
-  Col,
   DatePicker,
   Descriptions,
   Divider,
@@ -17,19 +15,19 @@ import {
   InputNumber,
   message,
   Modal,
-  Row,
   Select,
   Space,
   Spin,
-  Statistic,
   Table,
   Tag,
+  Typography,
 } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
 const { Option } = Select;
+const { Title } = Typography;
 
 const HealthCheckups = () => {
   const [data, setData] = useState([]);
@@ -42,10 +40,9 @@ const HealthCheckups = () => {
   const [form] = Form.useForm();
   const [updateForm] = Form.useForm();
   const [campaignId, setCampaignId] = useState("");
-  const [stats, setStats] = useState(null);
-  const [statsModal, setStatsModal] = useState(false);
   const [campaigns, setCampaigns] = useState([]);
   const [students, setStudents] = useState([]);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
 
   // Fetch danh sách campaign khi vào trang
   useEffect(() => {
@@ -91,19 +88,6 @@ const HealthCheckups = () => {
     setLoading(false);
   };
 
-  // Lấy thống kê
-  const fetchStats = async (cid = campaignId) => {
-    if (!cid) return;
-    try {
-      const res = await axios.get(`/api/medical-checks/statistics/${cid}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-      });
-      setStats(res.data.data);
-    } catch {
-      message.error("Không thể tải thống kê");
-    }
-  };
-
   // Xem chi tiết
   const handleViewDetail = async (record) => {
     try {
@@ -121,7 +105,7 @@ const HealthCheckups = () => {
   const handleCreate = async (values) => {
     try {
       await axios.post(
-        `/api/medical-checks`,
+        `/api/medical-checks/create`,
         { ...values, campaignId },
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -155,7 +139,6 @@ const HealthCheckups = () => {
   useEffect(() => {
     if (campaignId) {
       fetchCheckups();
-      fetchStats();
     }
     // eslint-disable-next-line
   }, [campaignId]);
@@ -230,48 +213,113 @@ const HealthCheckups = () => {
     },
   ];
 
+  const campaignColumns = [
+    { title: "Tên chiến dịch", dataIndex: "name", key: "name" },
+    { title: "Mô tả", dataIndex: "description", key: "description" },
+    {
+      title: "Ngày bắt đầu",
+      dataIndex: "scheduledDate",
+      key: "scheduledDate",
+      render: (date) => date && new Date(date).toLocaleDateString(),
+    },
+    {
+      title: "Ngày kết thúc",
+      dataIndex: "deadline",
+      key: "deadline",
+      render: (date) => date && new Date(date).toLocaleDateString(),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => (
+        <Tag color={status === "ACTIVE" ? "green" : "default"}>
+          {status === "ACTIVE" ? "Đang diễn ra" : "Đã kết thúc"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Hành động",
+      key: "actions",
+      render: (_, record) => (
+        <Button
+          type="primary"
+          onClick={() => {
+            setSelectedCampaign(record);
+            setCampaignId(record.id);
+          }}
+        >
+          Chọn chiến dịch
+        </Button>
+      ),
+    },
+  ];
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <span className="font-semibold">Chọn chiến dịch:</span>
-          <Select
-            style={{ minWidth: 220 }}
-            placeholder="Chọn chiến dịch kiểm tra"
-            value={campaignId || undefined}
-            onChange={(v) => setCampaignId(v)}
-            showSearch
-            optionFilterProp="children"
+      <div className="flex justify-between items-center">
+        <Title level={2}>Thực hiện khám sức khỏe</Title>
+      </div>
+      {!selectedCampaign ? (
+        <Card title="Chọn chiến dịch kiểm tra sức khỏe">
+          <Table
+            dataSource={campaigns}
+            columns={campaignColumns}
+            rowKey="id"
+            loading={loading}
+            pagination={false}
+          />
+        </Card>
+      ) : (
+        <>
+          <Card
+            title={`Chiến dịch: ${selectedCampaign.name}`}
+            extra={
+              <Button
+                onClick={() => {
+                  setSelectedCampaign(null);
+                  setCampaignId("");
+                }}
+              >
+                Đóng
+              </Button>
+            }
           >
-            {campaigns.map((c) => (
-              <Option key={c.id} value={c.id}>
-                {c.name}
-              </Option>
-            ))}
-          </Select>
-        </div>
-        {campaignId && (
-          <Space>
+            <Descriptions bordered column={2}>
+              <Descriptions.Item label="Mô tả">
+                {selectedCampaign.description || "Không có"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày bắt đầu">
+                {selectedCampaign.scheduledDate &&
+                  new Date(selectedCampaign.scheduledDate).toLocaleDateString()}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày kết thúc">
+                {selectedCampaign.deadline &&
+                  new Date(selectedCampaign.deadline).toLocaleDateString()}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                <Tag
+                  color={
+                    selectedCampaign.status === "ACTIVE" ? "green" : "default"
+                  }
+                >
+                  {selectedCampaign.status === "ACTIVE"
+                    ? "Đang diễn ra"
+                    : "Đã kết thúc"}
+                </Tag>
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+          <div style={{ margin: "16px 0" }}>
             <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => setCreateModal(true)}
+              style={{ marginRight: 8 }}
             >
               Tạo lịch kiểm tra
             </Button>
-            <Button
-              icon={<BarChartOutlined />}
-              onClick={() => setStatsModal(true)}
-              type="default"
-            >
-              Thống kê
-            </Button>
-          </Space>
-        )}
-      </div>
-
-      {campaignId ? (
-        <>
+          </div>
           <Card>
             <Form form={form} onFinish={handleSearch} layout="inline">
               <Form.Item name="studentId" label="Mã học sinh">
@@ -303,7 +351,6 @@ const HealthCheckups = () => {
               </Form.Item>
             </Form>
           </Card>
-
           <Card>
             <Table
               dataSource={data}
@@ -314,10 +361,6 @@ const HealthCheckups = () => {
             />
           </Card>
         </>
-      ) : (
-        <Card className="text-center text-gray-500">
-          Vui lòng chọn chiến dịch kiểm tra để xem danh sách.
-        </Card>
       )}
 
       {/* Modal chi tiết */}
@@ -529,49 +572,6 @@ const HealthCheckups = () => {
             </Button>
           </div>
         </Form>
-      </Modal>
-
-      {/* Modal thống kê */}
-      <Modal
-        title="Thống kê kiểm tra sức khỏe"
-        open={statsModal}
-        onCancel={() => setStatsModal(false)}
-        footer={<Button onClick={() => setStatsModal(false)}>Đóng</Button>}
-        width={600}
-      >
-        {stats ? (
-          <Row gutter={16}>
-            <Col span={8}>
-              <Statistic
-                title="Hoàn thành"
-                value={
-                  stats.statusStats?.find((s) => s.status === "COMPLETED")
-                    ?._count?.status || 0
-                }
-                valueStyle={{ color: "#3f8600" }}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="Đang thực hiện"
-                value={
-                  stats.statusStats?.find((s) => s.status === "IN_PROGRESS")
-                    ?._count?.status || 0
-                }
-                valueStyle={{ color: "#faad14" }}
-              />
-            </Col>
-            <Col span={8}>
-              <Statistic
-                title="Cần theo dõi"
-                value={stats.followUpCount || 0}
-                valueStyle={{ color: "#cf1322" }}
-              />
-            </Col>
-          </Row>
-        ) : (
-          <Spin />
-        )}
       </Modal>
     </div>
   );
