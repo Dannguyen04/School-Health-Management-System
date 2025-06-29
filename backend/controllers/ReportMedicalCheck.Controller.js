@@ -116,28 +116,28 @@ const extractFilter = (query) => {
 };
 
 // Enhanced error handling with more specific error types
-const handleError = (error, res, customMessage = "An error occurred") => {
+const handleError = (error, res, customMessage = "Đã xảy ra lỗi") => {
     console.error(`${customMessage}:`, error);
     let statusCode = 500;
     let message = customMessage;
     if (error.code === "P2002") {
         statusCode = 409;
-        message = "Duplicate entry found";
+        message = "Dữ liệu bị trùng lặp";
     } else if (error.code === "P2025") {
         statusCode = 404;
-        message = "Record not found";
+        message = "Không tìm thấy bản ghi";
     } else if (error.code === "P2003") {
         statusCode = 400;
-        message = "Foreign key constraint failed";
+        message = "Lỗi ràng buộc khoá ngoại";
     } else if (error.name === "ValidationError") {
         statusCode = 400;
-        message = "Validation failed";
+        message = "Dữ liệu không hợp lệ";
     } else if (error.message.includes("Invalid date")) {
         statusCode = 400;
-        message = "Invalid date format provided";
+        message = "Định dạng ngày tháng không hợp lệ";
     } else if (error.message.includes("Invalid filter")) {
         statusCode = 400;
-        message = "Invalid filter parameters";
+        message = "Tham số lọc không hợp lệ";
     }
     return res.status(statusCode).json({
         success: false,
