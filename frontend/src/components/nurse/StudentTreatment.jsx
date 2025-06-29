@@ -31,7 +31,6 @@ import {
 } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
-// import { studentTreatments } from "../../mock/nurseData";
 
 const { TextArea } = Input;
 const { Text, Title } = Typography;
@@ -50,6 +49,7 @@ const StudentTreatment = () => {
   const [summary, setSummary] = useState({});
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [detailRecord, setDetailRecord] = useState(null);
+  const [errorModal, setErrorModal] = useState({ visible: false, message: "" });
 
   useEffect(() => {
     fetchTreatments();
@@ -166,11 +166,23 @@ const StudentTreatment = () => {
       setSelectedTreatment(null);
       fetchTreatments();
     } catch (error) {
-      if (error.response?.data?.error) {
-        message.error(error.response.data.error);
-      } else {
-        message.error("Lỗi khi ghi nhận cấp phát thuốc");
-      }
+      console.log("CATCH ERROR", error, error.response?.data);
+      setIsModalVisible(false);
+      setSelectedTreatment(null);
+
+      setTimeout(() => {
+        if (error.response?.data?.error) {
+          setErrorModal({
+            visible: true,
+            message: error.response.data.error,
+          });
+        } else {
+          setErrorModal({
+            visible: true,
+            message: "Lỗi khi ghi nhận cấp phát thuốc",
+          });
+        }
+      }, 300);
     } finally {
       setSubmitting(false);
     }
@@ -188,7 +200,7 @@ const StudentTreatment = () => {
       );
       message.success("Đã dừng điều trị cho học sinh này");
       fetchTreatments();
-    } catch (e) {
+    } catch {
       message.error("Lỗi khi dừng điều trị");
     }
   };
@@ -600,25 +612,19 @@ const StudentTreatment = () => {
               {/* Thống kê lịch sử */}
               {historyData.summary && (
                 <Row gutter={16} className="mb-4">
-                  <Col span={6}>
+                  <Col span={8}>
                     <Statistic
                       title="Tổng số lần"
                       value={historyData.summary.totalAdministrations}
                     />
                   </Col>
-                  <Col span={6}>
+                  <Col span={8}>
                     <Statistic
                       title="Tổng liều dùng"
                       value={historyData.summary.totalDosage}
                     />
                   </Col>
-                  <Col span={6}>
-                    <Statistic
-                      title="Tổng số lượng"
-                      value={historyData.summary.totalQuantity}
-                    />
-                  </Col>
-                  <Col span={6}>
+                  <Col span={8}>
                     <Statistic
                       title="Liều trung bình"
                       value={historyData.summary.averageDosage}
@@ -779,6 +785,49 @@ const StudentTreatment = () => {
           </div>
         )}
       </Modal>
+
+      {/* Error Modal */}
+      {errorModal.visible && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 1000,
+          }}
+          onClick={() => setErrorModal({ visible: false, message: "" })}
+        >
+          <div
+            style={{
+              backgroundColor: "white",
+              padding: "24px",
+              borderRadius: "8px",
+              maxWidth: "500px",
+              width: "90%",
+              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ color: "#ff4d4f", marginBottom: "16px" }}>
+              Lỗi cấp phát thuốc
+            </h3>
+            <p style={{ marginBottom: "16px" }}>{errorModal.message}</p>
+            <Button
+              type="primary"
+              danger
+              onClick={() => setErrorModal({ visible: false, message: "" })}
+            >
+              Đóng
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

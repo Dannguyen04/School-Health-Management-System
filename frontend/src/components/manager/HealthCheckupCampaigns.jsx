@@ -79,7 +79,6 @@ const HealthCheckupCampaigns = () => {
         const mapped = (res.data.data || []).map((c) => ({
           id: c.id,
           name: c.name,
-          checkTypes: c.checkTypes,
           targetGrades: c.targetGrades || [],
           scheduledDate: c.scheduledDate,
           deadline: c.deadline,
@@ -193,20 +192,20 @@ const HealthCheckupCampaigns = () => {
         </Space>
       ),
     },
-    {
-      title: "Loại khám",
-      dataIndex: "checkTypes",
-      key: "checkTypes",
-      render: (types) => (
-        <Space>
-          {(types || []).map((t) => (
-            <Tag color="purple" key={t}>
-              {t}
-            </Tag>
-          ))}
-        </Space>
-      ),
-    },
+    // {
+    //   title: "Loại khám",
+    //   dataIndex: "checkTypes",
+    //   key: "checkTypes",
+    //   render: (types) => (
+    //     <Space>
+    //       {(types || []).map((t) => (
+    //         <Tag color="purple" key={t}>
+    //           {t}
+    //         </Tag>
+    //       ))}
+    //     </Space>
+    //   ),
+    // },
     {
       title: "Ngày bắt đầu",
       dataIndex: "scheduledDate",
@@ -258,7 +257,6 @@ const HealthCheckupCampaigns = () => {
       name: record.name,
       description: record.description,
       targetGrades: record.targetGrades,
-      checkTypes: record.checkTypes,
       status: record.status,
     });
     setIsModalVisible(true);
@@ -387,7 +385,6 @@ const HealthCheckupCampaigns = () => {
                   name: selectedCampaign.name,
                   description: selectedCampaign.description,
                   targetGrades: selectedCampaign.targetGrades || [],
-                  checkTypes: selectedCampaign.checkTypes || [],
                   scheduledDate: selectedCampaign.scheduledDate
                     ? dayjs(selectedCampaign.scheduledDate)
                     : null,
@@ -400,7 +397,6 @@ const HealthCheckupCampaigns = () => {
                   name: "",
                   description: "",
                   targetGrades: [],
-                  checkTypes: [],
                   scheduledDate: null,
                   deadline: null,
                   status: "ACTIVE",
@@ -411,7 +407,6 @@ const HealthCheckupCampaigns = () => {
             name: Yup.string().required("Vui lòng nhập tên chiến dịch"),
             description: Yup.string(),
             targetGrades: Yup.array().min(1, "Vui lòng chọn khối áp dụng"),
-            checkTypes: Yup.array().min(1, "Vui lòng chọn loại khám"),
             scheduledDate: Yup.date().required("Vui lòng chọn ngày bắt đầu"),
             deadline: Yup.date()
               .required("Vui lòng chọn ngày kết thúc")
@@ -448,7 +443,6 @@ const HealthCheckupCampaigns = () => {
                 name: values.name,
                 description: values.description,
                 targetGrades: values.targetGrades,
-                checkTypes: values.checkTypes,
                 scheduledDate: values.scheduledDate
                   ? typeof values.scheduledDate === "string"
                     ? values.scheduledDate
@@ -542,7 +536,7 @@ const HealthCheckupCampaigns = () => {
                   }))}
                 />
               </Form.Item>
-              <Form.Item
+              {/* <Form.Item
                 label="Loại khám"
                 help={
                   touched.checkTypes && errors.checkTypes
@@ -565,7 +559,7 @@ const HealthCheckupCampaigns = () => {
                   ]}
                   disabled={!!selectedCampaign}
                 />
-              </Form.Item>
+              </Form.Item> */}
               <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item
