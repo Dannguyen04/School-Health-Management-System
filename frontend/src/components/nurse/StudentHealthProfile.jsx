@@ -27,8 +27,8 @@ import {
   Tag,
   Typography,
 } from "antd";
+import axios from "axios";
 import { useEffect, useState } from "react";
-// import { nurseAPI } from "../../utils/api";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -43,82 +43,24 @@ const StudentHealthProfile = () => {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [form] = Form.useForm();
   const [error, setError] = useState(null);
+  const [healthChecks, setHealthChecks] = useState([]);
+  const [loadingChecks, setLoadingChecks] = useState(false);
+  const [checkDetail, setCheckDetail] = useState(null);
+  const [checkDetailModal, setCheckDetailModal] = useState(false);
 
-  // Sample data structure based on HealthProfile model
-  const sampleStudents = [
-    {
-      id: "1",
-      studentCode: "HS001",
-      fullName: "Nguyễn Văn An",
-      class: "10A1",
-      grade: "10",
-      healthProfile: {
-        allergies: ["Penicillin", "Đậu phộng", "Hải sản"],
-        chronicDiseases: ["Hen suyễn", "Tiểu đường type 1"],
-        medications: ["Ventolin", "Insulin"],
-        treatmentHistory:
-          "Đã điều trị hen suyễn từ năm 2020, tiểu đường từ 2022",
-        vision: "Cận thị -2.5 độ, đeo kính",
-        hearing: "Bình thường",
-        height: 165,
-        weight: 55,
-        notes:
-          "Học sinh cần theo dõi đường huyết thường xuyên, mang theo thuốc hen suyễn",
-      },
-    },
-    {
-      id: "2",
-      studentCode: "HS002",
-      fullName: "Trần Thị Bình",
-      class: "11A2",
-      grade: "11",
-      healthProfile: {
-        allergies: ["Sulfa"],
-        chronicDiseases: [],
-        medications: [],
-        treatmentHistory: "Không có",
-        vision: "10/10",
-        hearing: "Bình thường",
-        height: 160,
-        weight: 48,
-        notes: "Sức khỏe tốt, không có vấn đề đặc biệt",
-      },
-    },
-    {
-      id: "3",
-      studentCode: "HS003",
-      fullName: "Lê Văn Cường",
-      class: "9A1",
-      grade: "9",
-      healthProfile: {
-        allergies: ["Latex"],
-        chronicDiseases: ["Bệnh tim bẩm sinh"],
-        medications: ["Aspirin", "Beta-blocker"],
-        treatmentHistory: "Phẫu thuật tim năm 2018, cần theo dõi định kỳ",
-        vision: "10/10",
-        hearing: "Bình thường",
-        height: 170,
-        weight: 60,
-        notes: "Hạn chế vận động mạnh, cần theo dõi nhịp tim",
-      },
-    },
-  ];
-
+  // Fetch danh sách học sinh thực tế từ API
   const fetchStudents = async (isRefresh = false) => {
     try {
-      if (isRefresh) {
-        setRefreshing(true);
-      } else {
-        setLoading(true);
-      }
+      if (isRefresh) setRefreshing(true);
+      else setLoading(true);
       setError(null);
-      setTimeout(() => {
-        setStudents(sampleStudents);
-        setLoading(false);
-        setRefreshing(false);
-      }, 1000);
+      const res = await axios.get("/api/admin/students-for-nurse", {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setStudents(res.data.data || []);
+      setLoading(false);
+      setRefreshing(false);
     } catch (err) {
-      console.error("Error fetching students:", err);
       setError(
         err.response?.data?.error ||
           err.message ||
@@ -185,6 +127,41 @@ const StudentHealthProfile = () => {
     setStudents((prev) => prev.filter((s) => s.id !== studentId));
   };
 
+  // Fetch lịch sử kiểm tra sức khỏe khi chọn học sinh
+  const fetchHealthChecks = async (studentId) => {
+    if (!studentId) return;
+    setLoadingChecks(true);
+    try {
+      const res = await axios.get(`/api/medical-checks/student/${studentId}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setHealthChecks(res.data.data || []);
+    } catch {
+      setHealthChecks([]);
+    }
+    setLoadingChecks(false);
+  };
+
+  // Gọi khi chọn học sinh
+  useEffect(() => {
+    if (selectedStudent?.id) {
+      fetchHealthChecks(selectedStudent.id);
+    }
+  }, [selectedStudent]);
+
+  // Xem chi tiết kiểm tra
+  const handleViewCheckDetail = async (id) => {
+    try {
+      const res = await axios.get(`/api/medical-checks/${id}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      setCheckDetail(res.data.data);
+      setCheckDetailModal(true);
+    } catch {
+      setCheckDetail(null);
+    }
+  };
+
   const columns = [
     {
       title: "Mã học sinh",
@@ -205,75 +182,21 @@ const StudentHealthProfile = () => {
       width: 80,
     },
     {
-      title: "Dị ứng",
-      dataIndex: ["healthProfile", "allergies"],
-      key: "allergies",
-      render: (allergies) => (
-        <div>
-          {allergies && allergies.length > 0 ? (
-            allergies.slice(0, 2).map((allergy) => (
-              <Tag color="red" key={allergy} size="small">
-                {allergy}
-              </Tag>
-            ))
-          ) : (
-            <Text type="secondary">Không có</Text>
-          )}
-          {allergies && allergies.length > 2 && (
-            <Tag color="red" size="small">
-              +{allergies.length - 2}
-            </Tag>
-          )}
-        </div>
-      ),
+      title: "Khối",
+      dataIndex: "grade",
+      key: "grade",
+      width: 80,
     },
     {
-      title: "Bệnh mãn tính",
-      dataIndex: ["healthProfile", "chronicDiseases"],
-      key: "chronicDiseases",
-      render: (diseases) => (
-        <div>
-          {diseases && diseases.length > 0 ? (
-            diseases.slice(0, 1).map((disease) => (
-              <Tag color="orange" key={disease} size="small">
-                {disease}
-              </Tag>
-            ))
-          ) : (
-            <Text type="secondary">Không có</Text>
-          )}
-          {diseases && diseases.length > 1 && (
-            <Tag color="orange" size="small">
-              +{diseases.length - 1}
-            </Tag>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Thị lực",
-      dataIndex: ["healthProfile", "vision"],
-      key: "vision",
-      width: 120,
-      render: (vision) => <Text>{vision || "Chưa cập nhật"}</Text>,
-    },
-    {
-      title: "Chiều cao/Cân nặng",
-      key: "heightWeight",
-      width: 140,
-      render: (_, record) => {
-        const { height, weight } = record.healthProfile || {};
-        return (
-          <Text>
-            {height && weight ? `${height}cm / ${weight}kg` : "Chưa cập nhật"}
-          </Text>
-        );
-      },
+      title: "Giới tính",
+      dataIndex: "gender",
+      key: "gender",
+      width: 80,
     },
     {
       title: "Thao tác",
       key: "action",
-      width: 200,
+      width: 80,
       render: (_, record) => (
         <Space size="small">
           <Button
@@ -575,6 +498,53 @@ const StudentHealthProfile = () => {
             <Divider />
 
             {renderHealthProfile(selectedStudent.healthProfile)}
+
+            <Divider />
+
+            <Card size="small" title="Lịch sử kiểm tra sức khỏe">
+              <Table
+                dataSource={healthChecks}
+                loading={loadingChecks}
+                rowKey="id"
+                pagination={{ pageSize: 5 }}
+                columns={[
+                  {
+                    title: "Ngày khám",
+                    dataIndex: "scheduledDate",
+                    key: "scheduledDate",
+                    render: (date) =>
+                      date && new Date(date).toLocaleDateString(),
+                  },
+                  {
+                    title: "Chiến dịch",
+                    dataIndex: ["campaign", "name"],
+                    key: "campaignName",
+                  },
+                  {
+                    title: "Trạng thái",
+                    dataIndex: "status",
+                    key: "status",
+                    render: (status) => (
+                      <Tag color={status === "COMPLETED" ? "green" : "orange"}>
+                        {status}
+                      </Tag>
+                    ),
+                  },
+                  {
+                    title: "Thao tác",
+                    key: "actions",
+                    render: (_, record) => (
+                      <Button
+                        size="small"
+                        onClick={() => handleViewCheckDetail(record.id)}
+                      >
+                        Xem chi tiết
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
+            </Card>
           </div>
         )}
       </Modal>
@@ -679,6 +649,116 @@ const StudentHealthProfile = () => {
             </Button>
           </div>
         </Form>
+      </Modal>
+
+      {/* Modal chi tiết kiểm tra sức khỏe */}
+      <Modal
+        title="Chi tiết kiểm tra sức khỏe"
+        open={checkDetailModal}
+        onCancel={() => setCheckDetailModal(false)}
+        footer={
+          <Button onClick={() => setCheckDetailModal(false)}>Đóng</Button>
+        }
+        width={600}
+      >
+        {checkDetail ? (
+          <Card
+            bordered={false}
+            style={{ boxShadow: "0 2px 8px #f0f1f2", borderRadius: 12 }}
+          >
+            <Descriptions
+              title={
+                <span style={{ fontWeight: 700, fontSize: 18 }}>
+                  Thông tin kiểm tra
+                </span>
+              }
+              column={1}
+              size="middle"
+              labelStyle={{ fontWeight: 600, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+            >
+              <Descriptions.Item label="Ngày khám">
+                {checkDetail.scheduledDate
+                  ? new Date(checkDetail.scheduledDate).toLocaleDateString()
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Chiến dịch">
+                {checkDetail.campaign?.name || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                <Tag
+                  color={
+                    checkDetail.status === "COMPLETED" ? "green" : "orange"
+                  }
+                  style={{ fontSize: 14, padding: "2px 12px" }}
+                >
+                  {checkDetail.status === "COMPLETED"
+                    ? "Hoàn thành"
+                    : checkDetail.status}
+                </Tag>
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider />
+            <Descriptions
+              title={
+                <span style={{ fontWeight: 700, fontSize: 18 }}>
+                  Kết quả kiểm tra
+                </span>
+              }
+              column={1}
+              size="middle"
+              labelStyle={{ fontWeight: 600, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+            >
+              <Descriptions.Item label="Thị lực">
+                {checkDetail.visionResult || (
+                  <span style={{ color: "#aaa" }}>-</span>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thính lực">
+                {checkDetail.hearingResult || (
+                  <span style={{ color: "#aaa" }}>-</span>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Răng miệng">
+                {checkDetail.dentalResult || (
+                  <span style={{ color: "#aaa" }}>-</span>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Chiều cao / Cân nặng">
+                {checkDetail.heightWeight ? (
+                  `${checkDetail.heightWeight.height} cm / ${checkDetail.heightWeight.weight} kg`
+                ) : (
+                  <span style={{ color: "#aaa" }}>-</span>
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider />
+            <Descriptions
+              title={
+                <span style={{ fontWeight: 700, fontSize: 18 }}>Ghi chú</span>
+              }
+              column={1}
+              size="middle"
+              labelStyle={{ fontWeight: 600, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+            >
+              <Descriptions.Item label="">
+                {checkDetail.notes ? (
+                  <span style={{ whiteSpace: "pre-line" }}>
+                    {checkDetail.notes}
+                  </span>
+                ) : (
+                  <span style={{ color: "#aaa" }}>Không có ghi chú</span>
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+          </Card>
+        ) : (
+          <div className="flex justify-center items-center h-32">
+            <Spin size="large" />
+          </div>
+        )}
       </Modal>
     </div>
   );

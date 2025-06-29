@@ -40,15 +40,15 @@ const checkNursePermission = async (req, res, next) => {
   try {
     // Lấy nurseId từ token (req.user)
     const user = req.user;
-    if (!user || user.role !== "nurse") {
+    if (!user || user.role !== "SCHOOL_NURSE") {
       return res.status(403).json({
         success: false,
         error: "Bạn không có quyền thực hiện chức năng này (chỉ dành cho y tá)",
       });
     }
-    const nurseId = user.id; // hoặc user.nurseId nếu token lưu như vậy
-    const nurse = await prisma.schoolNurse.findUnique({
-      where: { id: nurseId },
+    const nurse = await prisma.schoolNurse.findFirst({
+      where: { userId: user.userId },
+      include: { user: true },
     });
     if (!nurse) {
       return res.status(404).json({
@@ -56,7 +56,7 @@ const checkNursePermission = async (req, res, next) => {
         error: "Không tìm thấy thông tin y tá",
       });
     }
-    if (!nurse.isActive) {
+    if (!nurse.user.isActive) {
       return res.status(403).json({
         success: false,
         error: "Tài khoản y tá không còn hoạt động",
@@ -214,10 +214,10 @@ const updateMedicalCheckResults = async (req, res) => {
         student: {
           select: {
             id: true,
-            name: true,
+            studentCode: true,
             grade: true,
             class: true,
-            studentCode: true,
+            user: { select: { fullName: true } },
           },
         },
         campaign: {
@@ -230,7 +230,7 @@ const updateMedicalCheckResults = async (req, res) => {
         nurse: {
           select: {
             id: true,
-            name: true,
+            user: { select: { fullName: true } },
           },
         },
       },
@@ -238,12 +238,12 @@ const updateMedicalCheckResults = async (req, res) => {
 
     // Log hoạt động (có thể thêm audit trail)
     console.log(
-      `Medical check updated for student ${updatedCheck.student.name} by nurse ${nurseId}`
+      `Medical check updated for student ${updatedCheck.student.fullName} by nurse ${nurseId}`
     );
 
     res.json({
       success: true,
-      message: `Cập nhật kết quả kiểm tra cho học sinh ${updatedCheck.student.name} thành công`,
+      message: `Cập nhật kết quả kiểm tra cho học sinh ${updatedCheck.student.fullName} thành công`,
       data: updatedCheck,
       isCompleted: updateData.status === "COMPLETED",
     });
@@ -286,10 +286,10 @@ const getMedicalChecksByCampaign = async (req, res) => {
           student: {
             select: {
               id: true,
-              name: true,
+              studentCode: true,
               grade: true,
               class: true,
-              studentCode: true,
+              user: { select: { fullName: true } },
             },
           },
           campaign: {
@@ -302,7 +302,7 @@ const getMedicalChecksByCampaign = async (req, res) => {
           nurse: {
             select: {
               id: true,
-              name: true,
+              user: { select: { fullName: true } },
             },
           },
         },
@@ -360,7 +360,7 @@ const getStudentMedicalChecks = async (req, res) => {
         nurse: {
           select: {
             id: true,
-            name: true,
+            user: { select: { fullName: true } },
           },
         },
       },
@@ -502,10 +502,10 @@ const scheduleMedicalCheckForStudent = async (req, res) => {
         student: {
           select: {
             id: true,
-            name: true,
+            studentCode: true,
             grade: true,
             class: true,
-            studentCode: true,
+            user: { select: { fullName: true } },
           },
         },
         campaign: {
@@ -521,7 +521,7 @@ const scheduleMedicalCheckForStudent = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: `Đã tạo lịch kiểm tra cho học sinh ${student.name}`,
+      message: `Đã tạo lịch kiểm tra cho học sinh ${student.fullName}`,
       data: medicalCheck,
     });
   } catch (error) {
@@ -533,7 +533,7 @@ const scheduleMedicalCheckForStudent = async (req, res) => {
 const createMedicalCheck = async (req, res) => {
   try {
     const user = req.user;
-    if (!user || user.role !== "nurse") {
+    if (!user || user.role !== "SCHOOL_NURSE") {
       return res.status(403).json({
         success: false,
         error: "Chỉ y tá mới được phép tạo báo cáo kiểm tra sức khỏe",
@@ -612,10 +612,10 @@ const createMedicalCheck = async (req, res) => {
         student: {
           select: {
             id: true,
-            name: true,
+            studentCode: true,
             grade: true,
             class: true,
-            studentCode: true,
+            user: { select: { fullName: true } },
           },
         },
         campaign: {
@@ -629,14 +629,14 @@ const createMedicalCheck = async (req, res) => {
         nurse: {
           select: {
             id: true,
-            name: true,
+            user: { select: { fullName: true } },
           },
         },
       },
     });
     res.status(201).json({
       success: true,
-      message: `Đã tạo báo cáo kiểm tra cho học sinh ${student.name}`,
+      message: `Đã tạo báo cáo kiểm tra cho học sinh ${student.fullName}`,
       data: medicalCheck,
     });
   } catch (error) {

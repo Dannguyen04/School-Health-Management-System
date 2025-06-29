@@ -84,6 +84,12 @@ enum CampaignStatus {
   CANCELLED
 }
 
+enum TreatmentStatus {
+  ONGOING   // Đang điều trị
+  STOPPED   // Đã dừng điều trị
+  COMPLETED // Đã hoàn thành (nếu cần)
+}
+
 // Main Models
 model users {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -138,6 +144,7 @@ model Student {
   medications         StudentMedication[]
   vaccinationConsents VaccinationConsent[]
   vaccinations        vaccinations[]
+  medicationAdministrationLogs MedicationAdministrationLog[] 
 
   @@map("students")
 }
@@ -174,6 +181,8 @@ model SchoolNurse {
   handledEvents MedicalEvent[]
   medicalChecks MedicalCheck[]
   vaccinations  vaccinations[]
+  medicationAdministrationLogs MedicationAdministrationLog[] 
+
 
   @@map("school_nurses")
 }
@@ -290,6 +299,8 @@ model Medication {
   studentMedications      StudentMedication[]
   medicalEventMedications MedicalEventMedication[]
   stockMovements          StockMovement[]
+  medicationAdministrationLogs MedicationAdministrationLog[] 
+
 
   @@map("medications")
 }
@@ -305,6 +316,7 @@ model StudentMedication {
   duration     String? // How long to take
   instructions String? // Special instructions
   status       MedicationStatus @default(PENDING_APPROVAL)
+  treatmentStatus TreatmentStatus @default(ONGOING)
 
   startDate DateTime
   endDate   DateTime?
@@ -314,6 +326,7 @@ model StudentMedication {
   student    Student    @relation(fields: [studentId], references: [id])
   parent     Parent     @relation(fields: [parentId], references: [id])
   medication Medication @relation(fields: [medicationId], references: [id])
+  medicationAdministrationLogs MedicationAdministrationLog[] 
 
   @@map("student_medications")
 }
@@ -580,4 +593,22 @@ model SchoolInfo {
   updatedAt DateTime @updatedAt
 
   @@map("school_info")
+}
+
+model MedicationAdministrationLog {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  studentMedicationId String   @db.ObjectId
+  studentId           String   @db.ObjectId
+  medicationId        String   @db.ObjectId
+  nurseId             String   @db.ObjectId
+  givenAt             DateTime @default(now())
+  dosageGiven         String
+  notes               String?
+
+  studentMedication   StudentMedication @relation(fields: [studentMedicationId], references: [id])
+  student             Student           @relation(fields: [studentId], references: [id])
+  medication          Medication        @relation(fields: [medicationId], references: [id])
+  nurse               SchoolNurse       @relation(fields: [nurseId], references: [id])
+
+  @@map("medication_administration_logs")
 }

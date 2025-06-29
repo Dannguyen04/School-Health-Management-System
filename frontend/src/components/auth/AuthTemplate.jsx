@@ -1,10 +1,11 @@
 import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
 import { Button, Modal } from "antd";
+import cn from "classnames";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
+import api from "../../utils/api";
 import { Input } from "../Input";
-import cn from "classnames";
 import {
   Form,
   FormContainer,
@@ -17,7 +18,6 @@ import {
   SignUpContainer,
   Title,
 } from "./AuthStyles";
-import api from "../../utils/api";
 
 export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const [signIn, setSignIn] = useState(true);
@@ -25,7 +25,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [errors, setErrors] = useState({});
-  const { login } = useAuth();
+  const { login, setScrollToServices } = useAuth();
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
@@ -47,6 +47,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
           navigate("/manager");
         } else {
           navigate("/user");
+          setScrollToServices(true);
         }
       }
     } catch (error) {
@@ -122,7 +123,11 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       if (res.data.success) {
         const { user, token } = res.data;
         login(user, token);
-        navigate(user.role === "ADMIN" ? "/admin" : "/user");
+        if (user.role === "ADMIN") {
+          navigate("/admin");
+        } else {
+          navigate("/");
+        }
       }
     } catch (error) {
       console.error("Google login error:", error);

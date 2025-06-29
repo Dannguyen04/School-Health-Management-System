@@ -35,6 +35,10 @@ const validationSchema = Yup.object().shape({
   endDate: Yup.date().required("Vui lòng chọn ngày kết thúc"),
   description: Yup.string(),
   unit: Yup.string(),
+  stockQuantity: Yup.number()
+    .typeError("Vui lòng nhập số lượng")
+    .min(1, "Số lượng phải lớn hơn 0")
+    .required("Vui lòng nhập số lượng"),
 });
 
 const statusColor = {
@@ -130,6 +134,7 @@ const MedicineInfo = () => {
           endDate: values.endDate ? values.endDate.toISOString() : null,
           description: values.description,
           unit: values.unit,
+          stockQuantity: values.stockQuantity,
         },
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -311,6 +316,7 @@ const MedicineInfo = () => {
                 endDate: null,
                 description: "",
                 unit: "",
+                stockQuantity: 1,
               }}
               validationSchema={validationSchema}
               onSubmit={handleSubmit}
@@ -425,6 +431,27 @@ const MedicineInfo = () => {
                           onBlur={handleBlur}
                           value={values.unit}
                           placeholder="Ví dụ: viên, ml, mg"
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <Form.Item
+                        label="Số lượng"
+                        validateStatus={
+                          touched.stockQuantity && errors.stockQuantity
+                            ? "error"
+                            : ""
+                        }
+                        help={touched.stockQuantity && errors.stockQuantity}
+                      >
+                        <Input
+                          name="stockQuantity"
+                          type="number"
+                          min={1}
+                          onChange={handleChange}
+                          onBlur={handleBlur}
+                          value={values.stockQuantity}
+                          placeholder="Nhập số lượng"
                         />
                       </Form.Item>
                     </Col>

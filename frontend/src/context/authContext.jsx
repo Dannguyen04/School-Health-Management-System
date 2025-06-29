@@ -6,6 +6,7 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [shouldScrollToServices, setShouldScrollToServices] = useState(false);
 
   useEffect(() => {
     const verifyUser = async () => {
@@ -14,7 +15,7 @@ export const AuthProvider = ({ children }) => {
         try {
           const response = await api.get("/auth/profile");
           setUser(response.data.user);
-        } catch (error) {
+        } catch (_error) {
           localStorage.removeItem("token");
           setUser(null);
         }
@@ -37,8 +38,21 @@ export const AuthProvider = ({ children }) => {
     delete api.defaults.headers.common["Authorization"];
   };
 
+  const setScrollToServices = (value) => {
+    setShouldScrollToServices(value);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        loading,
+        shouldScrollToServices,
+        setScrollToServices,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

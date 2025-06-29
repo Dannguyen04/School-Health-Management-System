@@ -1,29 +1,39 @@
 import express from "express";
 import {
-    authenticateToken,
-    verifyNurse,
-} from "../middleware/authenticateToken.js";
-import {
-    getDashboardStats,
-    getRecentMedicalEvents,
-    getUpcomingVaccinations,
-    updateMedicalEventStatus,
-    getMedicalInventory,
-    createMedicalInventory,
-    updateMedicalInventory,
-    deleteMedicalInventory,
-    getInventoryCategories,
-    getAllMedicalEvents,
-    createMedicalEvent,
-    updateMedicalEvent,
-    deleteMedicalEvent,
-    getMedicalEventById,
-    getVaccinationCampaigns,
-    getStudentsForCampaign,
-    performVaccination,
-    reportVaccinationResult,
-    getEligibleStudentsForVaccination,
+  approveMedicationRequest,
+  createMedicalEvent,
+  createMedicalInventory,
+  deleteMedicalEvent,
+  deleteMedicalInventory,
+  getAllMedicalEvents,
+  getApprovedMedications,
+  getDashboardStats,
+  getEligibleStudentsForVaccination,
+  getInventoryCategories,
+  getInventoryStats,
+  getMedicalEventById,
+  getMedicalInventory,
+  getMedicationHistory,
+  getMedicationRequestById,
+  getMedicationRequestStats,
+  getPendingMedicationRequests,
+  getRecentMedicalEvents,
+  getStudentsForCampaign,
+  getStudentTreatments,
+  getUpcomingVaccinations,
+  getVaccinationCampaigns,
+  giveMedicineToStudent,
+  performVaccination,
+  reportVaccinationResult,
+  stopStudentTreatment,
+  updateMedicalEvent,
+  updateMedicalEventStatus,
+  updateMedicalInventory,
 } from "../controllers/NurseController.js";
+import {
+  authenticateToken,
+  verifyNurse,
+} from "../middleware/authenticateToken.js";
 
 const router = express.Router();
 
@@ -37,6 +47,7 @@ router.get("/dashboard/upcoming-vaccinations", getUpcomingVaccinations);
 
 // Inventory routes
 router.get("/inventory", getMedicalInventory);
+router.get("/inventory/stats", getInventoryStats);
 router.post("/inventory", createMedicalInventory);
 router.put("/inventory/:id", updateMedicalInventory);
 router.delete("/inventory/:id", deleteMedicalInventory);
@@ -54,11 +65,29 @@ router.patch("/medical-events/:eventId/status", updateMedicalEventStatus);
 router.get("/vaccination-campaigns", getVaccinationCampaigns);
 router.get("/campaigns/:campaignId/students", getStudentsForCampaign);
 router.get(
-    "/vaccination-campaigns/:campaignId/eligible-students",
-    verifyNurse,
-    getEligibleStudentsForVaccination
+  "/vaccination-campaigns/:campaignId/eligible-students",
+  verifyNurse,
+  getEligibleStudentsForVaccination
 );
 router.post("/vaccinations/perform", verifyNurse, performVaccination);
 router.post("/vaccinations/report", reportVaccinationResult);
+
+// Medication request routes
+router.get("/medication-requests", getPendingMedicationRequests);
+router.get("/medication-requests/stats", getMedicationRequestStats);
+router.get("/medication-requests/:requestId", getMedicationRequestById);
+router.patch(
+  "/medication-requests/:requestId/approve",
+  approveMedicationRequest
+);
+
+// Thuốc đã được phê duyệt
+router.get("/approved-medications", getApprovedMedications);
+
+// Điều trị học sinh
+router.get("/student-treatments", getStudentTreatments);
+router.post("/give-medicine/:studentMedicationId", giveMedicineToStudent);
+router.get("/medication-history/:studentMedicationId", getMedicationHistory);
+router.patch("/student-treatments/:id/stop", stopStudentTreatment);
 
 export default router;
