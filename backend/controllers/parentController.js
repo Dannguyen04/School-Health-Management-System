@@ -548,7 +548,10 @@ export const getVaccinationDetail = async (req, res) => {
     try {
         const { campaignId, studentId } = req.params;
         const vaccination = await prisma.vaccinations.findFirst({
-            where: { campaignId, studentId },
+            where: {
+                studentId,
+                campaign: { id: campaignId },
+            },
             include: {
                 campaign: true,
                 nurse: { include: { user: true } },
@@ -662,15 +665,7 @@ export const getStudentVaccinationCampaigns = async (req, res) => {
             scheduledDate: campaign.scheduledDate,
             deadline: campaign.deadline,
             status: campaign.status,
-            vaccine: {
-                id: campaign.vaccinations.id,
-                name: campaign.vaccinations.name,
-                requirement: campaign.vaccinations.requirement,
-                expiredDate: campaign.vaccinations.expiredDate,
-                dose: campaign.vaccinations.dose,
-                status: campaign.vaccinations.status,
-                notes: campaign.vaccinations.notes,
-            },
+            vaccineName: campaign.vaccinations?.name || "",
         }));
 
         return res.status(200).json({

@@ -42,7 +42,7 @@ const Services = ({ onServiceClick, isHomepage }) => {
                         icon={icon1}
                         title="Lịch tiêm & khám"
                         des="Quản lý lịch tiêm chủng và khám sức khỏe định kỳ"
-                        to="/user/vaccination-schedule"
+                        to="/user/medical-schedule"
                         onClick={getOnClick()}
                     />
                     <ServicesCard

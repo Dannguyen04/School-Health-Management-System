@@ -79,7 +79,7 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
                 navigate("/manager/vaccination-campaigns");
                 break;
             case "vaccination":
-                navigate("/user/vaccination-schedule");
+                navigate("/user/medical-schedule");
                 break;
             case "medical_check":
                 navigate("/user/health-checkup-results");
