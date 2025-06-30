@@ -1,17 +1,23 @@
-import { CheckOutlined, CloseOutlined } from "@ant-design/icons";
+import {
+    CheckOutlined,
+    CloseOutlined,
+    FileTextOutlined,
+    UserOutlined,
+} from "@ant-design/icons";
 import {
     Button,
     Card,
     message,
     Select,
-    Space,
-    Table,
     Tag,
     Typography,
     Tabs,
-    Input,
     Modal,
-    Form,
+    Input,
+    Avatar,
+    Empty,
+    Space,
+    Tooltip,
 } from "antd";
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -20,421 +26,397 @@ import { useAuth } from "../../context/authContext";
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-const requirementMap = {
-    REQUIRED: "Bắt buộc",
-    OPTIONAL: "Tùy chọn",
+const statusTag = (consent) => {
+    if (consent === true) return <Tag color="green">Đã đồng ý</Tag>;
+    if (consent === false) return <Tag color="red">Đã từ chối</Tag>;
+    return <Tag color="gold">Chưa xác nhận</Tag>;
 };
 
-const doseMap = {
-    FIRST: "Liều đầu tiên",
-    SECOND: "Liều thứ hai",
-    BOOSTER: "Liều nhắc lại",
+const campaignStatusTag = (status) => {
+    if (status === "ACTIVE") return <Tag color="blue">Đang diễn ra</Tag>;
+    if (status === "FINISHED") return <Tag color="green">Hoàn thành</Tag>;
+    return <Tag color="red">Đã hủy</Tag>;
 };
 
-const statusMap = {
-    UNSCHEDULED: { color: "default", text: "Chưa lên lịch" },
-    SCHEDULED: { color: "processing", text: "Đã lên lịch" },
-    COMPLETED: { color: "success", text: "Đã tiêm" },
-    POSTPONED: { color: "warning", text: "Hoãn" },
-    CANCELLED: { color: "error", text: "Hủy" },
-};
-
-const VaccineConsentForm = () => {
+const ConsentForms = () => {
     const { user } = useAuth();
-    const [selectedChild, setSelectedChild] = useState(null);
     const [children, setChildren] = useState([]);
-    const [vaccinationCampaigns, setVaccinationCampaigns] = useState([]);
+    const [campaigns, setCampaigns] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState("all");
     const [consentModal, setConsentModal] = useState({
         visible: false,
         campaign: null,
         consent: null,
         studentId: null,
+        reason: "",
     });
 
-    // Get auth token
-    const getAuthToken = () => {
-        return localStorage.getItem("token");
-    };
+    // Fetch children
+    useEffect(() => {
+        const fetchChildren = async () => {
+            try {
+                const token = localStorage.getItem("token");
+                const response = await axios.get("/api/parents/my-children", {
+                    headers: { Authorization: `Bearer ${token}` },
+                });
+                if (response.data.success) {
+                    setChildren(response.data.data || []);
+                }
+            } catch (error) {
+                message.error("Không thể tải danh sách con em");
+            }
+        };
+        fetchChildren();
+    }, []);
 
-    // API headers
-    const getHeaders = () => ({
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${getAuthToken()}`,
-    });
+    // Fetch campaigns
+    useEffect(() => {
+        const fetchCampaigns = async () => {
+            setLoading(true);
+            try {
+                const token = localStorage.getItem("token");
+                const response = await axios.get(
+                    "/api/parents/vaccination-campaigns",
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+                if (response.data.success) {
+                    setCampaigns(response.data.data || []);
+                }
+            } catch (error) {
+                message.error("Không thể tải danh sách phiếu đồng ý");
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchCampaigns();
+    }, []);
 
-    // Fetch children of parent
-    const fetchChildren = async () => {
-        try {
-            const response = await axios.get("/api/parents/my-children", {
-                headers: getHeaders(),
+    // Remove selectedChild logic and show all consents for all children
+    // Get all forms for all children
+    const getAllConsents = () => {
+        let forms = [];
+        campaigns.forEach((c) => {
+            c.childrenConsent?.forEach((childConsent) => {
+                forms.push({
+                    ...c,
+                    consent: childConsent.consent,
+                    consentDate: childConsent.consentDate,
+                    reason: childConsent.reason,
+                    studentName: childConsent.studentName,
+                    className: childConsent.className,
+                    studentId: childConsent.studentId,
+                });
             });
-            if (response.data.success) {
-                setChildren(response.data.data || []);
-                if (response.data.data && response.data.data.length > 0) {
-                    setSelectedChild(response.data.data[0].id);
-                }
-            }
-        } catch (error) {
-            console.error("Error fetching children:", error);
-            message.error("Không thể tải danh sách con em");
-        }
+        });
+        // Filter by tab
+        if (activeTab === "pending")
+            return forms.filter((f) => f.consent === null);
+        if (activeTab === "approved")
+            return forms.filter((f) => f.consent === true);
+        if (activeTab === "rejected")
+            return forms.filter((f) => f.consent === false);
+        return forms;
     };
 
-    // Fetch vaccination campaigns
-    const fetchVaccinationCampaigns = async () => {
-        setLoading(true);
-        try {
-            const response = await axios.get(
-                "/api/parents/vaccination-campaigns",
-                {
-                    headers: getHeaders(),
-                }
-            );
-            if (response.data.success) {
-                setVaccinationCampaigns(response.data.data || []);
-                console.log("Fetched campaigns:", response.data.data);
-            }
-        } catch (error) {
-            console.error("Error fetching vaccination campaigns:", error);
-            message.error("Không thể tải danh sách chiến dịch tiêm chủng");
-        } finally {
-            setLoading(false);
-        }
-    };
+    const forms = getAllConsents();
 
-    // Submit consent
-    const submitConsent = async (campaignId, studentId, consent, notes) => {
+    // Handle consent actions
+    const openConsentModal = (form, consent) => {
+        setConsentModal({
+            visible: true,
+            campaign: form,
+            consent,
+            studentId: form.studentId,
+            reason: "",
+        });
+    };
+    const closeConsentModal = () =>
+        setConsentModal({
+            visible: false,
+            campaign: null,
+            consent: null,
+            studentId: null,
+            reason: "",
+        });
+    const handleConsent = async () => {
         try {
+            const token = localStorage.getItem("token");
             const response = await axios.post(
-                `/api/manager/vaccination-campaigns/${campaignId}/consent`,
+                `/api/manager/vaccination-campaigns/${consentModal.campaign.id}/consent`,
                 {
-                    campaignId,
-                    studentId: studentId,
-                    consent,
-                    notes,
+                    campaignId: consentModal.campaign.id,
+                    studentId: consentModal.studentId,
+                    consent: consentModal.consent,
+                    notes: consentModal.consent ? "" : consentModal.reason,
                 },
-                { headers: getHeaders() }
+                { headers: { Authorization: `Bearer ${token}` } }
             );
-
             if (response.data.success) {
                 message.success(response.data.message);
-                fetchVaccinationCampaigns(); // Refresh data
                 setConsentModal({
                     visible: false,
                     campaign: null,
                     consent: null,
                     studentId: null,
+                    reason: "",
                 });
+                // Refresh campaigns
+                const refreshed = await axios.get(
+                    "/api/parents/vaccination-campaigns",
+                    {
+                        headers: { Authorization: `Bearer ${token}` },
+                    }
+                );
+                if (refreshed.data.success)
+                    setCampaigns(refreshed.data.data || []);
             } else {
                 message.error(
                     response.data.error || "Không thể gửi phiếu đồng ý"
                 );
             }
         } catch (error) {
-            console.error("Error submitting consent:", error);
             message.error(
                 error.response?.data?.error || "Không thể gửi phiếu đồng ý"
             );
         }
     };
 
-    const handleConsentClick = (campaign, studentId, consent) => {
-        setConsentModal({ visible: true, campaign, consent, studentId });
-    };
-
-    const handleConsentModalOk = () => {
-        const { campaign, consent, studentId } = consentModal;
-        if (campaign && consent !== null && studentId) {
-            submitConsent(campaign.id, studentId, consent, "");
-        }
-    };
-
-    const handleConsentModalCancel = () => {
-        setConsentModal({
-            visible: false,
-            campaign: null,
-            consent: null,
-            studentId: null,
-        });
-    };
-
-    const getConsentTag = (consent) => {
-        if (consent === true) return <Tag color="success">Đã đồng ý</Tag>;
-        if (consent === false) return <Tag color="error">Không đồng ý</Tag>;
-        return <Tag color="warning">Chưa xác nhận</Tag>;
-    };
-
-    useEffect(() => {
-        fetchChildren();
-    }, []);
-
-    useEffect(() => {
-        fetchVaccinationCampaigns();
-    }, []);
-
-    const vaccinationColumns = [
-        {
-            title: "Tên chiến dịch",
-            dataIndex: "name",
-            key: "name",
-        },
-        {
-            title: "Vắc xin",
-            dataIndex: ["vaccine", "name"],
-            key: "vaccineName",
-        },
-        {
-            title: "Mô tả",
-            dataIndex: "description",
-            key: "description",
-            render: (text) => text || "Không có",
-        },
-        {
-            title: "Ngày bắt đầu",
-            dataIndex: "scheduledDate",
-            key: "scheduledDate",
-            render: (date) => new Date(date).toLocaleDateString("vi-VN"),
-        },
-        {
-            title: "Ngày kết thúc",
-            dataIndex: "deadline",
-            key: "deadline",
-            render: (date) => new Date(date).toLocaleDateString("vi-VN"),
-        },
-        {
-            title: "Trạng thái",
-            dataIndex: "status",
-            key: "status",
-            render: (status) => (
-                <Tag
-                    color={
-                        status === "ACTIVE"
-                            ? "blue"
-                            : status === "FINISHED"
-                            ? "green"
-                            : "red"
-                    }
-                >
-                    {status === "ACTIVE"
-                        ? "Đang diễn ra"
-                        : status === "FINISHED"
-                        ? "Hoàn thành"
-                        : "Đã hủy"}
-                </Tag>
-            ),
-        },
-        {
-            title: "Con em",
-            key: "children",
-            render: (_, record) => (
-                <div>
-                    {record.childrenConsent?.map((child, index) => (
-                        <div key={index} style={{ marginBottom: 8 }}>
-                            <div
-                                style={{ fontWeight: "bold", marginBottom: 4 }}
-                            >
-                                {child.studentName}
-                            </div>
-                            <div style={{ marginBottom: 4 }}>
-                                {getConsentTag(child.consent)}
-                            </div>
-                            {child.consent === null && (
-                                <Space>
-                                    <Button
-                                        type="primary"
-                                        icon={<CheckOutlined />}
-                                        onClick={() =>
-                                            handleConsentClick(
-                                                record,
-                                                child.studentId,
-                                                true
-                                            )
-                                        }
-                                        size="small"
-                                    >
-                                        Đồng ý
-                                    </Button>
-                                    <Button
-                                        danger
-                                        icon={<CloseOutlined />}
-                                        onClick={() =>
-                                            handleConsentClick(
-                                                record,
-                                                child.studentId,
-                                                false
-                                            )
-                                        }
-                                        size="small"
-                                    >
-                                        Từ chối
-                                    </Button>
-                                </Space>
-                            )}
-                            {child.consent !== null && (
-                                <div
-                                    style={{ fontSize: "12px", color: "#666" }}
-                                >
-                                    {child.consentDate &&
-                                        `Đã xác nhận: ${new Date(
-                                            child.consentDate
-                                        ).toLocaleDateString("vi-VN")}`}
-                                </div>
-                            )}
-                        </div>
-                    ))}
-                </div>
-            ),
-        },
-    ];
-
-    const tabItems = [
-        {
-            key: "vaccination",
-            label: "Phiếu đồng ý tiêm chủng",
-            children: (
-                <div>
-                    <Table
-                        columns={vaccinationColumns}
-                        dataSource={vaccinationCampaigns}
-                        rowKey="id"
-                        loading={loading}
-                        pagination={false}
-                    />
-                </div>
-            ),
-        },
-        {
-            key: "medical",
-            label: "Phiếu đồng ý khám sức khỏe",
-            children: (
-                <div>
-                    <Text type="secondary">Tính năng đang phát triển...</Text>
-                </div>
-            ),
-        },
-    ];
-
+    // UI
     return (
-        <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa]">
-            <Card
-                className="w-full rounded-3xl shadow-lg border-0 mt-12"
-                style={{
-                    background: "#fff",
-                    borderRadius: "1.5rem",
-                    boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
-                    padding: "2rem",
-                    marginTop: "3rem",
-                    maxWidth: "100%",
-                }}
-            >
-                <div
-                    style={{
-                        marginBottom: 24,
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: "16px",
-                    }}
-                >
-                    <div>
-                        <Title level={2} className="!text-[#36ae9a] !mb-0">
-                            Phiếu đồng ý
-                        </Title>
-                        <Text type="secondary">
-                            Xác nhận đồng ý cho các hoạt động y tế của con em
-                        </Text>
+        <div className="min-h-screen bg-[#f6fcfa]">
+            <div className="w-full max-w-4xl mx-auto px-4 pt-24">
+                {/* Header đồng bộ */}
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-4">
+                        <FileTextOutlined className="text-[#36ae9a]" />
+                        <span>Quản lý sức khỏe học sinh</span>
                     </div>
+                    <h1 className="text-4xl font-bold text-gray-800 mb-4">
+                        Phiếu đồng ý y tế
+                    </h1>
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                        Quản lý và xác nhận các phiếu đồng ý cho hoạt động y tế,
+                        tiêm chủng, khám sức khỏe của học sinh.
+                    </p>
                 </div>
 
+                {/* Tabs */}
                 <Tabs
-                    defaultActiveKey="vaccination"
-                    items={tabItems}
-                    size="large"
+                    activeKey={activeTab}
+                    onChange={setActiveTab}
+                    className="mb-6"
+                    items={[
+                        { key: "all", label: "Tất cả" },
+                        { key: "pending", label: "Chưa xác nhận" },
+                        { key: "approved", label: "Đã đồng ý" },
+                        { key: "rejected", label: "Đã từ chối" },
+                    ]}
                 />
+
+                {/* Consent forms list */}
+                {forms.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {forms.map((form) => (
+                            <Card
+                                key={form.id + "-" + form.studentId}
+                                className="rounded-xl shadow border-0 hover:shadow-lg transition-shadow duration-300"
+                                bodyStyle={{ padding: 20 }}
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <FileTextOutlined className="text-xl text-[#36ae9a]" />
+                                    <Title level={5} className="mb-0">
+                                        {form.name}
+                                    </Title>
+                                </div>
+                                <div className="mb-2 flex items-center gap-2">
+                                    <Avatar icon={<UserOutlined />} size={24} />
+                                    <span className="font-semibold">
+                                        {form.studentName}
+                                    </span>
+                                    {form.className && (
+                                        <span className="text-gray-400">
+                                            ({form.className})
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">Loại phiếu: </Text>
+                                    <Text strong>Tiêm chủng</Text>
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">Vắc xin: </Text>
+                                    <Text>{form.vaccine?.name || "-"}</Text>
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">Thời gian: </Text>
+                                    <Text>
+                                        {new Date(
+                                            form.scheduledDate
+                                        ).toLocaleDateString("vi-VN")}{" "}
+                                        -{" "}
+                                        {new Date(
+                                            form.deadline
+                                        ).toLocaleDateString("vi-VN")}
+                                    </Text>
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">
+                                        Trạng thái chiến dịch:{" "}
+                                    </Text>
+                                    {campaignStatusTag(form.status)}
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">
+                                        Trạng thái xác nhận:{" "}
+                                    </Text>
+                                    {statusTag(form.consent)}
+                                </div>
+                                {form.consentDate && (
+                                    <div className="mb-2 text-xs text-gray-500">
+                                        {form.consent === true && "Đã đồng ý"}
+                                        {form.consent === false && "Đã từ chối"}
+                                        {" lúc "}
+                                        {new Date(
+                                            form.consentDate
+                                        ).toLocaleDateString("vi-VN")}
+                                    </div>
+                                )}
+                                {form.reason && (
+                                    <div className="mb-2 text-xs text-red-500">
+                                        Lý do từ chối: {form.reason}
+                                    </div>
+                                )}
+                                <div className="flex gap-2 mt-4">
+                                    <Button
+                                        onClick={() =>
+                                            openConsentModal(form, null)
+                                        }
+                                        icon={<FileTextOutlined />}
+                                    >
+                                        Xem chi tiết
+                                    </Button>
+                                    {form.consent === null && (
+                                        <>
+                                            <Button
+                                                type="primary"
+                                                icon={<CheckOutlined />}
+                                                onClick={() =>
+                                                    openConsentModal(form, true)
+                                                }
+                                            >
+                                                Đồng ý
+                                            </Button>
+                                            <Button
+                                                danger
+                                                icon={<CloseOutlined />}
+                                                onClick={() =>
+                                                    openConsentModal(
+                                                        form,
+                                                        false
+                                                    )
+                                                }
+                                            >
+                                                Từ chối
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+                            </Card>
+                        ))}
+                    </div>
+                ) : (
+                    <Card className="rounded-xl shadow border-0">
+                        <Empty description="Không có phiếu đồng ý nào" />
+                    </Card>
+                )}
 
                 {/* Consent Modal */}
                 <Modal
-                    title={`Xác nhận ${
-                        consentModal.consent ? "đồng ý" : "từ chối"
-                    } tiêm chủng`}
+                    title={
+                        consentModal.campaign
+                            ? consentModal.consent === null
+                                ? "Chi tiết phiếu đồng ý"
+                                : consentModal.consent
+                                ? "Xác nhận đồng ý"
+                                : "Xác nhận từ chối"
+                            : ""
+                    }
                     open={consentModal.visible}
-                    onOk={handleConsentModalOk}
-                    onCancel={handleConsentModalCancel}
-                    okText={consentModal.consent ? "Đồng ý" : "Từ chối"}
+                    onCancel={closeConsentModal}
+                    onOk={
+                        consentModal.consent !== null
+                            ? handleConsent
+                            : closeConsentModal
+                    }
+                    okText={
+                        consentModal.consent === null
+                            ? "Đóng"
+                            : consentModal.consent
+                            ? "Đồng ý"
+                            : "Từ chối"
+                    }
                     cancelText="Hủy"
                     okType={consentModal.consent ? "primary" : "danger"}
                 >
                     {consentModal.campaign && (
                         <div>
-                            <p>
-                                Bạn có chắc chắn muốn{" "}
-                                {consentModal.consent ? "đồng ý" : "từ chối"}{" "}
-                                tiêm chủng cho chiến dịch:
-                            </p>
-                            <div style={{ marginBottom: 16 }}>
-                                <p>
-                                    <strong>Tên chiến dịch:</strong>{" "}
-                                    {consentModal.campaign.name}
-                                </p>
-                                <p>
-                                    <strong>Vắc xin:</strong>{" "}
-                                    {consentModal.campaign.vaccine?.name}
-                                </p>
-                                {consentModal.campaign.description && (
-                                    <p>
-                                        <strong>Mô tả:</strong>{" "}
-                                        {consentModal.campaign.description}
-                                    </p>
-                                )}
-                                <p>
-                                    <strong>Ngày bắt đầu:</strong>{" "}
-                                    {new Date(
-                                        consentModal.campaign.scheduledDate
-                                    ).toLocaleDateString("vi-VN")}
-                                </p>
-                                <p>
-                                    <strong>Ngày kết thúc:</strong>{" "}
-                                    {new Date(
-                                        consentModal.campaign.deadline
-                                    ).toLocaleDateString("vi-VN")}
-                                </p>
+                            <div className="mb-2">
+                                <Text strong>Tên chiến dịch:</Text>{" "}
+                                {consentModal.campaign.name}
                             </div>
-                            {consentModal.studentId && (
-                                <div
-                                    style={{
-                                        backgroundColor: "#f5f5f5",
-                                        padding: 12,
-                                        borderRadius: 6,
-                                        marginTop: 16,
-                                    }}
-                                >
-                                    <p style={{ margin: 0 }}>
-                                        <strong>Con em:</strong>{" "}
-                                        {
-                                            consentModal.campaign.childrenConsent?.find(
-                                                (child) =>
-                                                    child.studentId ===
-                                                    consentModal.studentId
-                                            )?.studentName
+                            <div className="mb-2">
+                                <Text strong>Vắc xin:</Text>{" "}
+                                {consentModal.campaign.vaccine?.name}
+                            </div>
+                            <div className="mb-2">
+                                <Text strong>Thời gian:</Text>{" "}
+                                {new Date(
+                                    consentModal.campaign.scheduledDate
+                                ).toLocaleDateString("vi-VN")}{" "}
+                                -{" "}
+                                {new Date(
+                                    consentModal.campaign.deadline
+                                ).toLocaleDateString("vi-VN")}
+                            </div>
+                            <div className="mb-2">
+                                <Text strong>Trạng thái chiến dịch:</Text>{" "}
+                                {campaignStatusTag(
+                                    consentModal.campaign.status
+                                )}
+                            </div>
+                            <div className="mb-2">
+                                <Text strong>Mô tả:</Text>{" "}
+                                {consentModal.campaign.description || "-"}
+                            </div>
+                            <div className="mb-2">
+                                <Text strong>Trạng thái xác nhận:</Text>{" "}
+                                {statusTag(consentModal.campaign.consent)}
+                            </div>
+                            {consentModal.consent === false && (
+                                <div className="mb-2">
+                                    <Text strong>Lý do từ chối:</Text>
+                                    <TextArea
+                                        rows={2}
+                                        value={consentModal.reason}
+                                        onChange={(e) =>
+                                            setConsentModal({
+                                                ...consentModal,
+                                                reason: e.target.value,
+                                            })
                                         }
-                                    </p>
+                                        placeholder="Nhập lý do từ chối (bắt buộc)"
+                                    />
                                 </div>
                             )}
-                            <div style={{ marginTop: 16 }}>
-                                <p style={{ fontSize: "14px", color: "#666" }}>
-                                    {consentModal.consent
-                                        ? "Việc đồng ý sẽ cho phép con em bạn tham gia chiến dịch tiêm chủng này."
-                                        : "Việc từ chối sẽ loại con em bạn khỏi chiến dịch tiêm chủng này."}
-                                </p>
-                            </div>
                         </div>
                     )}
                 </Modal>
-            </Card>
+            </div>
         </div>
     );
 };
 
-export default VaccineConsentForm;
+export default ConsentForms;

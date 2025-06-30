@@ -1,0 +1,317 @@
+import { useEffect, useState } from "react";
+import { Table, Button, Typography, Spin, Select, Space, Tabs } from "antd";
+import VaccinationDetailModal from "../parent/VaccinationDetailModal";
+import { parentAPI } from "../../utils/api";
+import api from "../../utils/api";
+import dayjs from "dayjs";
+import {
+    HeartOutlined,
+    MedicineBoxOutlined,
+    ScheduleOutlined,
+} from "@ant-design/icons";
+
+const { Title } = Typography;
+
+const MedicalSchedule = () => {
+    const [tab, setTab] = useState("vaccination");
+    const [loading, setLoading] = useState(false);
+    const [vaccinationRecords, setVaccinationRecords] = useState([]);
+    const [medicalRecords, setMedicalRecords] = useState([]);
+    const [selected, setSelected] = useState(null);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [children, setChildren] = useState([]);
+    const [selectedChild, setSelectedChild] = useState(null);
+
+    // Lấy danh sách học sinh
+    useEffect(() => {
+        parentAPI.getChildren().then((res) => {
+            if (res.data.success) {
+                const options = res.data.data.map((child) => ({
+                    value: child.studentId,
+                    label: child.fullName,
+                }));
+                setChildren(options);
+                if (options.length > 0) setSelectedChild(options[0].value);
+            }
+        });
+    }, []);
+
+    // Lấy lịch tiêm chủng
+    useEffect(() => {
+        if (tab === "vaccination" && selectedChild) {
+            setLoading(true);
+            parentAPI
+                .getVaccinationCampaigns(selectedChild)
+                .then((res) => {
+                    setVaccinationRecords(res.data.data || []);
+                })
+                .finally(() => setLoading(false));
+        }
+    }, [tab, selectedChild]);
+
+    // Lấy lịch khám sức khỏe
+    useEffect(() => {
+        if (tab === "medical") {
+            setLoading(true);
+            api.get("/medical-campaigns")
+                .then((res) => {
+                    setMedicalRecords(res.data.data || []);
+                })
+                .finally(() => setLoading(false));
+        }
+    }, [tab]);
+
+    // Hàm lấy chi tiết tiêm chủng cho modal
+    const fetchVaccinationDetail = async (campaignId, studentId) => {
+        try {
+            setLoading(true);
+            const res = await parentAPI.getVaccinationDetail(
+                campaignId,
+                studentId
+            );
+            if (res.data.success) {
+                setSelected(res.data.data);
+                setModalVisible(true);
+            }
+        } catch (e) {
+            // Không mở modal nếu không có dữ liệu
+            setSelected(null);
+            setModalVisible(false);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Cột bảng cho lịch tiêm chủng
+    const vaccinationColumns = [
+        {
+            title: "Tên chiến dịch",
+            dataIndex: "name",
+            key: "name",
+            width: 200,
+            ellipsis: true,
+        },
+        {
+            title: "Loại vắc xin",
+            key: "vaccineName",
+            width: 180,
+            render: (record) => record.vaccineName || "-",
+        },
+        {
+            title: "Ngày bắt đầu",
+            dataIndex: "scheduledDate",
+            key: "scheduledDate",
+            align: "center",
+            width: 120,
+            render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+        },
+        {
+            title: "Ngày kết thúc",
+            dataIndex: "deadline",
+            key: "deadline",
+            align: "center",
+            width: 120,
+            render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+        },
+        {
+            title: "Trạng thái",
+            dataIndex: "status",
+            key: "status",
+            align: "center",
+            width: 120,
+            render: (status) => {
+                switch (status) {
+                    case "ACTIVE":
+                        return "Đang diễn ra";
+                    case "FINISHED":
+                        return "Đã kết thúc";
+                    case "CANCELLED":
+                        return "Đã hủy";
+                    case "SCHEDULED":
+                        return "Đã lên lịch";
+                    default:
+                        return status || "-";
+                }
+            },
+        },
+    ];
+
+    // Cột bảng cho lịch khám sức khỏe
+    const medicalColumns = [
+        {
+            title: "Ngày dự kiến",
+            dataIndex: "scheduledDate",
+            key: "scheduledDate",
+            align: "center",
+            width: 120,
+            render: (date) => dayjs(date).format("DD/MM/YYYY"),
+        },
+        {
+            title: "Tên chiến dịch",
+            dataIndex: "name",
+            key: "name",
+            width: 200,
+            ellipsis: true,
+        },
+        {
+            title: "Trạng thái",
+            dataIndex: "status",
+            key: "status",
+            align: "center",
+            width: 120,
+            render: (status) => {
+                switch (status) {
+                    case "ACTIVE":
+                        return "Đang diễn ra";
+                    case "FINISHED":
+                        return "Đã kết thúc";
+                    case "CANCELLED":
+                        return "Đã hủy";
+                    case "SCHEDULED":
+                        return "Đã lên lịch";
+                    default:
+                        return status || "-";
+                }
+            },
+        },
+    ];
+
+    return (
+        <div className="min-h-screen bg-[#f6fcfa]">
+            <div className="w-full max-w-5xl mx-auto px-4 pt-24">
+                <div className="text-center mb-4">
+                    <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-2">
+                        <HeartOutlined className="text-[#36ae9a]" />
+                        <span>Quản lý sức khỏe học sinh</span>
+                    </div>
+                    <h1 className="text-4xl font-bold text-gray-800 mb-2">
+                        Lịch tiêm và khám
+                    </h1>
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                        Xem lịch tiêm chủng và lịch khám sức khỏe của học sinh
+                        để theo dõi quá trình bảo vệ sức khỏe.
+                    </p>
+                </div>
+                <Tabs
+                    activeKey={tab}
+                    onChange={setTab}
+                    items={[
+                        {
+                            key: "vaccination",
+                            label: (
+                                <span>
+                                    <MedicineBoxOutlined /> Lịch tiêm chủng
+                                </span>
+                            ),
+                            children: (
+                                <>
+                                    <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
+                                        <Title
+                                            level={2}
+                                            className="!text-[#36ae9a] !mb-0 text-center md:text-left"
+                                        >
+                                            Lịch tiêm chủng
+                                        </Title>
+                                        <Space>
+                                            <Select
+                                                style={{ width: 200 }}
+                                                value={selectedChild}
+                                                onChange={setSelectedChild}
+                                                options={children}
+                                                placeholder="Chọn học sinh"
+                                            />
+                                        </Space>
+                                    </div>
+                                    {loading ? (
+                                        <div
+                                            style={{
+                                                padding: "24px",
+                                                textAlign: "center",
+                                            }}
+                                        >
+                                            <Spin
+                                                size="large"
+                                                tip="Đang tải dữ liệu..."
+                                            />
+                                        </div>
+                                    ) : (
+                                        <Table
+                                            dataSource={vaccinationRecords}
+                                            columns={vaccinationColumns}
+                                            rowKey="id"
+                                            locale={{
+                                                emptyText: "Không có dữ liệu",
+                                            }}
+                                            pagination={{
+                                                pageSize: 10,
+                                                showSizeChanger: true,
+                                                showQuickJumper: true,
+                                                showTotal: (total, range) =>
+                                                    `${range[0]}-${range[1]} của ${total} bản ghi`,
+                                            }}
+                                            className="rounded-xl"
+                                            style={{ padding: 12 }}
+                                        />
+                                    )}
+                                </>
+                            ),
+                        },
+                        {
+                            key: "medical",
+                            label: (
+                                <span>
+                                    <ScheduleOutlined /> Lịch khám sức khỏe
+                                </span>
+                            ),
+                            children: (
+                                <>
+                                    <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
+                                        <Title
+                                            level={2}
+                                            className="!text-[#36ae9a] !mb-0 text-center md:text-left"
+                                        >
+                                            Lịch khám sức khỏe
+                                        </Title>
+                                    </div>
+                                    {loading ? (
+                                        <div
+                                            style={{
+                                                padding: "24px",
+                                                textAlign: "center",
+                                            }}
+                                        >
+                                            <Spin
+                                                size="large"
+                                                tip="Đang tải dữ liệu..."
+                                            />
+                                        </div>
+                                    ) : (
+                                        <Table
+                                            dataSource={medicalRecords}
+                                            columns={medicalColumns}
+                                            rowKey="id"
+                                            locale={{
+                                                emptyText: "Không có dữ liệu",
+                                            }}
+                                            pagination={{
+                                                pageSize: 10,
+                                                showSizeChanger: true,
+                                                showQuickJumper: true,
+                                                showTotal: (total, range) =>
+                                                    `${range[0]}-${range[1]} của ${total} bản ghi`,
+                                            }}
+                                            className="rounded-xl"
+                                            style={{ padding: 12 }}
+                                        />
+                                    )}
+                                </>
+                            ),
+                        },
+                    ]}
+                />
+            </div>
+        </div>
+    );
+};
+
+export default MedicalSchedule;

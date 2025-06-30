@@ -40,6 +40,7 @@ const NotificationBell = () => {
     const [vaccinationDetail, setVaccinationDetail] = useState(null);
     const [vaccinationModalVisible, setVaccinationModalVisible] =
         useState(false);
+    const [dropdownVisible, setDropdownVisible] = useState(false);
 
     const {
         notifications,
@@ -57,6 +58,7 @@ const NotificationBell = () => {
     const handleViewDetail = async (notification) => {
         setSelectedNotification(notification);
         setDetailModalVisible(true);
+        setDropdownVisible(false);
 
         if (
             notification.status !== "READ" &&
@@ -104,10 +106,7 @@ const NotificationBell = () => {
 
     const handleNotificationClick = (notification) => {
         // Đánh dấu đã đọc nếu chưa đọc
-        if (
-            notification.status !== "READ" &&
-            notification.status !== "ARCHIVED"
-        ) {
+        if (notification.status !== "READ") {
             markAsRead(notification.id);
         }
 
@@ -120,7 +119,7 @@ const NotificationBell = () => {
                 navigate("/manager/vaccination-campaigns");
                 break;
             case "vaccination":
-                navigate("/user/vaccination-schedule");
+                navigate("/user/medical-schedule");
                 break;
             case "medical_check":
                 navigate("/user/health-checkup-results");
@@ -128,13 +127,23 @@ const NotificationBell = () => {
             case "medication":
                 navigate("/user/medicine-info");
                 break;
+            case "vaccination_campaign_created":
+            case "vaccination_campaign_updated":
+            case "vaccination_campaign_deleted":
+            case "vaccine_created":
+            case "vaccine_updated":
+            case "vaccine_deleted":
+                navigate("/manager/vaccination-campaigns");
+                break;
             case "medical_event":
-                // Mở modal chi tiết cho medical event
-                handleViewDetail(notification);
+                // Chuyển hướng sang trang medical-events và truyền notificationId
+                navigate("/user/medical-events", {
+                    state: { notificationId: notification.id },
+                });
                 break;
             default:
-                // Mở modal chi tiết cho các loại thông báo khác
-                handleViewDetail(notification);
+                setSelectedNotification(notification);
+                setDetailModalVisible(true);
                 break;
         }
     };
@@ -145,6 +154,17 @@ const NotificationBell = () => {
                 return "🏥";
             case "vaccination":
                 return "💉";
+            case "vaccination_consent":
+                return "📋";
+            case "vaccination_consent_update":
+                return "✅";
+            case "vaccination_campaign_created":
+            case "vaccination_campaign_updated":
+            case "vaccination_campaign_deleted":
+            case "vaccine_created":
+            case "vaccine_updated":
+            case "vaccine_deleted":
+                return "📋";
             case "medical_check":
                 return "👨‍⚕️";
             case "medication":
@@ -173,8 +193,24 @@ const NotificationBell = () => {
                 return "Sự kiện y tế";
             case "vaccination":
                 return "Tiêm chủng";
+            case "vaccination_consent":
+                return "Phiếu đồng ý tiêm chủng";
+            case "vaccination_consent_update":
+                return "Cập nhật phiếu đồng ý";
+            case "vaccination_campaign_created":
+                return "Chiến dịch tiêm chủng";
+            case "vaccination_campaign_updated":
+                return "Cập nhật chiến dịch";
+            case "vaccination_campaign_deleted":
+                return "Xóa chiến dịch";
+            case "vaccine_created":
+                return "Vaccine mới";
+            case "vaccine_updated":
+                return "Cập nhật vaccine";
+            case "vaccine_deleted":
+                return "Xóa vaccine";
             case "medical_check":
-                return "Kiểm tra y tế";
+                return "Khám sức khỏe";
             case "medication":
                 return "Thuốc";
             default:
@@ -248,6 +284,29 @@ const NotificationBell = () => {
         }
     };
 
+    // Tạo notificationItems mới với phần scroll chỉ ở danh sách
+    const notificationList =
+        notifications.length > 0 ? (
+            <div style={{ maxHeight: "350px", overflowY: "auto" }}>
+                {notifications.map((notification) => (
+                    <NotificationItem
+                        key={notification.id}
+                        notification={notification}
+                        onViewDetail={handleViewDetail}
+                        onMarkAsRead={markAsRead}
+                        onDelete={deleteNotification}
+                        onNotificationClick={handleNotificationClick}
+                        getNotificationIcon={getNotificationIcon}
+                        getStatusColor={getStatusColor}
+                        getTypeLabel={getTypeLabel}
+                        getSeverityLabel={getSeverityLabel}
+                        getMedicalEventStatusLabel={getMedicalEventStatusLabel}
+                        getMedicalEventTypeLabel={getMedicalEventTypeLabel}
+                    />
+                ))}
+            </div>
+        ) : null;
+
     const notificationItems = [
         {
             key: "header",
@@ -272,21 +331,11 @@ const NotificationBell = () => {
             ),
             disabled: true,
         },
-        ...notifications.map((notification) => ({
-            key: notification.id,
-            label: (
-                <NotificationItem
-                    notification={notification}
-                    onViewDetail={handleViewDetail}
-                    onMarkAsRead={markAsRead}
-                    onDelete={deleteNotification}
-                    onNotificationClick={handleNotificationClick}
-                    getNotificationIcon={getNotificationIcon}
-                    getStatusColor={getStatusColor}
-                    getTypeLabel={getTypeLabel}
-                />
-            ),
-        })),
+        {
+            key: "list",
+            label: notificationList,
+            disabled: true,
+        },
         {
             key: "empty",
             label:
@@ -315,7 +364,8 @@ const NotificationBell = () => {
                 menu={{ items: notificationItems }}
                 placement="bottomRight"
                 trigger={["click"]}
-                overlayStyle={{ maxHeight: "400px", overflow: "auto" }}
+                open={dropdownVisible}
+                onOpenChange={setDropdownVisible}
             >
                 <Badge count={unreadCount} size="small">
                     <Button
@@ -331,362 +381,6 @@ const NotificationBell = () => {
                     />
                 </Badge>
             </Dropdown>
-
-            <Modal
-                title={
-                    <div
-                        style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                        }}
-                    >
-                        <span style={{ fontSize: "20px" }}>
-                            {selectedNotification &&
-                                getNotificationIcon(selectedNotification.type)}
-                        </span>
-                        <span>Chi tiết thông báo</span>
-                    </div>
-                }
-                open={detailModalVisible}
-                onCancel={() => {
-                    setDetailModalVisible(false);
-                    setSelectedNotification(null);
-                    setMedicalEventDetails(null);
-                }}
-                footer={[
-                    <Button
-                        key="close"
-                        onClick={() => {
-                            setDetailModalVisible(false);
-                            setSelectedNotification(null);
-                            setMedicalEventDetails(null);
-                        }}
-                    >
-                        Đóng
-                    </Button>,
-                    selectedNotification &&
-                        selectedNotification.status !== "READ" &&
-                        selectedNotification.status !== "ARCHIVED" && (
-                            <Button
-                                key="mark-read"
-                                type="primary"
-                                icon={<CheckOutlined />}
-                                onClick={() => {
-                                    markAsRead(selectedNotification.id);
-                                    setDetailModalVisible(false);
-                                    setSelectedNotification(null);
-                                    setMedicalEventDetails(null);
-                                }}
-                            >
-                                Đánh dấu đã đọc
-                            </Button>
-                        ),
-                    selectedNotification &&
-                    selectedNotification.status === "ARCHIVED" ? (
-                        <Button
-                            key="archive"
-                            icon={<InboxOutlined />}
-                            onClick={() => {
-                                if (selectedNotification) {
-                                    archiveNotification(
-                                        selectedNotification.id
-                                    );
-                                }
-                            }}
-                        >
-                            Lưu trữ
-                        </Button>
-                    ) : (
-                        <Button
-                            key="archive"
-                            icon={<InboxOutlined />}
-                            onClick={() => {
-                                if (selectedNotification) {
-                                    archiveNotification(
-                                        selectedNotification.id
-                                    );
-                                }
-                            }}
-                        >
-                            Lưu trữ
-                        </Button>
-                    ),
-                ].filter(Boolean)}
-                width={800}
-            >
-                {selectedNotification && (
-                    <div>
-                        <Descriptions column={1} bordered>
-                            <Descriptions.Item label="Tiêu đề" span={3}>
-                                <Text strong>{selectedNotification.title}</Text>
-                            </Descriptions.Item>
-
-                            <Descriptions.Item label="Nội dung" span={3}>
-                                <div
-                                    style={{
-                                        backgroundColor: "#f5f5f5",
-                                        padding: "12px",
-                                        borderRadius: "6px",
-                                        whiteSpace: "pre-wrap",
-                                    }}
-                                >
-                                    {selectedNotification.message}
-                                </div>
-                            </Descriptions.Item>
-
-                            <Descriptions.Item label="Loại thông báo">
-                                <Tag color="blue" style={{ fontSize: "12px" }}>
-                                    {getTypeLabel(selectedNotification.type)}
-                                </Tag>
-                            </Descriptions.Item>
-
-                            <Descriptions.Item label="Trạng thái">
-                                <Tag
-                                    color={getStatusColor(
-                                        selectedNotification.status
-                                    )}
-                                >
-                                    {selectedNotification.status === "READ"
-                                        ? "Đã đọc"
-                                        : "Chưa đọc"}
-                                </Tag>
-                            </Descriptions.Item>
-
-                            <Descriptions.Item label="Thời gian tạo">
-                                {moment(selectedNotification.createdAt).format(
-                                    "DD/MM/YYYY HH:mm:ss"
-                                )}
-                            </Descriptions.Item>
-
-                            {selectedNotification.sentAt && (
-                                <Descriptions.Item label="Thời gian gửi">
-                                    {moment(selectedNotification.sentAt).format(
-                                        "DD/MM/YYYY HH:mm:ss"
-                                    )}
-                                </Descriptions.Item>
-                            )}
-
-                            {selectedNotification.readAt && (
-                                <Descriptions.Item label="Thời gian đọc">
-                                    {moment(selectedNotification.readAt).format(
-                                        "DD/MM/YYYY HH:mm:ss"
-                                    )}
-                                </Descriptions.Item>
-                            )}
-
-                            {selectedNotification.archivedAt && (
-                                <Descriptions.Item label="Thời gian lưu trữ">
-                                    {moment(
-                                        selectedNotification.archivedAt
-                                    ).format("DD/MM/YYYY HH:mm:ss")}
-                                </Descriptions.Item>
-                            )}
-                        </Descriptions>
-
-                        {selectedNotification.type === "medical_event" && (
-                            <div style={{ marginTop: "24px" }}>
-                                <Title
-                                    level={4}
-                                    style={{ marginBottom: "16px" }}
-                                >
-                                    🏥 Chi tiết sự kiện y tế
-                                </Title>
-
-                                {loadingDetails ? (
-                                    <div
-                                        style={{
-                                            textAlign: "center",
-                                            padding: "24px",
-                                        }}
-                                    >
-                                        <Spin size="large" />
-                                        <div style={{ marginTop: "8px" }}>
-                                            Đang tải thông tin chi tiết...
-                                        </div>
-                                    </div>
-                                ) : medicalEventDetails ? (
-                                    <Descriptions
-                                        column={2}
-                                        bordered
-                                        size="small"
-                                    >
-                                        <Descriptions.Item
-                                            label="Học sinh"
-                                            span={2}
-                                        >
-                                            <Text strong>
-                                                {
-                                                    medicalEventDetails.studentName
-                                                }
-                                            </Text>
-                                        </Descriptions.Item>
-
-                                        <Descriptions.Item
-                                            label="Tiêu đề sự kiện"
-                                            span={2}
-                                        >
-                                            <Text strong>
-                                                {medicalEventDetails.title}
-                                            </Text>
-                                        </Descriptions.Item>
-
-                                        <Descriptions.Item
-                                            label="Mô tả"
-                                            span={2}
-                                        >
-                                            <div
-                                                style={{
-                                                    backgroundColor: "#f9f9f9",
-                                                    padding: "8px",
-                                                    borderRadius: "4px",
-                                                    whiteSpace: "pre-wrap",
-                                                }}
-                                            >
-                                                {
-                                                    medicalEventDetails.description
-                                                }
-                                            </div>
-                                        </Descriptions.Item>
-
-                                        <Descriptions.Item label="Loại sự kiện">
-                                            <Tag color="purple">
-                                                {getMedicalEventTypeLabel(
-                                                    medicalEventDetails.type
-                                                )}
-                                            </Tag>
-                                        </Descriptions.Item>
-
-                                        <Descriptions.Item label="Mức độ nghiêm trọng">
-                                            <Tag
-                                                color={getSeverityColor(
-                                                    medicalEventDetails.severity
-                                                )}
-                                            >
-                                                {getSeverityLabel(
-                                                    medicalEventDetails.severity
-                                                )}
-                                            </Tag>
-                                        </Descriptions.Item>
-
-                                        <Descriptions.Item label="Trạng thái">
-                                            <Tag color="blue">
-                                                {getMedicalEventStatusLabel(
-                                                    medicalEventDetails.status
-                                                )}
-                                            </Tag>
-                                        </Descriptions.Item>
-
-                                        <Descriptions.Item label="Địa điểm">
-                                            {medicalEventDetails.location ||
-                                                "Không xác định"}
-                                        </Descriptions.Item>
-
-                                        <Descriptions.Item
-                                            label="Triệu chứng"
-                                            span={2}
-                                        >
-                                            {medicalEventDetails.symptoms &&
-                                            medicalEventDetails.symptoms
-                                                .length > 0 ? (
-                                                <div>
-                                                    {medicalEventDetails.symptoms.map(
-                                                        (symptom, index) => (
-                                                            <Tag
-                                                                key={index}
-                                                                color="orange"
-                                                                style={{
-                                                                    marginBottom:
-                                                                        "4px",
-                                                                }}
-                                                            >
-                                                                {symptom}
-                                                            </Tag>
-                                                        )
-                                                    )}
-                                                </div>
-                                            ) : (
-                                                "Không có triệu chứng"
-                                            )}
-                                        </Descriptions.Item>
-
-                                        {medicalEventDetails.treatment && (
-                                            <Descriptions.Item
-                                                label="Điều trị"
-                                                span={2}
-                                            >
-                                                <div
-                                                    style={{
-                                                        backgroundColor:
-                                                            "#e6f7ff",
-                                                        padding: "8px",
-                                                        borderRadius: "4px",
-                                                        whiteSpace: "pre-wrap",
-                                                    }}
-                                                >
-                                                    {
-                                                        medicalEventDetails.treatment
-                                                    }
-                                                </div>
-                                            </Descriptions.Item>
-                                        )}
-
-                                        {medicalEventDetails.outcome && (
-                                            <Descriptions.Item
-                                                label="Kết quả"
-                                                span={2}
-                                            >
-                                                <div
-                                                    style={{
-                                                        backgroundColor:
-                                                            "#f6ffed",
-                                                        padding: "8px",
-                                                        borderRadius: "4px",
-                                                        whiteSpace: "pre-wrap",
-                                                    }}
-                                                >
-                                                    {
-                                                        medicalEventDetails.outcome
-                                                    }
-                                                </div>
-                                            </Descriptions.Item>
-                                        )}
-
-                                        <Descriptions.Item label="Thời gian xảy ra">
-                                            {moment(
-                                                medicalEventDetails.occurredAt
-                                            ).format("DD/MM/YYYY HH:mm")}
-                                        </Descriptions.Item>
-
-                                        {medicalEventDetails.resolvedAt && (
-                                            <Descriptions.Item label="Thời gian giải quyết">
-                                                {moment(
-                                                    medicalEventDetails.resolvedAt
-                                                ).format("DD/MM/YYYY HH:mm")}
-                                            </Descriptions.Item>
-                                        )}
-
-                                        <Descriptions.Item label="Y tá phụ trách">
-                                            {medicalEventDetails.nurseName}
-                                        </Descriptions.Item>
-                                    </Descriptions>
-                                ) : (
-                                    <div
-                                        style={{
-                                            textAlign: "center",
-                                            padding: "24px",
-                                            color: "#999",
-                                        }}
-                                    >
-                                        Không tìm thấy thông tin chi tiết sự
-                                        kiện y tế
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
-            </Modal>
 
             <VaccinationDetailModal
                 visible={vaccinationModalVisible}

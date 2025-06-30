@@ -9,6 +9,7 @@ import {
     upsertHealthProfile,
     getVaccinationHistory,
     getVaccinationDetail,
+    getStudentVaccinationCampaigns,
 } from "../controllers/parentController.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 
@@ -62,6 +63,13 @@ router.get(
     "/vaccination-detail/:campaignId/:studentId",
     authenticateToken,
     getVaccinationDetail
+);
+
+// Vaccination routes
+router.get(
+    "/students/:studentId/vaccination-campaigns",
+    authenticateToken,
+    getStudentVaccinationCampaigns
 );
 
 // Routes for notifications

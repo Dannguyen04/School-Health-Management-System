@@ -41,3 +41,13 @@
 .read-the-docs {
     color: #888;
 }
+
+.fade-init {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.6s, transform 0.6s;
+}
+.fade-in-up {
+    opacity: 1 !important;
+    transform: translateY(0) !important;
+}

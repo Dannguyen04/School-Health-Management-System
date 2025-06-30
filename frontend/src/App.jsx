@@ -36,7 +36,7 @@ import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
 import MedicineInfo from "./components/user/MedicineInfo";
 import NotificationCenter from "./components/shared/NotificationCenter";
-import VaccinationSchedule from "./components/user/VaccinationSchedule";
+import MedicalSchedule from "./components/user/MedicalSchedule";
 import VaccinationHistory from "./pages/VaccinationHistory";
 import AdminLayout from "./layouts/Admin";
 import ManagerLayout from "./layouts/Manager";
@@ -46,6 +46,7 @@ import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
+import MedicalEvents from "./pages/MedicalEvents";
 
 const App = () => {
     return (
@@ -174,14 +175,15 @@ const App = () => {
                         element={<HealthCheckupResults />}
                     />
                     <Route
-                        path="vaccination-schedule"
-                        element={<VaccinationSchedule />}
+                        path="medical-schedule"
+                        element={<MedicalSchedule />}
                     />
                     <Route
                         path="vaccination-history"
                         element={<VaccinationHistory />}
                     />
                     <Route path="profile" element={<UserProfile />} />
+                    <Route path="medical-events" element={<MedicalEvents />} />
                 </Route>
             </Routes>
         </Router>

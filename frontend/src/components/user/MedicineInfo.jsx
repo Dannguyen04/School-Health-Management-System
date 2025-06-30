@@ -1,538 +1,958 @@
-import { EditOutlined } from "@ant-design/icons";
 import {
-  Alert,
-  Button,
-  Card,
-  Col,
-  DatePicker,
-  Form,
-  Input,
-  message,
-  Modal,
-  Row,
-  Select,
-  Space,
-  Spin,
-  Table,
-  Tag,
-  Typography,
+    EditOutlined,
+    PlusOutlined,
+    MedicineBoxOutlined,
+    ClockCircleOutlined,
+    CheckCircleOutlined,
+    ExclamationCircleOutlined,
+    CalendarOutlined,
+    UserOutlined,
+    SearchOutlined,
+    FilterOutlined,
+    BellOutlined,
+    FileTextOutlined,
+    EyeOutlined,
+    DeleteOutlined,
+} from "@ant-design/icons";
+import {
+    Alert,
+    Button,
+    Card,
+    Col,
+    DatePicker,
+    Form,
+    Input,
+    message,
+    Modal,
+    Row,
+    Select,
+    Space,
+    Spin,
+    Table,
+    Tag,
+    Typography,
+    Statistic,
+    Progress,
+    Divider,
+    Tooltip,
+    Badge,
+    Empty,
+    Avatar,
+    List,
+    Tabs,
 } from "antd";
 import axios from "axios";
 import { Formik } from "formik";
 import { useEffect, useState } from "react";
 import * as Yup from "yup";
+import dayjs from "dayjs";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+const { Search } = Input;
 
 const validationSchema = Yup.object().shape({
-  studentId: Yup.string().required("Vui lòng chọn học sinh"),
-  medicationName: Yup.string().required("Vui lòng nhập tên thuốc"),
-  dosage: Yup.string().required("Vui lòng nhập liều lượng"),
-  frequency: Yup.string().required("Vui lòng nhập tần suất sử dụng"),
-  instructions: Yup.string().required("Vui lòng nhập hướng dẫn sử dụng"),
-  startDate: Yup.date().required("Vui lòng chọn ngày bắt đầu"),
-  endDate: Yup.date().required("Vui lòng chọn ngày kết thúc"),
-  description: Yup.string(),
-  unit: Yup.string(),
-  stockQuantity: Yup.number()
-    .typeError("Vui lòng nhập số lượng")
-    .min(1, "Số lượng phải lớn hơn 0")
-    .required("Vui lòng nhập số lượng"),
+    studentId: Yup.string().required("Vui lòng chọn học sinh"),
+    medicationName: Yup.string().required("Vui lòng nhập tên thuốc"),
+    dosage: Yup.string().required("Vui lòng nhập liều lượng"),
+    frequency: Yup.string().required("Vui lòng nhập tần suất sử dụng"),
+    instructions: Yup.string().required("Vui lòng nhập hướng dẫn sử dụng"),
+    startDate: Yup.date().required("Vui lòng chọn ngày bắt đầu"),
+    endDate: Yup.date().required("Vui lòng chọn ngày kết thúc"),
+    description: Yup.string(),
+    unit: Yup.string(),
+    stockQuantity: Yup.number()
+        .typeError("Vui lòng nhập số lượng")
+        .min(1, "Số lượng phải lớn hơn 0")
+        .required("Vui lòng nhập số lượng"),
 });
 
 const statusColor = {
-  PENDING_APPROVAL: "orange",
-  APPROVED: "green",
-  REJECTED: "red",
+    PENDING_APPROVAL: "orange",
+    APPROVED: "green",
+    REJECTED: "red",
 };
+
 const statusLabel = {
-  PENDING_APPROVAL: "Chờ duyệt",
-  APPROVED: "Đã duyệt",
-  REJECTED: "Từ chối",
+    PENDING_APPROVAL: "Chờ duyệt",
+    APPROVED: "Đã duyệt",
+    REJECTED: "Từ chối",
 };
 
 const MedicineInfo = () => {
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [children, setChildren] = useState([]);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [studentMedicines, setStudentMedicines] = useState([]);
-  const [loadingMedicines, setLoadingMedicines] = useState(false);
+    const [showSuccess, setShowSuccess] = useState(false);
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [children, setChildren] = useState([]);
+    const [selectedStudent, setSelectedStudent] = useState(null);
+    const [studentMedicines, setStudentMedicines] = useState([]);
+    const [loadingMedicines, setLoadingMedicines] = useState(false);
+    const [searchText, setSearchText] = useState("");
+    const [filterStatus, setFilterStatus] = useState("all");
+    const [activeTab, setActiveTab] = useState("all");
 
-  useEffect(() => {
-    fetchChildren();
-  }, []);
+    useEffect(() => {
+        fetchChildren();
+    }, []);
 
-  useEffect(() => {
-    if (selectedStudent) {
-      fetchStudentMedicines(selectedStudent);
-    }
-  }, [selectedStudent]);
-
-  const fetchChildren = async () => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.get("/api/parents/my-children", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.data.success) {
-        console.log(response.data.data);
-        setChildren(response.data.data);
-        if (response.data.data.length > 0) {
-          setSelectedStudent(response.data.data[0].studentId);
+    useEffect(() => {
+        if (selectedStudent) {
+            fetchStudentMedicines(selectedStudent);
         }
-      }
-    } catch (error) {
-      console.error("Error fetching children:", error);
-      message.error("Không thể lấy danh sách học sinh");
-    } finally {
-      setLoading(false);
-    }
-  };
+    }, [selectedStudent]);
 
-  const fetchStudentMedicines = async (studentId) => {
-    setLoadingMedicines(true);
-    try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        `/api/parents/students/${studentId}/medicines`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
+    const fetchChildren = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem("token");
+            const response = await axios.get("/api/parents/my-children", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.data.success) {
+                console.log(response.data.data);
+                setChildren(response.data.data);
+                if (response.data.data.length > 0) {
+                    setSelectedStudent(response.data.data[0].studentId);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching children:", error);
+            message.error("Không thể lấy danh sách học sinh");
+        } finally {
+            setLoading(false);
         }
-      );
-      if (response.data.success) {
-        setStudentMedicines(response.data.data || []);
-      } else {
-        setStudentMedicines([]);
-      }
-    } catch {
-      setStudentMedicines([]);
-    } finally {
-      setLoadingMedicines(false);
-    }
-  };
+    };
 
-  const handleStudentChange = (studentId) => {
-    setSelectedStudent(studentId);
-  };
-
-  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const response = await axios.post(
-        `/api/parents/request-medication/${values.studentId}`,
-        {
-          medicationName: values.medicationName,
-          dosage: values.dosage,
-          frequency: values.frequency,
-          instructions: values.instructions,
-          startDate: values.startDate ? values.startDate.toISOString() : null,
-          endDate: values.endDate ? values.endDate.toISOString() : null,
-          description: values.description,
-          unit: values.unit,
-          stockQuantity: values.stockQuantity,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` },
+    const fetchStudentMedicines = async (studentId) => {
+        setLoadingMedicines(true);
+        try {
+            const token = localStorage.getItem("token");
+            const response = await axios.get(
+                `/api/parents/students/${studentId}/medicines`,
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+            if (response.data.success) {
+                setStudentMedicines(response.data.data || []);
+            } else {
+                setStudentMedicines([]);
+            }
+        } catch {
+            setStudentMedicines([]);
+        } finally {
+            setLoadingMedicines(false);
         }
-      );
+    };
 
-      if (response.data.success) {
-        message.success("Gửi thông tin thuốc thành công");
-        resetForm();
-        setIsEditModalVisible(false);
-        setShowSuccess(true);
-        fetchStudentMedicines(selectedStudent);
-      } else {
-        message.error(response.data.error || "Có lỗi xảy ra khi gửi thông tin");
-      }
-    } catch (error) {
-      console.error("Error submitting medication:", error);
-      message.error(
-        error.response?.data?.error || "Có lỗi xảy ra khi gửi thông tin"
-      );
-    } finally {
-      setSubmitting(false);
-      setLoading(false);
-    }
-  };
+    const handleStudentChange = (studentId) => {
+        setSelectedStudent(studentId);
+    };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa]">
-        <div className="w-full max-w-5xl mx-auto px-4">
-          <div style={{ padding: "24px", textAlign: "center" }}>
-            <Spin size="large" />
-          </div>
-        </div>
-      </div>
-    );
-  }
+    const handleSubmit = async (values, { setSubmitting, resetForm }) => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem("token");
+            const response = await axios.post(
+                `/api/parents/request-medication/${values.studentId}`,
+                {
+                    medicationName: values.medicationName,
+                    dosage: values.dosage,
+                    frequency: values.frequency,
+                    instructions: values.instructions,
+                    startDate: values.startDate
+                        ? values.startDate.toISOString()
+                        : null,
+                    endDate: values.endDate
+                        ? values.endDate.toISOString()
+                        : null,
+                    description: values.description,
+                    unit: values.unit,
+                    stockQuantity: values.stockQuantity,
+                },
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
 
-  return (
-    <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa]">
-      <div className="w-full max-w-5xl mx-auto px-4">
-        <Card
-          className="w-full rounded-3xl shadow-lg border-0 mt-12"
-          style={{
-            background: "#fff",
-            borderRadius: "1.5rem",
-            boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
-            padding: "2rem",
-            marginTop: "3rem",
-            maxWidth: "100%",
-          }}
-        >
-          <div
-            style={{
-              marginBottom: 24,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "16px",
-            }}
-          >
-            <div>
-              <Title level={2} className="!text-[#36ae9a] !mb-0">
-                Thông tin thuốc
-              </Title>
-              <Text type="secondary">Quản lý thông tin thuốc của học sinh</Text>
-            </div>
-            <div style={{ display: "flex", gap: "16px" }}>
-              {children && children.length > 0 ? (
-                <Select
-                  style={{ width: 200 }}
-                  value={selectedStudent}
-                  onChange={handleStudentChange}
-                  placeholder="Chọn học sinh"
-                >
-                  {children.map((child) => (
-                    <Select.Option
-                      key={child.studentId}
-                      value={child.studentId}
-                    >
-                      {child.fullName}
-                    </Select.Option>
-                  ))}
-                </Select>
-              ) : (
-                <Text type="secondary">Không có học sinh nào</Text>
-              )}
-              <Button
-                type="primary"
-                icon={<EditOutlined />}
-                onClick={() => setIsEditModalVisible(true)}
-                disabled={!selectedStudent}
-              >
-                Thêm thuốc mới
-              </Button>
-            </div>
-          </div>
+            if (response.data.success) {
+                message.success("Gửi thông tin thuốc thành công");
+                resetForm();
+                setIsEditModalVisible(false);
+                setShowSuccess(true);
+                fetchStudentMedicines(selectedStudent);
+            } else {
+                message.error(
+                    response.data.error || "Có lỗi xảy ra khi gửi thông tin"
+                );
+            }
+        } catch (error) {
+            console.error("Error submitting medication:", error);
+            message.error(
+                error.response?.data?.error || "Có lỗi xảy ra khi gửi thông tin"
+            );
+        } finally {
+            setSubmitting(false);
+            setLoading(false);
+        }
+    };
 
-          {showSuccess && (
-            <Alert
-              message="Thông tin thuốc đã được gửi thành công!"
-              type="success"
-              showIcon
-              style={{ marginBottom: 24 }}
-            />
-          )}
+    // Helper functions for enhanced features
+    const frequencyLabel = {
+        once: "1 lần/ngày",
+        twice: "2 lần/ngày",
+        three: "3 lần/ngày",
+        four: "4 lần/ngày",
+    };
 
-          <Table
-            dataSource={studentMedicines}
-            loading={loadingMedicines}
-            columns={[
-              {
-                title: "Tên thuốc",
-                dataIndex: ["medication", "name"],
-                key: "medicationName",
-                render: (text, record) => record.medication?.name || "",
-              },
-              {
-                title: "Liều lượng",
-                dataIndex: "dosage",
-                key: "dosage",
-              },
-              {
-                title: "Tần suất",
-                dataIndex: "frequency",
-                key: "frequency",
-              },
-              {
-                title: "Hướng dẫn",
-                dataIndex: "instructions",
-                key: "instructions",
-              },
-              {
-                title: "Ngày bắt đầu",
-                dataIndex: "startDate",
-                key: "startDate",
-                render: (date) =>
-                  date ? new Date(date).toLocaleDateString("vi-VN") : "",
-              },
-              {
-                title: "Ngày kết thúc",
-                dataIndex: "endDate",
-                key: "endDate",
-                render: (date) =>
-                  date ? new Date(date).toLocaleDateString("vi-VN") : "",
-              },
-              {
-                title: "Trạng thái",
-                dataIndex: "status",
-                key: "status",
-                render: (status) => (
-                  <Tag color={statusColor[status]}>
-                    {statusLabel[status] || status}
-                  </Tag>
-                ),
-              },
-            ]}
-            rowKey="id"
-            pagination={false}
-            style={{ marginTop: 24 }}
-          />
+    // Calculate statistics
+    const getStatistics = () => {
+        const total = studentMedicines.length;
+        const approved = studentMedicines.filter(
+            (m) => m.status === "APPROVED"
+        ).length;
+        const pending = studentMedicines.filter(
+            (m) => m.status === "PENDING_APPROVAL"
+        ).length;
+        const rejected = studentMedicines.filter(
+            (m) => m.status === "REJECTED"
+        ).length;
 
-          <Modal
-            title="Thêm thuốc mới"
-            open={isEditModalVisible}
-            onCancel={() => setIsEditModalVisible(false)}
-            footer={null}
-            width={800}
-          >
-            <Formik
-              initialValues={{
-                studentId: selectedStudent,
-                medicationName: "",
-                dosage: "",
-                frequency: "",
-                instructions: "",
-                startDate: null,
-                endDate: null,
-                description: "",
-                unit: "",
-                stockQuantity: 1,
-              }}
-              validationSchema={validationSchema}
-              onSubmit={handleSubmit}
-              enableReinitialize={true}
-            >
-              {({
-                values,
-                errors,
-                touched,
-                handleChange,
-                handleBlur,
-                handleSubmit,
-                isSubmitting,
-                setFieldValue,
-              }) => (
-                <Form layout="vertical" onFinish={handleSubmit}>
-                  <Row gutter={24}>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Tên thuốc"
-                        validateStatus={
-                          touched.medicationName && errors.medicationName
-                            ? "error"
-                            : ""
-                        }
-                        help={touched.medicationName && errors.medicationName}
-                      >
-                        <Input
-                          name="medicationName"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.medicationName}
-                          placeholder="Nhập tên thuốc"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Liều lượng"
-                        validateStatus={
-                          touched.dosage && errors.dosage ? "error" : ""
-                        }
-                        help={touched.dosage && errors.dosage}
-                      >
-                        <Input
-                          name="dosage"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.dosage}
-                          placeholder="Ví dụ: 1 viên/lần"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Tần suất sử dụng"
-                        validateStatus={
-                          touched.frequency && errors.frequency ? "error" : ""
-                        }
-                        help={touched.frequency && errors.frequency}
-                      >
-                        <Select
-                          name="frequency"
-                          onChange={(value) =>
-                            setFieldValue("frequency", value)
-                          }
-                          onBlur={handleBlur}
-                          value={values.frequency}
-                          placeholder="Chọn tần suất"
-                        >
-                          <Select.Option value="once">1 lần/ngày</Select.Option>
-                          <Select.Option value="twice">
-                            2 lần/ngày
-                          </Select.Option>
-                          <Select.Option value="three">
-                            3 lần/ngày
-                          </Select.Option>
-                          <Select.Option value="four">4 lần/ngày</Select.Option>
-                        </Select>
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Mô tả"
-                        validateStatus={
-                          touched.description && errors.description
-                            ? "error"
-                            : ""
-                        }
-                        help={touched.description && errors.description}
-                      >
-                        <Input
-                          name="description"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.description}
-                          placeholder="Nhập mô tả thuốc"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Đơn vị"
-                        validateStatus={
-                          touched.unit && errors.unit ? "error" : ""
-                        }
-                        help={touched.unit && errors.unit}
-                      >
-                        <Input
-                          name="unit"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.unit}
-                          placeholder="Ví dụ: viên, ml, mg"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Số lượng"
-                        validateStatus={
-                          touched.stockQuantity && errors.stockQuantity
-                            ? "error"
-                            : ""
-                        }
-                        help={touched.stockQuantity && errors.stockQuantity}
-                      >
-                        <Input
-                          name="stockQuantity"
-                          type="number"
-                          min={1}
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.stockQuantity}
-                          placeholder="Nhập số lượng"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} md={12}>
-                      <Form.Item
-                        label="Thời gian sử dụng"
-                        validateStatus={
-                          (touched.startDate && errors.startDate) ||
-                          (touched.endDate && errors.endDate)
-                            ? "error"
-                            : ""
-                        }
-                        help={
-                          (touched.startDate && errors.startDate) ||
-                          (touched.endDate && errors.endDate)
-                        }
-                      >
-                        <Space>
-                          <DatePicker
-                            placeholder="Ngày bắt đầu"
-                            onChange={(date) =>
-                              setFieldValue("startDate", date)
-                            }
-                            value={values.startDate}
-                          />
-                          <span>-</span>
-                          <DatePicker
-                            placeholder="Ngày kết thúc"
-                            onChange={(date) => setFieldValue("endDate", date)}
-                            value={values.endDate}
-                          />
-                        </Space>
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24}>
-                      <Form.Item
-                        label="Hướng dẫn sử dụng"
-                        validateStatus={
-                          touched.instructions && errors.instructions
-                            ? "error"
-                            : ""
-                        }
-                        help={touched.instructions && errors.instructions}
-                      >
-                        <TextArea
-                          name="instructions"
-                          onChange={handleChange}
-                          onBlur={handleBlur}
-                          value={values.instructions}
-                          placeholder="Nhập hướng dẫn sử dụng chi tiết"
-                          rows={4}
-                        />
-                      </Form.Item>
-                    </Col>
-                  </Row>
+        // Check for expiring medicines (within 7 days)
+        const today = dayjs();
+        const expiring = studentMedicines.filter((m) => {
+            if (!m.endDate) return false;
+            const endDate = dayjs(m.endDate);
+            return (
+                endDate.diff(today, "day") <= 7 &&
+                endDate.diff(today, "day") >= 0
+            );
+        }).length;
 
-                  <Form.Item>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "flex-end",
-                        marginTop: 24,
-                      }}
-                    >
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        loading={isSubmitting}
-                      >
-                        Gửi thông tin
-                      </Button>
+        return { total, approved, pending, rejected, expiring };
+    };
+
+    // Filter medicines based on search and status
+    const getFilteredMedicines = () => {
+        let filtered = studentMedicines;
+
+        // Filter by search text
+        if (searchText) {
+            filtered = filtered.filter(
+                (medicine) =>
+                    medicine.medication?.name
+                        ?.toLowerCase()
+                        .includes(searchText.toLowerCase()) ||
+                    medicine.dosage
+                        ?.toLowerCase()
+                        .includes(searchText.toLowerCase()) ||
+                    medicine.instructions
+                        ?.toLowerCase()
+                        .includes(searchText.toLowerCase())
+            );
+        }
+
+        // Filter by status
+        if (filterStatus !== "all") {
+            filtered = filtered.filter(
+                (medicine) => medicine.status === filterStatus
+            );
+        }
+
+        // Filter by tab
+        if (activeTab === "active") {
+            filtered = filtered.filter(
+                (medicine) => medicine.status === "APPROVED"
+            );
+        } else if (activeTab === "pending") {
+            filtered = filtered.filter(
+                (medicine) => medicine.status === "PENDING_APPROVAL"
+            );
+        } else if (activeTab === "expiring") {
+            const today = dayjs();
+            filtered = filtered.filter((medicine) => {
+                if (!medicine.endDate) return false;
+                const endDate = dayjs(medicine.endDate);
+                return (
+                    endDate.diff(today, "day") <= 7 &&
+                    endDate.diff(today, "day") >= 0
+                );
+            });
+        }
+
+        return filtered;
+    };
+
+    const filteredMedicines = getFilteredMedicines();
+    const stats = getStatistics();
+
+    if (loading) {
+        return (
+            <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa] pt-20">
+                <div className="w-full max-w-6xl mx-auto px-4">
+                    <div style={{ padding: "24px", textAlign: "center" }}>
+                        <Spin size="large" />
                     </div>
-                  </Form.Item>
-                </Form>
-              )}
-            </Formik>
-          </Modal>
-        </Card>
-      </div>
-    </div>
-  );
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="min-h-screen bg-gradient-to-br from-[#f6fcfa] to-[#e8f5f2] pt-20">
+            <div className="w-full max-w-6xl mx-auto px-4 py-8">
+                {/* Header */}
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-4">
+                        <MedicineBoxOutlined className="text-[#36ae9a]" />
+                        <span>Quản lý thuốc học sinh</span>
+                    </div>
+                    <h1 className="text-4xl font-bold text-gray-800 mb-4">
+                        Thông tin thuốc
+                    </h1>
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                        Theo dõi và quản lý thông tin thuốc của học sinh một
+                        cách an toàn và hiệu quả
+                    </p>
+                </div>
+
+                {/* Student Selection */}
+                <Card className="rounded-2xl shadow-lg border-0 mb-6">
+                    <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+                        <div>
+                            <Title level={4} className="mb-2">
+                                Chọn học sinh
+                            </Title>
+                            <Text type="secondary">
+                                Chọn học sinh để xem và quản lý thông tin thuốc
+                            </Text>
+                        </div>
+                        <div className="flex items-center gap-4">
+                            {children && children.length > 0 ? (
+                                <Select
+                                    style={{ width: 250 }}
+                                    value={selectedStudent}
+                                    onChange={handleStudentChange}
+                                    placeholder="Chọn học sinh"
+                                    size="large"
+                                >
+                                    {children.map((child) => (
+                                        <Select.Option
+                                            key={child.studentId}
+                                            value={child.studentId}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <UserOutlined />
+                                                <span>{child.fullName}</span>
+                                            </div>
+                                        </Select.Option>
+                                    ))}
+                                </Select>
+                            ) : (
+                                <Text type="secondary">
+                                    Không có học sinh nào
+                                </Text>
+                            )}
+                        </div>
+                    </div>
+                </Card>
+
+                {showSuccess && (
+                    <Alert
+                        message="Thông tin thuốc đã được gửi thành công!"
+                        type="success"
+                        showIcon
+                        className="mb-6"
+                    />
+                )}
+
+                {selectedStudent && (
+                    <>
+                        {/* Separator */}
+                        <div className="my-8">
+                            <div className="flex items-center">
+                                <div className="flex-1 h-px bg-gray-200"></div>
+                                <div className="px-4">
+                                    <div className="inline-flex items-center gap-2 bg-white text-gray-500 px-3 py-1 rounded-full text-sm border border-gray-200">
+                                        <MedicineBoxOutlined className="text-[#36ae9a]" />
+                                        <span>Danh sách thuốc</span>
+                                    </div>
+                                </div>
+                                <div className="flex-1 h-px bg-gray-200"></div>
+                            </div>
+                        </div>
+
+                        {/* Tabs and Medicine List Section (merged) */}
+                        <Card className="rounded-2xl shadow-lg border-0">
+                            <div className="p-6">
+                                <div className="flex justify-between items-center mb-6">
+                                    <Title level={4} className="mb-0">
+                                        Danh sách thuốc
+                                    </Title>
+                                    <Button
+                                        type="primary"
+                                        icon={<PlusOutlined />}
+                                        onClick={() =>
+                                            setIsEditModalVisible(true)
+                                        }
+                                        className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
+                                    >
+                                        Gửi thuốc cho học sinh
+                                    </Button>
+                                </div>
+                                <Tabs
+                                    activeKey={activeTab}
+                                    onChange={setActiveTab}
+                                    items={[
+                                        {
+                                            key: "all",
+                                            label: (
+                                                <span>
+                                                    Tất cả
+                                                    <Badge
+                                                        count={stats.total}
+                                                        className="ml-2"
+                                                    />
+                                                </span>
+                                            ),
+                                        },
+                                        {
+                                            key: "active",
+                                            label: (
+                                                <span>
+                                                    Đang dùng
+                                                    <Badge
+                                                        count={stats.approved}
+                                                        className="ml-2"
+                                                    />
+                                                </span>
+                                            ),
+                                        },
+                                        {
+                                            key: "pending",
+                                            label: (
+                                                <span>
+                                                    Chờ duyệt
+                                                    <Badge
+                                                        count={stats.pending}
+                                                        className="ml-2"
+                                                    />
+                                                </span>
+                                            ),
+                                        },
+                                        {
+                                            key: "expiring",
+                                            label: (
+                                                <span>
+                                                    Sắp hết hạn
+                                                    <Badge
+                                                        count={stats.expiring}
+                                                        className="ml-2"
+                                                    />
+                                                </span>
+                                            ),
+                                        },
+                                    ]}
+                                />
+
+                                {filteredMedicines.length > 0 ? (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
+                                        {filteredMedicines.map((medicine) => {
+                                            const isExpiring =
+                                                medicine.endDate &&
+                                                dayjs(medicine.endDate).diff(
+                                                    dayjs(),
+                                                    "day"
+                                                ) <= 7;
+                                            const isExpired =
+                                                medicine.endDate &&
+                                                dayjs(medicine.endDate).diff(
+                                                    dayjs(),
+                                                    "day"
+                                                ) < 0;
+
+                                            return (
+                                                <Card
+                                                    key={medicine.id}
+                                                    className="rounded-2xl shadow-lg border-0 hover:shadow-xl transition-shadow duration-300"
+                                                    actions={[
+                                                        <Tooltip title="Xem chi tiết">
+                                                            <EyeOutlined
+                                                                key="view"
+                                                                className="text-blue-500"
+                                                            />
+                                                        </Tooltip>,
+                                                        <Tooltip title="Chỉnh sửa">
+                                                            <EditOutlined
+                                                                key="edit"
+                                                                className="text-green-500"
+                                                            />
+                                                        </Tooltip>,
+                                                        <Tooltip title="Xóa">
+                                                            <DeleteOutlined
+                                                                key="delete"
+                                                                className="text-red-500"
+                                                            />
+                                                        </Tooltip>,
+                                                    ]}
+                                                >
+                                                    <div className="flex items-start justify-between mb-4">
+                                                        <div className="flex-1">
+                                                            <Title
+                                                                level={5}
+                                                                className="mb-2 text-gray-800"
+                                                            >
+                                                                {medicine
+                                                                    .medication
+                                                                    ?.name ||
+                                                                    "Không có tên"}
+                                                            </Title>
+                                                            <Tag
+                                                                color={
+                                                                    statusColor[
+                                                                        medicine
+                                                                            .status
+                                                                    ]
+                                                                }
+                                                                className="mb-2"
+                                                            >
+                                                                {
+                                                                    statusLabel[
+                                                                        medicine
+                                                                            .status
+                                                                    ]
+                                                                }
+                                                            </Tag>
+                                                            {isExpiring &&
+                                                                !isExpired && (
+                                                                    <Tag
+                                                                        color="warning"
+                                                                        className="mb-2"
+                                                                    >
+                                                                        ⚠️ Sắp
+                                                                        hết hạn
+                                                                    </Tag>
+                                                                )}
+                                                            {isExpired && (
+                                                                <Tag
+                                                                    color="error"
+                                                                    className="mb-2"
+                                                                >
+                                                                    ❌ Đã hết
+                                                                    hạn
+                                                                </Tag>
+                                                            )}
+                                                        </div>
+                                                        <Avatar
+                                                            size={48}
+                                                            icon={
+                                                                <MedicineBoxOutlined />
+                                                            }
+                                                            className="bg-[#36ae9a] text-white"
+                                                        />
+                                                    </div>
+
+                                                    <div className="space-y-3">
+                                                        <div className="flex justify-between items-center">
+                                                            <Text type="secondary">
+                                                                Liều lượng:
+                                                            </Text>
+                                                            <Text strong>
+                                                                {
+                                                                    medicine.dosage
+                                                                }
+                                                            </Text>
+                                                        </div>
+
+                                                        <div className="flex justify-between items-center">
+                                                            <Text type="secondary">
+                                                                Tần suất:
+                                                            </Text>
+                                                            <Text strong>
+                                                                {frequencyLabel[
+                                                                    medicine
+                                                                        .frequency
+                                                                ] ||
+                                                                    medicine.frequency}
+                                                            </Text>
+                                                        </div>
+
+                                                        {medicine.startDate &&
+                                                            medicine.endDate && (
+                                                                <div className="flex justify-between items-center">
+                                                                    <Text type="secondary">
+                                                                        Thời
+                                                                        gian:
+                                                                    </Text>
+                                                                    <Text
+                                                                        strong
+                                                                    >
+                                                                        {dayjs(
+                                                                            medicine.startDate
+                                                                        ).format(
+                                                                            "DD/MM/YYYY"
+                                                                        )}{" "}
+                                                                        -{" "}
+                                                                        {dayjs(
+                                                                            medicine.endDate
+                                                                        ).format(
+                                                                            "DD/MM/YYYY"
+                                                                        )}
+                                                                    </Text>
+                                                                </div>
+                                                            )}
+
+                                                        {medicine.instructions && (
+                                                            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                                                                <Text
+                                                                    type="secondary"
+                                                                    className="text-sm"
+                                                                >
+                                                                    {medicine
+                                                                        .instructions
+                                                                        .length >
+                                                                    100
+                                                                        ? `${medicine.instructions.substring(
+                                                                              0,
+                                                                              100
+                                                                          )}...`
+                                                                        : medicine.instructions}
+                                                                </Text>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </Card>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <Empty
+                                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                                        description={
+                                            <span>
+                                                {searchText ||
+                                                filterStatus !== "all" ||
+                                                activeTab !== "all"
+                                                    ? "Không tìm thấy thuốc phù hợp"
+                                                    : "Chưa có thông tin thuốc nào"}
+                                            </span>
+                                        }
+                                    >
+                                        <Button
+                                            type="primary"
+                                            icon={<PlusOutlined />}
+                                            onClick={() =>
+                                                setIsEditModalVisible(true)
+                                            }
+                                            className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
+                                        >
+                                            Gửi thuốc cho học sinh
+                                        </Button>
+                                    </Empty>
+                                )}
+                            </div>
+                        </Card>
+                    </>
+                )}
+
+                {!selectedStudent && (
+                    <Card className="rounded-2xl shadow-lg border-0">
+                        <div className="text-center py-12">
+                            <div className="text-gray-400 text-6xl mb-4">
+                                👨‍🎓
+                            </div>
+                            <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                                Vui lòng chọn học sinh
+                            </h3>
+                            <p className="text-gray-500">
+                                Chọn học sinh từ danh sách để xem thông tin
+                                thuốc
+                            </p>
+                        </div>
+                    </Card>
+                )}
+
+                <Modal
+                    title="Thêm thuốc mới"
+                    open={isEditModalVisible}
+                    onCancel={() => setIsEditModalVisible(false)}
+                    footer={null}
+                    width={800}
+                >
+                    <Formik
+                        initialValues={{
+                            studentId: selectedStudent,
+                            medicationName: "",
+                            dosage: "",
+                            frequency: "",
+                            instructions: "",
+                            startDate: null,
+                            endDate: null,
+                            description: "",
+                            unit: "",
+                            stockQuantity: 1,
+                        }}
+                        validationSchema={validationSchema}
+                        onSubmit={handleSubmit}
+                        enableReinitialize={true}
+                    >
+                        {({
+                            values,
+                            errors,
+                            touched,
+                            handleChange,
+                            handleBlur,
+                            handleSubmit,
+                            isSubmitting,
+                            setFieldValue,
+                        }) => (
+                            <Form layout="vertical" onFinish={handleSubmit}>
+                                <Row gutter={24}>
+                                    <Col xs={24} md={12}>
+                                        <Form.Item
+                                            label="Tên thuốc"
+                                            validateStatus={
+                                                touched.medicationName &&
+                                                errors.medicationName
+                                                    ? "error"
+                                                    : ""
+                                            }
+                                            help={
+                                                touched.medicationName &&
+                                                errors.medicationName
+                                            }
+                                        >
+                                            <Input
+                                                name="medicationName"
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
+                                                value={values.medicationName}
+                                                placeholder="Nhập tên thuốc"
+                                            />
+                                        </Form.Item>
+                                    </Col>
+                                    <Col xs={24} md={12}>
+                                        <Form.Item
+                                            label="Liều lượng"
+                                            validateStatus={
+                                                touched.dosage && errors.dosage
+                                                    ? "error"
+                                                    : ""
+                                            }
+                                            help={
+                                                touched.dosage && errors.dosage
+                                            }
+                                        >
+                                            <Input
+                                                name="dosage"
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
+                                                value={values.dosage}
+                                                placeholder="Ví dụ: 1 viên/lần"
+                                            />
+                                        </Form.Item>
+                                    </Col>
+                                    <Col xs={24} md={12}>
+                                        <Form.Item
+                                            label="Tần suất sử dụng"
+                                            validateStatus={
+                                                touched.frequency &&
+                                                errors.frequency
+                                                    ? "error"
+                                                    : ""
+                                            }
+                                            help={
+                                                touched.frequency &&
+                                                errors.frequency
+                                            }
+                                        >
+                                            <Select
+                                                name="frequency"
+                                                onChange={(value) =>
+                                                    setFieldValue(
+                                                        "frequency",
+                                                        value
+                                                    )
+                                                }
+                                                onBlur={handleBlur}
+                                                value={values.frequency}
+                                                placeholder="Chọn tần suất"
+                                            >
+                                                <Select.Option value="once">
+                                                    1 lần/ngày
+                                                </Select.Option>
+                                                <Select.Option value="twice">
+                                                    2 lần/ngày
+                                                </Select.Option>
+                                                <Select.Option value="three">
+                                                    3 lần/ngày
+                                                </Select.Option>
+                                                <Select.Option value="four">
+                                                    4 lần/ngày
+                                                </Select.Option>
+                                            </Select>
+                                        </Form.Item>
+                                    </Col>
+                                    <Col xs={24} md={12}>
+                                        <Form.Item
+                                            label="Mô tả"
+                                            validateStatus={
+                                                touched.description &&
+                                                errors.description
+                                                    ? "error"
+                                                    : ""
+                                            }
+                                            help={
+                                                touched.description &&
+                                                errors.description
+                                            }
+                                        >
+                                            <Input
+                                                name="description"
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
+                                                value={values.description}
+                                                placeholder="Nhập mô tả thuốc"
+                                            />
+                                        </Form.Item>
+                                    </Col>
+                                    <Col xs={24} md={12}>
+                                        <Form.Item
+                                            label="Đơn vị"
+                                            validateStatus={
+                                                touched.unit && errors.unit
+                                                    ? "error"
+                                                    : ""
+                                            }
+                                            help={touched.unit && errors.unit}
+                                        >
+                                            <Input
+                                                name="unit"
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
+                                                value={values.unit}
+                                                placeholder="Ví dụ: viên, ml, mg"
+                                            />
+                                        </Form.Item>
+                                    </Col>
+                                    <Col xs={24} md={12}>
+                                        <Form.Item
+                                            label="Số lượng"
+                                            validateStatus={
+                                                touched.stockQuantity &&
+                                                errors.stockQuantity
+                                                    ? "error"
+                                                    : ""
+                                            }
+                                            help={
+                                                touched.stockQuantity &&
+                                                errors.stockQuantity
+                                            }
+                                        >
+                                            <Input
+                                                name="stockQuantity"
+                                                type="number"
+                                                min={1}
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
+                                                value={values.stockQuantity}
+                                                placeholder="Nhập số lượng"
+                                            />
+                                        </Form.Item>
+                                    </Col>
+                                    <Col xs={24} md={12}>
+                                        <Form.Item
+                                            label="Thời gian sử dụng"
+                                            validateStatus={
+                                                (touched.startDate &&
+                                                    errors.startDate) ||
+                                                (touched.endDate &&
+                                                    errors.endDate)
+                                                    ? "error"
+                                                    : ""
+                                            }
+                                            help={
+                                                (touched.startDate &&
+                                                    errors.startDate) ||
+                                                (touched.endDate &&
+                                                    errors.endDate)
+                                            }
+                                        >
+                                            <Space>
+                                                <DatePicker
+                                                    placeholder="Ngày bắt đầu"
+                                                    onChange={(date) =>
+                                                        setFieldValue(
+                                                            "startDate",
+                                                            date
+                                                        )
+                                                    }
+                                                    value={values.startDate}
+                                                />
+                                                <span>-</span>
+                                                <DatePicker
+                                                    placeholder="Ngày kết thúc"
+                                                    onChange={(date) =>
+                                                        setFieldValue(
+                                                            "endDate",
+                                                            date
+                                                        )
+                                                    }
+                                                    value={values.endDate}
+                                                />
+                                            </Space>
+                                        </Form.Item>
+                                    </Col>
+                                    <Col xs={24}>
+                                        <Form.Item
+                                            label="Hướng dẫn sử dụng"
+                                            validateStatus={
+                                                touched.instructions &&
+                                                errors.instructions
+                                                    ? "error"
+                                                    : ""
+                                            }
+                                            help={
+                                                touched.instructions &&
+                                                errors.instructions
+                                            }
+                                        >
+                                            <TextArea
+                                                name="instructions"
+                                                onChange={handleChange}
+                                                onBlur={handleBlur}
+                                                value={values.instructions}
+                                                placeholder="Nhập hướng dẫn sử dụng chi tiết"
+                                                rows={4}
+                                            />
+                                        </Form.Item>
+                                    </Col>
+                                </Row>
+
+                                <Form.Item>
+                                    <div
+                                        style={{
+                                            display: "flex",
+                                            justifyContent: "flex-end",
+                                            marginTop: 24,
+                                        }}
+                                    >
+                                        <Button
+                                            type="primary"
+                                            htmlType="submit"
+                                            loading={isSubmitting}
+                                        >
+                                            Gửi thông tin
+                                        </Button>
+                                    </div>
+                                </Form.Item>
+                            </Form>
+                        )}
+                    </Formik>
+                </Modal>
+            </div>
+        </div>
+    );
 };
 
 export default MedicineInfo;

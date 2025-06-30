@@ -548,7 +548,10 @@ export const getVaccinationDetail = async (req, res) => {
     try {
         const { campaignId, studentId } = req.params;
         const vaccination = await prisma.vaccinations.findFirst({
-            where: { campaignId, studentId },
+            where: {
+                studentId,
+                campaign: { id: campaignId },
+            },
             include: {
                 campaign: true,
                 nurse: { include: { user: true } },
@@ -602,5 +605,78 @@ export const getVaccinationHistory = async (req, res) => {
         res.json({ success: true, data: vaccinations });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+export const getStudentVaccinationCampaigns = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const parentId = req.user.parentProfile.id;
+
+        // Verify that the student belongs to the parent using StudentParent relationship
+        const studentParent = await prisma.studentParent.findFirst({
+            where: {
+                parentId: parentId,
+                studentId: studentId,
+            },
+            include: {
+                student: true,
+            },
+        });
+
+        if (!studentParent) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Không tìm thấy học sinh hoặc bạn không có quyền truy cập",
+            });
+        }
+
+        // Get vaccination campaigns for the student
+        const campaigns = await prisma.vaccinationCampaign.findMany({
+            where: {
+                OR: [
+                    {
+                        vaccinations: {
+                            studentId: studentId,
+                        },
+                    },
+                    {
+                        targetGrades: {
+                            hasSome: [studentParent.student.grade],
+                        },
+                        status: "ACTIVE",
+                    },
+                ],
+            },
+            include: {
+                vaccinations: true,
+            },
+            orderBy: {
+                scheduledDate: "desc",
+            },
+        });
+
+        // Transform the data
+        const transformedCampaigns = campaigns.map((campaign) => ({
+            id: campaign.id,
+            name: campaign.name,
+            description: campaign.description,
+            scheduledDate: campaign.scheduledDate,
+            deadline: campaign.deadline,
+            status: campaign.status,
+            vaccineName: campaign.vaccinations?.name || "",
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: transformedCampaigns,
+        });
+    } catch (error) {
+        console.error("Error in getStudentVaccinationCampaigns:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Đã xảy ra lỗi khi lấy thông tin chiến dịch tiêm chủng",
+        });
     }
 };

@@ -1,5 +1,11 @@
-import { Modal, Descriptions } from "antd";
+import { Modal, Typography, Row, Col, Tag, Divider } from "antd";
 import dayjs from "dayjs";
+import {
+    CheckCircleTwoTone,
+    ExclamationCircleTwoTone,
+    UserOutlined,
+    MedicineBoxOutlined,
+} from "@ant-design/icons";
 
 const getDoseLabel = (dose) => {
     switch (dose) {
@@ -10,7 +16,7 @@ const getDoseLabel = (dose) => {
         case "BOOSTER":
             return "Liều nhắc lại";
         default:
-            return dose;
+            return dose || "-";
     }
 };
 
@@ -25,7 +31,22 @@ const getReactionLabel = (reaction) => {
         case "SEVERE":
             return "Phản ứng nặng";
         default:
-            return reaction;
+            return reaction || "-";
+    }
+};
+
+const getStatusTag = (status) => {
+    switch (status) {
+        case "COMPLETED":
+            return <Tag color="green">Đã tiêm</Tag>;
+        case "SCHEDULED":
+            return <Tag color="blue">Đã lên lịch</Tag>;
+        case "CANCELLED":
+            return <Tag color="red">Đã hủy</Tag>;
+        case "POSTPONED":
+            return <Tag color="orange">Hoãn</Tag>;
+        default:
+            return <Tag>{status || "-"}</Tag>;
     }
 };
 
@@ -34,7 +55,8 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
         <Modal
             title={
                 <div className="text-center">
-                    <span className="text-xl font-bold text-[#36ae9a]">
+                    <span className="text-2xl font-bold text-[#36ae9a]">
+                        <MedicineBoxOutlined style={{ marginRight: 8 }} />
                         Chi tiết tiêm chủng
                     </span>
                 </div>
@@ -43,85 +65,147 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
             onCancel={onClose}
             footer={null}
             width={700}
-            style={{
-                borderRadius: "1rem",
-            }}
-            bodyStyle={{
-                padding: "24px",
-            }}
+            style={{ borderRadius: "1rem" }}
+            bodyStyle={{ padding: "32px 24px" }}
         >
-            <Descriptions
-                bordered
-                column={2}
-                size="middle"
-                labelStyle={{
-                    fontWeight: 600,
-                    color: "#36ae9a",
-                    backgroundColor: "#f6fcfa",
-                }}
-                contentStyle={{
-                    backgroundColor: "#fff",
-                }}
-            >
-                <Descriptions.Item label="Tên chiến dịch">
-                    {vaccination?.campaign?.name || "Không có"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày tiêm">
-                    {vaccination?.administeredDate
-                        ? dayjs(vaccination.administeredDate).format(
-                              "DD/MM/YYYY"
-                          )
-                        : "Chưa có"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Số lô vắc xin">
-                    {vaccination?.batchNumber || "Không có"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Loại liều">
-                    {getDoseLabel(vaccination?.dose)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Y tá thực hiện">
-                    {vaccination?.nurse?.user?.fullName || "Không có"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Học sinh">
-                    {vaccination?.student?.user?.fullName || "Không có"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Tác dụng phụ" span={2}>
+            {vaccination?.notFound ? (
+                <div
+                    style={{ textAlign: "center", padding: 32, color: "#888" }}
+                >
+                    <ExclamationCircleTwoTone
+                        twoToneColor="#faad14"
+                        style={{ fontSize: 40, marginBottom: 12 }}
+                    />
+                    <div style={{ fontSize: 18 }}>{vaccination.message}</div>
+                </div>
+            ) : (
+                <>
+                    {/* Thông tin chính */}
+                    <Row gutter={[16, 16]} align="middle">
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Học sinh
+                            </div>
+                            <div className="font-semibold flex items-center gap-2">
+                                <UserOutlined />
+                                {vaccination?.student?.user?.fullName ||
+                                    "Không có"}
+                            </div>
+                        </Col>
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Chiến dịch
+                            </div>
+                            <div className="font-semibold">
+                                {vaccination?.campaign?.name || "Không có"}
+                            </div>
+                        </Col>
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Loại vắc xin
+                            </div>
+                            <div className="font-semibold">
+                                {vaccination?.vaccineName ||
+                                    vaccination?.vaccine?.name ||
+                                    "-"}
+                            </div>
+                        </Col>
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Ngày tiêm
+                            </div>
+                            <div className="font-semibold">
+                                {vaccination?.administeredDate ? (
+                                    dayjs(vaccination.administeredDate).format(
+                                        "DD/MM/YYYY"
+                                    )
+                                ) : (
+                                    <span className="text-gray-400">
+                                        Chưa tiêm
+                                    </span>
+                                )}
+                            </div>
+                        </Col>
+                    </Row>
+                    <Divider />
+                    {/* Thông tin bổ sung */}
+                    <Row gutter={[16, 16]}>
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Loại liều
+                            </div>
+                            <div>{getDoseLabel(vaccination?.dose)}</div>
+                        </Col>
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Số lô vắc xin
+                            </div>
+                            <div>{vaccination?.batchNumber || "-"}</div>
+                        </Col>
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Y tá thực hiện
+                            </div>
+                            <div>
+                                {vaccination?.nurse?.user?.fullName || "-"}
+                            </div>
+                        </Col>
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Trạng thái
+                            </div>
+                            <div>{getStatusTag(vaccination?.status)}</div>
+                        </Col>
+                    </Row>
+                    <Divider />
+                    {/* Tác dụng phụ & phản ứng */}
+                    <Row gutter={[16, 16]}>
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Tác dụng phụ
+                            </div>
+                            <div
+                                style={{
+                                    background: "#f6fcfa",
+                                    borderRadius: 6,
+                                    padding: 8,
+                                    minHeight: 32,
+                                }}
+                            >
+                                {vaccination?.sideEffects || "Không có"}
+                            </div>
+                        </Col>
+                        <Col span={12}>
+                            <div className="mb-2 text-base text-gray-500">
+                                Phản ứng sau tiêm
+                            </div>
+                            <div
+                                style={{
+                                    background: "#f6fcfa",
+                                    borderRadius: 6,
+                                    padding: 8,
+                                    minHeight: 32,
+                                }}
+                            >
+                                {getReactionLabel(vaccination?.reaction)}
+                            </div>
+                        </Col>
+                    </Row>
+                    <Divider />
+                    {/* Ghi chú */}
+                    <div className="mb-2 text-base text-gray-500">Ghi chú</div>
                     <div
                         style={{
-                            backgroundColor: "#f6fcfa",
-                            padding: "8px 12px",
-                            borderRadius: "6px",
-                            minHeight: "20px",
-                        }}
-                    >
-                        {vaccination?.sideEffects || "Không có"}
-                    </div>
-                </Descriptions.Item>
-                <Descriptions.Item label="Phản ứng sau tiêm" span={2}>
-                    <div
-                        style={{
-                            backgroundColor: "#f6fcfa",
-                            padding: "8px 12px",
-                            borderRadius: "6px",
-                            minHeight: "20px",
-                        }}
-                    >
-                        {getReactionLabel(vaccination?.reaction)}
-                    </div>
-                </Descriptions.Item>
-                <Descriptions.Item label="Ghi chú" span={2}>
-                    <div
-                        style={{
-                            backgroundColor: "#f6fcfa",
-                            padding: "8px 12px",
-                            borderRadius: "6px",
-                            minHeight: "20px",
+                            background: "#f6fcfa",
+                            borderRadius: 6,
+                            padding: 8,
+                            minHeight: 32,
                         }}
                     >
                         {vaccination?.notes || "Không có"}
                     </div>
-                </Descriptions.Item>
-            </Descriptions>
+                </>
+            )}
         </Modal>
     );
 };

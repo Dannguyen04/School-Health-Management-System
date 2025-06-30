@@ -16,7 +16,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import NotificationItem from "./NotificationItem";
-import NotificationDetailModal from "./NotificationDetailModal";
 
 const { Title } = Typography;
 
@@ -26,7 +25,6 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
     const [activeTab, setActiveTab] = useState("all");
     const [dropdownVisible, setDropdownVisible] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState(null);
-    const [detailModalVisible, setDetailModalVisible] = useState(false);
 
     const {
         notifications,
@@ -81,13 +79,21 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
                 navigate("/manager/vaccination-campaigns");
                 break;
             case "vaccination":
-                navigate("/user/vaccination-schedule");
+                navigate("/user/medical-schedule");
                 break;
             case "medical_check":
                 navigate("/user/health-checkup-results");
                 break;
             case "medication":
                 navigate("/user/medicine-info");
+                break;
+            case "vaccination_campaign_created":
+            case "vaccination_campaign_updated":
+            case "vaccination_campaign_deleted":
+            case "vaccine_created":
+            case "vaccine_updated":
+            case "vaccine_deleted":
+                navigate("/manager/vaccination-campaigns");
                 break;
             case "medical_event":
                 // Mở modal chi tiết cho medical event
@@ -107,7 +113,6 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
 
     const handleViewDetail = (notification) => {
         setSelectedNotification(notification);
-        setDetailModalVisible(true);
     };
 
     const handleRefresh = () => {
@@ -121,6 +126,17 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
                 return "🏥";
             case "vaccination":
                 return "💉";
+            case "vaccination_consent":
+                return "📋";
+            case "vaccination_consent_update":
+                return "✅";
+            case "vaccination_campaign_created":
+            case "vaccination_campaign_updated":
+            case "vaccination_campaign_deleted":
+            case "vaccine_created":
+            case "vaccine_updated":
+            case "vaccine_deleted":
+                return "📋";
             case "medical_check":
                 return "👨‍⚕️";
             case "medication":
@@ -136,6 +152,22 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
                 return "Sự kiện y tế";
             case "vaccination":
                 return "Tiêm chủng";
+            case "vaccination_consent":
+                return "Phiếu đồng ý tiêm chủng";
+            case "vaccination_consent_update":
+                return "Cập nhật phiếu đồng ý";
+            case "vaccination_campaign_created":
+                return "Chiến dịch tiêm chủng";
+            case "vaccination_campaign_updated":
+                return "Cập nhật chiến dịch";
+            case "vaccination_campaign_deleted":
+                return "Xóa chiến dịch";
+            case "vaccine_created":
+                return "Vaccine mới";
+            case "vaccine_updated":
+                return "Cập nhật vaccine";
+            case "vaccine_deleted":
+                return "Xóa vaccine";
             case "medical_check":
                 return "Kiểm tra y tế";
             case "medication":
@@ -370,20 +402,6 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
                     />
                 </Badge>
             </Dropdown>
-
-            {/* Detail modal */}
-            <NotificationDetailModal
-                visible={detailModalVisible}
-                notification={selectedNotification}
-                onClose={() => {
-                    setDetailModalVisible(false);
-                    setSelectedNotification(null);
-                }}
-                onMarkAsRead={markAsRead}
-                onArchive={archiveNotification}
-                onRestore={restoreNotification}
-                onDelete={deleteNotification}
-            />
         </>
     );
 };
