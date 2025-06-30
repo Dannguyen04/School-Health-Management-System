@@ -53,7 +53,7 @@ const UserProfile = () => {
                 }
             } catch (error) {
                 console.error("Error fetching user profile:", error);
-                message.error("Failed to load user profile");
+                message.error("Tải hồ sơ người dùng thất bại");
             } finally {
                 setLoading(false);
             }
@@ -81,7 +81,7 @@ const UserProfile = () => {
             if (response.data.success) {
                 setUserData((prev) => ({ ...prev, ...values }));
                 setIsEditing(false);
-                message.success("Profile updated successfully");
+                message.success("Cập nhật hồ sơ thành công");
 
                 // Update auth context with new user data
                 if (user) {
@@ -93,7 +93,7 @@ const UserProfile = () => {
             }
         } catch (error) {
             console.error("Error updating profile:", error);
-            message.error("Failed to update profile");
+            message.error("Cập nhật hồ sơ thất bại");
         } finally {
             setLoading(false);
         }

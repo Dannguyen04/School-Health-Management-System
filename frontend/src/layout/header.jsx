@@ -40,10 +40,10 @@ export const Header = ({ collapsed, setCollapsed }) => {
     const handleLogout = async () => {
         try {
             await logout();
-            message.success("Logged out successfully");
+            message.success("Đăng xuất thành công");
             navigate("/auth");
         } catch {
-            message.error("Failed to logout");
+            message.error("Đăng xuất thất bại");
         }
     };
 

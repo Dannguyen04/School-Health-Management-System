@@ -38,7 +38,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
             if (response.data.success) {
                 const { user, token } = response.data;
                 login(user, token);
-                message.success("Log in successfully");
+                message.success("Đăng nhập thành công");
                 if (user.role === "ADMIN") {
                     navigate("/admin");
                 } else if (user.role === "SCHOOL_NURSE") {
