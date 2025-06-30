@@ -5,7 +5,6 @@ import { HiOutlineClock } from "react-icons/hi";
 import { FaHeartbeat } from "react-icons/fa";
 import ServicesCard from "../parentlayout/ServicesCard";
 import { useAuth } from "../../context/authContext";
-import MedicalEvents from "../../pages/MedicalEvents";
 
 const Services = ({ onServiceClick, isHomepage }) => {
     const { user } = useAuth();
@@ -91,9 +90,6 @@ const Services = ({ onServiceClick, isHomepage }) => {
                         onClick={getOnClick()}
                     />
                 </div>
-            </div>
-            <div className="lg:px-32 px-5 pb-20">
-                <MedicalEvents />
             </div>
         </div>
     );

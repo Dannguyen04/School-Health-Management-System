@@ -186,20 +186,21 @@ const ConsentForms = () => {
 
     // UI
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#f6fcfa] to-[#e8f5f2] py-10 px-2">
-            <div className="max-w-4xl mx-auto mt-8">
-                {/* Header */}
-                <div className="flex flex-col items-center mb-8 pt-8">
-                    <div className="flex items-center gap-3 mb-2">
-                        <FileTextOutlined className="text-3xl text-[#36ae9a]" />
-                        <Title level={2} className="!mb-0 !text-[#36ae9a]">
-                            Phiếu đồng ý y tế
-                        </Title>
+        <div className="min-h-screen bg-[#f6fcfa]">
+            <div className="w-full max-w-4xl mx-auto px-4 pt-24">
+                {/* Header đồng bộ */}
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-4">
+                        <FileTextOutlined className="text-[#36ae9a]" />
+                        <span>Quản lý sức khỏe học sinh</span>
                     </div>
-                    <Text type="secondary" className="text-center">
-                        Quản lý và xác nhận các phiếu đồng ý cho hoạt động y tế
-                        của học sinh
-                    </Text>
+                    <h1 className="text-4xl font-bold text-gray-800 mb-4">
+                        Phiếu đồng ý y tế
+                    </h1>
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                        Quản lý và xác nhận các phiếu đồng ý cho hoạt động y tế,
+                        tiêm chủng, khám sức khỏe của học sinh.
+                    </p>
                 </div>
 
                 {/* Tabs */}

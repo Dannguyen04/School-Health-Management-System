@@ -1,9 +1,21 @@
 import { CalendarOutlined, HistoryOutlined } from "@ant-design/icons";
-import { Card, Spin, Table, Tabs, Tooltip } from "antd";
-import axios from "axios";
+import {
+    Card,
+    Spin,
+    Table,
+    Tabs,
+    Tooltip,
+    Typography,
+    Select,
+    Space,
+    message,
+    Empty,
+} from "antd";
 import { useEffect, useState } from "react";
+import { parentAPI } from "../../utils/api";
 
 const { TabPane } = Tabs;
+const { Title } = Typography;
 
 const columns = [
     {
@@ -49,21 +61,25 @@ const columns = [
         key: "status",
         align: "center",
         width: 160,
-        render: (text) => {
-            if (text === "Scheduled") {
+        render: (status) => {
+            const style = {
+                fontWeight: 600,
+                fontSize: 15,
+                padding: "6px 12px",
+                borderRadius: 12,
+                display: "inline-block",
+                minWidth: 0,
+                textAlign: "center",
+                whiteSpace: "nowrap",
+            };
+
+            if (status === "ACTIVE" || status === "Scheduled") {
                 return (
                     <span
                         style={{
+                            ...style,
                             background: "#e6f0fd",
                             color: "#1976d2",
-                            fontWeight: 600,
-                            fontSize: 15,
-                            padding: "6px 12px",
-                            borderRadius: 12,
-                            display: "inline-block",
-                            minWidth: 0,
-                            textAlign: "center",
-                            whiteSpace: "nowrap",
                         }}
                     >
                         Đang diễn ra
@@ -73,16 +89,9 @@ const columns = [
                 return (
                     <span
                         style={{
+                            ...style,
                             background: "#e6f7ec",
                             color: "#2e7d32",
-                            fontWeight: 600,
-                            fontSize: 15,
-                            padding: "6px 12px",
-                            borderRadius: 12,
-                            display: "inline-block",
-                            minWidth: 0,
-                            textAlign: "center",
-                            whiteSpace: "nowrap",
                         }}
                     >
                         Hoàn tất
@@ -94,125 +103,147 @@ const columns = [
 ];
 
 const VaccinationSchedule = () => {
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [records, setRecords] = useState([]);
+    const [children, setChildren] = useState([]);
+    const [selectedStudent, setSelectedStudent] = useState(null);
 
     useEffect(() => {
-        const fetchCampaigns = async () => {
-            setLoading(true);
-            try {
-                const token = localStorage.getItem("token");
-                const res = await axios.get(
-                    "/api/parents/vaccination-campaigns",
-                    {
-                        headers: {
-                            Authorization: token
-                                ? `Bearer ${token}`
-                                : undefined,
-                        },
-                    }
-                );
-                if (
-                    res.data &&
-                    res.data.success &&
-                    Array.isArray(res.data.data)
-                ) {
-                    const mapped = res.data.data.map((item, idx) => ({
-                        key: item.id || idx,
-                        date: item.scheduledDate
-                            ? new Date(item.scheduledDate).toLocaleDateString()
-                            : "",
-                        deadline: item.deadline
-                            ? new Date(item.deadline).toLocaleDateString()
-                            : "",
-                        vaccineName: item.vaccine?.name || "",
-                        type: "Vaccination",
-                        description: item.name || "",
-                        status:
-                            item.status === "ACTIVE"
-                                ? "Scheduled"
-                                : "Completed",
-                    }));
-                    setRecords(mapped);
-                } else {
-                    setRecords([]);
-                }
-            } catch {
-                setRecords([]);
-            }
-            setLoading(false);
-        };
-        fetchCampaigns();
+        fetchChildren();
     }, []);
 
+    useEffect(() => {
+        if (selectedStudent) {
+            fetchCampaigns();
+        }
+    }, [selectedStudent]);
+
+    const fetchChildren = async () => {
+        try {
+            setLoading(true);
+            const response = await parentAPI.getChildren();
+            if (response?.data?.success) {
+                const childrenData = response.data.data || [];
+                setChildren(childrenData);
+                if (childrenData.length > 0) {
+                    const firstChild = childrenData[0];
+                    setSelectedStudent(firstChild.id || firstChild.studentId);
+                }
+            } else {
+                message.error(
+                    response?.data?.message ||
+                        "Không thể lấy danh sách học sinh"
+                );
+            }
+        } catch (error) {
+            console.error("Error fetching children:", error);
+            message.error("Không thể lấy danh sách học sinh");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const fetchCampaigns = async () => {
+        if (!selectedStudent) return;
+
+        setLoading(true);
+        try {
+            const response = await parentAPI.getVaccinationCampaigns(
+                selectedStudent
+            );
+
+            if (response?.data?.success && Array.isArray(response.data.data)) {
+                const mapped = response.data.data.map((item, idx) => ({
+                    key: item.id || idx,
+                    date: item.scheduledDate
+                        ? new Date(item.scheduledDate).toLocaleDateString(
+                              "vi-VN"
+                          )
+                        : "",
+                    deadline: item.deadline
+                        ? new Date(item.deadline).toLocaleDateString("vi-VN")
+                        : "",
+                    vaccineName: item.vaccine?.name || "",
+                    type: "Tiêm chủng",
+                    description: item.description || item.name || "",
+                    status: item.status || "ACTIVE",
+                }));
+                setRecords(mapped);
+            } else {
+                setRecords([]);
+                if (response?.data?.message) {
+                    message.warning(response.data.message);
+                }
+            }
+        } catch (error) {
+            console.error("Error fetching vaccination campaigns:", error);
+            message.error("Không thể lấy lịch tiêm chủng");
+            setRecords([]);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleStudentChange = (value) => {
+        setSelectedStudent(value);
+    };
+
+    if (loading && !records.length) {
+        return (
+            <div className="min-h-screen bg-[#f6fcfa] flex justify-center items-center">
+                <Spin size="large" />
+            </div>
+        );
+    }
+
     return (
-        <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa] ">
-            <div className="w-full max-w-5xl mx-auto px-4">
-                <Card
-                    className="w-full rounded-3xl shadow-lg border-0 mt-12"
-                    style={{
-                        background: "#fff",
-                        borderRadius: "1.5rem",
-                        boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
-                        padding: "2rem",
-                        marginTop: "3rem",
-                        width: "100%",
-                        maxWidth: "100%",
-                    }}
-                >
-                    <h2 className="text-2xl font-bold text-[#36ae9a] mb-6 text-center">
-                        Lịch tiêm & khám của học sinh
-                    </h2>
-                    <Tabs defaultActiveKey="1" centered>
-                        <TabPane
-                            tab={
-                                <span>
-                                    <CalendarOutlined /> Lịch sắp tới
-                                </span>
-                            }
-                            key="1"
-                        >
-                            {loading ? (
-                                <div className="flex justify-center py-8">
-                                    <Spin />
-                                </div>
-                            ) : (
-                                <Table
-                                    dataSource={records.filter(
-                                        (r) => r.status === "Scheduled"
-                                    )}
-                                    columns={columns}
-                                    pagination={false}
-                                    className="rounded-xl"
-                                    style={{ padding: 12 }}
-                                />
-                            )}
-                        </TabPane>
-                        <TabPane
-                            tab={
-                                <span>
-                                    <HistoryOutlined /> Lịch sử
-                                </span>
-                            }
-                            key="2"
-                        >
-                            {loading ? (
-                                <div className="flex justify-center py-8">
-                                    <Spin />
-                                </div>
-                            ) : (
-                                <Table
-                                    dataSource={records.filter(
-                                        (r) => r.status === "Completed"
-                                    )}
-                                    columns={columns}
-                                    pagination={false}
-                                    className="rounded-xl"
-                                    style={{ padding: 12 }}
-                                />
-                            )}
-                        </TabPane>
-                    </Tabs>
+        <div className="min-h-screen bg-[#f6fcfa]">
+            <div className="w-full max-w-5xl mx-auto px-4 pt-24">
+                <div className="text-center mb-8">
+                    <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-4">
+                        <CalendarOutlined />
+                        <span>Lịch tiêm chủng</span>
+                    </div>
+                    <Title level={2} className="!mb-0">
+                        Lịch tiêm chủng của học sinh
+                    </Title>
+                </div>
+
+                <Card className="mb-8">
+                    <div className="mb-4">
+                        <Space>
+                            <span>Chọn học sinh:</span>
+                            <Select
+                                value={selectedStudent}
+                                onChange={handleStudentChange}
+                                style={{ width: 200 }}
+                                loading={loading}
+                                placeholder="Chọn học sinh"
+                            >
+                                {children.map((child) => (
+                                    <Select.Option
+                                        key={child.id || child.studentId}
+                                        value={child.id || child.studentId}
+                                    >
+                                        {child.fullName || child.name}
+                                    </Select.Option>
+                                ))}
+                            </Select>
+                        </Space>
+                    </div>
+
+                    <Table
+                        columns={columns}
+                        dataSource={records}
+                        loading={loading}
+                        locale={{
+                            emptyText: <Empty description="Không có dữ liệu" />,
+                        }}
+                        pagination={{
+                            pageSize: 5,
+                            showTotal: (total) => `Tổng số ${total} mục`,
+                        }}
+                    />
                 </Card>
             </div>
         </div>

@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Table, Button, Typography, Card, Spin } from "antd";
+import { Table, Button, Typography, Spin, Select, Space } from "antd";
 import VaccinationDetailModal from "../components/parent/VaccinationDetailModal";
 import { parentAPI } from "../utils/api";
 import dayjs from "dayjs";
+import { HeartOutlined } from "@ant-design/icons";
 
 const { Title } = Typography;
 
@@ -11,6 +12,12 @@ const VaccinationHistory = () => {
     const [selected, setSelected] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [loading, setLoading] = useState(true);
+    // Giả lập danh sách học sinh
+    const [children] = useState([
+        { value: "child1", label: "Nguyễn Văn A" },
+        { value: "child2", label: "Nguyễn Văn B" },
+    ]);
+    const [selectedChild, setSelectedChild] = useState("child1");
 
     useEffect(() => {
         const fetchData = async () => {
@@ -25,7 +32,7 @@ const VaccinationHistory = () => {
             }
         };
         fetchData();
-    }, []);
+    }, [selectedChild]);
 
     const columns = [
         {
@@ -89,39 +96,45 @@ const VaccinationHistory = () => {
         },
     ];
 
-    if (loading) {
-        return (
-            <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa]">
-                <div className="w-full max-w-5xl mx-auto px-4">
-                    <div style={{ padding: "24px", textAlign: "center" }}>
-                        <Spin size="large" />
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa]">
-            <div className="w-full max-w-5xl mx-auto px-4">
-                <Card
-                    className="w-full rounded-3xl shadow-lg border-0 mt-12"
-                    style={{
-                        background: "#fff",
-                        borderRadius: "1.5rem",
-                        boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
-                        padding: "2rem",
-                        marginTop: "3rem",
-                        maxWidth: "100%",
-                    }}
-                >
+        <div className="min-h-screen bg-[#f6fcfa]">
+            <div className="w-full max-w-5xl mx-auto px-4 pt-24">
+                {/* Header theo mẫu HealthProfile */}
+                <div className="text-center mb-4">
+                    <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-2">
+                        <HeartOutlined className="text-[#36ae9a]" />
+                        <span>Quản lý sức khỏe học sinh</span>
+                    </div>
+                    <h1 className="text-4xl font-bold text-gray-800 mb-2">
+                        Lịch sử tiêm chủng
+                    </h1>
+                    <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                        Xem lại toàn bộ lịch sử tiêm chủng của học sinh để theo
+                        dõi quá trình bảo vệ sức khỏe.
+                    </p>
+                </div>
+                {/* Bỏ Card, chỉ giữ Select và Table */}
+                <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-4 gap-4">
                     <Title
                         level={2}
-                        className="text-2xl font-bold text-[#36ae9a] mb-6 text-center"
+                        className="!text-[#36ae9a] !mb-0 text-center md:text-left"
                     >
                         Lịch sử tiêm chủng
                     </Title>
-
+                    <Space>
+                        <Select
+                            style={{ width: 200 }}
+                            value={selectedChild}
+                            onChange={setSelectedChild}
+                            options={children}
+                        />
+                    </Space>
+                </div>
+                {loading ? (
+                    <div style={{ padding: "24px", textAlign: "center" }}>
+                        <Spin size="large" />
+                    </div>
+                ) : (
                     <Table
                         dataSource={vaccinations}
                         columns={columns}
@@ -136,9 +149,8 @@ const VaccinationHistory = () => {
                         className="rounded-xl"
                         style={{ padding: 12 }}
                     />
-                </Card>
+                )}
             </div>
-
             <VaccinationDetailModal
                 visible={modalVisible}
                 vaccination={selected}

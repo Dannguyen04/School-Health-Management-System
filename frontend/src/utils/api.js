@@ -141,6 +141,8 @@ export const parentAPI = {
     getVaccinationHistory: () => api.get("/parents/vaccination-history"),
     getVaccinationDetail: (campaignId, studentId) =>
         api.get(`/parents/vaccination-detail/${campaignId}/${studentId}`),
+    getVaccinationCampaigns: (studentId) =>
+        api.get(`/parents/students/${studentId}/vaccination-campaigns`),
 
     // Notification operations
     getNotifications: (params) => api.get("/parents/notifications", { params }),
