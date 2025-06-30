@@ -60,6 +60,11 @@ router.get(
 // Routes for vaccination history and details
 router.get("/vaccination-history", authenticateToken, getVaccinationHistory);
 router.get(
+    "/vaccination-history/:studentId",
+    authenticateToken,
+    getVaccinationHistory
+);
+router.get(
     "/vaccination-detail/:campaignId/:studentId",
     authenticateToken,
     getVaccinationDetail

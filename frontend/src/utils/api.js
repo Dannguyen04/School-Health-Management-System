@@ -142,7 +142,10 @@ export const parentAPI = {
         api.get(`/parents/students?parentId=${parentId}`),
 
     // Vaccination operations
-    getVaccinationHistory: () => api.get("/parents/vaccination-history"),
+    getVaccinationHistory: (studentId) =>
+        studentId
+            ? api.get(`/parents/vaccination-history/${studentId}`)
+            : api.get("/parents/vaccination-history"),
     getVaccinationDetail: (campaignId, studentId) =>
         api.get(`/parents/vaccination-detail/${campaignId}/${studentId}`),
     getVaccinationCampaigns: (studentId) =>
