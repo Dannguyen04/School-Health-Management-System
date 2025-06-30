@@ -5,11 +5,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-generator erd {
-  provider = "prisma-erd-generator"
-  output   = "./ERD.md"
-  format   = "mermaid"
-}
 
 datasource db {
   provider = "mongodb"
@@ -388,7 +383,8 @@ model VaccinationCampaign {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   description   String?
-  vaccinationId String         @db.ObjectId
+  vaccinationId String         @unique @db.ObjectId
+  vaccinations       vaccinations   @relation(fields: [vaccinationId], references: [id])
   targetGrades  String[]
   scheduledDate DateTime
   deadline      DateTime
@@ -400,13 +396,12 @@ model VaccinationCampaign {
   // Relations
   notifications Notification[]
   consents      VaccinationConsent[]
-  vaccinations  vaccinations[] 
 
   @@map("vaccination_campaigns")
 }
 
 model vaccinations {
-  id               String             @id @default(auto()) @map("_id") @db.ObjectId
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
   name             String
   requirement      VaccineRequirement
   expiredDate      DateTime
@@ -414,8 +409,8 @@ model vaccinations {
   dose             DoseType?
   sideEffects      String?
   notes            String?
-  studentId        String?            @db.ObjectId
-  nurseId          String?            @db.ObjectId
+  studentId        String?  @db.ObjectId
+  nurseId          String?  @db.ObjectId
   batchNumber      String?
   status           VaccinationStatus  @default(UNSCHEDULED)
   followUpRequired Boolean            @default(false)
@@ -427,8 +422,9 @@ model vaccinations {
   // Relations
   student   Student?      @relation(fields: [studentId], references: [id])
   nurse     SchoolNurse?  @relation(fields: [nurseId], references: [id])
-  campaignId String?      @db.ObjectId
-  campaign   VaccinationCampaign? @relation(fields: [campaignId], references: [id])
+  campaign  VaccinationCampaign?
+
+  @@map("vaccinations")
 }
 
 model VaccinationConsent {
