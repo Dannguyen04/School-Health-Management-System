@@ -76,17 +76,17 @@ const BlogCard = ({
             {/* Content */}
             <div className="p-6">
                 {/* Title */}
-                <h3 className="text-xl font-bold text-gray-800 mb-3 line-clamp-2 group-hover:text-[#36ae9a] transition-colors duration-300">
+                <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 group-hover:text-[#36ae9a] transition-colors duration-300">
                     {headlines}
                 </h3>
 
                 {/* Excerpt */}
-                <p className="text-gray-600 mb-4 line-clamp-3 leading-relaxed">
+                <p className="text-gray-600 mb-3 text-sm line-clamp-3 leading-relaxed">
                     {excerpt}
                 </p>
 
                 {/* Metadata */}
-                <div className="flex items-center justify-between text-sm text-gray-500">
+                <div className="flex items-center justify-between text-xs text-gray-500">
                     <Space size="small">
                         <div className="flex items-center gap-1">
                             <CalendarOutlined />
@@ -104,8 +104,8 @@ const BlogCard = ({
                 </div>
 
                 {/* Read More Button */}
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                    <div className="text-[#36ae9a] font-medium group-hover:text-[#2a8a7a] transition-colors duration-300">
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                    <div className="text-[#36ae9a] font-medium text-sm group-hover:text-[#2a8a7a] transition-colors duration-300">
                         Đọc thêm →
                     </div>
                 </div>

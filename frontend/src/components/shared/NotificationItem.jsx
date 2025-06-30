@@ -90,8 +90,8 @@ const NotificationItem = ({
         >
             <div
                 style={{
-                    fontSize: "28px",
-                    marginTop: "4px",
+                    fontSize: "22px",
+                    marginTop: "2px",
                     opacity: notification.status === "READ" ? 0.7 : 1,
                     transition: "opacity 0.3s ease",
                 }}
@@ -103,10 +103,10 @@ const NotificationItem = ({
                     style={{
                         fontWeight:
                             notification.status !== "READ" ? "600" : "400",
-                        marginBottom: "6px",
+                        marginBottom: "4px",
                         color:
                             notification.status !== "READ" ? "#1890ff" : "#000",
-                        fontSize: "14px",
+                        fontSize: "13px",
                         lineHeight: "1.4",
                         transition: "color 0.3s ease",
                     }}
@@ -115,9 +115,9 @@ const NotificationItem = ({
                 </div>
                 <div
                     style={{
-                        fontSize: "13px",
+                        fontSize: "12px",
                         color: "#666",
-                        marginBottom: "8px",
+                        marginBottom: "6px",
                         lineHeight: "1.5",
                         display: "-webkit-box",
                         WebkitLineClamp: 2,
@@ -133,10 +133,10 @@ const NotificationItem = ({
                         justifyContent: "space-between",
                         alignItems: "center",
                         flexWrap: "wrap",
-                        gap: "8px",
+                        gap: "4px",
                     }}
                 >
-                    <Space size="small">
+                    <Space size={2}>
                         <Tooltip
                             title={moment(notification.createdAt).format(
                                 "DD/MM/YYYY HH:mm"
@@ -144,33 +144,42 @@ const NotificationItem = ({
                         >
                             <span
                                 style={{
-                                    fontSize: "11px",
+                                    fontSize: "10px",
                                     color: "#999",
                                     display: "flex",
                                     alignItems: "center",
                                 }}
                             >
                                 <ClockCircleOutlined
-                                    style={{ marginRight: "4px" }}
+                                    style={{
+                                        marginRight: "2px",
+                                        fontSize: "12px",
+                                    }}
                                 />
                                 {getTimeAgo(notification.createdAt)}
                             </span>
                         </Tooltip>
-                        <span style={{ fontSize: "10px" }}>
+                        <span style={{ fontSize: "9px" }}>
                             {getTypeLabel(notification.type)}
+                            {notification.severity &&
+                                ` - ${getSeverityLabel(notification.severity)}`}
                         </span>
                     </Space>
-                    <Space size="small">
+                    <Space size={2}>
                         <Tooltip title="Xóa thông báo">
                             <Button
                                 type="text"
                                 size="small"
-                                icon={<DeleteOutlined />}
+                                icon={
+                                    <DeleteOutlined
+                                        style={{ fontSize: "13px" }}
+                                    />
+                                }
                                 onClick={handleDelete}
                                 danger
                                 style={{
                                     border: "none",
-                                    padding: "4px 8px",
+                                    padding: "2px 6px",
                                 }}
                             />
                         </Tooltip>
