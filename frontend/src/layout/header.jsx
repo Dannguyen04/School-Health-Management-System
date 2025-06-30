@@ -14,6 +14,8 @@ export const Header = ({ collapsed, setCollapsed }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const [toastNotification, setToastNotification] = useState(null);
+    const [dismissedNotificationId, setDismissedNotificationId] =
+        useState(null);
 
     const { notifications, markAsRead } = useNotifications(user?.id, {
         autoRefresh: true,
@@ -24,15 +26,16 @@ export const Header = ({ collapsed, setCollapsed }) => {
     useEffect(() => {
         if (notifications.length > 0) {
             const latestNotification = notifications[0];
-            // Chỉ hiển thị toast cho thông báo mới (SENT) và chưa được hiển thị
+            // Chỉ hiển thị toast cho thông báo mới (SENT) và chưa bị đóng
             if (
                 latestNotification.status === "SENT" &&
-                latestNotification.id !== toastNotification?.id
+                latestNotification.id !== toastNotification?.id &&
+                latestNotification.id !== dismissedNotificationId
             ) {
                 setToastNotification(latestNotification);
             }
         }
-    }, [notifications, toastNotification]);
+    }, [notifications, toastNotification, dismissedNotificationId]);
 
     const handleLogout = async () => {
         try {
@@ -58,6 +61,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
     };
 
     const handleToastClose = () => {
+        setDismissedNotificationId(toastNotification?.id);
         setToastNotification(null);
     };
 

@@ -12,6 +12,8 @@ const Navbar = () => {
     const [menu, setMenu] = useState(false);
     const [scrolled, setScrolled] = useState(false);
     const [toastNotification, setToastNotification] = useState(null);
+    const [dismissedNotificationId, setDismissedNotificationId] =
+        useState(null);
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuth();
@@ -37,15 +39,15 @@ const Navbar = () => {
     useEffect(() => {
         if (notifications.length > 0) {
             const latestNotification = notifications[0];
-            // Chỉ hiển thị toast cho thông báo mới (SENT) và chưa được hiển thị
             if (
                 latestNotification.status === "SENT" &&
-                latestNotification.id !== toastNotification?.id
+                latestNotification.id !== toastNotification?.id &&
+                latestNotification.id !== dismissedNotificationId
             ) {
                 setToastNotification(latestNotification);
             }
         }
-    }, [notifications, toastNotification]);
+    }, [notifications, toastNotification, dismissedNotificationId]);
 
     const handleNav = (section) => {
         if (isLandingPage) {
@@ -65,6 +67,7 @@ const Navbar = () => {
     };
 
     const handleToastClose = () => {
+        setDismissedNotificationId(toastNotification?.id);
         setToastNotification(null);
     };
 
