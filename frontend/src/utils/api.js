@@ -89,6 +89,10 @@ export const nurseAPI = {
     updateBlog: (id, data) => api.put(`/nurse/blogs/${id}`, data),
     deleteBlog: (id) => api.delete(`/nurse/blogs/${id}`),
     getBlogCategories: () => api.get("/nurse/blogs/categories"),
+    uploadBlogImage: (formData) =>
+        api.post("/upload/blog-image", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        }),
 };
 
 // User API endpoints

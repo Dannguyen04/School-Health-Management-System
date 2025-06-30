@@ -56,6 +56,7 @@ const BlogManagement = () => {
         isPublished: "",
     });
     const [coverImagePreview, setCoverImagePreview] = useState(null);
+    const [coverImageError, setCoverImageError] = useState("");
 
     const categoryOptions = [
         { value: "health_tips", label: "Mẹo sức khỏe" },
@@ -354,30 +355,29 @@ const BlogManagement = () => {
         }
     };
 
-    const handleImageUpload = (file) => {
+    const handleImageUpload = async (file) => {
+        setCoverImageError("");
         // Kiểm tra định dạng file
         const isImage = file.type.startsWith("image/");
         if (!isImage) {
-            message.error(
-                `File không phải là ảnh! Định dạng hiện tại: ${
-                    file.type || "Không xác định"
-                }`
-            );
+            const errMsg = `File không phải là ảnh! Định dạng hiện tại: ${
+                file.type || "Không xác định"
+            }`;
+            setCoverImageError(errMsg);
+            message.error(errMsg);
             return false;
         }
-
         // Kiểm tra kích thước file
         const fileSizeInMB = file.size / 1024 / 1024;
-        const isLt8M = fileSizeInMB < 8;
-        if (!isLt8M) {
-            message.error(
-                `Ảnh quá lớn! Kích thước hiện tại: ${fileSizeInMB.toFixed(
-                    2
-                )}MB. Giới hạn tối đa: 8MB`
-            );
+        const isLt10M = fileSizeInMB < 10;
+        if (!isLt10M) {
+            const errMsg = `Ảnh quá lớn! Kích thước hiện tại: ${fileSizeInMB.toFixed(
+                2
+            )}MB. Giới hạn tối đa: 10MB`;
+            setCoverImageError(errMsg);
+            message.error(errMsg);
             return false;
         }
-
         // Kiểm tra định dạng cụ thể
         const allowedTypes = [
             "image/jpeg",
@@ -387,42 +387,36 @@ const BlogManagement = () => {
             "image/webp",
         ];
         if (!allowedTypes.includes(file.type)) {
-            message.error(
-                `Định dạng ảnh không được hỗ trợ! Định dạng hiện tại: ${file.type}. Hỗ trợ: JPG, PNG, GIF, WebP`
-            );
+            const errMsg = `Định dạng ảnh không được hỗ trợ! Định dạng hiện tại: ${file.type}. Hỗ trợ: JPG, PNG, GIF, WebP`;
+            setCoverImageError(errMsg);
+            message.error(errMsg);
             return false;
         }
-
-        // Kiểm tra file có dữ liệu không
         if (file.size === 0) {
-            message.error("File ảnh trống! Vui lòng chọn file khác.");
+            const errMsg = "File ảnh trống! Vui lòng chọn file khác.";
+            setCoverImageError(errMsg);
+            message.error(errMsg);
             return false;
         }
-
+        // Upload file lên backend
+        const formData = new FormData();
+        formData.append("image", file);
         try {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const imageData = e.target.result;
-                form.setFieldValue("coverImage", imageData);
-                setCoverImagePreview(imageData);
-                message.success(
-                    `Upload ảnh thành công! Kích thước: ${fileSizeInMB.toFixed(
-                        2
-                    )}MB`
-                );
-            };
-            reader.onerror = () => {
-                message.error("Lỗi khi đọc file ảnh! Vui lòng thử lại.");
-            };
-            reader.readAsDataURL(file);
-        } catch (error) {
-            message.error(
-                "Lỗi không xác định khi xử lý ảnh! Vui lòng thử lại."
-            );
-            console.error("Image upload error:", error);
+            const res = await nurseAPI.uploadBlogImage(formData);
+            if (res.data.success) {
+                form.setFieldValue("coverImage", res.data.url);
+                setCoverImagePreview(res.data.url);
+                setCoverImageError("");
+                message.success("Upload ảnh thành công!");
+            } else {
+                setCoverImageError(res.data.error || "Lỗi upload ảnh");
+                message.error(res.data.error || "Lỗi upload ảnh");
+            }
+        } catch (err) {
+            setCoverImageError("Lỗi upload ảnh!");
+            message.error("Lỗi upload ảnh!");
         }
-
-        return false; // Prevent default upload
+        return false; // Ngăn upload mặc định
     };
 
     const columns = [
@@ -729,6 +723,7 @@ const BlogManagement = () => {
                                                 ""
                                             );
                                             setCoverImagePreview(null);
+                                            setCoverImageError("");
                                         }}
                                     >
                                         <p className="ant-upload-drag-icon">
@@ -743,10 +738,19 @@ const BlogManagement = () => {
                                         </p>
                                         <p className="ant-upload-hint">
                                             Hỗ trợ: JPG, PNG, GIF, WebP - Kích
-                                            thước tối đa 8MB
+                                            thước tối đa 10MB
                                         </p>
                                     </Dragger>
-
+                                    {coverImageError && (
+                                        <div
+                                            style={{
+                                                color: "red",
+                                                marginTop: 8,
+                                            }}
+                                        >
+                                            {coverImageError}
+                                        </div>
+                                    )}
                                     {coverImagePreview && (
                                         <div className="mt-4">
                                             <div className="flex justify-between items-center mb-2">
