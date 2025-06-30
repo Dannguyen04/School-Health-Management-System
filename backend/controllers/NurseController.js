@@ -977,17 +977,26 @@ export const getVaccinationCampaigns = async (req, res) => {
         isActive: true,
         status: "ACTIVE",
       },
-      include: {
-        vaccinations: true,
-      },
       orderBy: {
         scheduledDate: "asc",
       },
     });
 
+    const vaccineIds = campaigns.map((c) => c.vaccinationId);
+    const vaccines = await prisma.vaccinations.findMany({
+      where: { id: { in: vaccineIds } },
+      select: { id: true, name: true },
+    });
+
+    // Map lại để mỗi campaign có trường vaccination (object)
+    const campaignsWithVaccine = campaigns.map((c) => ({
+      ...c,
+      vaccination: vaccines.find((v) => v.id === c.vaccinationId) || null,
+    }));
+
     res.json({
       success: true,
-      data: campaigns,
+      data: campaignsWithVaccine,
     });
   } catch (error) {
     console.error("Error fetching vaccination campaigns:", error);
