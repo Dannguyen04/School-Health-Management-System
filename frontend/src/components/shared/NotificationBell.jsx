@@ -25,6 +25,7 @@ import { useAuth } from "../../context/authContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import { parentAPI } from "../../utils/api.js";
 import NotificationItem from "./NotificationItem.jsx";
+import VaccinationDetailModal from "../parent/VaccinationDetailModal";
 
 const { Text } = Typography;
 const { Title } = Typography;
@@ -36,6 +37,9 @@ const NotificationBell = () => {
     const [selectedNotification, setSelectedNotification] = useState(null);
     const [medicalEventDetails, setMedicalEventDetails] = useState(null);
     const [loadingDetails, setLoadingDetails] = useState(false);
+    const [vaccinationDetail, setVaccinationDetail] = useState(null);
+    const [vaccinationModalVisible, setVaccinationModalVisible] =
+        useState(false);
 
     const {
         notifications,
@@ -61,7 +65,20 @@ const NotificationBell = () => {
             markAsRead(notification.id);
         }
 
-        if (notification.type === "medical_event") {
+        if (notification.type === "vaccination_completed") {
+            try {
+                const response = await parentAPI.getVaccinationDetail(
+                    notification.vaccinationCampaignId,
+                    notification.studentId
+                );
+                if (response.data.success) {
+                    setVaccinationDetail(response.data.data);
+                    setVaccinationModalVisible(true);
+                }
+            } catch (error) {
+                console.error("Error fetching vaccination details:", error);
+            }
+        } else if (notification.type === "medical_event") {
             try {
                 setLoadingDetails(true);
                 const response = await parentAPI.getNotificationById(
@@ -368,14 +385,17 @@ const NotificationBell = () => {
                     selectedNotification &&
                     selectedNotification.status === "ARCHIVED" ? (
                         <Button
-                            key="restore"
-                            type="primary"
-                            icon={<UndoOutlined />}
+                            key="archive"
+                            icon={<InboxOutlined />}
                             onClick={() => {
-                                restoreNotification(selectedNotification.id);
+                                if (selectedNotification) {
+                                    archiveNotification(
+                                        selectedNotification.id
+                                    );
+                                }
                             }}
                         >
-                            Khôi phục
+                            Lưu trữ
                         </Button>
                     ) : (
                         <Button
@@ -667,6 +687,12 @@ const NotificationBell = () => {
                     </div>
                 )}
             </Modal>
+
+            <VaccinationDetailModal
+                visible={vaccinationModalVisible}
+                vaccination={vaccinationDetail}
+                onClose={() => setVaccinationModalVisible(false)}
+            />
         </>
     );
 };

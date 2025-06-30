@@ -1340,7 +1340,7 @@ export const performVaccination = async (req, res) => {
         }
 
         // Tạo bản ghi tiêm chủng
-        const vaccination = await prisma.vaccination.create({
+        const vaccination = await prisma.vaccinations.create({
             data: {
                 name: campaign.name,
                 requirement: "REQUIRED",
@@ -1403,18 +1403,21 @@ export const performVaccination = async (req, res) => {
                 await prisma.notification.create({
                     data: {
                         userId: studentParent.parent.user.id,
-                        title: `Đã tiêm chủng: ${campaign.name}`,
+                        title: `Đã tiêm chủng thành công: ${campaign.name}`,
                         message: `Học sinh ${
                             student.user.fullName
                         } đã được tiêm chủng ${
                             campaign.name
-                        } vào ngày ${new Date(
+                        } thành công vào ngày ${new Date(
                             administeredDate
-                        ).toLocaleDateString("vi-VN")}.`,
+                        ).toLocaleDateString(
+                            "vi-VN"
+                        )}. Nhấn để xem chi tiết thông tin tiêm chủng.`,
                         type: "vaccination_completed",
                         status: "SENT",
                         sentAt: new Date(),
                         vaccinationCampaignId: campaignId,
+                        studentId: studentId,
                     },
                 });
             }
@@ -1469,7 +1472,7 @@ export const reportVaccinationResult = async (req, res) => {
         }
 
         // Kiểm tra xem đã tiêm chủng chưa
-        const vaccination = await prisma.vaccination.findFirst({
+        const vaccination = await prisma.vaccinations.findFirst({
             where: {
                 campaignId,
                 studentId,
