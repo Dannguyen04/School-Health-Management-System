@@ -11,7 +11,7 @@ export const useNotifications = (userId, options = {}) => {
         type,
         status,
         autoRefresh = true,
-        refreshInterval = 30000,
+        refreshInterval = 5000,
     } = options;
 
     const fetchNotifications = useCallback(async () => {

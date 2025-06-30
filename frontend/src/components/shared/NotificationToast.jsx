@@ -44,6 +44,14 @@ const NotificationToast = ({
             case "medication":
                 navigate("/user/medicine-info");
                 break;
+            case "vaccination_campaign_created":
+            case "vaccination_campaign_updated":
+            case "vaccination_campaign_deleted":
+            case "vaccine_created":
+            case "vaccine_updated":
+            case "vaccine_deleted":
+                navigate("/manager/vaccination-campaigns");
+                break;
             default:
                 // For medical_event and others, just close the toast
                 break;
@@ -72,6 +80,13 @@ const NotificationToast = ({
                 return "👨‍⚕️";
             case "medication":
                 return "💊";
+            case "vaccination_campaign_created":
+            case "vaccination_campaign_updated":
+            case "vaccination_campaign_deleted":
+            case "vaccine_created":
+            case "vaccine_updated":
+            case "vaccine_deleted":
+                return "📋";
             default:
                 return "📢";
         }
@@ -87,6 +102,18 @@ const NotificationToast = ({
                 return "Kiểm tra y tế";
             case "medication":
                 return "Thuốc";
+            case "vaccination_campaign_created":
+                return "Chiến dịch tiêm chủng";
+            case "vaccination_campaign_updated":
+                return "Cập nhật chiến dịch";
+            case "vaccination_campaign_deleted":
+                return "Xóa chiến dịch";
+            case "vaccine_created":
+                return "Vaccine mới";
+            case "vaccine_updated":
+                return "Cập nhật vaccine";
+            case "vaccine_deleted":
+                return "Xóa vaccine";
             default:
                 return "Thông báo chung";
         }
