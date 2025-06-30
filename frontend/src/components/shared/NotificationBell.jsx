@@ -40,6 +40,7 @@ const NotificationBell = () => {
     const [vaccinationDetail, setVaccinationDetail] = useState(null);
     const [vaccinationModalVisible, setVaccinationModalVisible] =
         useState(false);
+    const [dropdownVisible, setDropdownVisible] = useState(false);
 
     const {
         notifications,
@@ -57,6 +58,7 @@ const NotificationBell = () => {
     const handleViewDetail = async (notification) => {
         setSelectedNotification(notification);
         setDetailModalVisible(true);
+        setDropdownVisible(false);
 
         if (
             notification.status !== "READ" &&
@@ -110,6 +112,7 @@ const NotificationBell = () => {
         ) {
             markAsRead(notification.id);
         }
+        setDropdownVisible(false);
 
         // Navigation dựa trên loại thông báo
         switch (notification.type) {
@@ -248,6 +251,26 @@ const NotificationBell = () => {
         }
     };
 
+    // Tạo notificationItems mới với phần scroll chỉ ở danh sách
+    const notificationList =
+        notifications.length > 0 ? (
+            <div style={{ maxHeight: "350px", overflowY: "auto" }}>
+                {notifications.map((notification) => (
+                    <NotificationItem
+                        key={notification.id}
+                        notification={notification}
+                        onViewDetail={handleViewDetail}
+                        onMarkAsRead={markAsRead}
+                        onDelete={deleteNotification}
+                        onNotificationClick={handleNotificationClick}
+                        getNotificationIcon={getNotificationIcon}
+                        getStatusColor={getStatusColor}
+                        getTypeLabel={getTypeLabel}
+                    />
+                ))}
+            </div>
+        ) : null;
+
     const notificationItems = [
         {
             key: "header",
@@ -272,21 +295,11 @@ const NotificationBell = () => {
             ),
             disabled: true,
         },
-        ...notifications.map((notification) => ({
-            key: notification.id,
-            label: (
-                <NotificationItem
-                    notification={notification}
-                    onViewDetail={handleViewDetail}
-                    onMarkAsRead={markAsRead}
-                    onDelete={deleteNotification}
-                    onNotificationClick={handleNotificationClick}
-                    getNotificationIcon={getNotificationIcon}
-                    getStatusColor={getStatusColor}
-                    getTypeLabel={getTypeLabel}
-                />
-            ),
-        })),
+        {
+            key: "list",
+            label: notificationList,
+            disabled: true,
+        },
         {
             key: "empty",
             label:
@@ -315,7 +328,8 @@ const NotificationBell = () => {
                 menu={{ items: notificationItems }}
                 placement="bottomRight"
                 trigger={["click"]}
-                overlayStyle={{ maxHeight: "400px", overflow: "auto" }}
+                open={dropdownVisible}
+                onOpenChange={setDropdownVisible}
             >
                 <Badge count={unreadCount} size="small">
                     <Button
