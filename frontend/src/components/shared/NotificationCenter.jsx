@@ -89,6 +89,14 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
             case "medication":
                 navigate("/user/medicine-info");
                 break;
+            case "vaccination_campaign_created":
+            case "vaccination_campaign_updated":
+            case "vaccination_campaign_deleted":
+            case "vaccine_created":
+            case "vaccine_updated":
+            case "vaccine_deleted":
+                navigate("/manager/vaccination-campaigns");
+                break;
             case "medical_event":
                 // Mở modal chi tiết cho medical event
                 handleViewDetail(notification);
@@ -121,6 +129,17 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
                 return "🏥";
             case "vaccination":
                 return "💉";
+            case "vaccination_consent":
+                return "📋";
+            case "vaccination_consent_update":
+                return "✅";
+            case "vaccination_campaign_created":
+            case "vaccination_campaign_updated":
+            case "vaccination_campaign_deleted":
+            case "vaccine_created":
+            case "vaccine_updated":
+            case "vaccine_deleted":
+                return "📋";
             case "medical_check":
                 return "👨‍⚕️";
             case "medication":
@@ -136,6 +155,22 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
                 return "Sự kiện y tế";
             case "vaccination":
                 return "Tiêm chủng";
+            case "vaccination_consent":
+                return "Phiếu đồng ý tiêm chủng";
+            case "vaccination_consent_update":
+                return "Cập nhật phiếu đồng ý";
+            case "vaccination_campaign_created":
+                return "Chiến dịch tiêm chủng";
+            case "vaccination_campaign_updated":
+                return "Cập nhật chiến dịch";
+            case "vaccination_campaign_deleted":
+                return "Xóa chiến dịch";
+            case "vaccine_created":
+                return "Vaccine mới";
+            case "vaccine_updated":
+                return "Cập nhật vaccine";
+            case "vaccine_deleted":
+                return "Xóa vaccine";
             case "medical_check":
                 return "Kiểm tra y tế";
             case "medication":

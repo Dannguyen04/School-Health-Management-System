@@ -59,6 +59,39 @@ const createVaccinationCampaign = async (req, res) => {
             },
         });
 
+        // Tạo thông báo cho manager sau khi tạo chiến dịch thành công
+        try {
+            const managerId = req.user.id; // Lấy ID của manager hiện tại
+
+            await prisma.notification.create({
+                data: {
+                    userId: managerId,
+                    title: `Chiến dịch tiêm chủng mới: ${campaign.name}`,
+                    message: `Bạn đã tạo thành công chiến dịch tiêm chủng "${
+                        campaign.name
+                    }" với vaccine ${
+                        vaccination.name
+                    }. Chiến dịch sẽ diễn ra từ ${new Date(
+                        scheduledDate
+                    ).toLocaleDateString("vi-VN")} đến ${new Date(
+                        deadline
+                    ).toLocaleDateString(
+                        "vi-VN"
+                    )} cho các khối: ${targetGrades.join(", ")}.`,
+                    type: "vaccination_campaign_created",
+                    status: "SENT",
+                    sentAt: new Date(),
+                    vaccinationCampaignId: campaign.id,
+                },
+            });
+        } catch (notificationError) {
+            console.error(
+                "Error creating notification for manager:",
+                notificationError
+            );
+            // Không fail toàn bộ request nếu tạo thông báo thất bại
+        }
+
         console.log(campaign);
         res.status(201).json({
             success: true,
@@ -145,6 +178,12 @@ const updateVaccinationCampaign = async (req, res) => {
                 error: "Không tìm thấy chiến dịch tiêm chủng",
             });
         }
+        if (!existingCampaign) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy chiến dịch tiêm chủng",
+            });
+        }
 
         // Prepare update data
         const updateData = {};
@@ -192,6 +231,29 @@ const updateVaccinationCampaign = async (req, res) => {
             data: updateData,
         });
 
+        // Tạo thông báo cho manager sau khi cập nhật chiến dịch thành công
+        try {
+            const managerId = req.user.id; // Lấy ID của manager hiện tại
+
+            await prisma.notification.create({
+                data: {
+                    userId: managerId,
+                    title: `Cập nhật chiến dịch tiêm chủng: ${updatedCampaign.name}`,
+                    message: `Bạn đã cập nhật thành công chiến dịch tiêm chủng "${updatedCampaign.name}".`,
+                    type: "vaccination_campaign_updated",
+                    status: "SENT",
+                    sentAt: new Date(),
+                    vaccinationCampaignId: updatedCampaign.id,
+                },
+            });
+        } catch (notificationError) {
+            console.error(
+                "Error creating notification for manager:",
+                notificationError
+            );
+            // Không fail toàn bộ request nếu tạo thông báo thất bại
+        }
+
         res.status(200).json({
             success: true,
             data: updatedCampaign,
@@ -227,6 +289,28 @@ const deleteVaccinationCampaign = async (req, res) => {
         await prisma.vaccinationCampaign.delete({
             where: { id },
         });
+
+        // Tạo thông báo cho manager sau khi xóa chiến dịch thành công
+        try {
+            const managerId = req.user.id; // Lấy ID của manager hiện tại
+
+            await prisma.notification.create({
+                data: {
+                    userId: managerId,
+                    title: `Xóa chiến dịch tiêm chủng: ${existingCampaign.name}`,
+                    message: `Bạn đã xóa thành công chiến dịch tiêm chủng "${existingCampaign.name}".`,
+                    type: "vaccination_campaign_deleted",
+                    status: "SENT",
+                    sentAt: new Date(),
+                },
+            });
+        } catch (notificationError) {
+            console.error(
+                "Error creating notification for manager:",
+                notificationError
+            );
+            // Không fail toàn bộ request nếu tạo thông báo thất bại
+        }
 
         res.status(200).json({
             success: true,
