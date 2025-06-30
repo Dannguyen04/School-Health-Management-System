@@ -19,6 +19,9 @@ const NotificationItem = ({
     getNotificationIcon,
     getStatusColor,
     getTypeLabel,
+    getSeverityLabel,
+    getMedicalEventStatusLabel,
+    getMedicalEventTypeLabel,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
 
@@ -58,6 +61,7 @@ const NotificationItem = ({
 
     return (
         <div
+            id={`notification-${notification.id}`}
             style={{
                 display: "flex",
                 alignItems: "flex-start",
@@ -152,53 +156,11 @@ const NotificationItem = ({
                                 {getTimeAgo(notification.createdAt)}
                             </span>
                         </Tooltip>
-                        <Tag
-                            color="blue"
-                            style={{
-                                fontSize: "10px",
-                                borderRadius: "6px",
-                                border: "none",
-                            }}
-                        >
+                        <span style={{ fontSize: "10px" }}>
                             {getTypeLabel(notification.type)}
-                        </Tag>
-                        {notification.status !== "READ" && (
-                            <Badge
-                                status="processing"
-                                text="Mới"
-                                style={{ fontSize: "10px" }}
-                            />
-                        )}
+                        </span>
                     </Space>
                     <Space size="small">
-                        <Tooltip title="Xem chi tiết">
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={<EyeOutlined />}
-                                onClick={handleViewDetail}
-                                style={{
-                                    color: "#1890ff",
-                                    border: "none",
-                                    padding: "4px 8px",
-                                }}
-                            />
-                        </Tooltip>
-                        {notification.status !== "READ" && (
-                            <Tooltip title="Đánh dấu đã đọc">
-                                <Button
-                                    type="text"
-                                    size="small"
-                                    icon={<CheckOutlined />}
-                                    onClick={handleMarkAsRead}
-                                    style={{
-                                        color: "#52c41a",
-                                        border: "none",
-                                        padding: "4px 8px",
-                                    }}
-                                />
-                            </Tooltip>
-                        )}
                         <Tooltip title="Xóa thông báo">
                             <Button
                                 type="text"

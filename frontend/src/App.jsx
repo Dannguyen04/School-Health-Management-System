@@ -46,6 +46,7 @@ import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
+import MedicalEvents from "./pages/MedicalEvents";
 
 const App = () => {
     return (
@@ -182,6 +183,7 @@ const App = () => {
                         element={<VaccinationHistory />}
                     />
                     <Route path="profile" element={<UserProfile />} />
+                    <Route path="medical-events" element={<MedicalEvents />} />
                 </Route>
             </Routes>
         </Router>

@@ -4,8 +4,11 @@ import { RiMicroscopeLine } from "react-icons/ri";
 import { HiOutlineClock } from "react-icons/hi";
 import { FaHeartbeat } from "react-icons/fa";
 import ServicesCard from "../parentlayout/ServicesCard";
+import { useAuth } from "../../context/authContext";
+import MedicalEvents from "../../pages/MedicalEvents";
 
 const Services = ({ onServiceClick, isHomepage }) => {
+    const { user } = useAuth();
     const icon1 = <RiMicroscopeLine size={35} className=" text-[#36ae9a]" />;
     const icon2 = <MdHealthAndSafety size={35} className=" text-[#36ae9a]" />;
     const icon3 = <FaFileMedical size={35} className=" text-[#36ae9a]" />;
@@ -78,7 +81,19 @@ const Services = ({ onServiceClick, isHomepage }) => {
                         to="/user/vaccination-history"
                         onClick={getOnClick()}
                     />
+                    <ServicesCard
+                        icon={
+                            <FaHeartbeat size={35} className="text-[#36ae9a]" />
+                        }
+                        title="Sự kiện y tế"
+                        des="Xem các sự kiện y tế liên quan đến học sinh"
+                        to="/user/medical-events"
+                        onClick={getOnClick()}
+                    />
                 </div>
+            </div>
+            <div className="lg:px-32 px-5 pb-20">
+                <MedicalEvents />
             </div>
         </div>
     );

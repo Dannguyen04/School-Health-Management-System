@@ -16,7 +16,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { useNotifications } from "../../hooks/useNotifications";
 import NotificationItem from "./NotificationItem";
-import NotificationDetailModal from "./NotificationDetailModal";
 
 const { Title } = Typography;
 
@@ -26,7 +25,6 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
     const [activeTab, setActiveTab] = useState("all");
     const [dropdownVisible, setDropdownVisible] = useState(false);
     const [selectedNotification, setSelectedNotification] = useState(null);
-    const [detailModalVisible, setDetailModalVisible] = useState(false);
 
     const {
         notifications,
@@ -115,7 +113,6 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
 
     const handleViewDetail = (notification) => {
         setSelectedNotification(notification);
-        setDetailModalVisible(true);
     };
 
     const handleRefresh = () => {
@@ -405,20 +402,6 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
                     />
                 </Badge>
             </Dropdown>
-
-            {/* Detail modal */}
-            <NotificationDetailModal
-                visible={detailModalVisible}
-                notification={selectedNotification}
-                onClose={() => {
-                    setDetailModalVisible(false);
-                    setSelectedNotification(null);
-                }}
-                onMarkAsRead={markAsRead}
-                onArchive={archiveNotification}
-                onRestore={restoreNotification}
-                onDelete={deleteNotification}
-            />
         </>
     );
 };
