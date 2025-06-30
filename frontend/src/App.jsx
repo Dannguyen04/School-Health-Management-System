@@ -37,6 +37,7 @@ import HealthProfile from "./components/user/HealthProfile";
 import MedicineInfo from "./components/user/MedicineInfo";
 import NotificationCenter from "./components/shared/NotificationCenter";
 import VaccinationSchedule from "./components/user/VaccinationSchedule";
+import VaccinationHistory from "./pages/VaccinationHistory";
 import AdminLayout from "./layouts/Admin";
 import ManagerLayout from "./layouts/Manager";
 import NurseLayout from "./layouts/Nurse";
@@ -175,6 +176,10 @@ const App = () => {
                     <Route
                         path="vaccination-schedule"
                         element={<VaccinationSchedule />}
+                    />
+                    <Route
+                        path="vaccination-history"
+                        element={<VaccinationHistory />}
                     />
                     <Route path="profile" element={<UserProfile />} />
                 </Route>

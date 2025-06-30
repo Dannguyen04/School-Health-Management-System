@@ -29,6 +29,7 @@ import {
     Progress,
     Badge,
     Tooltip,
+    Checkbox,
 } from "antd";
 import { useState, useEffect } from "react";
 import axios from "axios";
@@ -119,8 +120,7 @@ const Vaccination = () => {
                 message.success("Đã thực hiện tiêm chủng thành công");
                 setIsModalVisible(false);
                 vaccinationForm.resetFields();
-                setSelectedStudent(null);
-                // Refresh student list
+                setIsReportModalVisible(true);
                 fetchStudentsForCampaign(selectedCampaign.id);
             }
         } catch (error) {
