@@ -12,9 +12,6 @@ const ServicesCard = ({ icon, title, des, to, onClick }) => {
       </div>
       <h1 className=" font-semibold text-lg">{title}</h1>
       <p>{des}</p>
-      <h3 className=" text-[#36ae9a] cursor-pointer hover:text-[#ade9dc] transition duration-300 ease-in-out">
-        Learn more
-      </h3>
     </div>
   );
 };

@@ -2082,120 +2082,123 @@ export const getStudentTreatments = async (req, res) => {
             user: { select: { fullName: true, phone: true } },
           },
         },
-        medicationAdministrationLogs: {
-          where: {
-            givenAt: {
-              gte: new Date(new Date().setHours(0, 0, 0, 0)),
-            },
-          },
-          orderBy: { givenAt: "desc" },
-          take: 1,
-        },
       },
       orderBy: [{ startDate: "desc" }, { createdAt: "desc" }],
     });
 
-    const formatted = treatments.map((item) => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
+    // Lấy todayDosage cho từng treatment
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(today.getDate() + 1);
 
-      // Tính tổng liều dùng hôm nay
-      const todayDosage = item.medicationAdministrationLogs.reduce(
-        (sum, log) => {
-          return sum + (parseFloat(log.dosageGiven) || 0);
-        },
-        0
-      );
-
-      // Kiểm tra trạng thái thuốc
-      let stockStatus = "available";
-      if (item.medication.stockQuantity <= 0) {
-        stockStatus = "out_of_stock";
-      } else if (item.medication.stockQuantity <= 5) {
-        stockStatus = "low_stock";
-      }
-
-      // Kiểm tra hạn sử dụng
-      let expiryStatus = "valid";
-      if (item.medication.expiryDate) {
-        const daysUntilExpiry = Math.ceil(
-          (new Date(item.medication.expiryDate) - new Date()) /
-            (1000 * 60 * 60 * 24)
+    // Duyệt từng treatment để lấy tổng todayDosage
+    const formatted = await Promise.all(
+      treatments.map(async (item) => {
+        // Lấy tất cả log cấp phát hôm nay
+        const todayLogs = await prisma.medicationAdministrationLog.findMany({
+          where: {
+            studentMedicationId: item.id,
+            givenAt: { gte: today, lt: tomorrow },
+          },
+        });
+        const todayDosage = todayLogs.reduce(
+          (sum, log) => sum + (parseFloat(log.dosageGiven) || 0),
+          0
         );
-        if (daysUntilExpiry <= 0) {
-          expiryStatus = "expired";
-        } else if (daysUntilExpiry <= 30) {
-          expiryStatus = "expiring_soon";
+        // Lấy lần cấp phát gần nhất (nếu cần)
+        const lastLog = await prisma.medicationAdministrationLog.findFirst({
+          where: { studentMedicationId: item.id },
+          orderBy: { givenAt: "desc" },
+        });
+
+        // Kiểm tra trạng thái thuốc
+        let stockStatus = "available";
+        if (item.medication.stockQuantity <= 0) {
+          stockStatus = "out_of_stock";
+        } else if (item.medication.stockQuantity <= 5) {
+          stockStatus = "low_stock";
         }
-      }
 
-      // Kiểm tra giới hạn liều dùng hàng ngày (nếu có)
-      const freq = getFrequencyNumber(item.frequency);
-      const dailyLimit = parseFloat(item.dosage) * freq;
-      const canAdminister =
-        stockStatus !== "out_of_stock" &&
-        expiryStatus !== "expired" &&
-        todayDosage < dailyLimit;
+        // Kiểm tra hạn sử dụng
+        let expiryStatus = "valid";
+        if (item.medication.expiryDate) {
+          const daysUntilExpiry = Math.ceil(
+            (new Date(item.medication.expiryDate) - new Date()) /
+              (1000 * 60 * 60 * 24)
+          );
+          if (daysUntilExpiry <= 0) {
+            expiryStatus = "expired";
+          } else if (daysUntilExpiry <= 30) {
+            expiryStatus = "expiring_soon";
+          }
+        }
 
-      return {
-        id: item.id,
-        studentId: item.student.id,
-        studentName: item.student.user.fullName,
-        studentEmail: item.student.user.email,
-        studentCode: item.student.studentCode,
-        grade: item.student.grade,
-        class: item.student.class,
-        parentName: item.parent?.user?.fullName || "N/A",
-        parentPhone: item.parent?.user?.phone || "N/A",
-        medication: {
-          id: item.medication.id,
-          name: item.medication.name,
-          description: item.medication.description,
-          stockQuantity: item.medication.stockQuantity,
-          unit: item.medication.unit,
-          expiryDate: item.medication.expiryDate,
-          stockStatus: stockStatus,
-          expiryStatus: expiryStatus,
-        },
-        dosage: item.dosage,
-        frequency: item.frequency,
-        instructions: item.instructions,
-        startDate: item.startDate,
-        endDate: item.endDate,
-        status: item.status,
-        treatmentStatus: item.treatmentStatus,
-        todayDosage: todayDosage,
-        dailyLimit: dailyLimit,
-        canAdminister: canAdminister,
-        lastAdministration:
-          item.medicationAdministrationLogs[0]?.givenAt || null,
-        warnings: [],
-      };
-    });
+        // Kiểm tra giới hạn liều dùng hàng ngày (nếu có)
+        const freq = getFrequencyNumber(item.frequency);
+        const dailyLimit = parseFloat(item.dosage) * freq;
+        const canAdminister =
+          stockStatus !== "out_of_stock" &&
+          expiryStatus !== "expired" &&
+          todayDosage < dailyLimit;
 
-    // Thêm cảnh báo cho từng treatment
-    formatted.forEach((treatment) => {
-      if (treatment.medication.stockStatus === "low_stock") {
-        treatment.warnings.push(
-          `Tồn kho thấp: ${treatment.medication.stockQuantity} ${treatment.medication.unit}`
-        );
-      }
-      if (treatment.medication.expiryStatus === "expiring_soon") {
-        const daysUntilExpiry = Math.ceil(
-          (new Date(treatment.medication.expiryDate) - new Date()) /
-            (1000 * 60 * 60 * 24)
-        );
-        treatment.warnings.push(`Sắp hết hạn: ${daysUntilExpiry} ngày`);
-      }
-      if (treatment.medication.expiryStatus === "expired") {
-        treatment.warnings.push("Thuốc đã hết hạn");
-      }
-      if (treatment.todayDosage >= treatment.dailyLimit) {
-        treatment.warnings.push("Đã đủ liều dùng hôm nay");
-      }
-    });
+        const treatment = {
+          id: item.id,
+          studentId: item.student.id,
+          studentName: item.student.user.fullName,
+          studentEmail: item.student.user.email,
+          studentCode: item.student.studentCode,
+          grade: item.student.grade,
+          class: item.student.class,
+          parentName: item.parent?.user?.fullName || "N/A",
+          parentPhone: item.parent?.user?.phone || "N/A",
+          medication: {
+            id: item.medication.id,
+            name: item.medication.name,
+            description: item.medication.description,
+            stockQuantity: item.medication.stockQuantity,
+            unit: item.medication.unit,
+            expiryDate: item.medication.expiryDate,
+            stockStatus: stockStatus,
+            expiryStatus: expiryStatus,
+          },
+          dosage: item.dosage,
+          frequency: item.frequency,
+          instructions: item.instructions,
+          startDate: item.startDate,
+          endDate: item.endDate,
+          status: item.status,
+          treatmentStatus: item.treatmentStatus,
+          todayDosage: todayDosage,
+          dailyLimit: dailyLimit,
+          canAdminister: canAdminister,
+          lastAdministration: lastLog ? lastLog.givenAt : null,
+          warnings: [],
+        };
+
+        // Thêm cảnh báo
+        if (treatment.medication.stockStatus === "low_stock") {
+          treatment.warnings.push(
+            `Tồn kho thấp: ${treatment.medication.stockQuantity} ${treatment.medication.unit}`
+          );
+        }
+        if (treatment.medication.expiryStatus === "expiring_soon") {
+          const daysUntilExpiry = Math.ceil(
+            (new Date(treatment.medication.expiryDate) - new Date()) /
+              (1000 * 60 * 60 * 24)
+          );
+          treatment.warnings.push(`Sắp hết hạn: ${daysUntilExpiry} ngày`);
+        }
+        if (treatment.medication.expiryStatus === "expired") {
+          treatment.warnings.push("Thuốc đã hết hạn");
+        }
+        if (treatment.todayDosage >= treatment.dailyLimit) {
+          treatment.warnings.push("Đã đủ liều dùng hôm nay");
+        }
+
+        return treatment;
+      })
+    );
 
     res.json({
       success: true,
