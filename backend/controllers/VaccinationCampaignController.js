@@ -54,6 +54,9 @@ const createVaccinationCampaign = async (req, res) => {
                 status,
                 isActive: status === "ACTIVE",
             },
+            include: {
+                vaccinations: true,
+            },
         });
 
         // Tạo thông báo cho manager sau khi tạo chiến dịch thành công
@@ -89,6 +92,7 @@ const createVaccinationCampaign = async (req, res) => {
             // Không fail toàn bộ request nếu tạo thông báo thất bại
         }
 
+        console.log(campaign);
         res.status(201).json({
             success: true,
             data: campaign,
@@ -110,24 +114,13 @@ const getAllVaccinationCampaigns = async (req, res) => {
             orderBy: {
                 createdAt: "desc",
             },
+            include: {
+                vaccinations: true,
+            },
         });
-
-        // Lấy tất cả vaccinationId
-        const vaccineIds = campaigns.map((c) => c.vaccinationId);
-        const vaccines = await prisma.vaccinations.findMany({
-            where: { id: { in: vaccineIds } },
-            select: { id: true, name: true },
-        });
-
-        // Map lại để mỗi campaign có trường vaccination (object)
-        const campaignsWithVaccine = campaigns.map((c) => ({
-            ...c,
-            vaccination: vaccines.find((v) => v.id === c.vaccinationId) || null,
-        }));
-
         res.status(200).json({
             success: true,
-            data: campaignsWithVaccine,
+            data: campaigns,
             total: campaigns.length,
         });
     } catch (error) {
@@ -143,18 +136,18 @@ const getAllVaccinationCampaigns = async (req, res) => {
 const getVaccinationCampaignById = async (req, res) => {
     try {
         const { id } = req.params;
-
         const campaign = await prisma.vaccinationCampaign.findUnique({
             where: { id },
+            include: {
+                vaccinations: true,
+            },
         });
-
         if (!campaign) {
             return res.status(404).json({
                 success: false,
                 error: "Không tìm thấy chiến dịch tiêm chủng",
             });
         }
-
         res.status(200).json({
             success: true,
             data: campaign,
@@ -179,6 +172,12 @@ const updateVaccinationCampaign = async (req, res) => {
             where: { id },
         });
 
+        if (!existingCampaign) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy chiến dịch tiêm chủng",
+            });
+        }
         if (!existingCampaign) {
             return res.status(404).json({
                 success: false,
@@ -438,6 +437,9 @@ const submitVaccinationConsent = async (req, res) => {
         // Kiểm tra campaign có tồn tại không
         const campaign = await prisma.vaccinationCampaign.findUnique({
             where: { id: campaignId },
+            include: {
+                vaccinations: true,
+            },
         });
 
         if (!campaign) {
