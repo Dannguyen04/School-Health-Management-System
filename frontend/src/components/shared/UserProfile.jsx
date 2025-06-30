@@ -1,9 +1,4 @@
-import {
-    EditOutlined,
-    UserOutlined,
-    UploadOutlined,
-    CameraOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, UserOutlined } from "@ant-design/icons";
 import {
     Avatar,
     Button,
@@ -17,24 +12,18 @@ import {
     Space,
     Spin,
     Typography,
-    Upload,
 } from "antd";
 import React from "react";
 import { useAuth } from "../../context/authContext";
 import { userAPI } from "../../utils/api";
 
 const { Title, Text } = Typography;
-const { Dragger } = Upload;
 
 const UserProfile = () => {
     const { user, login } = useAuth();
-    const [isEditingBasicInfo, setIsEditingBasicInfo] = React.useState(false);
-    const [isEditingPersonalInfo, setIsEditingPersonalInfo] =
-        React.useState(false);
+    const [isEditing, setIsEditing] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
-    const [uploadingPhoto, setUploadingPhoto] = React.useState(false);
-    const [basicInfoForm] = Form.useForm();
-    const [personalInfoForm] = Form.useForm();
+    const [profileForm] = Form.useForm();
 
     const [userData, setUserData] = React.useState({
         fullName: "",
@@ -73,158 +62,25 @@ const UserProfile = () => {
         fetchUserProfile();
     }, []);
 
-    // Handle photo upload
-    const handlePhotoUpload = async (file) => {
-        // Validate file type
-        const isImage = file.type.startsWith("image/");
-        if (!isImage) {
-            message.error("Chỉ chấp nhận file ảnh!");
-            return false;
-        }
-
-        // Validate file size (8MB limit)
-        const fileSizeInMB = file.size / 1024 / 1024;
-        const isLt8M = fileSizeInMB < 8;
-        if (!isLt8M) {
-            message.error("Ảnh quá lớn! Kích thước tối đa 8MB.");
-            return false;
-        }
-
-        // Validate specific formats
-        const allowedTypes = [
-            "image/jpeg",
-            "image/jpg",
-            "image/png",
-            "image/gif",
-            "image/webp",
-        ];
-        if (!allowedTypes.includes(file.type)) {
-            message.error(
-                "Định dạng ảnh không được hỗ trợ! Hỗ trợ: JPG, PNG, GIF, WebP"
-            );
-            return false;
-        }
-
-        try {
-            setUploadingPhoto(true);
-            const formData = new FormData();
-            formData.append("profilePhoto", file);
-
-            const response = await userAPI.uploadProfilePhoto(formData);
-
-            if (response.data.success) {
-                setUserData((prev) => ({
-                    ...prev,
-                    avatar: response.data.avatar,
-                }));
-
-                // Update auth context
-                if (user) {
-                    login(
-                        { ...user, avatar: response.data.avatar },
-                        localStorage.getItem("token")
-                    );
-                }
-
-                message.success("Cập nhật ảnh đại diện thành công!");
-            }
-        } catch (error) {
-            console.error("Error uploading photo:", error);
-            message.error("Lỗi khi tải ảnh lên. Vui lòng thử lại.");
-        } finally {
-            setUploadingPhoto(false);
-        }
-
-        return false; // Prevent default upload
+    const handleEdit = () => {
+        setIsEditing(true);
+        profileForm.setFieldsValue(userData);
     };
 
-    // Handle paste image
-    const handlePasteImage = (e) => {
-        const items = e.clipboardData?.items;
-        if (!items) {
-            message.error("Không thể truy cập clipboard!");
-            return;
-        }
-
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf("image") !== -1) {
-                const file = items[i].getAsFile();
-                if (file) {
-                    handlePhotoUpload(file);
-                }
-                break;
-            }
-        }
-    };
-
-    // Add paste event listener
-    React.useEffect(() => {
-        const handlePaste = (e) => {
-            if (
-                e.target.tagName === "INPUT" ||
-                e.target.tagName === "TEXTAREA"
-            ) {
-                return; // Don't handle paste in form inputs
-            }
-            handlePasteImage(e);
-        };
-
-        document.addEventListener("paste", handlePaste);
-        return () => document.removeEventListener("paste", handlePaste);
-    }, []);
-
-    const handleEditBasicInfo = () => {
-        setIsEditingBasicInfo(true);
-        basicInfoForm.setFieldsValue(userData);
-    };
-
-    const handleSaveBasicInfo = async (values) => {
-        try {
-            setLoading(true);
-            const response = await userAPI.updateProfile({
-                fullName: values.fullName,
-                address: values.address,
-                avatar: values.avatar,
-            });
-
-            if (response.data.success) {
-                setUserData((prev) => ({ ...prev, ...values }));
-                setIsEditingBasicInfo(false);
-                message.success("Profile updated successfully");
-
-                // Update auth context with new user data
-                if (user) {
-                    login(
-                        { ...user, ...values },
-                        localStorage.getItem("token")
-                    );
-                }
-            }
-        } catch (error) {
-            console.error("Error updating basic profile:", error);
-            message.error("Failed to update profile");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const handleEditPersonalInfo = () => {
-        setIsEditingPersonalInfo(true);
-        personalInfoForm.setFieldsValue(userData);
-    };
-
-    const handleSavePersonalInfo = async (values) => {
+    const handleSave = async (values) => {
         try {
             setLoading(true);
             const response = await userAPI.updateProfile({
                 fullName: values.fullName,
                 email: values.email,
                 phone: values.phone,
+                address: values.address,
+                avatar: values.avatar,
             });
 
             if (response.data.success) {
                 setUserData((prev) => ({ ...prev, ...values }));
-                setIsEditingPersonalInfo(false);
+                setIsEditing(false);
                 message.success("Profile updated successfully");
 
                 // Update auth context with new user data
@@ -236,276 +92,238 @@ const UserProfile = () => {
                 }
             }
         } catch (error) {
-            console.error("Error updating personal information:", error);
+            console.error("Error updating profile:", error);
             message.error("Failed to update profile");
         } finally {
             setLoading(false);
         }
     };
 
-    // Split full name into first and last name for display
-    // const getFirstName = () => {
-    //   const names = userData.fullName.split(" ");
-    //   return names[0] || "";
-    // };
+    const handleCancel = () => {
+        setIsEditing(false);
+        profileForm.resetFields();
+    };
 
-    // const getLastName = () => {
-    //   const names = userData.fullName.split(" ");
-    //   return names.slice(1).join(" ") || "";
-    // };
-
-    if (loading && !userData.fullName) {
+    if (loading) {
         return (
-            <div className="p-6 flex justify-center items-center h-64">
-                <Spin size="large" />
+            <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa]">
+                <div className="w-full max-w-4xl mx-auto px-4">
+                    <div style={{ padding: "24px", textAlign: "center" }}>
+                        <Spin size="large" />
+                    </div>
+                </div>
             </div>
         );
     }
 
     return (
-        <div className="p-6">
-            <Title level={2} className="mb-6">
-                Profile
-            </Title>
+        <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa]">
+            <div className="w-full max-w-4xl mx-auto px-4">
+                <Card
+                    className="w-full rounded-3xl shadow-lg border-0 mt-12"
+                    style={{
+                        background: "#fff",
+                        borderRadius: "1.5rem",
+                        boxShadow: "0px 3px 16px rgba(0,0,0,0.10)",
+                        padding: "2rem",
+                        marginTop: "3rem",
+                        maxWidth: "100%",
+                    }}
+                >
+                    <div
+                        style={{
+                            marginBottom: 24,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            flexWrap: "wrap",
+                            gap: "16px",
+                        }}
+                    >
+                        <div>
+                            <Title level={2} className="mb-2">
+                                Hồ sơ cá nhân
+                            </Title>
+                            <Text type="secondary">
+                                Quản lý thông tin cá nhân và cài đặt tài khoản
+                            </Text>
+                        </div>
+                        {!isEditing && (
+                            <Button
+                                icon={<EditOutlined />}
+                                onClick={handleEdit}
+                                type="primary"
+                                className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
+                            >
+                                Chỉnh sửa
+                            </Button>
+                        )}
+                    </div>
 
-            {/* Basic Profile Information Card */}
-            <Card className="shadow-lg mb-6">
-                {!isEditingBasicInfo ? (
-                    <Row align="middle" gutter={[24, 24]}>
-                        <Col>
-                            <div className="relative">
+                    {!isEditing ? (
+                        /* Display Mode */
+                        <div className="space-y-6">
+                            {/* Profile Header */}
+                            <div className="flex items-center gap-6 p-6 bg-gray-50 rounded-xl">
                                 <Avatar
                                     size={100}
                                     icon={<UserOutlined />}
                                     src={userData.avatar}
                                     className="border-2 border-gray-200"
                                 />
-                                <div className="absolute -bottom-2 -right-2">
-                                    <Dragger
-                                        name="profilePhoto"
-                                        maxCount={1}
-                                        accept="image/*"
-                                        beforeUpload={handlePhotoUpload}
-                                        showUploadList={false}
-                                        disabled={uploadingPhoto}
-                                    >
-                                        <Button
-                                            type="primary"
-                                            shape="circle"
-                                            size="small"
-                                            icon={<CameraOutlined />}
-                                            loading={uploadingPhoto}
-                                            className="bg-blue-600 hover:bg-blue-700"
-                                        />
-                                    </Dragger>
+                                <div>
+                                    <Title level={3} className="mb-2">
+                                        {userData.fullName}
+                                    </Title>
+                                    <Text type="secondary" className="text-lg">
+                                        {userData.role}
+                                    </Text>
                                 </div>
                             </div>
-                        </Col>
-                        <Col flex="auto">
-                            <Title level={3} className="mb-0">
-                                {userData.fullName}
-                            </Title>
-                            <Text type="secondary" className="block">
-                                {userData.role} |{" "}
-                                {userData.address || "No location set"}
-                            </Text>
-                        </Col>
-                        <Col>
-                            <Space>
-                                <Button
-                                    icon={<EditOutlined />}
-                                    onClick={handleEditBasicInfo}
-                                    type="default"
-                                    loading={loading}
+
+                            {/* Profile Information */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="p-6 bg-white border border-gray-200 rounded-xl">
+                                    <Text
+                                        strong
+                                        className="text-gray-600 text-sm uppercase tracking-wide"
+                                    >
+                                        Email
+                                    </Text>
+                                    <div className="mt-2">
+                                        <Text className="text-lg">
+                                            {userData.email}
+                                        </Text>
+                                    </div>
+                                </div>
+                                <div className="p-6 bg-white border border-gray-200 rounded-xl">
+                                    <Text
+                                        strong
+                                        className="text-gray-600 text-sm uppercase tracking-wide"
+                                    >
+                                        Số điện thoại
+                                    </Text>
+                                    <div className="mt-2">
+                                        <Text className="text-lg">
+                                            {userData.phone || "Chưa cập nhật"}
+                                        </Text>
+                                    </div>
+                                </div>
+                                <div className="p-6 bg-white border border-gray-200 rounded-xl md:col-span-2">
+                                    <Text
+                                        strong
+                                        className="text-gray-600 text-sm uppercase tracking-wide"
+                                    >
+                                        Địa chỉ
+                                    </Text>
+                                    <div className="mt-2">
+                                        <Text className="text-lg">
+                                            {userData.address ||
+                                                "Chưa cập nhật"}
+                                        </Text>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        /* Edit Mode */
+                        <Form
+                            form={profileForm}
+                            layout="vertical"
+                            onFinish={handleSave}
+                            initialValues={userData}
+                            className="space-y-6"
+                        >
+                            {/* Profile Header in Edit Mode */}
+                            <div className="flex items-center gap-6 p-6 bg-gray-50 rounded-xl">
+                                <Avatar
+                                    size={100}
+                                    icon={<UserOutlined />}
+                                    src={userData.avatar}
+                                    className="border-2 border-gray-200"
+                                />
+                                <div className="flex-1">
+                                    <Form.Item
+                                        name="fullName"
+                                        label="Họ và tên"
+                                        rules={[
+                                            {
+                                                required: true,
+                                                message:
+                                                    "Vui lòng nhập họ và tên!",
+                                            },
+                                        ]}
+                                    >
+                                        <Input size="large" />
+                                    </Form.Item>
+                                </div>
+                            </div>
+
+                            {/* Form Fields */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <Form.Item
+                                    name="email"
+                                    label="Email"
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message: "Vui lòng nhập email!",
+                                        },
+                                        {
+                                            type: "email",
+                                            message: "Email không hợp lệ!",
+                                        },
+                                    ]}
                                 >
-                                    Edit
+                                    <Input size="large" />
+                                </Form.Item>
+                                <Form.Item name="phone" label="Số điện thoại">
+                                    <Input
+                                        size="large"
+                                        placeholder="Nhập số điện thoại"
+                                    />
+                                </Form.Item>
+                                <Form.Item
+                                    name="address"
+                                    label="Địa chỉ"
+                                    className="md:col-span-2"
+                                >
+                                    <Input
+                                        size="large"
+                                        placeholder="Nhập địa chỉ"
+                                    />
+                                </Form.Item>
+                                <Form.Item
+                                    name="avatar"
+                                    label="Avatar URL"
+                                    className="md:col-span-2"
+                                >
+                                    <Input
+                                        size="large"
+                                        placeholder="Nhập URL ảnh đại diện"
+                                    />
+                                </Form.Item>
+                            </div>
+
+                            {/* Action Buttons */}
+                            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                                <Button onClick={handleCancel} size="large">
+                                    Hủy
                                 </Button>
-                            </Space>
-                        </Col>
-                    </Row>
-                ) : (
-                    <Form
-                        form={basicInfoForm}
-                        layout="vertical"
-                        onFinish={handleSaveBasicInfo}
-                        initialValues={userData}
-                    >
-                        <Form.Item
-                            name="fullName"
-                            label="Full Name"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Please input your full name!",
-                                },
-                            ]}
-                        >
-                            <Input />
-                        </Form.Item>
-                        <Form.Item
-                            name="address"
-                            label="Location"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Please input your location!",
-                                },
-                            ]}
-                        >
-                            <Input />
-                        </Form.Item>
-                        <Form.Item name="avatar" label="Avatar URL">
-                            <Input placeholder="Enter avatar image URL" />
-                        </Form.Item>
-                        <Space>
-                            <Button
-                                type="primary"
-                                htmlType="submit"
-                                className="bg-blue-900 hover:bg-blue-800"
-                                loading={loading}
-                            >
-                                Save
-                            </Button>
-                            <Button
-                                onClick={() => setIsEditingBasicInfo(false)}
-                            >
-                                Cancel
-                            </Button>
-                        </Space>
-                    </Form>
-                )}
-            </Card>
-
-            {/* Photo Upload Section */}
-            <Card className="shadow-lg mb-6">
-                <Title level={4} className="mb-4">
-                    Cập nhật ảnh đại diện
-                </Title>
-                <Dragger
-                    name="profilePhoto"
-                    maxCount={1}
-                    accept="image/*"
-                    beforeUpload={handlePhotoUpload}
-                    onRemove={() => {
-                        // Handle remove if needed
-                    }}
-                    disabled={uploadingPhoto}
-                >
-                    <p className="ant-upload-drag-icon">
-                        <UploadOutlined />
-                    </p>
-                    <p className="ant-upload-text">
-                        Kéo và thả ảnh vào đây hoặc nhấp để chọn ảnh
-                    </p>
-                    <p className="ant-upload-hint">
-                        Hoặc copy ảnh (Ctrl+V) vào trang này
-                    </p>
-                    <p className="ant-upload-hint">
-                        Hỗ trợ: JPG, PNG, GIF, WebP - Kích thước tối đa 8MB
-                    </p>
-                </Dragger>
-            </Card>
-
-            {/* Personal Information Card */}
-            <Card className="shadow-lg">
-                <div className="flex justify-between items-center mb-4">
-                    <Title level={4} className="mb-0">
-                        Personal Information
-                    </Title>
-                    <Button
-                        icon={<EditOutlined />}
-                        onClick={handleEditPersonalInfo}
-                        type="default"
-                        loading={loading}
-                    >
-                        Edit
-                    </Button>
-                </div>
-                <Divider className="my-2" />
-                {!isEditingPersonalInfo ? (
-                    <Row gutter={[16, 16]}>
-                        <Col span={12}>
-                            <div>
-                                <Text strong>Full Name:</Text>
-                                <br />
-                                <Text>{userData.fullName}</Text>
+                                <Button
+                                    type="primary"
+                                    htmlType="submit"
+                                    size="large"
+                                    loading={loading}
+                                    className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
+                                >
+                                    Lưu thay đổi
+                                </Button>
                             </div>
-                        </Col>
-                        <Col span={12}>
-                            <div>
-                                <Text strong>Email:</Text>
-                                <br />
-                                <Text>{userData.email}</Text>
-                            </div>
-                        </Col>
-                        <Col span={12}>
-                            <div>
-                                <Text strong>Phone:</Text>
-                                <br />
-                                <Text>{userData.phone || "Not provided"}</Text>
-                            </div>
-                        </Col>
-                        <Col span={12}>
-                            <div>
-                                <Text strong>Role:</Text>
-                                <br />
-                                <Text>{userData.role}</Text>
-                            </div>
-                        </Col>
-                    </Row>
-                ) : (
-                    <Form
-                        form={personalInfoForm}
-                        layout="vertical"
-                        onFinish={handleSavePersonalInfo}
-                        initialValues={userData}
-                    >
-                        <Form.Item
-                            name="fullName"
-                            label="Full Name"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Please input your full name!",
-                                },
-                            ]}
-                        >
-                            <Input />
-                        </Form.Item>
-                        <Form.Item
-                            name="email"
-                            label="Email address"
-                            rules={[
-                                {
-                                    required: true,
-                                    type: "email",
-                                    message: "Please enter a valid email!",
-                                },
-                            ]}
-                        >
-                            <Input />
-                        </Form.Item>
-                        <Form.Item name="phone" label="Phone">
-                            <Input />
-                        </Form.Item>
-                        <Space>
-                            <Button
-                                type="primary"
-                                htmlType="submit"
-                                className="bg-blue-900 hover:bg-blue-800"
-                                loading={loading}
-                            >
-                                Save
-                            </Button>
-                            <Button
-                                onClick={() => setIsEditingPersonalInfo(false)}
-                            >
-                                Cancel
-                            </Button>
-                        </Space>
-                    </Form>
-                )}
-            </Card>
+                        </Form>
+                    )}
+                </Card>
+            </div>
         </div>
     );
 };

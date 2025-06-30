@@ -1,7 +1,8 @@
-import { UserOutlined } from "@ant-design/icons";
-import { Avatar, Dropdown } from "antd";
+import { UserOutlined, MenuOutlined, CloseOutlined } from "@ant-design/icons";
+import { Avatar, Dropdown, Badge } from "antd";
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { FaHeartbeat, FaBell } from "react-icons/fa";
 import NotificationBell from "../shared/NotificationBell";
 import NotificationToast from "../shared/NotificationToast";
 import { useNotifications } from "../../hooks/useNotifications";
@@ -9,6 +10,7 @@ import { useAuth } from "../../context/authContext";
 
 const Navbar = () => {
     const [menu, setMenu] = useState(false);
+    const [scrolled, setScrolled] = useState(false);
     const [toastNotification, setToastNotification] = useState(null);
     const navigate = useNavigate();
     const location = useLocation();
@@ -19,6 +21,17 @@ const Navbar = () => {
         autoRefresh: true,
         refreshInterval: 30000,
     });
+
+    // Handle scroll effect
+    useEffect(() => {
+        const handleScroll = () => {
+            const isScrolled = window.scrollY > 20;
+            setScrolled(isScrolled);
+        };
+
+        window.addEventListener("scroll", handleScroll);
+        return () => window.removeEventListener("scroll", handleScroll);
+    }, []);
 
     // Hiển thị toast cho thông báo mới
     useEffect(() => {
@@ -75,99 +88,151 @@ const Navbar = () => {
 
     return (
         <>
-            <div className=" fixed w-full z-50 text-white">
-                <div>
-                    <div className=" flex flex-row justify-between p-5 md:px-32 px-5 bg-[#36ae9a] shadow-[rgba(0,_0,_0,_0.24)_0px_3px_8px]">
-                        <div className=" flex flex-row items-center cursor-pointer">
-                            <span onClick={() => handleNav("home")}>
-                                <h1 className=" text-2xl font-semibold">
-                                    Sức Khỏe Học Đường
-                                </h1>
-                            </span>
-                        </div>
-                        <nav className=" hidden lg:flex flex-row items-center text-lg font-medium gap-5 whitespace-nowrap">
-                            <span
-                                className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
-                                onClick={() => handleNav("home")}
-                            >
-                                Trang chủ
-                            </span>
-                            <span
-                                className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
-                                onClick={() => handleNav("about")}
-                            >
-                                Giới thiệu
-                            </span>
-                            <span
-                                className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
-                                onClick={() => handleNav("services")}
-                            >
-                                Dịch vụ
-                            </span>
-                            <span
-                                className="hover:text-[#FFC000] transition-all cursor-pointer whitespace-nowrap"
-                                onClick={() => handleNav("blog")}
-                            >
-                                Tin tức
-                            </span>
-                            <NotificationBell />
-                            <Dropdown
-                                menu={{ items: userMenuItems }}
-                                placement="bottomRight"
-                                arrow
-                            >
-                                <Avatar
-                                    style={{ cursor: "pointer" }}
-                                    icon={<UserOutlined />}
-                                />
-                            </Dropdown>
-                        </nav>
-                    </div>
-                    <div
-                        className={`${
-                            menu ? "translate-x-0" : "-translate-x-full"
-                        } lg:hidden flex flex-col absolute bg-backgroundColor text-white left-0 top-16 font-semibold text-2xl text-center pt-8 pb-4 gap-8 w-full h-fit transition-transform duration-300`}
-                    >
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-                            onClick={() => handleNav("home")}
-                        >
-                            Trang chủ
-                        </span>
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-                            onClick={() => handleNav("about")}
-                        >
-                            Giới thiệu
-                        </span>
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
+            <div
+                className={`fixed w-full z-50 transition-all duration-300 ${
+                    scrolled
+                        ? "bg-white/95 backdrop-blur-md shadow-lg"
+                        : "bg-[#36ae9a]"
+                }`}
+            >
+                <div className="max-w-7xl mx-auto">
+                    <div className="flex flex-row justify-between items-center p-4 lg:px-8">
+                        {/* Logo */}
+                        <div
+                            className="flex items-center cursor-pointer group"
                             onClick={() => handleNav("services")}
                         >
-                            Dịch vụ
-                        </span>
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-                            onClick={() => handleNav("doctors")}
-                        >
-                            Đội ngũ bác sĩ
-                        </span>
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-                            onClick={() => handleNav("blog")}
-                        >
-                            Tin tức
-                        </span>
-                        <Dropdown
-                            menu={{ items: userMenuItems }}
-                            placement="bottomRight"
-                            arrow
-                        >
-                            <Avatar
-                                style={{ cursor: "pointer" }}
-                                icon={<UserOutlined />}
-                            />
-                        </Dropdown>
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-center w-10 h-10 bg-white/20 rounded-xl group-hover:bg-white/30 transition-all duration-300">
+                                    <FaHeartbeat className="text-2xl text-white group-hover:scale-110 transition-transform duration-300" />
+                                </div>
+                                <div>
+                                    <h1
+                                        className={`text-xl lg:text-2xl font-bold transition-colors duration-300 ${
+                                            scrolled
+                                                ? "text-[#36ae9a]"
+                                                : "text-white"
+                                        }`}
+                                    >
+                                        Sức Khỏe Học Đường
+                                    </h1>
+                                    <p
+                                        className={`text-xs lg:text-sm transition-colors duration-300 ${
+                                            scrolled
+                                                ? "text-gray-600"
+                                                : "text-white/80"
+                                        }`}
+                                    >
+                                        Hệ thống quản lý y tế học đường
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Desktop Navigation */}
+                        <nav className="hidden lg:flex flex-row items-center gap-8">
+                            {/* Notification Bell */}
+                            <div className="flex items-center gap-4">
+                                <NotificationBell />
+
+                                {/* User Avatar */}
+                                <Dropdown
+                                    menu={{ items: userMenuItems }}
+                                    placement="bottomRight"
+                                    arrow
+                                >
+                                    <div className="flex items-center gap-2 cursor-pointer group">
+                                        <Avatar
+                                            size={40}
+                                            className="border-2 border-white/20 group-hover:border-white/40 transition-all duration-300"
+                                            icon={<UserOutlined />}
+                                        />
+                                        <div className="hidden xl:block text-left">
+                                            <p
+                                                className={`text-sm font-medium transition-colors duration-300 ${
+                                                    scrolled
+                                                        ? "text-gray-700"
+                                                        : "text-white"
+                                                }`}
+                                            >
+                                                {user?.fullName || "Phụ huynh"}
+                                            </p>
+                                            <p
+                                                className={`text-xs transition-colors duration-300 ${
+                                                    scrolled
+                                                        ? "text-gray-500"
+                                                        : "text-white/70"
+                                                }`}
+                                            >
+                                                Phụ huynh
+                                            </p>
+                                        </div>
+                                    </div>
+                                </Dropdown>
+                            </div>
+                        </nav>
+
+                        {/* Mobile Menu Button */}
+                        <div className="lg:hidden flex items-center gap-3">
+                            <NotificationBell />
+                            <button
+                                onClick={() => setMenu(!menu)}
+                                className={`p-2 rounded-lg transition-all duration-300 ${
+                                    scrolled
+                                        ? "bg-gray-100 text-gray-700"
+                                        : "bg-white/20 text-white"
+                                }`}
+                            >
+                                {menu ? <CloseOutlined /> : <MenuOutlined />}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Mobile Menu */}
+                    <div
+                        className={`lg:hidden transition-all duration-300 ease-in-out ${
+                            menu
+                                ? "max-h-96 opacity-100 visible"
+                                : "max-h-0 opacity-0 invisible"
+                        } overflow-hidden`}
+                    >
+                        <div className="bg-white/95 backdrop-blur-md border-t border-gray-200/50">
+                            <div className="flex flex-col py-4 px-6 space-y-4">
+                                {/* Mobile User Menu */}
+                                <div className="border-t border-gray-200/50 pt-4">
+                                    <div className="flex items-center gap-3 py-2 px-4">
+                                        <Avatar
+                                            size={40}
+                                            icon={<UserOutlined />}
+                                        />
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-700">
+                                                {user?.fullName || "Phụ huynh"}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                Phụ huynh
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="mt-2 space-y-1">
+                                        <button
+                                            className="w-full text-left text-gray-700 py-2 px-4 rounded-lg hover:bg-[#36ae9a]/10 hover:text-[#36ae9a] transition-all duration-300"
+                                            onClick={() =>
+                                                navigate("/user/profile")
+                                            }
+                                        >
+                                            Hồ sơ cá nhân
+                                        </button>
+                                        <button
+                                            className="w-full text-left text-gray-700 py-2 px-4 rounded-lg hover:bg-[#36ae9a]/10 hover:text-[#36ae9a] transition-all duration-300"
+                                            onClick={handleLogout}
+                                        >
+                                            Đăng xuất
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
