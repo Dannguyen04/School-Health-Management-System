@@ -165,74 +165,63 @@ const Blogs = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-[#f6fcfa] to-[#e8f5f2]">
-            {/* Hero Section */}
-            <div className="lg:px-32 px-5 pt-24 pb-12">
-                <div className="text-center max-w-4xl mx-auto">
-                    <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-6">
-                        <BookOutlined className="text-[#36ae9a]" />
-                        <span>Kiến thức sức khỏe</span>
-                    </div>
-                    <h1 className="text-4xl lg:text-5xl font-bold text-gray-800 mb-4 leading-tight">
-                        Blog sức khỏe
-                    </h1>
-                    <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
-                        Cập nhật kiến thức, chia sẻ kinh nghiệm và thông tin hữu
-                        ích về sức khỏe học đường từ các chuyên gia y tế.
-                    </p>
+        <div className="min-h-[60vh] bg-gradient-to-br from-[#f6fcfa] to-[#e8f5f2] py-16 px-5 lg:px-32">
+            <div className="text-center max-w-4xl mx-auto mb-10">
+                <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-6">
+                    <BookOutlined className="text-[#36ae9a]" />
+                    <span>Kiến thức sức khỏe</span>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4 leading-tight">
+                    Blog sức khỏe
+                </h2>
+                <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                    Cập nhật kiến thức, chia sẻ kinh nghiệm và thông tin hữu ích
+                    về sức khỏe học đường từ các chuyên gia y tế.
+                </p>
 
-                    {/* Search and Filter */}
-                    <div className="flex flex-col lg:flex-row gap-4 max-w-2xl mx-auto">
-                        <Search
-                            placeholder="Tìm kiếm bài viết..."
-                            allowClear
-                            enterButton={<SearchOutlined />}
-                            size="large"
-                            onSearch={handleSearch}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="flex-1"
-                        />
-                        <Select
-                            value={selectedCategory}
-                            onChange={handleCategoryChange}
-                            size="large"
-                            className="min-w-[150px]"
-                            placeholder="Chọn danh mục"
-                        >
-                            {categories.map((cat) => (
-                                <Select.Option
-                                    key={cat.value}
-                                    value={cat.value}
-                                >
-                                    <Tag color={cat.color}>{cat.label}</Tag>
-                                </Select.Option>
-                            ))}
-                        </Select>
-                    </div>
+                {/* Search and Filter */}
+                <div className="flex flex-col lg:flex-row gap-4 max-w-2xl mx-auto">
+                    <Search
+                        placeholder="Tìm kiếm bài viết..."
+                        allowClear
+                        enterButton={<SearchOutlined />}
+                        size="large"
+                        onSearch={handleSearch}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="flex-1"
+                    />
+                    <Select
+                        value={selectedCategory}
+                        onChange={handleCategoryChange}
+                        size="large"
+                        className="min-w-[150px]"
+                        placeholder="Chọn danh mục"
+                        options={categories}
+                    />
                 </div>
             </div>
 
             {/* Blog Grid */}
-            <div className="lg:px-32 px-5 pb-20">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {Array.from({ length: 6 }).map((_, index) => (
-                            <div
-                                key={index}
-                                className="bg-white rounded-2xl p-6 space-y-4 animate-pulse"
-                            >
-                                <div className="h-48 w-full rounded-xl bg-gray-300"></div>
-                                <div className="h-6 bg-gray-300 rounded w-3/4"></div>
-                                <div className="h-4 bg-gray-300 rounded w-full"></div>
-                                <div className="h-4 bg-gray-300 rounded w-2/3"></div>
-                            </div>
-                        ))}
-                    </div>
+                    Array.from({ length: 6 }).map((_, index) => (
+                        <div
+                            key={index}
+                            className="bg-white rounded-2xl p-6 space-y-4 animate-pulse"
+                        >
+                            <div className="h-48 w-full rounded-xl bg-gray-300"></div>
+                            <div className="h-6 bg-gray-300 rounded w-3/4"></div>
+                            <div className="h-4 bg-gray-300 rounded w-full"></div>
+                            <div className="h-4 bg-gray-300 rounded w-2/3"></div>
+                        </div>
+                    ))
                 ) : filteredBlogs.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {filteredBlogs.map((blog) => (
+                    filteredBlogs.map((blog) => (
+                        <div
+                            key={blog.id}
+                            className="transition-transform hover:-translate-y-2 hover:shadow-xl"
+                        >
                             <BlogCard
-                                key={blog.id}
                                 id={blog.id}
                                 img={blog.coverImage}
                                 headlines={blog.title}
@@ -242,27 +231,11 @@ const Blogs = () => {
                                 views={blog.views}
                                 date={blog.date}
                             />
-                        ))}
-                    </div>
+                        </div>
+                    ))
                 ) : (
-                    <div className="text-center py-12">
-                        <div className="text-gray-400 text-6xl mb-4">📝</div>
-                        <h3 className="text-xl font-semibold text-gray-600 mb-2">
-                            Không tìm thấy bài viết
-                        </h3>
-                        <p className="text-gray-500 mb-6">
-                            Thử thay đổi từ khóa tìm kiếm hoặc danh mục khác
-                        </p>
-                        <Button
-                            type="primary"
-                            onClick={() => {
-                                setSearchTerm("");
-                                setSelectedCategory("all");
-                            }}
-                            className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
-                        >
-                            Xem tất cả bài viết
-                        </Button>
+                    <div className="col-span-full text-center text-gray-500 py-10">
+                        Không tìm thấy bài viết phù hợp.
                     </div>
                 )}
             </div>
