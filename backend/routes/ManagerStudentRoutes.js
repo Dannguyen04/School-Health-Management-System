@@ -1,17 +1,18 @@
 import express from "express";
 import {
-    addStudent,
-    deleteUser,
-    filterStudents,
-    getAllStudents,
-    updateStudent,
-    getAllParents,
-    addParent,
-    getAllGradesWithStudentCount,
+  addParent,
+  addStudent,
+  deleteUser,
+  filterStudents,
+  getAllGradesWithStudentCount,
+  getAllParents,
+  getAllStudents,
+  updateStudent,
 } from "../controllers/AdminController.js";
+import { getDashboardStats } from "../controllers/ManagerDashboardController.js";
 import {
-    authenticateToken,
-    verifyManager,
+  authenticateToken,
+  verifyManager,
 } from "../middleware/authenticateToken.js";
 
 const router = express.Router();
@@ -33,10 +34,18 @@ router.get("/parents", authenticateToken, verifyManager, getAllParents);
 router.post("/parents", authenticateToken, verifyManager, addParent);
 
 router.get(
-    "/grades-with-count",
-    authenticateToken,
-    verifyManager,
-    getAllGradesWithStudentCount
+  "/grades-with-count",
+  authenticateToken,
+  verifyManager,
+  getAllGradesWithStudentCount
+);
+
+// Dashboard stats for manager
+router.get(
+  "/dashboard-stats",
+  authenticateToken,
+  verifyManager,
+  getDashboardStats
 );
 
 export default router;

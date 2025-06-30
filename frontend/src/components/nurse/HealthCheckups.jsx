@@ -12,6 +12,7 @@ import {
   Modal,
   Select,
   Table,
+  Tabs,
   Tag,
   Typography,
 } from "antd";
@@ -46,11 +47,11 @@ const checkupSchema = Yup.object().shape({
   hearingRightWhisper: Yup.number().required(),
   dentalUpperJaw: Yup.string().required("Nhập kết quả răng hàm trên"),
   dentalLowerJaw: Yup.string().required("Nhập kết quả răng hàm dưới"),
-  clinicalNotes: Yup.string().required("Nhập ghi chú lâm sàng"),
+  clinicalNotes: Yup.string(),
   overallHealth: Yup.string()
     .oneOf(["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"])
     .required("Chọn trạng thái"),
-  recommendations: Yup.string().required("Nhập khuyến nghị"),
+  recommendations: Yup.string(),
   requiresFollowUp: Yup.boolean().required("Chọn"),
   followUpDate: Yup.date().nullable(),
   notes: Yup.string(),
@@ -69,6 +70,7 @@ const HealthCheckups = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editInitialValues, setEditInitialValues] = useState(null);
+  const [activeTab, setActiveTab] = useState("campaigns");
 
   // Fetch danh sách campaign khi vào trang
   useEffect(() => {
@@ -121,6 +123,7 @@ const HealthCheckups = () => {
         }
       );
       setReports(resReports.data.data || []);
+      setActiveTab("students");
     } catch {
       setStudents([]);
       setReports([]);
@@ -262,14 +265,84 @@ const HealthCheckups = () => {
     },
   ];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <Typography.Title level={2}>
-          Demo lọc học sinh theo chiến dịch
-        </Typography.Title>
-      </div>
-      {!selectedCampaign ? (
+  const reportColumns = [
+    {
+      title: "Mã học sinh",
+      dataIndex: ["student", "studentCode"],
+      key: "studentCode",
+    },
+    {
+      title: "Tên học sinh",
+      dataIndex: ["student", "user", "fullName"],
+      key: "fullName",
+    },
+    {
+      title: "Lớp",
+      dataIndex: ["student", "class"],
+      key: "class",
+    },
+    {
+      title: "Khối",
+      dataIndex: ["student", "grade"],
+      key: "grade",
+    },
+    {
+      title: "Ngày khám",
+      dataIndex: "scheduledDate",
+      key: "scheduledDate",
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => (
+        <Tag color={status === "COMPLETED" ? "green" : "orange"}>
+          {status === "COMPLETED" ? "Hoàn thành" : "Đã lên lịch"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Sức khỏe tổng thể",
+      dataIndex: "overallHealth",
+      key: "overallHealth",
+      render: (health) => {
+        const statusMap = {
+          NORMAL: { text: "Bình thường", color: "green" },
+          NEEDS_ATTENTION: { text: "Cần chú ý", color: "orange" },
+          REQUIRES_TREATMENT: { text: "Cần điều trị", color: "red" },
+        };
+        const status = statusMap[health] || { text: health, color: "default" };
+        return <Tag color={status.color}>{status.text}</Tag>;
+      },
+    },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (_, record) => (
+        <Button
+          type="default"
+          icon={<EyeOutlined />}
+          shape="round"
+          size="small"
+          style={{
+            color: "#1677ff",
+            borderColor: "#1677ff",
+            fontWeight: 500,
+          }}
+          onClick={() => handleViewDetail(record)}
+        >
+          Chi tiết
+        </Button>
+      ),
+    },
+  ];
+
+  const items = [
+    {
+      key: "campaigns",
+      label: "Chiến dịch khám sức khỏe",
+      children: (
         <Card title="Chọn chiến dịch kiểm tra sức khỏe">
           <Table
             dataSource={campaigns}
@@ -279,53 +352,102 @@ const HealthCheckups = () => {
             pagination={false}
           />
         </Card>
+      ),
+    },
+    {
+      key: "students",
+      label: "Danh sách học sinh",
+      children: selectedCampaign ? (
+        <Card title="Danh sách học sinh phù hợp">
+          <Table
+            dataSource={students}
+            columns={studentColumns}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 5 }}
+          />
+        </Card>
       ) : (
-        <>
-          <Card
-            title={`Chiến dịch: ${selectedCampaign.name}`}
-            extra={
-              <Button onClick={() => setSelectedCampaign(null)}>Đóng</Button>
-            }
-          >
-            <Descriptions bordered column={2}>
-              <Descriptions.Item label="Mô tả">
-                {selectedCampaign.description || "Không có"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày bắt đầu">
-                {selectedCampaign.scheduledDate &&
-                  new Date(selectedCampaign.scheduledDate).toLocaleDateString()}
-              </Descriptions.Item>
-              <Descriptions.Item label="Ngày kết thúc">
-                {selectedCampaign.deadline &&
-                  new Date(selectedCampaign.deadline).toLocaleDateString()}
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng thái">
-                <Tag
-                  color={
-                    selectedCampaign.status === "ACTIVE" ? "green" : "default"
-                  }
-                >
-                  {selectedCampaign.status === "ACTIVE"
-                    ? "Đang diễn ra"
-                    : "Đã kết thúc"}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Khối áp dụng">
-                {(selectedCampaign.targetGrades || []).join(", ")}
-              </Descriptions.Item>
-            </Descriptions>
-          </Card>
-          <Card title="Danh sách học sinh phù hợp">
-            <Table
-              dataSource={students}
-              columns={studentColumns}
-              rowKey="id"
-              loading={loading}
-              pagination={{ pageSize: 5 }}
-            />
-          </Card>
-        </>
+        <Card>
+          <div className="text-center text-gray-500">
+            Vui lòng chọn chiến dịch trước
+          </div>
+        </Card>
+      ),
+    },
+    {
+      key: "reports",
+      label: "Báo cáo khám sức khỏe",
+      children: selectedCampaign ? (
+        <Card title="Danh sách báo cáo khám sức khỏe">
+          <Table
+            dataSource={reports}
+            columns={reportColumns}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 5 }}
+          />
+        </Card>
+      ) : (
+        <Card>
+          <div className="text-center text-gray-500">
+            Vui lòng chọn chiến dịch trước
+          </div>
+        </Card>
+      ),
+    },
+  ];
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <Typography.Title level={2}>
+          Khám sức khỏe theo chiến dịch
+        </Typography.Title>
+      </div>
+      {selectedCampaign && (
+        <Card
+          title={`Chiến dịch: ${selectedCampaign.name}`}
+          extra={
+            <Button onClick={() => setSelectedCampaign(null)}>Đóng</Button>
+          }
+        >
+          <Descriptions bordered column={2}>
+            <Descriptions.Item label="Mô tả">
+              {selectedCampaign.description || "Không có"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày bắt đầu">
+              {selectedCampaign.scheduledDate &&
+                new Date(selectedCampaign.scheduledDate).toLocaleDateString()}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày kết thúc">
+              {selectedCampaign.deadline &&
+                new Date(selectedCampaign.deadline).toLocaleDateString()}
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag
+                color={
+                  selectedCampaign.status === "ACTIVE" ? "green" : "default"
+                }
+              >
+                {selectedCampaign.status === "ACTIVE"
+                  ? "Đang diễn ra"
+                  : "Đã kết thúc"}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Khối áp dụng">
+              {(selectedCampaign.targetGrades || []).join(", ")}
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
       )}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={items}
+        size="large"
+      />
+      {/* Các Modal giữ nguyên */}
       {/* Modal nhập báo cáo khám sức khỏe */}
       <Modal
         title={`Khám sức khỏe: ${checkupStudent?.fullName || ""}`}
@@ -405,12 +527,16 @@ const HealthCheckups = () => {
           {({ values, setFieldValue, isSubmitting, handleSubmit }) => (
             <form onSubmit={handleSubmit}>
               <Divider orientation="left">Thông tin cơ bản</Divider>
-              <Form.Item label="Ngày khám" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Ngày khám"
+                required
+              >
                 <DatePicker
                   style={{ width: "100%" }}
                   value={values.scheduledDate}
                   onChange={(date) => setFieldValue("scheduledDate", date)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="scheduledDate"
@@ -418,14 +544,18 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Chiều cao (cm)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Chiều cao (cm)"
+                required
+              >
                 <InputNumber
                   min={50}
                   max={250}
                   style={{ width: "100%" }}
                   value={values.height}
                   onChange={(v) => setFieldValue("height", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="height"
@@ -433,14 +563,18 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Cân nặng (kg)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Cân nặng (kg)"
+                required
+              >
                 <InputNumber
                   min={10}
                   max={200}
                   style={{ width: "100%" }}
                   value={values.weight}
                   onChange={(v) => setFieldValue("weight", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="weight"
@@ -448,14 +582,18 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Mạch" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Mạch"
+                required
+              >
                 <InputNumber
                   min={40}
                   max={200}
                   style={{ width: "100%" }}
                   value={values.pulse}
                   onChange={(v) => setFieldValue("pulse", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="pulse"
@@ -463,14 +601,18 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Huyết áp tâm thu" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Huyết áp tâm thu"
+                required
+              >
                 <InputNumber
                   min={60}
                   max={250}
                   style={{ width: "100%" }}
                   value={values.systolicBP}
                   onChange={(v) => setFieldValue("systolicBP", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="systolicBP"
@@ -478,14 +620,18 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Huyết áp tâm trương" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Huyết áp tâm trương"
+                required
+              >
                 <InputNumber
                   min={30}
                   max={150}
                   style={{ width: "100%" }}
                   value={values.diastolicBP}
                   onChange={(v) => setFieldValue("diastolicBP", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="diastolicBP"
@@ -494,7 +640,12 @@ const HealthCheckups = () => {
                 />
               </Form.Item>
               <Divider orientation="left">Thị lực</Divider>
-              <Form.Item label="Phải (không kính)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Phải (không kính)"
+                required
+              >
                 <InputNumber
                   min={0}
                   max={10}
@@ -502,7 +653,6 @@ const HealthCheckups = () => {
                   style={{ width: "100%" }}
                   value={values.visionRightNoGlasses}
                   onChange={(v) => setFieldValue("visionRightNoGlasses", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="visionRightNoGlasses"
@@ -510,7 +660,12 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Trái (không kính)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Trái (không kính)"
+                required
+              >
                 <InputNumber
                   min={0}
                   max={10}
@@ -518,7 +673,6 @@ const HealthCheckups = () => {
                   style={{ width: "100%" }}
                   value={values.visionLeftNoGlasses}
                   onChange={(v) => setFieldValue("visionLeftNoGlasses", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="visionLeftNoGlasses"
@@ -526,7 +680,12 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Phải (có kính)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Phải (có kính)"
+                required
+              >
                 <InputNumber
                   min={0}
                   max={10}
@@ -534,7 +693,6 @@ const HealthCheckups = () => {
                   style={{ width: "100%" }}
                   value={values.visionRightWithGlasses}
                   onChange={(v) => setFieldValue("visionRightWithGlasses", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="visionRightWithGlasses"
@@ -542,7 +700,12 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Trái (có kính)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Trái (có kính)"
+                required
+              >
                 <InputNumber
                   min={0}
                   max={10}
@@ -550,7 +713,6 @@ const HealthCheckups = () => {
                   style={{ width: "100%" }}
                   value={values.visionLeftWithGlasses}
                   onChange={(v) => setFieldValue("visionLeftWithGlasses", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="visionLeftWithGlasses"
@@ -559,7 +721,12 @@ const HealthCheckups = () => {
                 />
               </Form.Item>
               <Divider orientation="left">Thính lực</Divider>
-              <Form.Item label="Trái (bình thường)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Trái (bình thường)"
+                required
+              >
                 <InputNumber
                   min={0}
                   max={10}
@@ -567,7 +734,6 @@ const HealthCheckups = () => {
                   style={{ width: "100%" }}
                   value={values.hearingLeftNormal}
                   onChange={(v) => setFieldValue("hearingLeftNormal", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="hearingLeftNormal"
@@ -575,7 +741,12 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Trái (thì thầm)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Trái (thì thầm)"
+                required
+              >
                 <InputNumber
                   min={0}
                   max={10}
@@ -583,7 +754,6 @@ const HealthCheckups = () => {
                   style={{ width: "100%" }}
                   value={values.hearingLeftWhisper}
                   onChange={(v) => setFieldValue("hearingLeftWhisper", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="hearingLeftWhisper"
@@ -591,7 +761,12 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Phải (bình thường)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Phải (bình thường)"
+                required
+              >
                 <InputNumber
                   min={0}
                   max={10}
@@ -599,7 +774,6 @@ const HealthCheckups = () => {
                   style={{ width: "100%" }}
                   value={values.hearingRightNormal}
                   onChange={(v) => setFieldValue("hearingRightNormal", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="hearingRightNormal"
@@ -607,7 +781,12 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Phải (thì thầm)" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Phải (thì thầm)"
+                required
+              >
                 <InputNumber
                   min={0}
                   max={10}
@@ -615,7 +794,6 @@ const HealthCheckups = () => {
                   style={{ width: "100%" }}
                   value={values.hearingRightWhisper}
                   onChange={(v) => setFieldValue("hearingRightWhisper", v)}
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="hearingRightWhisper"
@@ -624,13 +802,17 @@ const HealthCheckups = () => {
                 />
               </Form.Item>
               <Divider orientation="left">Răng miệng</Divider>
-              <Form.Item label="Răng hàm trên" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Răng hàm trên"
+                required
+              >
                 <Input
                   value={values.dentalUpperJaw}
                   onChange={(e) =>
                     setFieldValue("dentalUpperJaw", e.target.value)
                   }
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="dentalUpperJaw"
@@ -638,13 +820,17 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Răng hàm dưới" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Răng hàm dưới"
+                required
+              >
                 <Input
                   value={values.dentalLowerJaw}
                   onChange={(e) =>
                     setFieldValue("dentalLowerJaw", e.target.value)
                   }
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="dentalLowerJaw"
@@ -653,11 +839,15 @@ const HealthCheckups = () => {
                 />
               </Form.Item>
               <Divider orientation="left">Đánh giá tổng thể</Divider>
-              <Form.Item label="Phân loại thể lực" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Phân loại thể lực"
+                required
+              >
                 <Select
                   value={values.physicalClassification}
                   onChange={(v) => setFieldValue("physicalClassification", v)}
-                  disabled={true}
                 >
                   <Option value="EXCELLENT">Xuất sắc</Option>
                   <Option value="GOOD">Tốt</Option>
@@ -670,7 +860,12 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Sức khỏe tổng thể" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Sức khỏe tổng thể"
+                required
+              >
                 <Select
                   value={values.overallHealth}
                   onChange={(v) => setFieldValue("overallHealth", v)}
@@ -685,7 +880,12 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Cần theo dõi" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Cần theo dõi"
+                required
+              >
                 <Select
                   value={values.requiresFollowUp}
                   onChange={(v) => setFieldValue("requiresFollowUp", v)}
@@ -699,7 +899,11 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Ngày theo dõi">
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Ngày theo dõi"
+              >
                 <DatePicker
                   style={{ width: "100%" }}
                   value={values.followUpDate}
@@ -711,14 +915,17 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Khuyến nghị" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Khuyến nghị"
+              >
                 <Input.TextArea
                   rows={2}
                   value={values.recommendations}
                   onChange={(e) =>
                     setFieldValue("recommendations", e.target.value)
                   }
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="recommendations"
@@ -726,14 +933,17 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Ghi chú lâm sàng" required>
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Ghi chú lâm sàng"
+              >
                 <Input.TextArea
                   rows={2}
                   value={values.clinicalNotes}
                   onChange={(e) =>
                     setFieldValue("clinicalNotes", e.target.value)
                   }
-                  disabled={true}
                 />
                 <ErrorMessage
                   name="clinicalNotes"
@@ -741,7 +951,11 @@ const HealthCheckups = () => {
                   className="text-red-500 text-xs"
                 />
               </Form.Item>
-              <Form.Item label="Ghi chú thêm">
+              <Form.Item
+                labelCol={{ span: 6 }}
+                wrapperCol={{ span: 18 }}
+                label="Ghi chú thêm"
+              >
                 <Input.TextArea
                   rows={2}
                   value={values.notes}
@@ -942,7 +1156,12 @@ const HealthCheckups = () => {
             {({ values, setFieldValue, isSubmitting, handleSubmit }) => (
               <form onSubmit={handleSubmit}>
                 <Divider orientation="left">Thông tin cơ bản</Divider>
-                <Form.Item label="Ngày khám" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Ngày khám"
+                  required
+                >
                   <DatePicker
                     style={{ width: "100%" }}
                     value={values.scheduledDate}
@@ -955,7 +1174,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Chiều cao (cm)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Chiều cao (cm)"
+                  required
+                >
                   <InputNumber
                     min={50}
                     max={250}
@@ -970,7 +1194,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Cân nặng (kg)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Cân nặng (kg)"
+                  required
+                >
                   <InputNumber
                     min={10}
                     max={200}
@@ -985,7 +1214,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Mạch" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Mạch"
+                  required
+                >
                   <InputNumber
                     min={40}
                     max={200}
@@ -1000,7 +1234,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Huyết áp tâm thu" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Huyết áp tâm thu"
+                  required
+                >
                   <InputNumber
                     min={60}
                     max={250}
@@ -1015,7 +1254,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Huyết áp tâm trương" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Huyết áp tâm trương"
+                  required
+                >
                   <InputNumber
                     min={30}
                     max={150}
@@ -1031,7 +1275,12 @@ const HealthCheckups = () => {
                   />
                 </Form.Item>
                 <Divider orientation="left">Thị lực</Divider>
-                <Form.Item label="Phải (không kính)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Phải (không kính)"
+                  required
+                >
                   <InputNumber
                     min={0}
                     max={10}
@@ -1047,7 +1296,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Trái (không kính)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Trái (không kính)"
+                  required
+                >
                   <InputNumber
                     min={0}
                     max={10}
@@ -1063,7 +1317,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Phải (có kính)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Phải (có kính)"
+                  required
+                >
                   <InputNumber
                     min={0}
                     max={10}
@@ -1079,7 +1338,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Trái (có kính)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Trái (có kính)"
+                  required
+                >
                   <InputNumber
                     min={0}
                     max={10}
@@ -1096,7 +1360,12 @@ const HealthCheckups = () => {
                   />
                 </Form.Item>
                 <Divider orientation="left">Thính lực</Divider>
-                <Form.Item label="Trái (bình thường)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Trái (bình thường)"
+                  required
+                >
                   <InputNumber
                     min={0}
                     max={10}
@@ -1112,7 +1381,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Trái (thì thầm)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Trái (thì thầm)"
+                  required
+                >
                   <InputNumber
                     min={0}
                     max={10}
@@ -1128,7 +1402,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Phải (bình thường)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Phải (bình thường)"
+                  required
+                >
                   <InputNumber
                     min={0}
                     max={10}
@@ -1144,7 +1423,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Phải (thì thầm)" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Phải (thì thầm)"
+                  required
+                >
                   <InputNumber
                     min={0}
                     max={10}
@@ -1161,7 +1445,12 @@ const HealthCheckups = () => {
                   />
                 </Form.Item>
                 <Divider orientation="left">Răng miệng</Divider>
-                <Form.Item label="Răng hàm trên" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Răng hàm trên"
+                  required
+                >
                   <Input
                     value={values.dentalUpperJaw}
                     onChange={(e) =>
@@ -1175,7 +1464,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Răng hàm dưới" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Răng hàm dưới"
+                  required
+                >
                   <Input
                     value={values.dentalLowerJaw}
                     onChange={(e) =>
@@ -1190,7 +1484,12 @@ const HealthCheckups = () => {
                   />
                 </Form.Item>
                 <Divider orientation="left">Đánh giá tổng thể</Divider>
-                <Form.Item label="Phân loại thể lực" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Phân loại thể lực"
+                  required
+                >
                   <Select
                     value={values.physicalClassification}
                     onChange={(v) => setFieldValue("physicalClassification", v)}
@@ -1207,7 +1506,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Sức khỏe tổng thể" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Sức khỏe tổng thể"
+                  required
+                >
                   <Select
                     value={values.overallHealth}
                     onChange={(v) => setFieldValue("overallHealth", v)}
@@ -1222,7 +1526,12 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Cần theo dõi" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Cần theo dõi"
+                  required
+                >
                   <Select
                     value={values.requiresFollowUp}
                     onChange={(v) => setFieldValue("requiresFollowUp", v)}
@@ -1236,7 +1545,11 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Ngày theo dõi">
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Ngày theo dõi"
+                >
                   <DatePicker
                     style={{ width: "100%" }}
                     value={values.followUpDate}
@@ -1248,14 +1561,17 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Khuyến nghị" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Khuyến nghị"
+                >
                   <Input.TextArea
                     rows={2}
                     value={values.recommendations}
                     onChange={(e) =>
                       setFieldValue("recommendations", e.target.value)
                     }
-                    disabled={true}
                   />
                   <ErrorMessage
                     name="recommendations"
@@ -1263,14 +1579,17 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Ghi chú lâm sàng" required>
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Ghi chú lâm sàng"
+                >
                   <Input.TextArea
                     rows={2}
                     value={values.clinicalNotes}
                     onChange={(e) =>
                       setFieldValue("clinicalNotes", e.target.value)
                     }
-                    disabled={true}
                   />
                   <ErrorMessage
                     name="clinicalNotes"
@@ -1278,7 +1597,11 @@ const HealthCheckups = () => {
                     className="text-red-500 text-xs"
                   />
                 </Form.Item>
-                <Form.Item label="Ghi chú thêm">
+                <Form.Item
+                  labelCol={{ span: 6 }}
+                  wrapperCol={{ span: 18 }}
+                  label="Ghi chú thêm"
+                >
                   <Input.TextArea
                     rows={2}
                     value={values.notes}
