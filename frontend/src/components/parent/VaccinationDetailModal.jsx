@@ -105,9 +105,7 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                                 Loại vắc xin
                             </div>
                             <div className="font-semibold">
-                                {vaccination?.vaccineName ||
-                                    vaccination?.vaccine?.name ||
-                                    "-"}
+                                {vaccination?.vaccineName || "-"}
                             </div>
                         </Col>
                         <Col span={12}>

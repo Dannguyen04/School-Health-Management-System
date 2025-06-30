@@ -618,7 +618,13 @@ export const getVaccinationHistory = async (req, res) => {
             orderBy: { administeredDate: "desc" },
         });
 
-        res.json({ success: true, data: vaccinations });
+        // Bổ sung trường vaccineName cho mỗi vaccination
+        const vaccinationsWithVaccineName = vaccinations.map((vac) => ({
+            ...vac,
+            vaccineName: vac.name || "",
+        }));
+
+        res.json({ success: true, data: vaccinationsWithVaccineName });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
