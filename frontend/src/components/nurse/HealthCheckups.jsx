@@ -47,7 +47,7 @@ const checkupSchema = Yup.object().shape({
   hearingRightWhisper: Yup.number().required(),
   dentalUpperJaw: Yup.string().required("Nhập kết quả răng hàm trên"),
   dentalLowerJaw: Yup.string().required("Nhập kết quả răng hàm dưới"),
-  clinicalNotes: Yup.string(),
+  clinicalNotes: Yup.string().required(),
   overallHealth: Yup.string()
     .oneOf(["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"])
     .required("Chọn trạng thái"),
@@ -937,6 +937,7 @@ const HealthCheckups = () => {
                 labelCol={{ span: 6 }}
                 wrapperCol={{ span: 18 }}
                 label="Ghi chú lâm sàng"
+                required
               >
                 <Input.TextArea
                   rows={2}
@@ -1028,7 +1029,18 @@ const HealthCheckups = () => {
                 {detailReport.diastolicBP}
               </Descriptions.Item>
               <Descriptions.Item label="Phân loại thể lực">
-                {detailReport.physicalClassification}
+                {(() => {
+                  const map = {
+                    EXCELLENT: "Xuất sắc",
+                    GOOD: "Tốt",
+                    AVERAGE: "Trung bình",
+                    WEAK: "Yếu",
+                  };
+                  return (
+                    map[detailReport.physicalClassification] ||
+                    detailReport.physicalClassification
+                  );
+                })()}
               </Descriptions.Item>
             </Descriptions>
             <Divider orientation="left">Thị lực</Divider>
@@ -1082,7 +1094,17 @@ const HealthCheckups = () => {
                       : "red"
                   }
                 >
-                  {detailReport.overallHealth}
+                  {(() => {
+                    const map = {
+                      NORMAL: "Bình thường",
+                      NEEDS_ATTENTION: "Cần chú ý",
+                      REQUIRES_TREATMENT: "Cần điều trị",
+                    };
+                    return (
+                      map[detailReport.overallHealth] ||
+                      detailReport.overallHealth
+                    );
+                  })()}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Cần theo dõi">
@@ -1583,6 +1605,7 @@ const HealthCheckups = () => {
                   labelCol={{ span: 6 }}
                   wrapperCol={{ span: 18 }}
                   label="Ghi chú lâm sàng"
+                  required
                 >
                   <Input.TextArea
                     rows={2}

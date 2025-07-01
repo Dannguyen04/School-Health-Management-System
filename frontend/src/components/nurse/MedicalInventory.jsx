@@ -56,23 +56,41 @@ const MedicalInventory = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const params = new URLSearchParams();
-
-      if (filters.studentName)
-        params.append("studentName", filters.studentName);
-      if (filters.parentName) params.append("parentName", filters.parentName);
-      if (filters.medicationName)
-        params.append("medicationName", filters.medicationName);
-
       const response = await axios.get("/api/nurse/approved-medications", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params,
       });
-
       if (response.data.success) {
-        setApprovedData(response.data.data);
+        let data = response.data.data;
+        // Nếu có filter, thực hiện search phía client với normalize
+        if (
+          filters.studentName ||
+          filters.parentName ||
+          filters.medicationName
+        ) {
+          const normalize = (str) =>
+            (str || "").replace(/\s+/g, " ").trim().toLowerCase();
+          data = data.filter((item) => {
+            const studentMatch = filters.studentName
+              ? normalize(item.studentName).includes(
+                  normalize(filters.studentName)
+                )
+              : true;
+            const parentMatch = filters.parentName
+              ? normalize(item.parentName).includes(
+                  normalize(filters.parentName)
+                )
+              : true;
+            const medMatch = filters.medicationName
+              ? normalize(item.medicationName).includes(
+                  normalize(filters.medicationName)
+                )
+              : true;
+            return studentMatch && parentMatch && medMatch;
+          });
+        }
+        setApprovedData(data);
       }
     } catch (error) {
       console.error("Error fetching approved medications:", error);
@@ -87,21 +105,29 @@ const MedicalInventory = () => {
     setInventoryLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const params = new URLSearchParams();
-
-      if (filters.search) params.append("search", filters.search);
-      if (filters.category) params.append("category", filters.category);
-      if (filters.lowStock) params.append("lowStock", filters.lowStock);
-
       const response = await axios.get("/api/nurse/inventory", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-        params,
       });
-
       if (response.data.success) {
-        setInventoryData(response.data.data);
+        let data = response.data.data;
+        // Nếu có filter search, thực hiện search phía client với normalize
+        if (filters.search) {
+          const normalize = (str) =>
+            (str || "").replace(/\s+/g, " ").trim().toLowerCase();
+          data = data.filter((item) =>
+            normalize(item.name).includes(normalize(filters.search))
+          );
+        }
+        // Các filter khác vẫn giữ nguyên nếu cần
+        if (filters.category) {
+          data = data.filter((item) => item.category === filters.category);
+        }
+        if (filters.lowStock) {
+          data = data.filter((item) => item.stockQuantity <= 5);
+        }
+        setInventoryData(data);
       }
     } catch (error) {
       console.error("Error fetching medical inventory:", error);
@@ -282,6 +308,15 @@ const MedicalInventory = () => {
       title: "Tần suất",
       dataIndex: "frequency",
       key: "frequency",
+      render: (frequency) => {
+        const freqMap = {
+          once: "1 lần/ngày",
+          twice: "2 lần/ngày",
+          three: "3 lần/ngày",
+          four: "4 lần/ngày",
+        };
+        return freqMap[frequency] || frequency || "-";
+      },
     },
     {
       title: "Ngày bắt đầu",

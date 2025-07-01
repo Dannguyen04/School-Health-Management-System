@@ -230,7 +230,7 @@ const Vaccination = () => {
     },
     {
       title: "Vắc xin",
-      dataIndex: ["vaccination", "name"],
+      dataIndex: ["vaccinations", "name"],
       key: "vaccinationName",
     },
     {

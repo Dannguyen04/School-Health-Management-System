@@ -182,15 +182,20 @@ const HealthCheckupCampaigns = () => {
       title: "Khối áp dụng",
       dataIndex: "targetGrades",
       key: "targetGrades",
-      render: (grades) => (
-        <Space>
-          {(grades || []).map((g) => (
-            <Tag color="geekblue" key={g}>
-              {g}
-            </Tag>
-          ))}
-        </Space>
-      ),
+      render: (grades) => {
+        const sorted = (grades || [])
+          .slice()
+          .sort((a, b) => Number(a) - Number(b));
+        return (
+          <Space>
+            {sorted.map((g) => (
+              <Tag color="geekblue" key={g}>
+                {g}
+              </Tag>
+            ))}
+          </Space>
+        );
+      },
     },
     // {
     //   title: "Loại khám",

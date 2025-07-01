@@ -1502,6 +1502,7 @@ const getAllStudentsForNurse = async (req, res) => {
             bloodType: true,
             emergencyContact: true,
             emergencyPhone: true,
+            healthProfile: true,
           },
         },
       },
@@ -1523,6 +1524,7 @@ const getAllStudentsForNurse = async (req, res) => {
         bloodType: student.studentProfile.bloodType,
         emergencyContact: student.studentProfile.emergencyContact,
         emergencyPhone: student.studentProfile.emergencyPhone,
+        healthProfile: student.studentProfile.healthProfile, // Thêm dòng này
       }));
 
     res.json({
