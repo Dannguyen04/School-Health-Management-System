@@ -42,6 +42,7 @@ app.use(
         origin: [
             "http://localhost:5173",
             "https://school-health-oqsssvh2x-dannguyen04s-projects.vercel.app",
+            "https://school-health-delta.vercel.app",
         ],
         credentials: true,
     })
