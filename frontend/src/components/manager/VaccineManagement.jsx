@@ -322,7 +322,7 @@ const VaccineManagement = () => {
               ? {
                   name: selectedVaccine.name,
                   requirement: selectedVaccine.requirement,
-                  dose: selectedVaccine.dose,
+                  // dose: selectedVaccine.dose,
                   expiredDate: selectedVaccine.expiredDate
                     ? dayjs(selectedVaccine.expiredDate)
                     : null,
@@ -332,7 +332,7 @@ const VaccineManagement = () => {
               : {
                   name: "",
                   requirement: "",
-                  dose: "",
+                  // dose: "",
                   expiredDate: null,
                   sideEffects: "",
                   notes: "",
@@ -342,14 +342,14 @@ const VaccineManagement = () => {
           validationSchema={Yup.object({
             name: Yup.string().required("Vui lòng nhập tên vaccine"),
             requirement: Yup.string().required("Vui lòng chọn yêu cầu"),
-            dose: Yup.string().required("Vui lòng chọn liều lượng"),
+            // dose: Yup.string().required("Vui lòng chọn liều lượng"),
             expiredDate: Yup.date().required("Vui lòng chọn ngày hết hạn"),
           })}
           onSubmit={async (values, { setSubmitting }) => {
             const data = {
               name: values.name,
               requirement: values.requirement,
-              dose: values.dose,
+              // dose: values.dose,
               expiredDate: values.expiredDate
                 ? typeof values.expiredDate === "string"
                   ? values.expiredDate
@@ -420,7 +420,7 @@ const VaccineManagement = () => {
                   <Select.Option value="OPTIONAL">Tùy chọn</Select.Option>
                 </Select>
               </Form.Item>
-              <Form.Item
+              {/* <Form.Item
                 label="Liều lượng"
                 help={touched.dose && errors.dose ? errors.dose : undefined}
                 validateStatus={
@@ -437,7 +437,7 @@ const VaccineManagement = () => {
                   <Select.Option value="SECOND">Mũi 2</Select.Option>
                   <Select.Option value="BOOSTER">Nhắc lại</Select.Option>
                 </Select>
-              </Form.Item>
+              </Form.Item> */}
               <Form.Item
                 label="Ngày hết hạn"
                 help={
