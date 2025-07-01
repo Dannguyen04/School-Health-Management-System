@@ -7,6 +7,8 @@ const NotificationToast = ({
     notification: notificationData,
     onClose,
     onMarkAsRead,
+    actionButton,
+    studentId,
 }) => {
     const [isVisible, setIsVisible] = useState(true);
     const navigate = useNavigate();
@@ -27,7 +29,15 @@ const NotificationToast = ({
             onMarkAsRead(notificationData.id);
         }
 
-        // Navigation logic
+        if (notificationData.id === "missing-health-profile" && studentId) {
+            navigate(`/user/health-profile?studentId=${studentId}`);
+            setIsVisible(false);
+            setTimeout(() => {
+                onClose();
+            }, 300);
+            return;
+        }
+
         switch (notificationData.type) {
             case "vaccination_consent":
                 navigate("/user/consent-forms");
@@ -193,6 +203,7 @@ const NotificationToast = ({
                                     {getTypeLabel(notificationData.type)}
                                 </span>
                                 <Space size="small">
+                                    {actionButton}
                                     <Button
                                         type="text"
                                         size="small"
