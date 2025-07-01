@@ -129,6 +129,28 @@ const NotificationToast = ({
         }
     };
 
+    const getIconBgColor = (type) => {
+        switch (type) {
+            case "medical_event":
+                return "#ff7875"; // đỏ nhạt
+            case "vaccination":
+                return "#40a9ff"; // xanh dương
+            case "medical_check":
+                return "#36cfc9"; // xanh ngọc
+            case "medication":
+                return "#9254de"; // tím
+            case "vaccination_campaign_created":
+            case "vaccination_campaign_updated":
+            case "vaccination_campaign_deleted":
+            case "vaccine_created":
+            case "vaccine_updated":
+            case "vaccine_deleted":
+                return "#ffd666"; // vàng
+            default:
+                return "#bfbfbf"; // xám
+        }
+    };
+
     return (
         isVisible && (
             <div
@@ -161,7 +183,23 @@ const NotificationToast = ({
                             gap: "12px",
                         }}
                     >
-                        <div style={{ fontSize: "24px" }}>
+                        <div
+                            style={{
+                                fontSize: "32px",
+                                background: getIconBgColor(
+                                    notificationData.type
+                                ),
+                                color: "#fff",
+                                borderRadius: "50%",
+                                boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                                width: 48,
+                                height: 48,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "2px solid #fff",
+                            }}
+                        >
                             {getNotificationIcon(notificationData.type)}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>

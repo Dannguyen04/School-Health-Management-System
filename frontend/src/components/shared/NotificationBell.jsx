@@ -295,7 +295,7 @@ const NotificationBell = () => {
                         notification={notification}
                         onViewDetail={handleViewDetail}
                         onMarkAsRead={markAsRead}
-                        onDelete={deleteNotification}
+                        onDelete={async (id) => await deleteNotification(id)}
                         onNotificationClick={handleNotificationClick}
                         getNotificationIcon={getNotificationIcon}
                         getStatusColor={getStatusColor}
