@@ -2,7 +2,11 @@ import axios from "axios";
 
 // Use environment variable for production, fallback to proxy for development
 //const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
-const API_BASE_URL = "https://school-health.onrender.com/api";
+const API_BASE_URL =
+    import.meta.env.VITE_API_URL ||
+    (window.location.hostname === "localhost"
+        ? "http://localhost:5000/api"
+        : "https://school-health.onrender.com/api");
 
 // Create axios instance with default config
 const api = axios.create({
