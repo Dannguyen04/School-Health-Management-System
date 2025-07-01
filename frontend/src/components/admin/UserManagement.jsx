@@ -463,6 +463,7 @@ const UserManagement = () => {
                   value={values.role}
                   onChange={(value) => setFieldValue("role", value)}
                   onBlur={handleBlur}
+                  disabled={editingUser && editingUser.role === "PARENT"}
                 >
                   <Option value="ADMIN">Quản trị viên</Option>
                   <Option value="SCHOOL_NURSE">Y tá trường học</Option>

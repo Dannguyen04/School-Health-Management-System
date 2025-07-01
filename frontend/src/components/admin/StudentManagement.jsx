@@ -139,7 +139,7 @@ const StudentManagement = () => {
         return;
       }
 
-      const response = await axios.get("/api/manager/students/parents", {
+      const response = await axios.get("/api/admin/parents", {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
