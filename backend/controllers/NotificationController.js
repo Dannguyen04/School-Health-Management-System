@@ -408,3 +408,31 @@ export const getNotificationById = async (req, res) => {
         });
     }
 };
+
+// Đánh dấu tất cả thông báo là đã đọc
+export const markAllAsRead = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const updated = await prisma.notification.updateMany({
+            where: {
+                userId,
+                status: { in: ["SENT", "DELIVERED"] },
+            },
+            data: {
+                status: "READ",
+                readAt: new Date(),
+            },
+        });
+        res.json({
+            success: true,
+            data: updated,
+            message: "All notifications marked as read",
+        });
+    } catch (error) {
+        console.error("Error marking all notifications as read:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error marking all notifications as read",
+        });
+    }
+};

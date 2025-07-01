@@ -8,6 +8,7 @@ import {
     restoreNotification,
     sendMedicalEventNotification,
     updateNotificationStatus,
+    markAllAsRead,
 } from "../controllers/NotificationController.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 
@@ -56,5 +57,8 @@ router.post(
     authenticateToken,
     sendMedicalEventNotification
 );
+
+// Đánh dấu tất cả thông báo là đã đọc
+router.patch("/user/:userId/read-all", authenticateToken, markAllAsRead);
 
 export default router;

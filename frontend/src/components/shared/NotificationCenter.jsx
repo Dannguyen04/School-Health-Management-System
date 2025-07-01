@@ -33,6 +33,7 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
         error,
         refresh,
         markAsRead,
+        markAllAsRead,
         deleteNotification,
         archiveNotification,
         restoreNotification,
@@ -378,6 +379,14 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
         </div>
     );
 
+    // Khi mở dropdown chuông, đánh dấu tất cả là đã đọc
+    const handleDropdownOpenChange = async (open) => {
+        setDropdownVisible(open);
+        if (open && unreadCount > 0) {
+            await markAllAsRead();
+        }
+    };
+
     return (
         <>
             <Dropdown
@@ -385,7 +394,7 @@ const NotificationCenter = ({ maxDropdownItems = 10 }) => {
                 placement="bottomRight"
                 trigger={["click"]}
                 open={dropdownVisible}
-                onOpenChange={setDropdownVisible}
+                onOpenChange={handleDropdownOpenChange}
                 overlayStyle={{ maxHeight: "600px", overflow: "auto" }}
             >
                 <Badge count={unreadCount} size="small">

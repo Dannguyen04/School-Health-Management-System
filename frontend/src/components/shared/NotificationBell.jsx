@@ -47,6 +47,7 @@ const NotificationBell = () => {
         unreadCount,
         loading,
         markAsRead,
+        markAllAsRead,
         deleteNotification,
         archiveNotification,
         restoreNotification,
@@ -358,6 +359,14 @@ const NotificationBell = () => {
         },
     ].filter(Boolean);
 
+    // Khi mở dropdown chuông, đánh dấu tất cả là đã đọc
+    const handleDropdownOpenChange = async (open) => {
+        setDropdownVisible(open);
+        if (open && unreadCount > 0) {
+            await markAllAsRead();
+        }
+    };
+
     return (
         <>
             <Dropdown
@@ -365,7 +374,7 @@ const NotificationBell = () => {
                 placement="bottomRight"
                 trigger={["click"]}
                 open={dropdownVisible}
-                onOpenChange={setDropdownVisible}
+                onOpenChange={handleDropdownOpenChange}
             >
                 <Badge count={unreadCount} size="small">
                     <Button

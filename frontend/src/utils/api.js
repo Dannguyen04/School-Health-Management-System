@@ -163,10 +163,12 @@ export const parentAPI = {
         api.patch(`/parents/notifications/${notificationId}/archive`),
     restoreNotification: (notificationId) =>
         api.patch(`/parents/notifications/${notificationId}/restore`),
-    getUnreadNotificationCount: () =>
-        api.get("/parents/notifications/unread-count"),
+    getUnreadNotificationCount: (userId) =>
+        api.get(`/notifications/user/${userId}/unread-count`),
     deleteNotification: (notificationId) =>
         api.delete(`/notifications/${notificationId}`),
+    markAllNotificationsAsRead: (userId) =>
+        api.patch(`/notifications/user/${userId}/read-all`),
 };
 
 // Auth API functions
