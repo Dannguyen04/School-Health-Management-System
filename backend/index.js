@@ -39,7 +39,10 @@ connectToDatabase();
 
 app.use(
     cors({
-        origin: "http://localhost:5173",
+        origin: [
+            "http://localhost:5173",
+            "https://school-health-oqsssvh2x-dannguyen04s-projects.vercel.app",
+        ],
         credentials: true,
     })
 );
