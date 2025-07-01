@@ -47,6 +47,8 @@ const StudentHealthProfile = () => {
   const [loadingChecks, setLoadingChecks] = useState(false);
   const [checkDetail, setCheckDetail] = useState(null);
   const [checkDetailModal, setCheckDetailModal] = useState(false);
+  const [searchForm] = Form.useForm();
+  const [filteredStudents, setFilteredStudents] = useState([]);
 
   // Fetch danh sách học sinh thực tế từ API
   const fetchStudents = async (isRefresh = false) => {
@@ -74,6 +76,10 @@ const StudentHealthProfile = () => {
   useEffect(() => {
     fetchStudents();
   }, []);
+
+  useEffect(() => {
+    setFilteredStudents(students);
+  }, [students]);
 
   const handleRefresh = () => {
     fetchStudents(true);
@@ -162,6 +168,34 @@ const StudentHealthProfile = () => {
     }
   };
 
+  // Hàm xử lý tìm kiếm
+  const handleSearch = () => {
+    const values = searchForm.getFieldsValue();
+    const normalize = (str) => (str || "").replace(/\s+/g, "").toLowerCase();
+    setFilteredStudents(
+      students.filter((student) => {
+        const codeMatch = values.studentCode
+          ? normalize(student.studentCode).includes(
+              normalize(values.studentCode)
+            )
+          : true;
+        const nameMatch = values.name
+          ? normalize(student.fullName).includes(normalize(values.name))
+          : true;
+        const classMatch = values.class
+          ? normalize(student.class).includes(normalize(values.class))
+          : true;
+        return codeMatch && nameMatch && classMatch;
+      })
+    );
+  };
+
+  // Hàm xóa bộ lọc
+  const handleReset = () => {
+    searchForm.resetFields();
+    setFilteredStudents(students);
+  };
+
   const columns = [
     {
       title: "Mã học sinh",
@@ -192,6 +226,12 @@ const StudentHealthProfile = () => {
       dataIndex: "gender",
       key: "gender",
       width: 80,
+      render: (gender) => {
+        const g = gender.toString().trim().toLowerCase();
+        if (["male", "nam", "NAM"].includes(g)) return "Nam";
+        if (["female", "NỮ", "nữ"].includes(g)) return "Nữ";
+        return gender;
+      },
     },
     {
       title: "Thao tác",
@@ -231,112 +271,116 @@ const StudentHealthProfile = () => {
     }
 
     return (
-      <div className="space-y-4">
-        {/* Allergies Section */}
-        <Card
-          size="small"
-          title="Dị ứng"
-          className="border-l-4 border-l-red-500"
-        >
-          {profile.allergies && profile.allergies.length > 0 ? (
-            <div className="space-y-2">
-              {profile.allergies.map((allergy, index) => (
-                <Tag color="red" key={index} size="large">
-                  {allergy}
-                </Tag>
-              ))}
-            </div>
-          ) : (
-            <Text type="secondary">Không có dị ứng</Text>
-          )}
-        </Card>
-
-        {/* Chronic Diseases Section */}
-        <Card
-          size="small"
-          title="Bệnh mãn tính"
-          className="border-l-4 border-l-orange-500"
-        >
-          {profile.chronicDiseases && profile.chronicDiseases.length > 0 ? (
-            <div className="space-y-2">
-              {profile.chronicDiseases.map((disease, index) => (
-                <Tag color="orange" key={index} size="large">
-                  {disease}
-                </Tag>
-              ))}
-            </div>
-          ) : (
-            <Text type="secondary">Không có bệnh mãn tính</Text>
-          )}
-        </Card>
-
-        {/* Current Medications */}
-        <Card
-          size="small"
-          title="Thuốc đang sử dụng"
-          className="border-l-4 border-l-blue-500"
-        >
-          {profile.medications && profile.medications.length > 0 ? (
-            <div className="space-y-2">
-              {profile.medications.map((medication, index) => (
-                <Tag color="blue" key={index} size="large">
-                  {medication}
-                </Tag>
-              ))}
-            </div>
-          ) : (
-            <Text type="secondary">Không có thuốc đang sử dụng</Text>
-          )}
-        </Card>
-
-        {/* Physical Measurements */}
-        <Row gutter={16}>
-          <Col span={12}>
-            <Card
-              size="small"
-              title="Thông số cơ thể"
-              className="border-l-4 border-l-green-500"
+      <Card
+        title={
+          <span style={{ fontWeight: 700, fontSize: 18 }}>Hồ sơ sức khỏe</span>
+        }
+        bordered={false}
+        style={{ boxShadow: "0 2px 8px #f0f1f2", borderRadius: 12 }}
+      >
+        <Row gutter={24}>
+          <Col xs={24} md={12}>
+            <Descriptions
+              title={
+                <span style={{ fontWeight: 600 }}>Thông tin tổng quát</span>
+              }
+              column={1}
+              size="middle"
+              labelStyle={{ fontWeight: 500, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+              className="mb-4"
             >
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="Chiều cao">
-                  {profile.height ? `${profile.height} cm` : "Chưa cập nhật"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Cân nặng">
-                  {profile.weight ? `${profile.weight} kg` : "Chưa cập nhật"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Thị lực">
-                  {profile.vision || "Chưa cập nhật"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Thính lực">
-                  {profile.hearing || "Chưa cập nhật"}
-                </Descriptions.Item>
-              </Descriptions>
-            </Card>
+              <Descriptions.Item label="Dị ứng">
+                {profile.allergies && profile.allergies.length > 0 ? (
+                  profile.allergies.map((allergy, idx) => (
+                    <Tag color="red" key={idx} style={{ marginBottom: 4 }}>
+                      {allergy}
+                    </Tag>
+                  ))
+                ) : (
+                  <Text type="secondary">Không có dị ứng</Text>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Bệnh mãn tính">
+                {profile.chronicDiseases &&
+                profile.chronicDiseases.length > 0 ? (
+                  profile.chronicDiseases.map((disease, idx) => (
+                    <Tag color="orange" key={idx} style={{ marginBottom: 4 }}>
+                      {disease}
+                    </Tag>
+                  ))
+                ) : (
+                  <Text type="secondary">Không có bệnh mãn tính</Text>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thuốc đang sử dụng">
+                {profile.medications && profile.medications.length > 0 ? (
+                  profile.medications.map((med, idx) => (
+                    <Tag color="blue" key={idx} style={{ marginBottom: 4 }}>
+                      {med}
+                    </Tag>
+                  ))
+                ) : (
+                  <Text type="secondary">Không có thuốc</Text>
+                )}
+              </Descriptions.Item>
+            </Descriptions>
           </Col>
-          <Col span={12}>
-            <Card
-              size="small"
-              title="Tiền sử điều trị"
-              className="border-l-4 border-l-purple-500"
+          <Col xs={24} md={12}>
+            <Descriptions
+              title={<span style={{ fontWeight: 600 }}>Thông số cơ thể</span>}
+              column={1}
+              size="middle"
+              labelStyle={{ fontWeight: 500, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+              className="mb-4"
             >
-              <Text>
-                {profile.treatmentHistory || "Không có tiền sử điều trị"}
-              </Text>
-            </Card>
+              <Descriptions.Item label="Chiều cao">
+                {profile.height ? `${profile.height} cm` : "Chưa cập nhật"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Cân nặng">
+                {profile.weight ? `${profile.weight} kg` : "Chưa cập nhật"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thị lực">
+                {profile.vision || "Chưa cập nhật"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thính lực">
+                {profile.hearing || "Chưa cập nhật"}
+              </Descriptions.Item>
+            </Descriptions>
           </Col>
         </Row>
-
-        {/* Notes */}
-        {profile.notes && (
-          <Card
-            size="small"
-            title="Ghi chú"
-            className="border-l-4 border-l-gray-500"
-          >
-            <Text>{profile.notes}</Text>
-          </Card>
-        )}
-      </div>
+        <Row gutter={24}>
+          <Col xs={24} md={12}>
+            <Descriptions
+              title={<span style={{ fontWeight: 600 }}>Tiền sử điều trị</span>}
+              column={1}
+              size="middle"
+              labelStyle={{ fontWeight: 500, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+            >
+              <Descriptions.Item label="">
+                {profile.treatmentHistory || (
+                  <Text type="secondary">Không có tiền sử điều trị</Text>
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+          </Col>
+          <Col xs={24} md={12}>
+            {profile.notes && (
+              <Descriptions
+                title={<span style={{ fontWeight: 600 }}>Ghi chú</span>}
+                column={1}
+                size="middle"
+                labelStyle={{ fontWeight: 500, minWidth: 120 }}
+                contentStyle={{ fontSize: 16 }}
+              >
+                <Descriptions.Item label="">{profile.notes}</Descriptions.Item>
+              </Descriptions>
+            )}
+          </Col>
+        </Row>
+      </Card>
     );
   };
 
@@ -393,28 +437,28 @@ const StudentHealthProfile = () => {
       </div>
 
       <Card>
-        <Form layout="vertical">
+        <Form layout="vertical" form={searchForm} onFinish={handleSearch}>
           <Row gutter={16}>
             <Col xs={24} sm={8}>
               <Form.Item name="studentCode" label="Mã học sinh">
-                <Input placeholder="Nhập mã học sinh" />
+                <Input placeholder="Nhập mã học sinh" allowClear />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
               <Form.Item name="name" label="Tên học sinh">
-                <Input placeholder="Nhập tên học sinh" />
+                <Input placeholder="Nhập tên học sinh" allowClear />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>
               <Form.Item name="class" label="Lớp">
-                <Input placeholder="Nhập lớp" />
+                <Input placeholder="Nhập lớp" allowClear />
               </Form.Item>
             </Col>
           </Row>
           <Row>
             <Col span={24} className="text-right">
               <Space>
-                <Button>Xóa bộ lọc</Button>
+                <Button onClick={handleReset}>Xóa bộ lọc</Button>
                 <Button
                   type="primary"
                   icon={<SearchOutlined />}
@@ -431,7 +475,19 @@ const StudentHealthProfile = () => {
       <Card>
         <Table
           columns={columns}
-          dataSource={students}
+          dataSource={[...filteredStudents].sort((a, b) => {
+            if (!a.studentCode || !b.studentCode) return 0;
+            // Nếu studentCode là số, so sánh số; nếu là chuỗi, so sánh chuỗi
+            const codeA = isNaN(Number(a.studentCode))
+              ? a.studentCode
+              : Number(a.studentCode);
+            const codeB = isNaN(Number(b.studentCode))
+              ? b.studentCode
+              : Number(b.studentCode);
+            if (codeA < codeB) return -1;
+            if (codeA > codeB) return 1;
+            return 0;
+          })}
           rowKey="id"
           pagination={{
             pageSize: 5,
@@ -659,7 +715,7 @@ const StudentHealthProfile = () => {
         footer={
           <Button onClick={() => setCheckDetailModal(false)}>Đóng</Button>
         }
-        width={600}
+        width={700}
       >
         {checkDetail ? (
           <Card
@@ -692,9 +748,15 @@ const StudentHealthProfile = () => {
                   }
                   style={{ fontSize: 14, padding: "2px 12px" }}
                 >
-                  {checkDetail.status === "COMPLETED"
-                    ? "Hoàn thành"
-                    : checkDetail.status}
+                  {(() => {
+                    const map = {
+                      COMPLETED: "Hoàn thành",
+                      SCHEDULED: "Đã lên lịch",
+                      RESCHEDULED: "Đã dời lịch",
+                      CANCELLED: "Đã hủy",
+                    };
+                    return map[checkDetail.status] || checkDetail.status;
+                  })()}
                 </Tag>
               </Descriptions.Item>
             </Descriptions>
@@ -702,7 +764,160 @@ const StudentHealthProfile = () => {
             <Descriptions
               title={
                 <span style={{ fontWeight: 700, fontSize: 18 }}>
-                  Kết quả kiểm tra
+                  Chỉ số cơ thể
+                </span>
+              }
+              column={2}
+              size="middle"
+              labelStyle={{ fontWeight: 600, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+            >
+              <Descriptions.Item label="Chiều cao">
+                {checkDetail.height != null ? `${checkDetail.height} cm` : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Cân nặng">
+                {checkDetail.weight != null ? `${checkDetail.weight} kg` : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Mạch">
+                {checkDetail.pulse != null
+                  ? `${checkDetail.pulse} lần/phút`
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Huyết áp">
+                {checkDetail.systolicBP != null &&
+                checkDetail.diastolicBP != null
+                  ? `${checkDetail.systolicBP}/${checkDetail.diastolicBP} mmHg`
+                  : "-"}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider />
+            <Descriptions
+              title={
+                <span style={{ fontWeight: 700, fontSize: 18 }}>Thị lực</span>
+              }
+              column={2}
+              size="middle"
+              labelStyle={{ fontWeight: 600, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+            >
+              <Descriptions.Item label="Phải (không kính)">
+                {checkDetail.visionRightNoGlasses != null
+                  ? checkDetail.visionRightNoGlasses
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trái (không kính)">
+                {checkDetail.visionLeftNoGlasses != null
+                  ? checkDetail.visionLeftNoGlasses
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phải (có kính)">
+                {checkDetail.visionRightWithGlasses != null
+                  ? checkDetail.visionRightWithGlasses
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trái (có kính)">
+                {checkDetail.visionLeftWithGlasses != null
+                  ? checkDetail.visionLeftWithGlasses
+                  : "-"}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider />
+            <Descriptions
+              title={
+                <span style={{ fontWeight: 700, fontSize: 18 }}>Thính lực</span>
+              }
+              column={2}
+              size="middle"
+              labelStyle={{ fontWeight: 600, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+            >
+              <Descriptions.Item label="Trái (bình thường)">
+                {checkDetail.hearingLeftNormal != null
+                  ? checkDetail.hearingLeftNormal
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trái (thì thầm)">
+                {checkDetail.hearingLeftWhisper != null
+                  ? checkDetail.hearingLeftWhisper
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phải (bình thường)">
+                {checkDetail.hearingRightNormal != null
+                  ? checkDetail.hearingRightNormal
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phải (thì thầm)">
+                {checkDetail.hearingRightWhisper != null
+                  ? checkDetail.hearingRightWhisper
+                  : "-"}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider />
+            <Descriptions
+              title={
+                <span style={{ fontWeight: 700, fontSize: 18 }}>
+                  Răng miệng
+                </span>
+              }
+              column={2}
+              size="middle"
+              labelStyle={{ fontWeight: 600, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+            >
+              <Descriptions.Item label="Hàm trên">
+                {checkDetail.dentalUpperJaw || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Hàm dưới">
+                {checkDetail.dentalLowerJaw || "-"}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider />
+            <Descriptions
+              title={
+                <span style={{ fontWeight: 700, fontSize: 18 }}>
+                  Phân loại thể lực & Tổng thể
+                </span>
+              }
+              column={2}
+              size="middle"
+              labelStyle={{ fontWeight: 600, minWidth: 120 }}
+              contentStyle={{ fontSize: 16 }}
+            >
+              <Descriptions.Item label="Phân loại thể lực">
+                {(() => {
+                  const map = {
+                    EXCELLENT: "Xuất sắc",
+                    GOOD: "Tốt",
+                    AVERAGE: "Trung bình",
+                    WEAK: "Yếu",
+                  };
+                  return (
+                    map[checkDetail.physicalClassification] ||
+                    checkDetail.physicalClassification ||
+                    "-"
+                  );
+                })()}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tổng thể sức khỏe">
+                {(() => {
+                  const map = {
+                    NORMAL: "Bình thường",
+                    NEEDS_ATTENTION: "Cần chú ý",
+                    REQUIRES_TREATMENT: "Cần điều trị",
+                  };
+                  return (
+                    map[checkDetail.overallHealth] ||
+                    checkDetail.overallHealth ||
+                    "-"
+                  );
+                })()}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider />
+            <Descriptions
+              title={
+                <span style={{ fontWeight: 700, fontSize: 18 }}>
+                  Khuyến nghị & Theo dõi
                 </span>
               }
               column={1}
@@ -710,40 +925,18 @@ const StudentHealthProfile = () => {
               labelStyle={{ fontWeight: 600, minWidth: 120 }}
               contentStyle={{ fontSize: 16 }}
             >
-              <Descriptions.Item label="Thị lực">
-                {checkDetail.visionResult || (
-                  <span style={{ color: "#aaa" }}>-</span>
-                )}
+              <Descriptions.Item label="Khuyến nghị">
+                {checkDetail.recommendations || "-"}
               </Descriptions.Item>
-              <Descriptions.Item label="Thính lực">
-                {checkDetail.hearingResult || (
-                  <span style={{ color: "#aaa" }}>-</span>
-                )}
+              <Descriptions.Item label="Cần theo dõi lại">
+                {checkDetail.requiresFollowUp ? "Có" : "Không"}
               </Descriptions.Item>
-              <Descriptions.Item label="Răng miệng">
-                {checkDetail.dentalResult || (
-                  <span style={{ color: "#aaa" }}>-</span>
-                )}
+              <Descriptions.Item label="Ngày theo dõi lại">
+                {checkDetail.followUpDate
+                  ? new Date(checkDetail.followUpDate).toLocaleDateString()
+                  : "-"}
               </Descriptions.Item>
-              <Descriptions.Item label="Chiều cao / Cân nặng">
-                {checkDetail.heightWeight ? (
-                  `${checkDetail.heightWeight.height} cm / ${checkDetail.heightWeight.weight} kg`
-                ) : (
-                  <span style={{ color: "#aaa" }}>-</span>
-                )}
-              </Descriptions.Item>
-            </Descriptions>
-            <Divider />
-            <Descriptions
-              title={
-                <span style={{ fontWeight: 700, fontSize: 18 }}>Ghi chú</span>
-              }
-              column={1}
-              size="middle"
-              labelStyle={{ fontWeight: 600, minWidth: 120 }}
-              contentStyle={{ fontSize: 16 }}
-            >
-              <Descriptions.Item label="">
+              <Descriptions.Item label="Ghi chú">
                 {checkDetail.notes ? (
                   <span style={{ whiteSpace: "pre-line" }}>
                     {checkDetail.notes}

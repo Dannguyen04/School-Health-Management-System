@@ -474,9 +474,8 @@ const getStudentMedicalChecks = async (req, res) => {
           },
         },
         nurse: {
-          select: {
-            id: true,
-            name: true,
+          include: {
+            user: true,
           },
         },
       },

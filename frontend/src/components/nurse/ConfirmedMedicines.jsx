@@ -92,6 +92,15 @@ const ConfirmedMedicines = () => {
       title: "Tần suất",
       dataIndex: "frequency",
       key: "frequency",
+      render: (frequency) => {
+        const freqMap = {
+          once: "1 lần/ngày",
+          twice: "2 lần/ngày",
+          three: "3 lần/ngày",
+          four: "4 lần/ngày",
+        };
+        return freqMap[frequency] || frequency || "-";
+      },
     },
     {
       title: "Ngày bắt đầu",

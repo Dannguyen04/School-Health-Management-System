@@ -461,7 +461,7 @@ const StudentList = () => {
         return;
       }
       // Call deleteUser endpoint for students
-      await axios.delete(`/api/manager/users/${studentId}`, {
+      await axios.delete(`/api/manager/students/${studentId}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -611,8 +611,8 @@ const StudentList = () => {
               ]}
             >
               <Select>
-                <Option value="Nam">Nam</Option>
-                <Option value="Nữ">Nữ</Option>
+                <Option value="male">Nam</Option>
+                <Option value="female">Nữ</Option>
               </Select>
             </Form.Item>
             <Form.Item
@@ -641,6 +641,21 @@ const StudentList = () => {
                   required: true,
                   message: "Vui lòng nhập lớp!",
                 },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const grade = getFieldValue("grade");
+                    if (!grade || !value) return Promise.resolve();
+                    const regex = new RegExp(`^${grade}[A-E]$`);
+                    if (!regex.test(value)) {
+                      return Promise.reject(
+                        new Error(
+                          "Lớp phải có định dạng: [Khối][Chữ cái A-E] (VD: 1A, 2B, 3C)"
+                        )
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                }),
               ]}
             >
               <Input />
