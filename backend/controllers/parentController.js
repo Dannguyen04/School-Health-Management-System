@@ -11,6 +11,7 @@ export const getMyChildren = async (req, res) => {
         }
 
         const parentId = req.user.parentProfile.id;
+        console.log("[getMyChildren] parentId:", parentId);
 
         const childrenRelations = await prisma.studentParent.findMany({
             where: {
@@ -29,10 +30,14 @@ export const getMyChildren = async (req, res) => {
             },
         });
 
+        console.log("[getMyChildren] childrenRelations:", childrenRelations);
+
         const children = childrenRelations.map((rel) => ({
             studentId: rel.student.id,
             fullName: rel.student.user.fullName,
         }));
+
+        console.log("[getMyChildren] children response:", children);
 
         res.json({
             success: true,
@@ -573,6 +578,7 @@ export const getVaccinationDetail = async (req, res) => {
 export const getVaccinationHistory = async (req, res) => {
     try {
         const parentId = req.user.parentProfile.id;
+        const { studentId } = req.params;
 
         // Lấy danh sách con của phụ huynh
         const children = await prisma.studentParent.findMany({
@@ -586,7 +592,17 @@ export const getVaccinationHistory = async (req, res) => {
             },
         });
 
-        const studentIds = children.map((child) => child.student.id);
+        let studentIds = children.map((child) => child.student.id);
+        if (studentId) {
+            // Kiểm tra studentId có thuộc parent không
+            if (!studentIds.includes(studentId)) {
+                return res.status(403).json({
+                    success: false,
+                    error: "Bạn không có quyền xem lịch sử tiêm chủng của học sinh này.",
+                });
+            }
+            studentIds = [studentId];
+        }
 
         // Lấy lịch sử tiêm chủng của các con
         const vaccinations = await prisma.vaccinations.findMany({
@@ -602,7 +618,13 @@ export const getVaccinationHistory = async (req, res) => {
             orderBy: { administeredDate: "desc" },
         });
 
-        res.json({ success: true, data: vaccinations });
+        // Bổ sung trường vaccineName cho mỗi vaccination
+        const vaccinationsWithVaccineName = vaccinations.map((vac) => ({
+            ...vac,
+            vaccineName: vac.name || "",
+        }));
+
+        res.json({ success: true, data: vaccinationsWithVaccineName });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }

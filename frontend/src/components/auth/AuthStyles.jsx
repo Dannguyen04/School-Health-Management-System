@@ -21,48 +21,66 @@ export const FormContainer = styled.div`
     min-height: 600px;
     display: flex;
     flex-direction: row;
+    @media (max-width: 768px) {
+        width: 100vw;
+        min-height: 100vh;
+        flex-direction: column;
+        border-radius: 0;
+        box-shadow: none;
+    }
     // hidden form sign up
     &.signin-active .sign-up-container {
         transform: translateX(0);
         opacity: 0;
         z-index: 1;
+        @media (max-width: 768px) {
+            display: none;
+        }
     }
-
     &.signin-active .sign-in-container {
         transform: translateX(0);
         opacity: 1;
         z-index: 5;
     }
-
     &.signin-active .overlay-container {
         transform: translateX(0);
+        @media (max-width: 768px) {
+            display: none;
+        }
     }
-
     &.signin-active .overlay {
         left: -100%;
         transform: translateX(50%);
+        @media (max-width: 768px) {
+            display: none;
+        }
     }
-
     // hidden form sign in
     &.signup-active .sign-in-container {
         transform: translateX(100%);
         opacity: 0;
         z-index: 1;
+        @media (max-width: 768px) {
+            display: none;
+        }
     }
-
     &.signup-active .sign-up-container {
         transform: translateX(100%);
         opacity: 1;
         z-index: 5;
     }
-
     &.signup-active .overlay-container {
         transform: translateX(-100%);
+        @media (max-width: 768px) {
+            display: none;
+        }
     }
-
     &.signup-active .overlay {
         left: 0%;
         transform: translateX(0);
+        @media (max-width: 768px) {
+            display: none;
+        }
     }
 `;
 
@@ -80,6 +98,17 @@ export const SignUpContainer = styled.div`
     flex-direction: column;
     padding: 0 50px;
     transition: all 0.5s ease-in-out;
+    @media (max-width: 768px) {
+        position: static;
+        width: 100vw;
+        max-width: 100vw;
+        height: auto;
+        padding: 24px 16px;
+        min-height: 100vh;
+        background: #fff;
+        z-index: 2;
+        box-shadow: none;
+    }
 `;
 
 export const SignInContainer = styled.div`
@@ -96,6 +125,17 @@ export const SignInContainer = styled.div`
     flex-direction: column;
     padding: 0 50px;
     transition: all 0.5s ease-in-out;
+    @media (max-width: 768px) {
+        position: static;
+        width: 100vw;
+        max-width: 100vw;
+        height: auto;
+        padding: 24px 16px;
+        min-height: 100vh;
+        background: #fff;
+        z-index: 2;
+        box-shadow: none;
+    }
 `;
 
 export const OverlayContainer = styled.div`
@@ -107,6 +147,9 @@ export const OverlayContainer = styled.div`
     overflow: hidden;
     transition: transform 0.5s ease-in-out;
     z-index: 100;
+    @media (max-width: 768px) {
+        display: none !important;
+    }
 `;
 
 export const Overlay = styled.div`
@@ -120,6 +163,9 @@ export const Overlay = styled.div`
     height: 100%;
     width: 200%;
     transition: transform 0.5s ease-in-out;
+    @media (max-width: 768px) {
+        display: none !important;
+    }
 `;
 
 export const OverlayPanel = styled.div`
@@ -136,6 +182,9 @@ export const OverlayPanel = styled.div`
     transform: translateX(0);
     transition: transform 0.5s ease-in-out;
     z-index: 101;
+    @media (max-width: 768px) {
+        display: none !important;
+    }
 `;
 
 export const Form = styled.form`
@@ -148,12 +197,19 @@ export const Form = styled.form`
     width: 100%;
     max-width: 520px;
     text-align: center;
+    @media (max-width: 768px) {
+        max-width: 100vw;
+        padding: 0;
+    }
 `;
 
 export const Title = styled.h1`
     font-size: 2.5vw;
     font-weight: bold;
     margin: 0;
+    @media (max-width: 768px) {
+        font-size: 2rem;
+    }
 `;
 
 export const InputStyled = styled.input`
@@ -164,6 +220,10 @@ export const InputStyled = styled.input`
     width: 100%;
     max-width: 500px;
     color: #000;
+    @media (max-width: 768px) {
+        max-width: 100%;
+        font-size: 1rem;
+    }
 `;
 
 export const Button = styled.button`
@@ -178,8 +238,11 @@ export const Button = styled.button`
     text-transform: uppercase;
     transition: transform 80ms ease-in;
     margin-top: 10px;
-    &:hover {
-        background-color: #ff3a2b;
+    width: 100%;
+    max-width: 100%;
+    @media (max-width: 768px) {
+        font-size: 1rem;
+        padding: 12px 0;
     }
 `;
 

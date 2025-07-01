@@ -141,6 +141,23 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
             styles={{
                 body: {
                     height: 580,
+                    padding: 0,
+                },
+                content: {
+                    borderRadius: 10,
+                },
+                "@media (max-width: 768px)": {
+                    body: {
+                        height: "100vh",
+                        padding: 0,
+                    },
+                    content: {
+                        borderRadius: 0,
+                        boxShadow: "none",
+                        width: "100vw",
+                        minHeight: "100vh",
+                        margin: 0,
+                    },
                 },
             }}
         >

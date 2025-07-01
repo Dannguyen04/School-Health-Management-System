@@ -89,6 +89,10 @@ export const nurseAPI = {
     updateBlog: (id, data) => api.put(`/nurse/blogs/${id}`, data),
     deleteBlog: (id) => api.delete(`/nurse/blogs/${id}`),
     getBlogCategories: () => api.get("/nurse/blogs/categories"),
+    uploadBlogImage: (formData) =>
+        api.post("/upload/blog-image", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        }),
 };
 
 // User API endpoints
@@ -138,7 +142,10 @@ export const parentAPI = {
         api.get(`/parents/students?parentId=${parentId}`),
 
     // Vaccination operations
-    getVaccinationHistory: () => api.get("/parents/vaccination-history"),
+    getVaccinationHistory: (studentId) =>
+        studentId
+            ? api.get(`/parents/vaccination-history/${studentId}`)
+            : api.get("/parents/vaccination-history"),
     getVaccinationDetail: (campaignId, studentId) =>
         api.get(`/parents/vaccination-detail/${campaignId}/${studentId}`),
     getVaccinationCampaigns: (studentId) =>

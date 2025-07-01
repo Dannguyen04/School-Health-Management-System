@@ -12,18 +12,44 @@ const VaccinationHistory = () => {
     const [selected, setSelected] = useState(null);
     const [modalVisible, setModalVisible] = useState(false);
     const [loading, setLoading] = useState(true);
-    // Giả lập danh sách học sinh
-    const [children] = useState([
-        { value: "child1", label: "Nguyễn Văn A" },
-        { value: "child2", label: "Nguyễn Văn B" },
-    ]);
-    const [selectedChild, setSelectedChild] = useState("child1");
+    const [children, setChildren] = useState([]);
+    const [selectedChild, setSelectedChild] = useState(null);
+
+    // Lấy danh sách con khi mount
+    useEffect(() => {
+        const fetchChildren = async () => {
+            try {
+                const res = await parentAPI.getChildren();
+                const childrenArr = res.data?.data || [];
+                setChildren(
+                    childrenArr.map((child) => ({
+                        value: child.studentId,
+                        label: child.fullName,
+                    }))
+                );
+                // Chọn mặc định là con đầu tiên nếu có
+                if (childrenArr.length > 0) {
+                    setSelectedChild(childrenArr[0].studentId);
+                }
+            } catch (error) {
+                setChildren([]);
+            }
+        };
+        fetchChildren();
+    }, []);
 
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true);
-                const res = await parentAPI.getVaccinationHistory();
+                if (!selectedChild) {
+                    setVaccinations([]);
+                    setLoading(false);
+                    return;
+                }
+                const res = await parentAPI.getVaccinationHistory(
+                    selectedChild
+                );
                 if (res.data.success) setVaccinations(res.data.data);
             } catch (error) {
                 console.error("Error fetching vaccination history:", error);
