@@ -53,7 +53,7 @@ const NotificationBell = () => {
         restoreNotification,
     } = useNotifications(user?.id, {
         autoRefresh: true,
-        refreshInterval: 30000, // 30 seconds
+        refreshInterval: 5000, // 5 seconds
     });
 
     const handleViewDetail = async (notification) => {
