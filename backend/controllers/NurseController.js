@@ -541,20 +541,7 @@ export const getAllMedicalEvents = async (req, res) => {
             },
             include: {
                 student: {
-                    select: {
-                        id: true,
-                        studentCode: true,
-                        grade: true,
-                        class: true,
-                        bloodType: true,
-                        emergencyContact: true,
-                        emergencyPhone: true,
-                        user: {
-                            select: {
-                                fullName: true,
-                            },
-                        },
-                    },
+                    include: { user: true },
                 },
                 nurse: {
                     select: {
