@@ -12,10 +12,13 @@ import {
     Space,
     Spin,
     Typography,
+    Modal,
 } from "antd";
-import React from "react";
+import React, { useState } from "react";
 import { useAuth } from "../../context/authContext";
 import { userAPI } from "../../utils/api";
+import axios from "../../utils/api";
+import { useOutletContext } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
@@ -24,6 +27,7 @@ const UserProfile = () => {
     const [isEditing, setIsEditing] = React.useState(false);
     const [loading, setLoading] = React.useState(false);
     const [profileForm] = Form.useForm();
+    const [showWrongPasswordModal, setShowWrongPasswordModal] = useState(false);
 
     const [userData, setUserData] = React.useState({
         fullName: "",
@@ -33,6 +37,8 @@ const UserProfile = () => {
         address: "",
         avatar: "",
     });
+
+    const { addToastNotification } = useOutletContext?.() || {};
 
     // Fetch user profile data
     React.useEffect(() => {
@@ -224,6 +230,83 @@ const UserProfile = () => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Thêm form đổi mật khẩu dưới phần thông tin cá nhân */}
+                            <Divider />
+                            <Title level={4}>Đổi mật khẩu</Title>
+                            <Form
+                                layout="vertical"
+                                onFinish={async (values) => {
+                                    try {
+                                        const res = await axios.post(
+                                            "/users/change-password",
+                                            values
+                                        );
+                                        if (addToastNotification) {
+                                            addToastNotification({
+                                                title: "Đổi mật khẩu thành công",
+                                                message:
+                                                    "Bạn đã đổi mật khẩu thành công. Vui lòng đăng nhập lại.",
+                                                type: "update_password",
+                                            });
+                                        }
+                                        setTimeout(() => {
+                                            localStorage.removeItem("token");
+                                            window.location.href = "/auth";
+                                        }, 1500);
+                                    } catch (err) {
+                                        if (
+                                            err.response?.data?.message ===
+                                            "Mật khẩu cũ không đúng."
+                                        ) {
+                                            setShowWrongPasswordModal(true);
+                                        } else {
+                                            message.error(
+                                                err.response?.data?.message ||
+                                                    "Có lỗi xảy ra."
+                                            );
+                                        }
+                                    }
+                                }}
+                                style={{ maxWidth: 400 }}
+                            >
+                                <Form.Item
+                                    label="Mật khẩu cũ"
+                                    name="oldPassword"
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message:
+                                                "Vui lòng nhập mật khẩu cũ",
+                                        },
+                                    ]}
+                                >
+                                    <Input.Password />
+                                </Form.Item>
+                                <Form.Item
+                                    label="Mật khẩu mới"
+                                    name="newPassword"
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message:
+                                                "Vui lòng nhập mật khẩu mới",
+                                        },
+                                        {
+                                            min: 8,
+                                            message:
+                                                "Mật khẩu mới phải có ít nhất 8 ký tự",
+                                        },
+                                    ]}
+                                >
+                                    <Input.Password />
+                                </Form.Item>
+                                <Form.Item>
+                                    <Button type="primary" htmlType="submit">
+                                        Đổi mật khẩu
+                                    </Button>
+                                </Form.Item>
+                            </Form>
                         </div>
                     ) : (
                         /* Edit Mode */
@@ -323,6 +406,22 @@ const UserProfile = () => {
                         </Form>
                     )}
                 </Card>
+                <Modal
+                    open={showWrongPasswordModal}
+                    onCancel={() => setShowWrongPasswordModal(false)}
+                    footer={[
+                        <Button
+                            key="close"
+                            type="primary"
+                            onClick={() => setShowWrongPasswordModal(false)}
+                        >
+                            Đóng
+                        </Button>,
+                    ]}
+                    title="Sai mật khẩu"
+                >
+                    Bạn đã nhập sai mật khẩu cũ. Vui lòng kiểm tra lại!
+                </Modal>
             </div>
         </div>
     );

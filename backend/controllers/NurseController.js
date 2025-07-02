@@ -1434,11 +1434,15 @@ export const reportVaccinationResult = async (req, res) => {
     const updatedVaccination = await prisma.vaccinationRecord.update({
       where: { id: vaccination.id },
       data: {
-        sideEffects: sideEffects,
-        sideEffects: sideEffects || vaccination.sideEffects,
-        notes: additionalNotes || vaccination.notes,
-        reaction: reaction || vaccination.reaction,
-        followUpRequired: followUpRequired || false,
+        sideEffects:
+          sideEffects !== undefined ? sideEffects : vaccination.sideEffects,
+        notes:
+          additionalNotes !== undefined ? additionalNotes : vaccination.notes,
+        reaction: reaction !== undefined ? reaction : vaccination.reaction,
+        followUpRequired:
+          followUpRequired !== undefined
+            ? followUpRequired
+            : vaccination.followUpRequired,
         followUpDate: followUpDate
           ? new Date(followUpDate)
           : vaccination.followUpDate,

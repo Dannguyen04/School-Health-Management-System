@@ -33,7 +33,7 @@ const MedicalCampaignDetailModal = ({ visible, campaign, onClose }) => {
             footer={null}
             width={600}
             style={{ borderRadius: "1rem" }}
-            bodyStyle={{ padding: "32px 24px" }}
+            styles={{ body: { padding: "32px 24px" } }}
         >
             {!campaign ? (
                 <div

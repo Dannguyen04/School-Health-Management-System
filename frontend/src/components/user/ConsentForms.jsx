@@ -223,7 +223,7 @@ const ConsentForms = () => {
                             <Card
                                 key={form.id + "-" + form.studentId}
                                 className="rounded-xl shadow border-0 hover:shadow-lg transition-shadow duration-300"
-                                bodyStyle={{ padding: 20 }}
+                                styles={{ body: { padding: 20 } }}
                             >
                                 <div className="flex items-center gap-3 mb-2">
                                     <FileTextOutlined className="text-xl text-[#36ae9a]" />
@@ -360,6 +360,7 @@ const ConsentForms = () => {
                     }
                     cancelText="Hủy"
                     okType={consentModal.consent ? "primary" : "danger"}
+                    styles={{ body: { padding: 20 } }}
                 >
                     {consentModal.campaign && (
                         <div>

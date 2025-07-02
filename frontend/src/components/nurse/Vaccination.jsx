@@ -110,7 +110,7 @@ const Vaccination = () => {
                 setIsModalVisible(false);
                 vaccinationForm.resetFields();
                 setIsReportModalVisible(true);
-                fetchStudentsForCampaign(selectedCampaign.id);
+                await fetchStudentsForCampaign(selectedCampaign.id);
             }
         } catch (error) {
             console.error("Error performing vaccination:", error);
@@ -120,26 +120,44 @@ const Vaccination = () => {
         }
     };
 
+    // Thêm hàm chuyển đổi dữ liệu trước khi gửi lên backend
+    const normalizeReportValues = (values) => {
+        return {
+            ...values,
+            followUpRequired:
+                values.followUpRequired === true ||
+                values.followUpRequired === "true",
+            followUpDate: values.followUpDate
+                ? values.followUpDate.toISOString()
+                : undefined,
+        };
+    };
+
     // Report vaccination result
     const reportVaccinationResult = async (values) => {
         try {
-            const response = await axios.post(
+            const normalized = normalizeReportValues(values);
+            const response = await axios.put(
                 `/api/nurse/vaccinations/report`,
                 {
-                    ...values,
+                    ...normalized,
                     campaignId: selectedCampaign.id,
                     studentId: selectedStudent.id,
                 },
                 { headers: getHeaders() }
             );
+            console.log("API response:", response.data);
 
             if (response.data.success) {
                 message.success("Đã báo cáo kết quả tiêm chủng");
                 setIsReportModalVisible(false);
                 setSelectedStudent(null);
-                // Refresh student list
+                vaccinationForm.resetFields();
                 fetchStudentsForCampaign(selectedCampaign.id);
+            } else {
+                message.error(response.data.error || "Lỗi khi báo cáo kết quả");
             }
+            fetchStudentsForCampaign(selectedCampaign.id);
         } catch (error) {
             console.error("Error reporting vaccination:", error);
             message.error(
@@ -158,8 +176,16 @@ const Vaccination = () => {
         setIsModalVisible(true);
     };
 
+    // Sửa handleReportResult để reset form khi mở modal
     const handleReportResult = (student) => {
+        if (student.vaccinationStatus !== "COMPLETED") {
+            message.warning(
+                "Chỉ có thể báo cáo kết quả cho học sinh đã tiêm chủng."
+            );
+            return;
+        }
         setSelectedStudent(student);
+        vaccinationForm.resetFields();
         setIsReportModalVisible(true);
     };
 
@@ -593,8 +619,10 @@ const Vaccination = () => {
                 onCancel={() => {
                     setIsReportModalVisible(false);
                     setSelectedStudent(null);
+                    vaccinationForm.resetFields();
                 }}
                 width={600}
+                destroyOnClose={true}
             >
                 {selectedStudent && (
                     <div style={{ marginBottom: 16 }}>

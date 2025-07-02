@@ -340,7 +340,8 @@ const ParentManagement = () => {
                 open={isModalVisible}
                 onCancel={handleModalCancel}
                 footer={null}
-                destroyOnClose
+                destroyOnHidden
+                styles={{ body: { padding: 20 } }}
             >
                 <Formik
                     initialValues={

@@ -185,3 +185,41 @@ export const uploadProfilePhoto = async (req, res) => {
         });
     }
 };
+
+// Đổi mật khẩu user (không hash)
+export const changePassword = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { oldPassword, newPassword } = req.body;
+
+        if (!oldPassword || !newPassword) {
+            return res
+                .status(400)
+                .json({ message: "Vui lòng nhập đầy đủ thông tin." });
+        }
+        if (newPassword.length < 8) {
+            return res
+                .status(400)
+                .json({ message: "Mật khẩu mới phải có ít nhất 8 ký tự." });
+        }
+
+        const user = await prisma.users.findUnique({ where: { id: userId } });
+        if (!user)
+            return res
+                .status(404)
+                .json({ message: "Không tìm thấy người dùng." });
+
+        if (user.password !== oldPassword) {
+            return res.status(400).json({ message: "Mật khẩu cũ không đúng." });
+        }
+
+        await prisma.users.update({
+            where: { id: userId },
+            data: { password: newPassword, updatedAt: new Date() },
+        });
+
+        res.json({ message: "Đổi mật khẩu thành công." });
+    } catch (err) {
+        res.status(500).json({ message: "Lỗi máy chủ." });
+    }
+};

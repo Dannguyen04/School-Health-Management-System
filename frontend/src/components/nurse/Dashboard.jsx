@@ -199,34 +199,6 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
-      {/* Pending Medications */}
-      <Card
-        title="Thuốc đang chờ xử lý"
-        className="mt-4 shadow-sm"
-        headStyle={{
-          backgroundColor: "#f6ffed",
-          borderBottom: "1px solid #b7eb8f",
-        }}
-      >
-        <Row gutter={16}>
-          <Col span={12}>
-            <Statistic
-              title="Học sinh cần uống thuốc"
-              value={dashboardStats.pendingMedications}
-              prefix={<MedicineBoxOutlined className="text-purple-500" />}
-              valueStyle={{ color: "#722ed1" }}
-            />
-          </Col>
-          <Col span={12}>
-            <Statistic
-              title="Vật tư tồn kho thấp"
-              value={dashboardStats.lowStockItems}
-              prefix={<AlertOutlined className="text-red-500" />}
-              valueStyle={{ color: "#ff4d4f" }}
-            />
-          </Col>
-        </Row>
-      </Card>
 
       {/* Alerts Section */}
       {lowStockItems.length > 0 && (
@@ -281,9 +253,11 @@ const Dashboard = () => {
         <Card
           title={`Vật tư tồn kho thấp (${lowStockItems.length})`}
           className="mt-4 shadow-sm"
-          headStyle={{
-            backgroundColor: "#fff7e6",
-            borderBottom: "1px solid #ffd591",
+          styles={{
+            header: {
+              backgroundColor: "#fff7e6",
+              borderBottom: "1px solid #ffd591",
+            },
           }}
         >
           <Table
@@ -298,9 +272,11 @@ const Dashboard = () => {
         <Card
           title="Vật tư tồn kho"
           className="mt-4 shadow-sm"
-          headStyle={{
-            backgroundColor: "#f6ffed",
-            borderBottom: "1px solid #b7eb8f",
+          styles={{
+            header: {
+              backgroundColor: "#f6ffed",
+              borderBottom: "1px solid #b7eb8f",
+            },
           }}
         >
           <div className="text-center py-8 text-gray-500">
@@ -309,6 +285,76 @@ const Dashboard = () => {
           </div>
         </Card>
       )}
+
+      {/* Pending Medications */}
+      <Card
+        title="Thuốc đang chờ xử lý"
+        className="mt-4 shadow-sm"
+        styles={{
+          header: {
+            backgroundColor: "#f6ffed",
+            borderBottom: "1px solid #b7eb8f",
+          },
+        }}
+      >
+        <Row gutter={16}>
+          <Col span={12}>
+            <Statistic
+              title="Học sinh cần uống thuốc"
+              value={dashboardStats.pendingMedications}
+              prefix={<MedicineBoxOutlined className="text-purple-500" />}
+              valueStyle={{ color: "#722ed1" }}
+            />
+          </Col>
+          <Col span={12}>
+            <Statistic
+              title="Vật tư tồn kho thấp"
+              value={dashboardStats.lowStockItems}
+              prefix={<AlertOutlined className="text-red-500" />}
+              valueStyle={{ color: "#ff4d4f" }}
+            />
+          </Col>
+        </Row>
+      </Card>
+
+      {/* Summary Information */}
+      <Card
+        title="Tóm tắt hoạt động"
+        className="mt-4 shadow-sm"
+        styles={{
+          header: {
+            backgroundColor: "#f0f9ff",
+            borderBottom: "1px solid #91d5ff",
+          },
+        }}
+      >
+        <Row gutter={16}>
+          <Col span={8}>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">
+                {dashboardStats.totalStudents}
+              </div>
+              <div className="text-gray-600">Học sinh</div>
+            </div>
+          </Col>
+          <Col span={8}>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">
+                {dashboardStats.totalMedicalEvents}
+              </div>
+              <div className="text-gray-600">Sự cố tháng này</div>
+            </div>
+          </Col>
+          <Col span={8}>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {dashboardStats.upcomingVaccinations}
+              </div>
+              <div className="text-gray-600">Tiêm chủng sắp tới</div>
+            </div>
+          </Col>
+        </Row>
+      </Card>
     </div>
   );
 };

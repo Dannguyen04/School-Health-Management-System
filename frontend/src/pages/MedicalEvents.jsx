@@ -283,11 +283,12 @@ const MedicalEvents = () => {
                     }
                     width={700}
                     centered
-                    bodyStyle={{ padding: 0 }}
+                    styles={{ body: { padding: 0 } }}
                 >
                     <Card
                         className="rounded-2xl shadow-lg border-0"
                         bodyStyle={{ padding: 24 }}
+                        styles={{ body: { padding: 24 } }}
                     >
                         {loadingDetail ? (
                             <Skeleton active paragraph={{ rows: 8 }} />
