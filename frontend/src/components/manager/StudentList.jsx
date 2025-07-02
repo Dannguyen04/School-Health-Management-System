@@ -141,6 +141,7 @@ const StudentList = () => {
         emergencyContact: user.studentProfile?.emergencyContact,
         emergencyPhone: user.studentProfile?.emergencyPhone,
         status: user.isActive ? "active" : "inactive",
+        parentId: user.studentProfile?.parentId,
       }));
       setStudents(formattedStudents);
       setFilteredStudents(formattedStudents); // Initialize filtered students with all students
@@ -197,7 +198,7 @@ const StudentList = () => {
       }
 
       const response = await axios.post(
-        "/api/manager/students/parents",
+        "/api/admin/parents",
         {
           name: values.newParentName,
           email: values.newParentEmail,
@@ -236,6 +237,16 @@ const StudentList = () => {
       selectedParentName: selectedParent.fullName,
     });
   };
+
+  // Khi chọn phụ huynh, tự động set emergencyContact và emergencyPhone
+  useEffect(() => {
+    if (selectedParent) {
+      form.setFieldsValue({
+        emergencyContact: selectedParent.fullName,
+        emergencyPhone: selectedParent.phone,
+      });
+    }
+  }, [selectedParent, form]);
 
   const columns = [
     {
@@ -312,6 +323,9 @@ const StudentList = () => {
 
   const handleEdit = (student) => {
     setEditingStudent(student);
+    // Tìm phụ huynh của học sinh này (giả sử student có parentId)
+    const parent = parents.find((p) => p.id === student.parentId);
+    setSelectedParent(parent || null);
     form.setFieldsValue({
       studentCode: student.studentCode,
       name: student.name,
@@ -322,8 +336,8 @@ const StudentList = () => {
       class: student.class,
       emergencyContact: student.emergencyContact,
       emergencyPhone: student.emergencyPhone,
+      selectedParentId: parent ? parent.id : undefined,
     });
-    setSelectedParent(null);
     setIsModalVisible(true);
   };
 
@@ -596,6 +610,22 @@ const StudentList = () => {
                   required: true,
                   message: "Vui lòng chọn ngày sinh!",
                 },
+                {
+                  validator(_, value) {
+                    if (!value) return Promise.resolve();
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const minYear = year - 13; // lớn nhất 13 tuổi
+                    const maxYear = year - 6; // nhỏ nhất 6 tuổi
+                    const dobYear = value.year();
+                    if (dobYear < minYear || dobYear > maxYear) {
+                      return Promise.reject(
+                        new Error("Năm sinh không hợp lệ với học sinh tiểu học")
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                },
               ]}
             >
               <DatePicker style={{ width: "100%" }} />
@@ -670,7 +700,7 @@ const StudentList = () => {
                 },
               ]}
             >
-              <Input />
+              <Input disabled placeholder="Chọn phụ huynh để tự động điền" />
             </Form.Item>
             <Form.Item
               name="emergencyPhone"
@@ -682,21 +712,19 @@ const StudentList = () => {
                 },
               ]}
             >
-              <Input />
+              <Input disabled placeholder="Chọn phụ huynh để tự động điền" />
             </Form.Item>
 
             <Form.Item
               name="selectedParentId"
-              label="Phụ huynh"
+              noStyle
               rules={[
                 {
                   required: true,
                   message: "Vui lòng chọn phụ huynh!",
                 },
               ]}
-            >
-              <Input type="hidden" />
-            </Form.Item>
+            />
 
             <Form.Item label="Chọn phụ huynh">
               <Space direction="vertical" style={{ width: "100%" }}>

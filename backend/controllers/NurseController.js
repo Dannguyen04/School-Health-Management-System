@@ -1938,7 +1938,7 @@ export const getMedicationRequestById = async (req, res) => {
       studentId: medicationRequest.studentId,
       studentName: medicationRequest.student.user.fullName,
       studentEmail: medicationRequest.student.user.email,
-      studentGrade: `${medicationRequest.student.grade}${medicationRequest.student.class}`,
+      studentGrade: medicationRequest.student.class,
       parentId: medicationRequest.parentId,
       parentName: medicationRequest.parent.user.fullName,
       parentEmail: medicationRequest.parent.user.email,
@@ -2008,6 +2008,7 @@ export const getApprovedMedications = async (req, res) => {
       orderBy: { updatedAt: "desc" },
     });
 
+    console.log(approvedRequests);
     const formatted = approvedRequests.map((request) => ({
       id: request.id,
       studentId: request.studentId,
