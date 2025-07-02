@@ -307,9 +307,11 @@ const AdminDashboard = () => {
                     <Card
                         title="Phân bố theo vai trò"
                         className="shadow-sm"
-                        headStyle={{
-                            backgroundColor: "#f0f9ff",
-                            borderBottom: "1px solid #91d5ff",
+                        styles={{
+                            header: {
+                                backgroundColor: "#f0f9ff",
+                                borderBottom: "1px solid #91d5ff",
+                            },
                         }}
                     >
                         <Bar
@@ -331,9 +333,11 @@ const AdminDashboard = () => {
                     <Card
                         title="Trạng thái người dùng"
                         className="shadow-sm"
-                        headStyle={{
-                            backgroundColor: "#f6ffed",
-                            borderBottom: "1px solid #b7eb8f",
+                        styles={{
+                            header: {
+                                backgroundColor: "#f6ffed",
+                                borderBottom: "1px solid #b7eb8f",
+                            },
                         }}
                     >
                         <Bar

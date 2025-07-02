@@ -77,7 +77,7 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
             footer={null}
             width={700}
             style={{ borderRadius: "1rem" }}
-            bodyStyle={{ padding: "32px 24px" }}
+            styles={{ body: { padding: "32px 24px" } }}
         >
             {vaccination?.notFound ? (
                 <div
