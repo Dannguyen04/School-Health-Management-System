@@ -27,15 +27,13 @@ export const FormContainer = styled.div`
     flex-direction: column;
     border-radius: 0;
     box-shadow: none;
+    position: relative;
   }
-  // hidden form sign up
+  // hidden form sign up (chỉ giữ cho desktop)
   &.signin-active .sign-up-container {
     transform: translateX(0);
     opacity: 0;
     z-index: 1;
-    @media (max-width: 768px) {
-      display: none;
-    }
   }
   &.signin-active .sign-in-container {
     transform: translateX(0);
@@ -55,14 +53,11 @@ export const FormContainer = styled.div`
       display: none;
     }
   }
-  // hidden form sign in
+  // hidden form sign in (chỉ giữ cho desktop)
   &.signup-active .sign-in-container {
     transform: translateX(100%);
     opacity: 0;
     z-index: 1;
-    @media (max-width: 768px) {
-      display: none;
-    }
   }
   &.signup-active .sign-up-container {
     transform: translateX(100%);
@@ -108,6 +103,7 @@ export const SignUpContainer = styled.div`
     background: #fff;
     z-index: 2;
     box-shadow: none;
+    display: flex;
   }
 `;
 
@@ -135,6 +131,7 @@ export const SignInContainer = styled.div`
     background: #fff;
     z-index: 2;
     box-shadow: none;
+    display: flex;
   }
 `;
 
@@ -278,4 +275,19 @@ export const Paragraph = styled.p`
 export const ErrorMessage = styled.span`
   color: red;
   font-size: 12px;
+`;
+
+export const MobileSwitchButton = styled.button`
+  display: none;
+  @media (max-width: 768px) {
+    display: block;
+    background: none;
+    border: none;
+    color: #ff4b2b;
+    font-weight: bold;
+    margin-top: 16px;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: underline;
+  }
 `;

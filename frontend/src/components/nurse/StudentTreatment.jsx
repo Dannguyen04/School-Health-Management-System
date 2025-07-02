@@ -86,9 +86,10 @@ const StudentTreatment = () => {
       return;
     }
     setSelectedTreatment(record);
+    const dosageNumber = parseFloat(record.dosage); // lấy số đầu tiên
     form.setFieldsValue({
-      quantityUsed: 1,
-      dosageGiven: record.dosage,
+      quantityUsed: dosageNumber,
+      dosageGiven: dosageNumber,
       notes: "",
     });
     setIsModalVisible(true);
@@ -229,6 +230,16 @@ const StudentTreatment = () => {
       default:
         return "Không xác định";
     }
+  };
+
+  const getFrequencyText = (frequency) => {
+    const freqMap = {
+      once: "1 lần/ngày",
+      twice: "2 lần/ngày",
+      three: "3 lần/ngày",
+      four: "4 lần/ngày",
+    };
+    return freqMap[frequency] || frequency || "-";
   };
 
   const columns = [
@@ -541,6 +552,7 @@ const StudentTreatment = () => {
                   max={selectedTreatment?.medication?.stockQuantity || 999}
                   style={{ width: "100%" }}
                   addonAfter={selectedTreatment?.medication?.unit}
+                  disabled
                 />
               </Form.Item>
             </Col>
@@ -726,7 +738,7 @@ const StudentTreatment = () => {
                 </div>
                 <div className="mb-3">
                   <Text strong>Tần suất:</Text>
-                  <div>{detailRecord.frequency}</div>
+                  <div>{getFrequencyText(detailRecord.frequency)}</div>
                 </div>
               </Col>
             </Row>

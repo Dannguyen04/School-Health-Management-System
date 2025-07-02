@@ -458,7 +458,7 @@ const HealthCheckupCampaigns = () => {
                     ? values.deadline
                     : values.deadline.toISOString()
                   : "",
-                status: values.status,
+                status: "ACTIVE",
               };
               success = await createCampaign(data);
             }
@@ -615,26 +615,28 @@ const HealthCheckupCampaigns = () => {
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item
-                label="Trạng thái"
-                help={
-                  touched.status && errors.status ? errors.status : undefined
-                }
-                validateStatus={
-                  touched.status && errors.status ? "error" : undefined
-                }
-              >
-                <Select
-                  value={values.status}
-                  onChange={(val) => setFieldValue("status", val)}
-                  onBlur={handleBlur}
-                  options={[
-                    { label: "Đang diễn ra", value: "ACTIVE" },
-                    { label: "Hoàn thành", value: "FINISHED" },
-                    { label: "Đã hủy", value: "CANCELLED" },
-                  ]}
-                />
-              </Form.Item>
+              {selectedCampaign && (
+                <Form.Item
+                  label="Trạng thái"
+                  help={
+                    touched.status && errors.status ? errors.status : undefined
+                  }
+                  validateStatus={
+                    touched.status && errors.status ? "error" : undefined
+                  }
+                >
+                  <Select
+                    value={values.status}
+                    onChange={(val) => setFieldValue("status", val)}
+                    onBlur={handleBlur}
+                    options={[
+                      { label: "Đang diễn ra", value: "ACTIVE" },
+                      { label: "Hoàn thành", value: "FINISHED" },
+                      { label: "Đã hủy", value: "CANCELLED" },
+                    ]}
+                  />
+                </Form.Item>
+              )}
               <Form.Item>
                 <Button type="primary" htmlType="submit" loading={isSubmitting}>
                   {selectedCampaign ? "Cập nhật" : "Thêm"}
