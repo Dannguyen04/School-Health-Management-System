@@ -168,10 +168,7 @@ const NotificationToast = ({
         isVisible && (
             <div
                 style={{
-                    position: "fixed",
-                    top: "20px",
-                    right: "20px",
-                    zIndex: 1000,
+                    position: "static",
                     transform: isVisible ? "translateX(0)" : "translateX(100%)",
                     transition: "transform 0.3s ease",
                     maxWidth: "400px",
