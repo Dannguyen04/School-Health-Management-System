@@ -12,7 +12,9 @@ const Services = ({ onServiceClick, isHomepage }) => {
     const icon2 = <MdHealthAndSafety size={35} className=" text-[#36ae9a]" />;
     const icon3 = <FaFileMedical size={35} className=" text-[#36ae9a]" />;
     const icon4 = <MdOutlineMedication size={35} className=" text-[#36ae9a]" />;
-    const icon5 = <HiOutlineClock size={35} className=" text-[#36ae9a]" />;
+    const icon5 = (
+        <HiOutlineClock size={50} className="text-[#36ae9a] sm:text-[35px]" />
+    );
 
     // Nếu là homepage thì truyền onClick, ngược lại không truyền (ServicesCard sẽ tự navigate)
     const getOnClick = () => (isHomepage ? onServiceClick : undefined);

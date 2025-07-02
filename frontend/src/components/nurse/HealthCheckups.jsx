@@ -1,4 +1,4 @@
-import { EyeOutlined } from "@ant-design/icons";
+import { EyeOutlined, MailOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -27,6 +27,7 @@ import * as Yup from "yup";
 const { TextArea } = Input;
 const { Option } = Select;
 const { Title } = Typography;
+const { RangePicker } = DatePicker;
 
 // Yup schema validate
 const checkupSchema = Yup.object().shape({
@@ -73,6 +74,11 @@ const HealthCheckups = () => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editInitialValues, setEditInitialValues] = useState(null);
   const [activeTab, setActiveTab] = useState("campaigns");
+  const [consultModalVisible, setConsultModalVisible] = useState(false);
+  const [consultReport, setConsultReport] = useState(null);
+  const [consultContent, setConsultContent] = useState("");
+  const [consultRange, setConsultRange] = useState([]);
+  const [consultLoading, setConsultLoading] = useState(false);
 
   // Fetch danh sách campaign khi vào trang
   useEffect(() => {
@@ -80,7 +86,9 @@ const HealthCheckups = () => {
       setLoading(true);
       try {
         const res = await axios.get("/api/medical-campaigns", {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         });
         setCampaigns(res.data.data || []);
       } catch {
@@ -99,7 +107,9 @@ const HealthCheckups = () => {
       const resCampaign = await axios.get(
         `/api/medical-campaigns/${campaign.id}`,
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
       );
       const campaignDetail = resCampaign.data.data;
@@ -107,7 +117,9 @@ const HealthCheckups = () => {
 
       // Lấy danh sách học sinh
       const resStudents = await axios.get("/api/admin/students-for-nurse", {
-        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
       });
       // Lọc theo targetGrades từ campaign chi tiết (ép kiểu về string để tránh lỗi)
       const filtered = (resStudents.data.data || []).filter((s) =>
@@ -121,7 +133,9 @@ const HealthCheckups = () => {
       const resReports = await axios.get(
         `/api/medical-checks/campaign/${campaignDetail.id}`,
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         }
       );
       setReports(resReports.data.data || []);
@@ -175,6 +189,37 @@ const HealthCheckups = () => {
     });
     setDetailModalVisible(false);
     setEditModalVisible(true);
+  };
+
+  // Hàm mở modal gửi kết quả & đặt lịch tư vấn
+  const handleOpenConsultModal = (report) => {
+    setConsultReport(report);
+    setConsultContent("");
+    setConsultRange([]);
+    setConsultModalVisible(true);
+  };
+
+  // Hàm gửi kết quả & lịch tư vấn (mock API)
+  const handleSendConsult = async () => {
+    if (!consultContent || !consultRange.length) {
+      message.error(
+        "Vui lòng nhập đầy đủ nội dung và chọn khoảng thời gian tư vấn"
+      );
+      return;
+    }
+    setConsultLoading(true);
+    try {
+      // TODO: Gọi API thực tế ở đây
+      await new Promise((res) => setTimeout(res, 1000));
+      message.success("Đã gửi kết quả và lịch tư vấn cho phụ huynh!");
+      setConsultModalVisible(false);
+      setConsultReport(null);
+      setConsultContent("");
+      setConsultRange([]);
+    } catch {
+      message.error("Gửi thất bại, vui lòng thử lại");
+    }
+    setConsultLoading(false);
   };
 
   // Table columns chỉ cho students
@@ -314,29 +359,51 @@ const HealthCheckups = () => {
           NEEDS_ATTENTION: { text: "Cần chú ý", color: "orange" },
           REQUIRES_TREATMENT: { text: "Cần điều trị", color: "red" },
         };
-        const status = statusMap[health] || { text: health, color: "default" };
+        const status = statusMap[health] || {
+          text: health,
+          color: "default",
+        };
         return <Tag color={status.color}>{status.text}</Tag>;
       },
     },
     {
       title: "Thao tác",
       key: "actions",
-      render: (_, record) => (
-        <Button
-          type="default"
-          icon={<EyeOutlined />}
-          shape="round"
-          size="small"
-          style={{
-            color: "#1677ff",
-            borderColor: "#1677ff",
-            fontWeight: 500,
-          }}
-          onClick={() => handleViewDetail(record)}
-        >
-          Chi tiết
-        </Button>
-      ),
+      render: (_, record) => {
+        const isNeedConsult =
+          record.overallHealth === "NEEDS_ATTENTION" ||
+          record.overallHealth === "REQUIRES_TREATMENT";
+        return (
+          <>
+            <Button
+              type="default"
+              icon={<EyeOutlined />}
+              shape="round"
+              size="small"
+              style={{
+                color: "#1677ff",
+                borderColor: "#1677ff",
+                fontWeight: 500,
+                marginRight: 8,
+              }}
+              onClick={() => handleViewDetail(record)}
+            >
+              Chi tiết
+            </Button>
+            {isNeedConsult && (
+              <Button
+                type="primary"
+                icon={<MailOutlined />}
+                shape="round"
+                size="small"
+                onClick={() => handleOpenConsultModal(record)}
+              >
+                Đặt lịch tư vấn
+              </Button>
+            )}
+          </>
+        );
+      },
     },
   ];
 
@@ -1705,6 +1772,67 @@ const HealthCheckups = () => {
             )}
           </Formik>
         )}
+      </Modal>
+      {/* Modal gửi kết quả & đặt lịch tư vấn */}
+      <Modal
+        title={`Đặt lịch tư vấn: ${
+          consultReport?.student?.user?.fullName || ""
+        }`}
+        open={consultModalVisible}
+        onCancel={() => setConsultModalVisible(false)}
+        onOk={handleSendConsult}
+        okText="Đặt lịch"
+        confirmLoading={consultLoading}
+      >
+        {consultReport && (
+          <Card
+            type="inner"
+            title="Kết quả khám sức khỏe"
+            style={{ marginBottom: 16 }}
+          >
+            <div>
+              <b>Chiều cao:</b>{" "}
+              {consultReport.height ? consultReport.height + " cm" : "-"}
+            </div>
+            <div>
+              <b>Cân nặng:</b>{" "}
+              {consultReport.weight ? consultReport.weight + " kg" : "-"}
+            </div>
+            <div>
+              <b>Huyết áp:</b>{" "}
+              {consultReport.systolicBP && consultReport.diastolicBP
+                ? `${consultReport.systolicBP}/${consultReport.diastolicBP} mmHg`
+                : "-"}
+            </div>
+            <div>
+              <b>Sức khỏe tổng thể:</b>{" "}
+              {consultReport.overallHealth === "NORMAL"
+                ? "Bình thường"
+                : consultReport.overallHealth === "NEEDS_ATTENTION"
+                ? "Cần chú ý"
+                : consultReport.overallHealth === "REQUIRES_TREATMENT"
+                ? "Cần điều trị"
+                : consultReport.overallHealth}
+            </div>
+            {consultReport.notes && (
+              <div>
+                <b>Ghi chú:</b> {consultReport.notes}
+              </div>
+            )}
+          </Card>
+        )}
+        <Form layout="vertical">
+          <Form.Item label="Khoảng thời gian tư vấn" required>
+            <RangePicker
+              style={{ width: "100%" }}
+              value={consultRange}
+              onChange={setConsultRange}
+              showTime
+              format="DD/MM/YYYY HH:mm"
+              placeholder={["Từ ngày/giờ", "Đến ngày/giờ"]}
+            />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

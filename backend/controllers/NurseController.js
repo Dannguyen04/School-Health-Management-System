@@ -1087,111 +1087,58 @@ export const getEligibleStudentsForVaccination = async (req, res) => {
       });
     }
 
-    // Lấy tất cả consent đã đồng ý cho campaign này
-    const consents = await prisma.vaccinationConsent.findMany({
+    const students = await prisma.student.findMany({
       where: {
-        campaign: { id: campaignId },
-        consent: true, // Chỉ lấy những consent đã đồng ý
+        grade: {
+          in: campaign.targetGrades,
+        },
+        user: {
+          is: {},
+        },
       },
       include: {
-        student: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-                phone: true,
-              },
-            },
+        user: {
+          select: {
+            fullName: true,
           },
         },
-        parent: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                fullName: true,
-                email: true,
-                phone: true,
-              },
-            },
+        vaccinationConsents: {
+          where: {
+            campaign: { id: campaignId },
+            consent: true,
           },
+        },
+        vaccinationRecords: {
+          where: {
+            campaignId: campaignId,
+          },
+          orderBy: { administeredDate: "desc" },
+          take: 1,
         },
       },
     });
 
-    // Kiểm tra xem học sinh đã được tiêm chủng chưa
-    const studentsWithVaccinationStatus = await Promise.all(
-      consents.map(async (consent) => {
-        // Kiểm tra xem học sinh đã được tiêm chủng chưa
-        const existingVaccination = await prisma.vaccinationRecord.findFirst({
-          where: {
-            campaign: { id: campaignId },
-            studentId: consent.studentId,
-          },
-        });
+    // Format dữ liệu để trả về
+    const formattedStudents = students.map((student) => {
+      const consent = student.vaccinationConsents[0];
+      const vaccination = student.vaccinationRecords[0];
 
-        return {
-          consentId: consent.id,
-          student: {
-            id: consent.student.id,
-            studentCode: consent.student.studentCode,
-            grade: consent.student.grade,
-            class: consent.student.class,
-            dateOfBirth: consent.student.dateOfBirth,
-            gender: consent.student.gender,
-            bloodType: consent.student.bloodType,
-            emergencyContact: consent.student.emergencyContact,
-            emergencyPhone: consent.student.emergencyPhone,
-            user: consent.student.user,
-          },
-          parent: {
-            id: consent.parent.id,
-            occupation: consent.parent.occupation,
-            workplace: consent.parent.workplace,
-            user: consent.parent.user,
-          },
-          consent: {
-            consent: consent.consent,
-            notes: consent.notes,
-            submittedAt: consent.submittedAt,
-          },
-          vaccinationStatus: existingVaccination
-            ? {
-                id: existingVaccination.id,
-                status: existingVaccination.status,
-                administeredDate: existingVaccination.administeredDate,
-                batchNumber: existingVaccination.batchNumber,
-                dose: existingVaccination.dose,
-                sideEffects: existingVaccination.sideEffects,
-                notes: existingVaccination.notes,
-                reaction: existingVaccination.reaction,
-              }
-            : null,
-        };
-      })
-    );
-
-    // Lọc bỏ những học sinh không có user (nếu có)
-    const validStudents = studentsWithVaccinationStatus.filter(
-      (item) => item.student.user !== null
-    );
+      return {
+        id: student.id,
+        studentCode: student.studentCode,
+        user: student.user,
+        grade: student.grade,
+        consentStatus: consent ? consent.consent : null,
+        vaccinationStatus: vaccination ? vaccination.status : "UNSCHEDULED",
+        administeredDate: vaccination ? vaccination.administeredDate : null,
+        batchNumber: vaccination ? vaccination.batchNumber : null,
+        doseType: vaccination ? vaccination.dose : null,
+      };
+    });
 
     res.json({
       success: true,
-      data: {
-        campaign: {
-          id: campaign.id,
-          name: campaign.name,
-          description: campaign.description,
-          scheduledDate: campaign.scheduledDate,
-          deadline: campaign.deadline,
-          targetGrades: campaign.targetGrades,
-        },
-        eligibleStudents: validStudents,
-        totalCount: validStudents.length,
-      },
+      data: formattedStudents,
     });
   } catch (error) {
     console.error("Error getting eligible students for vaccination:", error);
@@ -2570,12 +2517,13 @@ export const getVaccinationStats = async (req, res) => {
     // Lấy số học sinh đã đồng ý tiêm chủng
     const consentedStudents = await prisma.vaccinationConsent.count({
       where: {
-        campaign: { id: campaignId },
+        campaignId: campaignId,
         consent: true,
       },
     });
 
     // Lấy số học sinh đã được tiêm chủng
+
     const vaccinatedStudents = await prisma.vaccinationRecord.count({
       where: {
         campaignId: campaignId,
@@ -2586,7 +2534,7 @@ export const getVaccinationStats = async (req, res) => {
     // Lấy số học sinh từ chối tiêm chủng
     const refusedStudents = await prisma.vaccinationConsent.count({
       where: {
-        campaign: { id: campaignId },
+        campaignId: campaignId,
         consent: false,
       },
     });
