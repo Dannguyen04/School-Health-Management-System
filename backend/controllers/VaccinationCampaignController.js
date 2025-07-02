@@ -282,6 +282,11 @@ const deleteVaccinationCampaign = async (req, res) => {
             });
         }
 
+        // Trước khi xóa campaign, xóa các bản ghi VaccinationRecord liên quan:
+        await prisma.vaccinationRecord.deleteMany({
+            where: { campaignId: id },
+        });
+
         // Delete campaign
         await prisma.vaccinationCampaign.delete({
             where: { id },

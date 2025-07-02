@@ -1,7 +1,6 @@
 import {
   DeleteOutlined,
   EditOutlined,
-  ExclamationCircleOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -37,7 +36,6 @@ const VaccineManagement = () => {
   const [searchForm] = Form.useForm();
   const [vaccineForm] = Form.useForm();
   const [filteredVaccines, setFilteredVaccines] = useState([]);
-  const [errorModal, setErrorModal] = useState({ visible: false, message: "" });
 
   // Get auth token
   const getAuthToken = () => {
@@ -54,12 +52,9 @@ const VaccineManagement = () => {
   const fetchVaccines = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(
-        "/api/manager/vaccination-campaigns/vaccines",
-        {
-          headers: getHeaders(),
-        }
-      );
+      const response = await axios.get("/api/manager/vaccination", {
+        headers: getHeaders(),
+      });
       if (response.data.success) {
         setVaccines(response.data.data || []);
         setFilteredVaccines(response.data.data || []);
@@ -129,26 +124,15 @@ const VaccineManagement = () => {
         fetchVaccines();
         return true;
       } else {
-        showFriendlyError(response.data.error);
+        message.error(response.data.error || "Không thể xóa vaccine");
         return false;
       }
     } catch (error) {
-      showFriendlyError(error.response?.data?.error);
+      console.error("Error deleting vaccine:", error);
+      message.error(error.response?.data?.error || "Không thể xóa vaccine");
       return false;
     }
   };
-
-  function showFriendlyError(errorMsg) {
-    let friendlyMsg = errorMsg;
-    if (errorMsg && errorMsg.includes("VaccinationCampaignTovaccinations")) {
-      friendlyMsg =
-        "Không thể xóa vaccine này vì đang có chiến dịch tiêm chủng sử dụng vaccine này. Vui lòng xóa các chiến dịch liên quan trước.";
-    }
-    setErrorModal({
-      visible: true,
-      message: friendlyMsg || "Không thể xóa vaccine",
-    });
-  }
 
   // Load vaccines on component mount
   useEffect(() => {
@@ -504,50 +488,6 @@ const VaccineManagement = () => {
           )}
         </Formik>
       </Modal>
-
-      {/* Error Modal giống StudentTreatment */}
-      {errorModal.visible && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 1000,
-          }}
-          onClick={() => setErrorModal({ visible: false, message: "" })}
-        >
-          <div
-            style={{
-              backgroundColor: "white",
-              padding: "24px",
-              borderRadius: "8px",
-              maxWidth: "500px",
-              width: "90%",
-              boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 style={{ color: "#ff4d4f", marginBottom: "16px" }}>
-              <ExclamationCircleOutlined style={{ marginRight: 8 }} />
-              Lỗi xóa vaccine
-            </h3>
-            <p style={{ marginBottom: "16px" }}>{errorModal.message}</p>
-            <Button
-              type="primary"
-              danger
-              onClick={() => setErrorModal({ visible: false, message: "" })}
-            >
-              Đóng
-            </Button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

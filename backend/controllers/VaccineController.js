@@ -23,7 +23,7 @@ const createVaccination = async (req, res) => {
     const { name, requirement, expiredDate, dose, sideEffects, notes } =
         req.body;
 
-    if (!name || !requirement || !expiredDate) {
+    if (!name || !requirement) {
         return res.status(404).json({
             success: false,
             error: "Thiếu trường dữ liệu cần thiết",
