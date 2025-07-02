@@ -29,6 +29,15 @@ const NotificationToast = ({
             onMarkAsRead(notificationData.id);
         }
 
+        if (notificationData.type === "update_phone") {
+            navigate("/user/profile");
+            setIsVisible(false);
+            setTimeout(() => {
+                onClose();
+            }, 300);
+            return;
+        }
+
         if (notificationData.id === "missing-health-profile" && studentId) {
             navigate(`/user/health-profile?studentId=${studentId}`);
             setIsVisible(false);
@@ -97,6 +106,8 @@ const NotificationToast = ({
             case "vaccine_updated":
             case "vaccine_deleted":
                 return "📋";
+            case "update_phone":
+                return "📱";
             default:
                 return "📢";
         }
@@ -124,6 +135,8 @@ const NotificationToast = ({
                 return "Cập nhật vaccine";
             case "vaccine_deleted":
                 return "Xóa vaccine";
+            case "update_phone":
+                return "Cập nhật số điện thoại";
             default:
                 return "Thông báo chung";
         }

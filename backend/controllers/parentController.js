@@ -1,6 +1,33 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+// Thêm hàm gửi notification nếu thiếu số điện thoại
+async function notifyParentToUpdatePhone(user) {
+    if (!user.phone) {
+        // Kiểm tra đã có notification chưa đọc cùng loại chưa
+        const existing = await prisma.notification.findFirst({
+            where: {
+                userId: user.id,
+                type: "update_phone",
+                status: { in: ["SENT", "DELIVERED"] },
+            },
+        });
+        if (!existing) {
+            await prisma.notification.create({
+                data: {
+                    userId: user.id,
+                    title: "Cập nhật số điện thoại",
+                    message:
+                        "Vui lòng cập nhật số điện thoại để nhận đầy đủ thông báo từ nhà trường.",
+                    type: "update_phone",
+                    status: "SENT",
+                    sentAt: new Date(),
+                },
+            });
+        }
+    }
+}
+
 export const getMyChildren = async (req, res) => {
     try {
         if (!req.user.parentProfile) {
@@ -9,6 +36,8 @@ export const getMyChildren = async (req, res) => {
                 error: "You must be a parent to access this resource",
             });
         }
+        // Kiểm tra và gửi notification nếu thiếu số điện thoại
+        await notifyParentToUpdatePhone(req.user);
 
         const parentId = req.user.parentProfile.id;
         console.log("[getMyChildren] parentId:", parentId);

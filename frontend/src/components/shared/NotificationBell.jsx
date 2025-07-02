@@ -113,6 +113,9 @@ const NotificationBell = () => {
 
         // Navigation dựa trên loại thông báo
         switch (notification.type) {
+            case "update_phone":
+                navigate("/user/profile");
+                break;
             case "vaccination_consent":
                 navigate("/user/consent-forms");
                 break;
