@@ -164,6 +164,17 @@ const User = () => {
         setDismissedNotificationIds((prev) => [...prev, id]);
     };
 
+    const addToastNotification = (notification) => {
+        setToastNotifications((prev) => [
+            {
+                ...notification,
+                id: `custom-${Date.now()}`,
+                status: "SENT",
+            },
+            ...prev,
+        ]);
+    };
+
     return (
         <div className="min-h-screen flex flex-col">
             <Navbar />
@@ -213,7 +224,7 @@ const User = () => {
                         </div>
                     </>
                 ) : (
-                    <Outlet />
+                    <Outlet context={{ addToastNotification }} />
                 )}
             </main>
             <Footer />
