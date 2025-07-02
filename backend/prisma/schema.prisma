@@ -284,7 +284,7 @@ model MedicalEvent {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  student   Student      @relation(fields: [studentId], references: [id])
+  student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   nurse     SchoolNurse? @relation(fields: [nurseId], references: [id])
   createdBy users        @relation("EventCreator", fields: [createdById], references: [id])
 
