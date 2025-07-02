@@ -586,6 +586,22 @@ const StudentList = () => {
                   required: true,
                   message: "Vui lòng chọn ngày sinh!",
                 },
+                {
+                  validator(_, value) {
+                    if (!value) return Promise.resolve();
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const minYear = year - 13; // lớn nhất 13 tuổi
+                    const maxYear = year - 6; // nhỏ nhất 6 tuổi
+                    const dobYear = value.year();
+                    if (dobYear < minYear || dobYear > maxYear) {
+                      return Promise.reject(
+                        new Error("Năm sinh không hợp lệ với học sinh tiểu học")
+                      );
+                    }
+                    return Promise.resolve();
+                  },
+                },
               ]}
             >
               <DatePicker style={{ width: "100%" }} />

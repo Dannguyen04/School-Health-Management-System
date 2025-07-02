@@ -1541,7 +1541,11 @@ const getAllStudentsForNurse = async (req, res) => {
         isActive: true,
       },
       include: {
-        studentProfile: true,
+        studentProfile: {
+          include: {
+            healthProfile: true,
+          },
+        },
       },
       orderBy: {
         fullName: "asc",
@@ -1559,7 +1563,7 @@ const getAllStudentsForNurse = async (req, res) => {
         gender: student.studentProfile.gender,
         dateOfBirth: student.studentProfile.dateOfBirth,
         bloodType: student.studentProfile.bloodType,
-        healthProfile: student.studentProfile.healthProfile, // Thêm dòng này
+        healthProfile: student.studentProfile.healthProfile,
       }));
 
     res.json({

@@ -59,6 +59,7 @@ const StudentHealthProfile = () => {
       const res = await axios.get("/api/admin/students-for-nurse", {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
+      console.log(res.data.data);
       setStudents(res.data.data || []);
       setLoading(false);
       setRefreshing(false);
@@ -580,11 +581,23 @@ const StudentHealthProfile = () => {
                     title: "Trạng thái",
                     dataIndex: "status",
                     key: "status",
-                    render: (status) => (
-                      <Tag color={status === "COMPLETED" ? "green" : "orange"}>
-                        {status}
-                      </Tag>
-                    ),
+                    render: (status) => {
+                      const map = {
+                        COMPLETED: { text: "Hoàn thành", color: "green" },
+                        SCHEDULED: { text: "Đã lên lịch", color: "orange" },
+                        RESCHEDULED: { text: "Đã dời lịch", color: "blue" },
+                        CANCELLED: { text: "Đã hủy", color: "red" },
+                      };
+                      const info = map[status] || {
+                        text: status,
+                        color: "default",
+                      };
+                      return (
+                        <Tag color={info.color} style={{ fontWeight: 500 }}>
+                          {info.text}
+                        </Tag>
+                      );
+                    },
                   },
                   {
                     title: "Thao tác",

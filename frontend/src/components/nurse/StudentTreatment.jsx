@@ -86,9 +86,10 @@ const StudentTreatment = () => {
       return;
     }
     setSelectedTreatment(record);
+    const dosageNumber = parseFloat(record.dosage); // lấy số đầu tiên
     form.setFieldsValue({
-      quantityUsed: 1,
-      dosageGiven: record.dosage,
+      quantityUsed: dosageNumber,
+      dosageGiven: dosageNumber,
       notes: "",
     });
     setIsModalVisible(true);
@@ -551,6 +552,7 @@ const StudentTreatment = () => {
                   max={selectedTreatment?.medication?.stockQuantity || 999}
                   style={{ width: "100%" }}
                   addonAfter={selectedTreatment?.medication?.unit}
+                  disabled
                 />
               </Form.Item>
             </Col>
