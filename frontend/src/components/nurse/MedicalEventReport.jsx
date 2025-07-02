@@ -82,6 +82,7 @@ const MedicalEventReport = () => {
     try {
       const response = await nurseAPI.getStudentsForNurse();
       if (response.data.success) {
+        console.log(response.data.data);
         setStudents(response.data.data);
       } else {
         message.error("Không thể tải danh sách học sinh");

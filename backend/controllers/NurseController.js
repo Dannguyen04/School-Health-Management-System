@@ -579,7 +579,7 @@ export const getAllMedicalEvents = async (req, res) => {
       studentId: event.student.id,
       studentName: event.student.user.fullName,
       studentCode: event.student.studentCode,
-      grade: `${event.student.grade}${event.student.class}`,
+      grade: event.student.class,
       title: event.title,
       description: event.description,
       type: event.type,

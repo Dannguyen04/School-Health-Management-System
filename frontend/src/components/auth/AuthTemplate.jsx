@@ -168,6 +168,13 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
               placeholder="Nhập email của bạn"
               required
             />
+
+            <Input
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Nhập mật khẩu của bạn"
+              type="password"
+              required
+            />
             {errors.email && (
               <p
                 style={{
@@ -184,12 +191,6 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
                 {errors.email}
               </p>
             )}
-            <Input
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nhập mật khẩu của bạn"
-              type="password"
-              required
-            />
             {errors.password && (
               <p
                 style={{

@@ -231,6 +231,16 @@ const StudentTreatment = () => {
     }
   };
 
+  const getFrequencyText = (frequency) => {
+    const freqMap = {
+      once: "1 lần/ngày",
+      twice: "2 lần/ngày",
+      three: "3 lần/ngày",
+      four: "4 lần/ngày",
+    };
+    return freqMap[frequency] || frequency || "-";
+  };
+
   const columns = [
     {
       title: "Học sinh",
@@ -726,7 +736,7 @@ const StudentTreatment = () => {
                 </div>
                 <div className="mb-3">
                   <Text strong>Tần suất:</Text>
-                  <div>{detailRecord.frequency}</div>
+                  <div>{getFrequencyText(detailRecord.frequency)}</div>
                 </div>
               </Col>
             </Row>
