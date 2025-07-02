@@ -3,7 +3,17 @@ import {
     PrinterOutlined,
     HeartOutlined,
 } from "@ant-design/icons";
-import { Button, Select, Space, Table, Typography, message, Spin } from "antd";
+import {
+    Button,
+    Select,
+    Space,
+    Table,
+    Typography,
+    message,
+    Spin,
+    Modal,
+    Descriptions,
+} from "antd";
 import { useState, useEffect } from "react";
 import axios from "axios";
 
@@ -14,6 +24,8 @@ const HealthCheckupResults = () => {
     const [children, setChildren] = useState([]);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [checkupResults, setCheckupResults] = useState([]);
+    const [detailModalVisible, setDetailModalVisible] = useState(false);
+    const [selectedCheckup, setSelectedCheckup] = useState(null);
 
     useEffect(() => {
         fetchChildren();
@@ -60,15 +72,30 @@ const HealthCheckupResults = () => {
                 const formattedResults = response.data.data.map(
                     (result, index) => ({
                         key: index,
-                        date: new Date(result.checkupDate).toLocaleDateString(),
-                        height: `${result.height} cm`,
-                        weight: `${result.weight} kg`,
-                        bmi: (
-                            result.weight /
-                            (result.height / 100) ** 2
-                        ).toFixed(1),
-                        vision: result.vision || "N/A",
-                        bloodPressure: result.bloodPressure || "N/A",
+                        raw: result,
+                        date: result.scheduledDate
+                            ? new Date(
+                                  result.scheduledDate
+                              ).toLocaleDateString()
+                            : "N/A",
+                        height: result.height ? `${result.height} cm` : "N/A",
+                        weight: result.weight ? `${result.weight} kg` : "N/A",
+                        bmi:
+                            result.height && result.weight
+                                ? (
+                                      result.weight /
+                                      (result.height / 100) ** 2
+                                  ).toFixed(1)
+                                : "N/A",
+                        vision:
+                            result.visionRightNoGlasses &&
+                            result.visionLeftNoGlasses
+                                ? `${result.visionRightNoGlasses}/${result.visionLeftNoGlasses}`
+                                : "N/A",
+                        bloodPressure:
+                            result.systolicBP && result.diastolicBP
+                                ? `${result.systolicBP}/${result.diastolicBP} mmHg`
+                                : "N/A",
                         notes: result.notes || "",
                     })
                 );
@@ -121,6 +148,21 @@ const HealthCheckupResults = () => {
             dataIndex: "notes",
             key: "notes",
         },
+        {
+            title: "Thao tác",
+            key: "actions",
+            render: (_, record) => (
+                <Button
+                    type="link"
+                    onClick={() => {
+                        setSelectedCheckup(record.raw);
+                        setDetailModalVisible(true);
+                    }}
+                >
+                    Xem chi tiết
+                </Button>
+            ),
+        },
     ];
 
     const handleDownload = () => {
@@ -129,6 +171,20 @@ const HealthCheckupResults = () => {
 
     const handlePrint = () => {
         window.print();
+    };
+
+    // Thêm hàm định dạng ngày giờ đẹp
+    const formatDateTime = (dateStr) => {
+        if (!dateStr) return "N/A";
+        const d = new Date(dateStr);
+        return `${d.getHours().toString().padStart(2, "0")}:${d
+            .getMinutes()
+            .toString()
+            .padStart(2, "0")} ${d.getDate().toString().padStart(2, "0")}/${(
+            d.getMonth() + 1
+        )
+            .toString()
+            .padStart(2, "0")}/${d.getFullYear()}`;
     };
 
     if (loading) {
@@ -176,18 +232,6 @@ const HealthCheckupResults = () => {
                             }))}
                             placeholder="Chọn học sinh"
                         />
-                        <Button
-                            icon={<DownloadOutlined />}
-                            onClick={handleDownload}
-                        >
-                            Tải xuống
-                        </Button>
-                        <Button
-                            icon={<PrinterOutlined />}
-                            onClick={handlePrint}
-                        >
-                            In
-                        </Button>
                     </Space>
                 </div>
                 <Table
@@ -198,6 +242,192 @@ const HealthCheckupResults = () => {
                     style={{ padding: 12 }}
                 />
             </div>
+            {/* Modal xem chi tiết */}
+            <Modal
+                title={
+                    <div>
+                        <div style={{ fontWeight: 600, fontSize: 20 }}>
+                            Chi tiết báo cáo khám sức khỏe
+                        </div>
+                        <div
+                            style={{
+                                color: "#888",
+                                fontSize: 14,
+                                marginBottom: 8,
+                            }}
+                        >
+                            Ngày khám:{" "}
+                            {selectedCheckup?.scheduledDate
+                                ? new Date(
+                                      selectedCheckup.scheduledDate
+                                  ).toLocaleDateString()
+                                : "N/A"}
+                        </div>
+                    </div>
+                }
+                open={detailModalVisible}
+                onCancel={() => setDetailModalVisible(false)}
+                footer={null}
+                width={520}
+            >
+                {selectedCheckup && (
+                    <div style={{ background: "#fff", borderRadius: 8 }}>
+                        {/* Thông tin cơ bản */}
+                        <div className="font-semibold mb-2">
+                            Thông tin cơ bản
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                            <div>
+                                Chiều cao:{" "}
+                                <b>
+                                    {selectedCheckup.height
+                                        ? `${selectedCheckup.height} cm`
+                                        : "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Cân nặng:{" "}
+                                <b>
+                                    {selectedCheckup.weight
+                                        ? `${selectedCheckup.weight} kg`
+                                        : "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Huyết áp:{" "}
+                                <b>
+                                    {selectedCheckup.systolicBP &&
+                                    selectedCheckup.diastolicBP
+                                        ? `${selectedCheckup.systolicBP}/${selectedCheckup.diastolicBP} mmHg`
+                                        : "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Phân loại thể lực:{" "}
+                                <b>
+                                    {selectedCheckup.physicalClassification ||
+                                        "N/A"}
+                                </b>
+                            </div>
+                        </div>
+                        {/* Thị lực */}
+                        <div className="font-semibold mb-2">Thị lực</div>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                            <div>
+                                Phải (không kính):{" "}
+                                <b>
+                                    {selectedCheckup.visionRightNoGlasses ||
+                                        "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Trái (không kính):{" "}
+                                <b>
+                                    {selectedCheckup.visionLeftNoGlasses ||
+                                        "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Phải (có kính):{" "}
+                                <b>
+                                    {selectedCheckup.visionRightWithGlasses ||
+                                        "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Trái (có kính):{" "}
+                                <b>
+                                    {selectedCheckup.visionLeftWithGlasses ||
+                                        "N/A"}
+                                </b>
+                            </div>
+                        </div>
+                        {/* Thính lực */}
+                        <div className="font-semibold mb-2">Thính lực</div>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                            <div>
+                                Trái (bình thường):{" "}
+                                <b>
+                                    {selectedCheckup.hearingLeftNormal || "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Phải (bình thường):{" "}
+                                <b>
+                                    {selectedCheckup.hearingRightNormal ||
+                                        "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Trái (thì thầm):{" "}
+                                <b>
+                                    {selectedCheckup.hearingLeftWhisper ||
+                                        "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Phải (thì thầm):{" "}
+                                <b>
+                                    {selectedCheckup.hearingRightWhisper ||
+                                        "N/A"}
+                                </b>
+                            </div>
+                        </div>
+                        {/* Răng miệng */}
+                        <div className="font-semibold mb-2">Răng miệng</div>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                            <div>
+                                Hàm trên:{" "}
+                                <b>{selectedCheckup.dentalUpperJaw || "N/A"}</b>
+                            </div>
+                            <div>
+                                Hàm dưới:{" "}
+                                <b>{selectedCheckup.dentalLowerJaw || "N/A"}</b>
+                            </div>
+                        </div>
+                        {/* Đánh giá tổng thể */}
+                        <div className="font-semibold mb-2">
+                            Đánh giá tổng thể
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mb-2">
+                            <div>
+                                Sức khỏe tổng thể:{" "}
+                                <b>
+                                    {selectedCheckup.overallHealth === "NORMAL"
+                                        ? "Bình thường"
+                                        : selectedCheckup.overallHealth ===
+                                          "NEEDS_ATTENTION"
+                                        ? "Cần chú ý"
+                                        : selectedCheckup.overallHealth ===
+                                          "REQUIRES_TREATMENT"
+                                        ? "Cần điều trị"
+                                        : selectedCheckup.overallHealth ||
+                                          "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Khuyến nghị:{" "}
+                                <b>
+                                    {selectedCheckup.recommendations || "N/A"}
+                                </b>
+                            </div>
+                            <div>
+                                Lịch tư vấn:{" "}
+                                <b>
+                                    {selectedCheckup.consultationStart &&
+                                    selectedCheckup.consultationEnd
+                                        ? `Từ ${formatDateTime(
+                                              selectedCheckup.consultationStart
+                                          )} đến ${formatDateTime(
+                                              selectedCheckup.consultationEnd
+                                          )}`
+                                        : "Chưa có lịch tư vấn"}
+                                </b>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 };

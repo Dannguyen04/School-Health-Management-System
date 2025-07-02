@@ -72,7 +72,7 @@ const Vaccination = () => {
     try {
       setLoading(true);
       const response = await axios.get(
-        `/api/nurse/campaigns/${campaignId}/students`,
+        `/api/nurse/vaccination-campaigns/${campaignId}/eligible-students`,
         {
           headers: getHeaders(),
         }
@@ -476,14 +476,22 @@ const Vaccination = () => {
         val ? (
           <Tag
             color="gold"
-            style={{ fontWeight: 600, fontSize: 14, padding: "2px 12px" }}
+            style={{
+              fontWeight: 600,
+              fontSize: 14,
+              padding: "2px 12px",
+            }}
           >
             Có
           </Tag>
         ) : (
           <Tag
             color="default"
-            style={{ fontWeight: 600, fontSize: 14, padding: "2px 12px" }}
+            style={{
+              fontWeight: 600,
+              fontSize: 14,
+              padding: "2px 12px",
+            }}
           >
             Không
           </Tag>
@@ -645,7 +653,9 @@ const Vaccination = () => {
             columns={vaccinationReportColumns}
             rowKey="id"
             loading={reportLoading}
-            locale={{ emptyText: "Chưa có dữ liệu báo cáo tiêm chủng" }}
+            locale={{
+              emptyText: "Chưa có dữ liệu báo cáo tiêm chủng",
+            }}
             pagination={{ pageSize: 10, showQuickJumper: true }}
             size="middle"
             bordered

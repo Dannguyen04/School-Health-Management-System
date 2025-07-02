@@ -106,6 +106,7 @@ const NotificationBell = () => {
     };
 
     const handleNotificationClick = (notification) => {
+        console.log("CLICKED NOTI:", notification);
         // Đánh dấu đã đọc nếu chưa đọc
         if (notification.status !== "READ") {
             markAsRead(notification.id);
@@ -144,6 +145,9 @@ const NotificationBell = () => {
                 navigate("/user/medical-events", {
                     state: { notificationId: notification.id },
                 });
+                break;
+            case "medical_consultation":
+                navigate("/user/health-checkup-results");
                 break;
             default:
                 setSelectedNotification(notification);

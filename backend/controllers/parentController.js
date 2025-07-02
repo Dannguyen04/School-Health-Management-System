@@ -810,3 +810,43 @@ export const getStudentVaccinationCampaigns = async (req, res) => {
         });
     }
 };
+
+// Lấy toàn bộ kết quả khám sức khỏe của học sinh cho phụ huynh
+export const getStudentHealthCheckups = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        // Kiểm tra quyền truy cập: phụ huynh phải là cha/mẹ của học sinh này
+        if (!req.user.parentProfile) {
+            return res
+                .status(403)
+                .json({
+                    success: false,
+                    error: "You must be a parent to access this resource",
+                });
+        }
+        const parentId = req.user.parentProfile.id;
+        const studentParent = await prisma.studentParent.findFirst({
+            where: { parentId, studentId },
+        });
+        if (!studentParent) {
+            return res
+                .status(403)
+                .json({
+                    success: false,
+                    error: "You are not authorized to view this student's health checkups",
+                });
+        }
+        // Lấy toàn bộ kết quả khám sức khỏe
+        const checkups = await prisma.medicalCheck.findMany({
+            where: { studentId },
+            orderBy: { scheduledDate: "desc" },
+        });
+        res.json({ success: true, data: checkups });
+    } catch (error) {
+        console.error("Error fetching health checkups:", error);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
+    }
+};
