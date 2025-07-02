@@ -9,7 +9,6 @@ import {
   Button,
   Card,
   Col,
-  DatePicker,
   Form,
   Input,
   message,
@@ -22,7 +21,6 @@ import {
   Tag,
 } from "antd";
 import axios from "axios";
-import dayjs from "dayjs";
 import { Formik } from "formik";
 import { useEffect, useState } from "react";
 import * as Yup from "yup";
@@ -174,12 +172,6 @@ const VaccineManagement = () => {
     //     key: "dose",
     // },
     {
-      title: "Ngày hết hạn",
-      dataIndex: "expiredDate",
-      key: "expiredDate",
-      render: (date) => new Date(date).toLocaleDateString("vi-VN"),
-    },
-    {
       title: "Tác dụng phụ",
       dataIndex: "sideEffects",
       key: "sideEffects",
@@ -219,7 +211,6 @@ const VaccineManagement = () => {
     setSelectedVaccine(record);
     vaccineForm.setFieldsValue({
       ...record,
-      expiredDate: record.expiredDate ? dayjs(record.expiredDate) : null,
     });
     setIsModalVisible(true);
   };
@@ -328,9 +319,6 @@ const VaccineManagement = () => {
                   name: selectedVaccine.name,
                   requirement: selectedVaccine.requirement,
                   // dose: selectedVaccine.dose,
-                  expiredDate: selectedVaccine.expiredDate
-                    ? dayjs(selectedVaccine.expiredDate)
-                    : null,
                   sideEffects: selectedVaccine.sideEffects || "",
                   notes: selectedVaccine.notes || "",
                 }
@@ -338,7 +326,6 @@ const VaccineManagement = () => {
                   name: "",
                   requirement: "",
                   // dose: "",
-                  expiredDate: null,
                   sideEffects: "",
                   notes: "",
                 }
@@ -348,18 +335,12 @@ const VaccineManagement = () => {
             name: Yup.string().required("Vui lòng nhập tên vaccine"),
             requirement: Yup.string().required("Vui lòng chọn yêu cầu"),
             // dose: Yup.string().required("Vui lòng chọn liều lượng"),
-            expiredDate: Yup.date().required("Vui lòng chọn ngày hết hạn"),
           })}
           onSubmit={async (values, { setSubmitting }) => {
             const data = {
               name: values.name,
               requirement: values.requirement,
               // dose: values.dose,
-              expiredDate: values.expiredDate
-                ? typeof values.expiredDate === "string"
-                  ? values.expiredDate
-                  : values.expiredDate.toISOString()
-                : null,
               sideEffects: values.sideEffects,
               notes: values.notes,
             };
@@ -444,26 +425,6 @@ const VaccineManagement = () => {
                   <Select.Option value="BOOSTER">Nhắc lại</Select.Option>
                 </Select>
               </Form.Item> */}
-              <Form.Item
-                label="Ngày hết hạn"
-                help={
-                  touched.expiredDate && errors.expiredDate
-                    ? errors.expiredDate
-                    : undefined
-                }
-                validateStatus={
-                  touched.expiredDate && errors.expiredDate
-                    ? "error"
-                    : undefined
-                }
-              >
-                <DatePicker
-                  style={{ width: "100%" }}
-                  value={values.expiredDate ? dayjs(values.expiredDate) : null}
-                  onChange={(date) => setFieldValue("expiredDate", date)}
-                  onBlur={handleBlur}
-                />
-              </Form.Item>
               <Form.Item label="Tác dụng phụ">
                 <TextArea
                   name="sideEffects"
