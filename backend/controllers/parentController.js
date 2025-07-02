@@ -266,7 +266,8 @@ export const deleteHealthProfile = async (req, res) => {
 
 export const requestMedication = async (req, res) => {
     try {
-        console.log("Requesting medication with body:", req.body);
+        console.log("[requestMedication] Body:", req.body);
+        console.log("[requestMedication] File:", req.file);
         const { studentId } = req.params;
         const {
             medicationName,
@@ -279,6 +280,37 @@ export const requestMedication = async (req, res) => {
             unit,
             stockQuantity,
         } = req.body;
+
+        // Validate dữ liệu đầu vào
+        if (!medicationName || !dosage || !frequency || !startDate || !unit) {
+            return res.status(400).json({
+                success: false,
+                error: "Thiếu thông tin bắt buộc: medicationName, dosage, frequency, startDate, unit",
+            });
+        }
+        if (isNaN(Number(stockQuantity))) {
+            return res.status(400).json({
+                success: false,
+                error: "Số lượng thuốc (stockQuantity) phải là số",
+            });
+        }
+        let parsedStartDate = null;
+        let parsedEndDate = null;
+        try {
+            parsedStartDate = new Date(startDate);
+            if (endDate) parsedEndDate = new Date(endDate);
+            if (
+                isNaN(parsedStartDate.getTime()) ||
+                (endDate && isNaN(parsedEndDate.getTime()))
+            ) {
+                throw new Error();
+            }
+        } catch {
+            return res.status(400).json({
+                success: false,
+                error: "Ngày bắt đầu/kết thúc không hợp lệ",
+            });
+        }
 
         // Check if user has parent profile
         if (!req.user.parentProfile) {
@@ -328,6 +360,11 @@ export const requestMedication = async (req, res) => {
         }
 
         // Create medication request using the found/created medication's ID
+        let image = null;
+        if (req.file) {
+            // Đường dẫn public để client truy cập
+            image = `/api/uploads/medicine-images/${req.file.filename}`;
+        }
         const studentMedication = await prisma.studentMedication.create({
             data: {
                 studentId,
@@ -336,9 +373,10 @@ export const requestMedication = async (req, res) => {
                 dosage,
                 frequency,
                 instructions,
-                startDate: new Date(startDate),
-                endDate: endDate ? new Date(endDate) : null,
+                startDate: parsedStartDate,
+                endDate: parsedEndDate || null,
                 status: "PENDING_APPROVAL",
+                image,
             },
             include: {
                 medication: true,

@@ -9,12 +9,16 @@ const __dirname = path.dirname(__filename);
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, "../uploads");
 const profilePhotosDir = path.join(uploadsDir, "profile-photos");
+const medicineImagesDir = path.join(uploadsDir, "medicine-images");
 
 if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 if (!fs.existsSync(profilePhotosDir)) {
     fs.mkdirSync(profilePhotosDir, { recursive: true });
+}
+if (!fs.existsSync(medicineImagesDir)) {
+    fs.mkdirSync(medicineImagesDir, { recursive: true });
 }
 
 // Configure storage
@@ -27,6 +31,17 @@ const storage = multer.diskStorage({
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
         const ext = path.extname(file.originalname);
         cb(null, `profile-${req.user?.id || "unknown"}-${uniqueSuffix}${ext}`);
+    },
+});
+
+const medicineImageStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, medicineImagesDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        const ext = path.extname(file.originalname);
+        cb(null, `medicine-${uniqueSuffix}${ext}`);
     },
 });
 
@@ -64,6 +79,15 @@ const upload = multer({
 
 // Single file upload middleware for profile photos
 export const uploadProfilePhoto = upload.single("profilePhoto");
+
+// Single file upload middleware for medicine images
+export const uploadMedicineImage = multer({
+    storage: medicineImageStorage,
+    fileFilter: fileFilter,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+}).single("medicineImage");
 
 // Error handling middleware for multer
 export const handleUploadError = (err, req, res, next) => {

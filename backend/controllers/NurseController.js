@@ -1970,6 +1970,7 @@ export const getMedicationRequestById = async (req, res) => {
             createdAt: medicationRequest.createdAt,
             updatedAt: medicationRequest.updatedAt,
             healthProfile: medicationRequest.student.healthProfile,
+            image: medicationRequest.image,
         };
 
         res.json({
