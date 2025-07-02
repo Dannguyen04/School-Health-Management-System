@@ -270,34 +270,6 @@ const Vaccination = () => {
     }
   };
 
-  const getDoseText = (dose) => {
-    switch (dose) {
-      case "FIRST":
-        return "Liều đầu tiên";
-      case "SECOND":
-        return "Liều thứ hai";
-      case "BOOSTER":
-        return "Liều nhắc lại";
-      default:
-        return dose || "-";
-    }
-  };
-
-  const getReactionText = (reaction) => {
-    switch (reaction) {
-      case "NONE":
-        return "Không có phản ứng";
-      case "MILD":
-        return "Phản ứng nhẹ";
-      case "MODERATE":
-        return "Phản ứng vừa";
-      case "SEVERE":
-        return "Phản ứng nặng";
-      default:
-        return reaction || "-";
-    }
-  };
-
   // Columns
   const campaignColumns = [
     { title: "Tên chiến dịch", dataIndex: "name", key: "name" },
