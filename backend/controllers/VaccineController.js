@@ -20,8 +20,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 
 const createVaccination = async (req, res) => {
-    const { name, requirement, expiredDate, dose, sideEffects, notes } =
-        req.body;
+    const { name, requirement, dose, sideEffects, notes } = req.body;
 
     if (!name || !requirement) {
         return res.status(404).json({
@@ -45,7 +44,6 @@ const createVaccination = async (req, res) => {
             data: {
                 name,
                 requirement,
-                expiredDate: new Date(expiredDate),
                 dose,
                 sideEffects,
                 notes,
@@ -195,8 +193,7 @@ const getVaccinations = async (req, res) => {
 
 const updateVaccination = async (req, res) => {
     const { id } = req.params;
-    const { name, requirement, expiredDate, dose, sideEffects, notes } =
-        req.body;
+    const { name, requirement, dose, sideEffects, notes } = req.body;
     try {
         const existedVaccination = await prisma.vaccinations.findUnique({
             where: { id },
@@ -224,7 +221,6 @@ const updateVaccination = async (req, res) => {
             data: {
                 name,
                 requirement,
-                expiredDate: expiredDate ? new Date(expiredDate) : undefined,
                 dose,
                 sideEffects,
                 notes,

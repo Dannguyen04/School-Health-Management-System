@@ -460,6 +460,7 @@ model VaccinationRecord {
   reaction         String?
   status           VaccinationStatus @default(COMPLETED)
   followUpRequired Boolean           @default(false)
+  followUpDate     DateTime?         
 
   campaignId String   @db.ObjectId
   studentId  String   @db.ObjectId
