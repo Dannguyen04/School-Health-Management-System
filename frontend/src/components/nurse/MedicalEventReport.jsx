@@ -379,16 +379,6 @@ const MedicalEventReport = () => {
       width: 100,
     },
     {
-      title: "Liên lạc khẩn cấp",
-      key: "emergency",
-      render: (_, record) => (
-        <div>
-          <div className="text-sm">{record.emergencyContact}</div>
-          <div className="text-sm text-gray-500">{record.emergencyPhone}</div>
-        </div>
-      ),
-    },
-    {
       title: "Thao tác",
       key: "actions",
       width: 100,
@@ -795,20 +785,6 @@ const MedicalEventReport = () => {
                     <div className="text-sm">
                       <span className="font-medium">Nhóm máu:</span>{" "}
                       {selectedStudentInfo.bloodType}
-                    </div>
-                  </Col>
-                </Row>
-                <Row gutter={16} className="mt-2">
-                  <Col span={12}>
-                    <div className="text-sm">
-                      <span className="font-medium">Liên lạc khẩn cấp:</span>{" "}
-                      {selectedStudentInfo.emergencyContact}
-                    </div>
-                  </Col>
-                  <Col span={12}>
-                    <div className="text-sm">
-                      <span className="font-medium">Số điện thoại:</span>{" "}
-                      {selectedStudentInfo.emergencyPhone}
                     </div>
                   </Col>
                 </Row>

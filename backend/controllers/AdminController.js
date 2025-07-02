@@ -235,12 +235,10 @@ const addStudent = async (req, res) => {
       gender,
       grade,
       class: studentClass,
-      emergencyContact,
-      emergencyPhone,
+      bloodType,
       parentName,
       parentId,
       newParentData,
-      bloodType,
     } = req.body;
 
     const requiredFields = [
@@ -251,8 +249,6 @@ const addStudent = async (req, res) => {
       "gender",
       "studentClass",
       "grade",
-      "emergencyContact",
-      "emergencyPhone",
     ];
 
     const missingFields = requiredFields.filter((field) => {
@@ -343,8 +339,6 @@ const addStudent = async (req, res) => {
           gender: gender.toLowerCase(),
           grade: grade.toString(),
           class: studentClass.trim(),
-          emergencyContact: emergencyContact?.trim(),
-          emergencyPhone: emergencyPhone?.trim(),
           ...(bloodType && { bloodType: bloodType.trim() }),
         },
       });
@@ -1116,11 +1110,43 @@ const deleteUser = async (req, res) => {
           });
           console.log("✅ Đã xóa StudentParent relationships");
 
+          // Lấy tất cả studentMedicationId liên quan đến student
+          const studentMedications = await tx.studentMedication.findMany({
+            where: { studentId },
+            select: { id: true },
+          });
+          const studentMedicationIds = studentMedications.map((med) => med.id);
+
+          // Xóa MedicationAdministrationLog liên quan đến các studentMedication này
+          if (
+            studentMedicationIds.length > 0 &&
+            tx.medicationAdministrationLog
+          ) {
+            await tx.medicationAdministrationLog.deleteMany({
+              where: {
+                studentMedicationId: {
+                  in: studentMedicationIds,
+                },
+              },
+            });
+            console.log(
+              "✅ Đã xóa MedicationAdministrationLog liên quan StudentMedication"
+            );
+          }
+
           // Xóa StudentMedication
           await tx.studentMedication.deleteMany({
-            where: { studentId: studentId },
+            where: { studentId },
           });
-          console.log("✅ Đã xóa StudentMedication");
+
+          // Kiểm tra còn StudentMedication không
+          const count = await tx.studentMedication.count({
+            where: { studentId },
+          });
+          console.log(
+            "Số bản ghi StudentMedication còn lại sau khi xóa:",
+            count
+          );
 
           // Xóa MedicalEvent
           await tx.medicalEvent.deleteMany({
@@ -1191,8 +1217,12 @@ const deleteUser = async (req, res) => {
 
       // Xóa profile tương ứng với role
       const tableName = roleToTable[user.role];
-      if (tableName && user[roleToModel[user.role]]) {
-        console.log(`🗑️ Xóa ${tableName} profile`);
+      if (user.role === "STUDENT" && user.studentProfile) {
+        await tx.student.delete({
+          where: { id: user.studentProfile.id },
+        });
+        console.log("✅ Đã xóa student profile");
+      } else if (tableName && user[roleToModel[user.role]]) {
         await tx[tableName].delete({ where: { userId: id } });
         console.log(`✅ Đã xóa ${tableName} profile`);
       }

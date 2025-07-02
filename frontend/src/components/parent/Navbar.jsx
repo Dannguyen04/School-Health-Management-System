@@ -4,16 +4,16 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { FaHeartbeat, FaBell } from "react-icons/fa";
 import NotificationBell from "../shared/NotificationBell";
-import NotificationToast from "../shared/NotificationToast";
 import { useNotifications } from "../../hooks/useNotifications";
 import { useAuth } from "../../context/authContext";
 
 const Navbar = () => {
     const [menu, setMenu] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [toastNotification, setToastNotification] = useState(null);
-    const [dismissedNotificationId, setDismissedNotificationId] =
-        useState(null);
+    const [toastNotifications, setToastNotifications] = useState([]);
+    const [dismissedNotificationIds, setDismissedNotificationIds] = useState(
+        []
+    );
     const navigate = useNavigate();
     const location = useLocation();
     const { user } = useAuth();
@@ -35,19 +35,22 @@ const Navbar = () => {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // Hiển thị toast cho thông báo mới
+    // Hiển thị toast cho tất cả thông báo mới (SENT) chưa bị đóng, loại bỏ cảnh báo thiếu khai báo sức khỏe đặc biệt
     useEffect(() => {
         if (notifications.length > 0) {
-            const latestNotification = notifications[0];
-            if (
-                latestNotification.status === "SENT" &&
-                latestNotification.id !== toastNotification?.id &&
-                latestNotification.id !== dismissedNotificationId
-            ) {
-                setToastNotification(latestNotification);
+            const newToasts = notifications.filter(
+                (n) =>
+                    n.status === "SENT" &&
+                    n.id !== "missing-health-profile" && // Bỏ qua cảnh báo đặc biệt
+                    !toastNotifications.some((t) => t.id === n.id) &&
+                    !dismissedNotificationIds.includes(n.id)
+            );
+            if (newToasts.length > 0) {
+                setToastNotifications((prev) => [...newToasts, ...prev]);
             }
         }
-    }, [notifications, toastNotification, dismissedNotificationId]);
+        // eslint-disable-next-line
+    }, [notifications, toastNotifications, dismissedNotificationIds]);
 
     const handleNav = (section) => {
         if (isLandingPage) {
@@ -66,14 +69,14 @@ const Navbar = () => {
         navigate("/auth");
     };
 
-    const handleToastClose = () => {
-        setDismissedNotificationId(toastNotification?.id);
-        setToastNotification(null);
+    const handleToastClose = (id) => {
+        setDismissedNotificationIds((prev) => [...prev, id]);
+        setToastNotifications((prev) => prev.filter((t) => t.id !== id));
     };
 
-    const handleToastMarkAsRead = async (notificationId) => {
-        await markAsRead(notificationId);
-        setToastNotification(null);
+    const handleToastMarkAsRead = async (id) => {
+        await markAsRead(id);
+        setToastNotifications((prev) => prev.filter((t) => t.id !== id));
     };
 
     const userMenuItems = [
@@ -239,15 +242,6 @@ const Navbar = () => {
                     </div>
                 </div>
             </div>
-
-            {/* Hiển thị NotificationToast */}
-            {toastNotification && (
-                <NotificationToast
-                    notification={toastNotification}
-                    onClose={handleToastClose}
-                    onMarkAsRead={handleToastMarkAsRead}
-                />
-            )}
         </>
     );
 };

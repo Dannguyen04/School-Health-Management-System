@@ -1,6 +1,33 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+// Thêm hàm gửi notification nếu thiếu số điện thoại
+async function notifyParentToUpdatePhone(user) {
+    if (!user.phone) {
+        // Kiểm tra đã có notification chưa đọc cùng loại chưa
+        const existing = await prisma.notification.findFirst({
+            where: {
+                userId: user.id,
+                type: "update_phone",
+                status: { in: ["SENT", "DELIVERED"] },
+            },
+        });
+        if (!existing) {
+            await prisma.notification.create({
+                data: {
+                    userId: user.id,
+                    title: "Cập nhật số điện thoại",
+                    message:
+                        "Vui lòng cập nhật số điện thoại để nhận đầy đủ thông báo từ nhà trường.",
+                    type: "update_phone",
+                    status: "SENT",
+                    sentAt: new Date(),
+                },
+            });
+        }
+    }
+}
+
 export const getMyChildren = async (req, res) => {
     try {
         if (!req.user.parentProfile) {
@@ -9,6 +36,8 @@ export const getMyChildren = async (req, res) => {
                 error: "You must be a parent to access this resource",
             });
         }
+        // Kiểm tra và gửi notification nếu thiếu số điện thoại
+        await notifyParentToUpdatePhone(req.user);
 
         const parentId = req.user.parentProfile.id;
         console.log("[getMyChildren] parentId:", parentId);
@@ -602,9 +631,50 @@ export const getVaccinationDetail = async (req, res) => {
             },
         });
         if (!vaccination) {
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy dữ liệu tiêm chủng",
+            // Nếu không có record tiêm chủng, trả về thông tin campaign, student, consent (nếu có)
+            const campaign = await prisma.VaccinationCampaign.findUnique({
+                where: { id: campaignId },
+                include: {
+                    vaccinations: true,
+                    consents: true,
+                },
+            });
+            const student = await prisma.Student.findUnique({
+                where: { id: studentId },
+                include: {
+                    user: true,
+                    parents: {
+                        include: {
+                            parent: {
+                                include: { user: true },
+                            },
+                        },
+                    },
+                    healthProfile: true,
+                },
+            });
+            // Lấy consent của học sinh này với campaign này (nếu có)
+            const consent = await prisma.VaccinationConsent.findFirst({
+                where: {
+                    campaignId: campaignId,
+                    studentId: studentId,
+                },
+            });
+            if (!campaign || !student) {
+                return res.status(404).json({
+                    success: false,
+                    error: "Không tìm thấy dữ liệu tiêm chủng hoặc chiến dịch",
+                });
+            }
+            return res.json({
+                success: true,
+                data: {
+                    campaign,
+                    student,
+                    consent,
+                    status: "SCHEDULED",
+                    notVaccinated: true,
+                },
             });
         }
         res.json({ success: true, data: vaccination });

@@ -138,10 +138,7 @@ const StudentList = () => {
         class: user.studentProfile?.class,
         grade: user.studentProfile?.grade,
         bloodType: user.studentProfile?.bloodType,
-        emergencyContact: user.studentProfile?.emergencyContact,
-        emergencyPhone: user.studentProfile?.emergencyPhone,
         status: user.isActive ? "active" : "inactive",
-        parentId: user.studentProfile?.parentId,
       }));
       setStudents(formattedStudents);
       setFilteredStudents(formattedStudents); // Initialize filtered students with all students
@@ -198,7 +195,7 @@ const StudentList = () => {
       }
 
       const response = await axios.post(
-        "/api/admin/parents",
+        "/api/manager/students/parents",
         {
           name: values.newParentName,
           email: values.newParentEmail,
@@ -237,16 +234,6 @@ const StudentList = () => {
       selectedParentName: selectedParent.fullName,
     });
   };
-
-  // Khi chọn phụ huynh, tự động set emergencyContact và emergencyPhone
-  useEffect(() => {
-    if (selectedParent) {
-      form.setFieldsValue({
-        emergencyContact: selectedParent.fullName,
-        emergencyPhone: selectedParent.phone,
-      });
-    }
-  }, [selectedParent, form]);
 
   const columns = [
     {
@@ -323,9 +310,6 @@ const StudentList = () => {
 
   const handleEdit = (student) => {
     setEditingStudent(student);
-    // Tìm phụ huynh của học sinh này (giả sử student có parentId)
-    const parent = parents.find((p) => p.id === student.parentId);
-    setSelectedParent(parent || null);
     form.setFieldsValue({
       studentCode: student.studentCode,
       name: student.name,
@@ -334,10 +318,8 @@ const StudentList = () => {
       gender: student.gender,
       grade: Number(student.grade),
       class: student.class,
-      emergencyContact: student.emergencyContact,
-      emergencyPhone: student.emergencyPhone,
-      selectedParentId: parent ? parent.id : undefined,
     });
+    setSelectedParent(null);
     setIsModalVisible(true);
   };
 
@@ -362,8 +344,6 @@ const StudentList = () => {
             gender: values.gender,
             grade: parseInt(values.grade),
             class: values.class,
-            emergencyContact: values.emergencyContact,
-            emergencyPhone: values.emergencyPhone,
             ...parentData,
           }
         : {
@@ -375,8 +355,6 @@ const StudentList = () => {
             gender: values.gender,
             grade: parseInt(values.grade),
             class: values.class,
-            emergencyContact: values.emergencyContact,
-            emergencyPhone: values.emergencyPhone,
             ...parentData,
           };
 
@@ -403,8 +381,6 @@ const StudentList = () => {
             gender: values.gender,
             grade: parseInt(values.grade),
             class: values.class,
-            emergencyContact: values.emergencyContact,
-            emergencyPhone: values.emergencyPhone,
             ...parentData,
           };
 
@@ -610,22 +586,6 @@ const StudentList = () => {
                   required: true,
                   message: "Vui lòng chọn ngày sinh!",
                 },
-                {
-                  validator(_, value) {
-                    if (!value) return Promise.resolve();
-                    const today = new Date();
-                    const year = today.getFullYear();
-                    const minYear = year - 13; // lớn nhất 13 tuổi
-                    const maxYear = year - 6; // nhỏ nhất 6 tuổi
-                    const dobYear = value.year();
-                    if (dobYear < minYear || dobYear > maxYear) {
-                      return Promise.reject(
-                        new Error("Năm sinh không hợp lệ với học sinh tiểu học")
-                      );
-                    }
-                    return Promise.resolve();
-                  },
-                },
               ]}
             >
               <DatePicker style={{ width: "100%" }} />
@@ -690,41 +650,19 @@ const StudentList = () => {
             >
               <Input />
             </Form.Item>
-            <Form.Item
-              name="emergencyContact"
-              label="Người liên hệ khẩn cấp"
-              rules={[
-                {
-                  required: true,
-                  message: "Vui lòng nhập tên người liên hệ!",
-                },
-              ]}
-            >
-              <Input disabled placeholder="Chọn phụ huynh để tự động điền" />
-            </Form.Item>
-            <Form.Item
-              name="emergencyPhone"
-              label="Số điện thoại liên hệ khẩn cấp"
-              rules={[
-                {
-                  required: true,
-                  message: "Vui lòng nhập số điện thoại!",
-                },
-              ]}
-            >
-              <Input disabled placeholder="Chọn phụ huynh để tự động điền" />
-            </Form.Item>
 
             <Form.Item
               name="selectedParentId"
-              noStyle
+              label="Phụ huynh"
               rules={[
                 {
                   required: true,
                   message: "Vui lòng chọn phụ huynh!",
                 },
               ]}
-            />
+            >
+              <Input type="hidden" />
+            </Form.Item>
 
             <Form.Item label="Chọn phụ huynh">
               <Space direction="vertical" style={{ width: "100%" }}>

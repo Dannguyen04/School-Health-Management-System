@@ -7,7 +7,8 @@ import Services from "../components/parent/Services";
 import { useAuth } from "../context/authContext";
 import { parentAPI } from "../utils/api";
 import { notification } from "antd";
-import NotificationToast from "../components/shared/NotificationToast";
+import NotificationToastList from "../components/shared/NotificationToastList";
+import { useNotifications } from "../hooks/useNotifications";
 
 const User = () => {
     const location = useLocation();
@@ -16,6 +17,17 @@ const User = () => {
     const [showHealthProfileToast, setShowHealthProfileToast] = useState(false);
     const [missingStudents, setMissingStudents] = useState([]);
     const navigate = useNavigate();
+    const { notifications: apiNotifications, markAsRead } = useNotifications(
+        user?.id,
+        {
+            autoRefresh: true,
+            refreshInterval: 30000,
+        }
+    );
+    const [toastNotifications, setToastNotifications] = useState([]);
+    const [dismissedNotificationIds, setDismissedNotificationIds] = useState(
+        []
+    );
 
     useEffect(() => {
         if (isLandingPage && location.state?.scrollTo) {
@@ -112,22 +124,56 @@ const User = () => {
         // eslint-disable-next-line
     }, [user]);
 
+    // Gộp notification API và cảnh báo thiếu khai báo sức khỏe
+    useEffect(() => {
+        let notiList = apiNotifications.filter(
+            (n) =>
+                n.status === "SENT" && !dismissedNotificationIds.includes(n.id)
+        );
+        if (showHealthProfileToast && missingStudents.length > 0) {
+            notiList = [
+                {
+                    id: "missing-health-profile",
+                    title: "Cảnh báo thiếu khai báo sức khỏe",
+                    message: `Bạn có ${missingStudents.length} con chưa được khai báo sức khỏe. Vui lòng cập nhật thông tin sức khỏe cho các bé!`,
+                    type: "medical_check",
+                    status: "SENT",
+                },
+                ...notiList,
+            ];
+        }
+        setToastNotifications(notiList);
+    }, [
+        apiNotifications,
+        showHealthProfileToast,
+        missingStudents,
+        dismissedNotificationIds,
+    ]);
+
+    const handleToastClose = (id) => {
+        setDismissedNotificationIds((prev) => [...prev, id]);
+        if (id === "missing-health-profile") setShowHealthProfileToast(false);
+    };
+
+    const handleToastMarkAsRead = async (id) => {
+        if (id === "missing-health-profile") {
+            setShowHealthProfileToast(false);
+        } else {
+            await markAsRead(id);
+        }
+        setDismissedNotificationIds((prev) => [...prev, id]);
+    };
+
     return (
         <div className="min-h-screen flex flex-col">
             <Navbar />
-            {/* Hiển thị NotificationToast nếu thiếu health profile */}
-            {showHealthProfileToast && missingStudents.length > 0 && (
-                <NotificationToast
-                    notification={{
-                        id: "missing-health-profile",
-                        title: "Cảnh báo thiếu khai báo sức khỏe",
-                        message: `Bạn có ${missingStudents.length} con chưa được khai báo sức khỏe. Vui lòng cập nhật thông tin sức khỏe cho các bé!`,
-                        type: "medical_check",
-                        status: "SENT",
-                    }}
-                    onClose={() => setShowHealthProfileToast(false)}
-                    onMarkAsRead={() => setShowHealthProfileToast(false)}
-                    actionButton={
+            {/* Hiển thị NotificationToastList duy nhất */}
+            <NotificationToastList
+                notifications={toastNotifications}
+                onClose={handleToastClose}
+                onMarkAsRead={handleToastMarkAsRead}
+                actionButtons={{
+                    "missing-health-profile": (
                         <button
                             style={{
                                 background: "#36ae9a",
@@ -150,10 +196,12 @@ const User = () => {
                         >
                             Khai báo ngay
                         </button>
-                    }
-                    studentId={missingStudents[0]?.studentId}
-                />
-            )}
+                    ),
+                }}
+                studentIds={{
+                    "missing-health-profile": missingStudents[0]?.studentId,
+                }}
+            />
             <main className="flex-1">
                 {isLandingPage ? (
                     <>

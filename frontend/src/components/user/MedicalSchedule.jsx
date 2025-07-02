@@ -9,6 +9,7 @@ import {
     MedicineBoxOutlined,
     ScheduleOutlined,
 } from "@ant-design/icons";
+import MedicalCampaignDetailModal from "../parent/MedicalCampaignDetailModal";
 
 const { Title } = Typography;
 
@@ -21,6 +22,10 @@ const MedicalSchedule = () => {
     const [modalVisible, setModalVisible] = useState(false);
     const [children, setChildren] = useState([]);
     const [selectedChild, setSelectedChild] = useState(null);
+    const [selectedMedicalCampaign, setSelectedMedicalCampaign] =
+        useState(null);
+    const [medicalModalVisible, setMedicalModalVisible] = useState(false);
+    const [medicalDetail, setMedicalDetail] = useState(null);
 
     // Lấy danh sách học sinh
     useEffect(() => {
@@ -82,6 +87,23 @@ const MedicalSchedule = () => {
         }
     };
 
+    // Hàm lấy chi tiết chiến dịch khám sức khỏe
+    const fetchMedicalCampaignDetail = async (campaignId) => {
+        try {
+            setLoading(true);
+            const res = await api.get(`/medical-campaigns/${campaignId}`);
+            if (res.data.success) {
+                setMedicalDetail(res.data.data);
+                setMedicalModalVisible(true);
+            }
+        } catch (e) {
+            setMedicalDetail(null);
+            setMedicalModalVisible(false);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Cột bảng cho lịch tiêm chủng
     const vaccinationColumns = [
         {
@@ -134,6 +156,23 @@ const MedicalSchedule = () => {
                 }
             },
         },
+        {
+            title: "Chi tiết",
+            key: "action",
+            align: "center",
+            width: 100,
+            render: (record) => (
+                <Button
+                    type="link"
+                    onClick={() =>
+                        fetchVaccinationDetail(record.id, selectedChild)
+                    }
+                    style={{ color: "#36ae9a" }}
+                >
+                    Chi tiết
+                </Button>
+            ),
+        },
     ];
 
     // Cột bảng cho lịch khám sức khỏe
@@ -173,6 +212,21 @@ const MedicalSchedule = () => {
                         return status || "-";
                 }
             },
+        },
+        {
+            title: "Chi tiết",
+            key: "action",
+            align: "center",
+            width: 100,
+            render: (record) => (
+                <Button
+                    type="link"
+                    onClick={() => fetchMedicalCampaignDetail(record.id)}
+                    style={{ color: "#36ae9a" }}
+                >
+                    Chi tiết
+                </Button>
+            ),
         },
     ];
 
@@ -253,6 +307,15 @@ const MedicalSchedule = () => {
                                             style={{ padding: 12 }}
                                         />
                                     )}
+                                    {modalVisible && (
+                                        <VaccinationDetailModal
+                                            visible={modalVisible}
+                                            vaccination={selected}
+                                            onClose={() =>
+                                                setModalVisible(false)
+                                            }
+                                        />
+                                    )}
                                 </>
                             ),
                         },
@@ -302,6 +365,15 @@ const MedicalSchedule = () => {
                                             }}
                                             className="rounded-xl"
                                             style={{ padding: 12 }}
+                                        />
+                                    )}
+                                    {medicalModalVisible && (
+                                        <MedicalCampaignDetailModal
+                                            visible={medicalModalVisible}
+                                            campaign={medicalDetail}
+                                            onClose={() =>
+                                                setMedicalModalVisible(false)
+                                            }
                                         />
                                     )}
                                 </>
