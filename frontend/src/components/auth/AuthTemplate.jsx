@@ -1,14 +1,15 @@
-import { GoogleLogin, GoogleOAuthProvider } from "@react-oauth/google";
-import { Button, Modal } from "antd";
-import { useState } from "react";
+import { Button, Modal, message } from "antd";
+import cn from "classnames";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
+import api from "../../utils/api";
 import { Input } from "../Input";
-import cn from "classnames";
 import {
   Form,
   FormContainer,
   GhostButton,
+  MobileSwitchButton,
   Overlay,
   OverlayContainer,
   OverlayPanel,
@@ -17,16 +18,25 @@ import {
   SignUpContainer,
   Title,
 } from "./AuthStyles";
-import api from "../../utils/api";
 
-export const AuthTemplate = ({ isOpen, onCloseModal }) => {
-  const [signIn, setSignIn] = useState(true);
+export const AuthTemplate = ({ isOpen, onCloseModal, signIn, setSignIn }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [errors, setErrors] = useState({});
-  const { login } = useAuth();
+  const { login, setScrollToServices } = useAuth();
   const navigate = useNavigate();
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    console.log("signIn:", signIn);
+  }, [signIn]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -39,6 +49,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       if (response.data.success) {
         const { user, token } = response.data;
         login(user, token);
+        message.success("Đăng nhập thành công");
         if (user.role === "ADMIN") {
           navigate("/admin");
         } else if (user.role === "SCHOOL_NURSE") {
@@ -47,6 +58,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
           navigate("/manager");
         } else {
           navigate("/user");
+          setScrollToServices(true);
         }
       }
     } catch (error) {
@@ -110,36 +122,6 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
     }
   };
 
-  const handleGoogleSuccess = async (response) => {
-    try {
-      console.log("Google login response:", response);
-      const res = await api.post("/auth/google-login", {
-        credential: response.credential,
-      });
-
-      console.log("Backend response:", res.data);
-
-      if (res.data.success) {
-        const { user, token } = res.data;
-        login(user, token);
-        navigate(user.role === "ADMIN" ? "/admin" : "/user");
-      }
-    } catch (error) {
-      console.error("Google login error:", error);
-      setErrors({
-        general:
-          error.response?.data?.error ||
-          error.message ||
-          "Đăng nhập bằng Google thất bại. Vui lòng thử lại.",
-      });
-    }
-  };
-
-  const handleGoogleError = (error) => {
-    console.error("Google login error:", error);
-    setErrors({ general: "Đăng nhập bằng Google thất bại. Vui lòng thử lại." });
-  };
-
   return (
     <Modal
       open={isOpen}
@@ -147,214 +129,417 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       footer={null}
       centered
       className="custom-modal"
-      destroyOnHidden
+      forceRender={true}
       width={1200}
       styles={{
         body: {
           height: 580,
+          padding: 0,
+        },
+        content: {
+          borderRadius: 10,
+        },
+        "@media (max-width: 768px)": {
+          body: {
+            height: "100vh",
+            padding: 0,
+          },
+          content: {
+            borderRadius: 0,
+            boxShadow: "none",
+            width: "100vw",
+            minHeight: "100vh",
+            margin: 0,
+          },
         },
       }}
     >
       <FormContainer
-        className={cn({
-          "signin-active": signIn,
-          "signup-active": !signIn,
-        })}
+        className={isMobile
+          ? undefined
+          : cn({
+              "signin-active": signIn,
+              "signup-active": !signIn,
+            })
+        }
       >
-        <SignInContainer className="sign-in-container">
-          {errors.general && (
-            <div
-              style={{
-                color: "red",
-                marginBottom: "10px",
-                textAlign: "center",
-              }}
-            >
-              {errors.general}
-            </div>
-          )}
-          <Form onSubmit={handleLogin}>
-            <Title>Đăng nhập</Title>
-            <Input
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Nhập email của bạn"
-              required
-            />
-            {errors.email && (
-              <p
-                style={{
-                  color: "#D8000C",
-                  backgroundColor: "#FFD2D2",
-                  border: "1px solid #D8000C",
-                  padding: "5px 10px",
-                  borderRadius: "3px",
-                  fontSize: "13px",
-                  marginTop: "5px",
-                  fontWeight: "bold",
+        {isMobile ? (
+          signIn ? (
+            <SignInContainer className="sign-in-container">
+              {errors.general && (
+                <div
+                  style={{
+                    color: "red",
+                    marginBottom: "10px",
+                    textAlign: "center",
+                  }}
+                >
+                  {errors.general}
+                </div>
+              )}
+              <Form onSubmit={handleLogin}>
+                <Title>Đăng nhập</Title>
+                <Input
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Nhập email của bạn"
+                  required
+                />
+                <Input
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu của bạn"
+                  type="password"
+                  required
+                />
+                {errors.email && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.email}
+                  </p>
+                )}
+                {errors.password && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.password}
+                  </p>
+                )}
+                <Paragraph>Quên mật khẩu?</Paragraph>
+                <Button
+                  htmlType="submit"
+                  style={{
+                    borderRadius: "20px",
+                    border: "1px solid #ff4b2b",
+                    backgroundColor: "#ff4b2b",
+                    color: "#fff",
+                    fontSize: "15px",
+                    fontWeight: "bold",
+                    padding: "24px 47px",
+                    letterSpacing: "1px",
+                    transition: "transform 80ms ease-in",
+                    marginTop: "10px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Đăng nhập
+                </Button>
+              </Form>
+              <MobileSwitchButton
+                onClick={() => {
+                  setSignIn(false);
+                  setErrors({});
                 }}
               >
-                {errors.email}
-              </p>
-            )}
-            <Input
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Nhập mật khẩu của bạn"
-              type="password"
-              required
-            />
-            {errors.password && (
-              <p
-                style={{
-                  color: "#D8000C",
-                  backgroundColor: "#FFD2D2",
-                  border: "1px solid #D8000C",
-                  padding: "5px 10px",
-                  borderRadius: "3px",
-                  fontSize: "13px",
-                  marginTop: "5px",
-                  fontWeight: "bold",
-                }}
-              >
-                {errors.password}
-              </p>
-            )}
-            <Paragraph>Quên mật khẩu?</Paragraph>
-            <Button
-              htmlType="submit"
-              style={{
-                borderRadius: "20px",
-                border: "1px solid #ff4b2b",
-                backgroundColor: "#ff4b2b",
-                color: "#fff",
-                fontSize: "15px",
-                fontWeight: "bold",
-                padding: "24px 47px",
-                letterSpacing: "1px",
-                transition: "transform 80ms ease-in",
-                marginTop: "10px",
-                textTransform: "uppercase",
-              }}
-            >
-              Đăng nhập
-            </Button>
-            <Paragraph>hoặc sử dụng tài khoản của bạn</Paragraph>
-            <GoogleOAuthProvider clientId="576568259129-taaehj1ll63so5u0eiqg6qaoria61d86.apps.googleusercontent.com">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                useOneTap
-              />
-            </GoogleOAuthProvider>
-          </Form>
-        </SignInContainer>
+                Bạn chưa có tài khoản? Đăng ký
+              </MobileSwitchButton>
+            </SignInContainer>
+          ) : (
+            <SignUpContainer className="sign-up-container">
+              {errors.general && (
+                <div
+                  style={{
+                    color: "red",
+                    marginBottom: "10px",
+                    textAlign: "center",
+                  }}
+                >
+                  {errors.general}
+                </div>
+              )}
 
-        <SignUpContainer className="sign-up-container">
-          {errors.general && (
-            <div
-              style={{
-                color: "red",
-                marginBottom: "10px",
-                textAlign: "center",
-              }}
-            >
-              {errors.general}
-            </div>
-          )}
-          <Form onSubmit={handleRegister}>
-            <Title>Tạo tài khoản</Title>
-            <Input
-              placeholder="Nhập tên của bạn"
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            {errors.name && (
-              <p
-                style={{
-                  color: "#D8000C",
-                  backgroundColor: "#FFD2D2",
-                  border: "1px solid #D8000C",
-                  padding: "5px 10px",
-                  borderRadius: "3px",
-                  fontSize: "13px",
-                  marginTop: "5px",
-                  fontWeight: "bold",
+              <Form onSubmit={handleRegister}>
+                <Title>Tạo tài khoản</Title>
+                <Input
+                  placeholder="Nhập tên của bạn"
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+                {errors.name && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.name}
+                  </p>
+                )}
+                <Input
+                  placeholder="Nhập email của bạn"
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                {errors.email && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.email}
+                  </p>
+                )}
+                <Input
+                  placeholder="Nhập mật khẩu của bạn"
+                  type="password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                {errors.password && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.password}
+                  </p>
+                )}
+                <Button
+                  htmlType="submit"
+                  style={{
+                    borderRadius: "20px",
+                    border: "1px solid #ff4b2b",
+                    backgroundColor: "#ff4b2b",
+                    color: "#fff",
+                    fontSize: "15px",
+                    fontWeight: "bold",
+                    padding: "24px 47px",
+                    letterSpacing: "1px",
+                    transition: "transform 80ms ease-in",
+                    marginTop: "10px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Đăng ký
+                </Button>
+              </Form>
+              <MobileSwitchButton
+                onClick={() => {
+                  setSignIn(true);
+                  setErrors({});
                 }}
               >
-                {errors.name}
-              </p>
-            )}
-            <Input
-              placeholder="Nhập email của bạn"
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            {errors.email && (
-              <p
-                style={{
-                  color: "#D8000C",
-                  backgroundColor: "#FFD2D2",
-                  border: "1px solid #D8000C",
-                  padding: "5px 10px",
-                  borderRadius: "3px",
-                  fontSize: "13px",
-                  marginTop: "5px",
-                  fontWeight: "bold",
-                }}
-              >
-                {errors.email}
-              </p>
-            )}
-            <Input
-              placeholder="Nhập mật khẩu của bạn"
-              type="password"
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            {errors.password && (
-              <p
-                style={{
-                  color: "#D8000C",
-                  backgroundColor: "#FFD2D2",
-                  border: "1px solid #D8000C",
-                  padding: "5px 10px",
-                  borderRadius: "3px",
-                  fontSize: "13px",
-                  marginTop: "5px",
-                  fontWeight: "bold",
-                }}
-              >
-                {errors.password}
-              </p>
-            )}
-            <Button
-              htmlType="submit"
-              style={{
-                borderRadius: "20px",
-                border: "1px solid #ff4b2b",
-                backgroundColor: "#ff4b2b",
-                color: "#fff",
-                fontSize: "15px",
-                fontWeight: "bold",
-                padding: "24px 47px",
-                letterSpacing: "1px",
-                transition: "transform 80ms ease-in",
-                marginTop: "10px",
-                textTransform: "uppercase",
-              }}
-            >
-              Đăng ký
-            </Button>
-            <Paragraph>hoặc sử dụng email để đăng ký</Paragraph>
-            <GoogleOAuthProvider clientId="576568259129-taaehj1ll63so5u0eiqg6qaoria61d86.apps.googleusercontent.com">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={handleGoogleError}
-                useOneTap
-              />
-            </GoogleOAuthProvider>
-          </Form>
-        </SignUpContainer>
-
+                Đã có tài khoản? Đăng nhập
+              </MobileSwitchButton>
+            </SignUpContainer>
+          )
+        ) : (
+          <>
+            <SignInContainer className="sign-in-container">
+              {errors.general && (
+                <div
+                  style={{
+                    color: "red",
+                    marginBottom: "10px",
+                    textAlign: "center",
+                  }}
+                >
+                  {errors.general}
+                </div>
+              )}
+              <Form onSubmit={handleLogin}>
+                <Title>Đăng nhập</Title>
+                <Input
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Nhập email của bạn"
+                  required
+                />
+                <Input
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Nhập mật khẩu của bạn"
+                  type="password"
+                  required
+                />
+                {errors.email && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.email}
+                  </p>
+                )}
+                {errors.password && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.password}
+                  </p>
+                )}
+                <Paragraph>Quên mật khẩu?</Paragraph>
+                <Button
+                  htmlType="submit"
+                  style={{
+                    borderRadius: "20px",
+                    border: "1px solid #ff4b2b",
+                    backgroundColor: "#ff4b2b",
+                    color: "#fff",
+                    fontSize: "15px",
+                    fontWeight: "bold",
+                    padding: "24px 47px",
+                    letterSpacing: "1px",
+                    transition: "transform 80ms ease-in",
+                    marginTop: "10px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Đăng nhập
+                </Button>
+              </Form>
+            </SignInContainer>
+            <SignUpContainer className="sign-up-container">
+              {errors.general && (
+                <div
+                  style={{
+                    color: "red",
+                    marginBottom: "10px",
+                    textAlign: "center",
+                  }}
+                >
+                  {errors.general}
+                </div>
+              )}
+              <Form onSubmit={handleRegister}>
+                <Title>Tạo tài khoản</Title>
+                <Input
+                  placeholder="Nhập tên của bạn"
+                  onChange={(e) => setName(e.target.value)}
+                  required
+                />
+                {errors.name && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.name}
+                  </p>
+                )}
+                <Input
+                  placeholder="Nhập email của bạn"
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+                {errors.email && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.email}
+                  </p>
+                )}
+                <Input
+                  placeholder="Nhập mật khẩu của bạn"
+                  type="password"
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                {errors.password && (
+                  <p
+                    style={{
+                      color: "#D8000C",
+                      backgroundColor: "#FFD2D2",
+                      border: "1px solid #D8000C",
+                      padding: "5px 10px",
+                      borderRadius: "3px",
+                      fontSize: "13px",
+                      marginTop: "5px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {errors.password}
+                  </p>
+                )}
+                <Button
+                  htmlType="submit"
+                  style={{
+                    borderRadius: "20px",
+                    border: "1px solid #ff4b2b",
+                    backgroundColor: "#ff4b2b",
+                    color: "#fff",
+                    fontSize: "15px",
+                    fontWeight: "bold",
+                    padding: "24px 47px",
+                    letterSpacing: "1px",
+                    transition: "transform 80ms ease-in",
+                    marginTop: "10px",
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Đăng ký
+                </Button>
+              </Form>
+            </SignUpContainer>
+          </>
+        )}
         <OverlayContainer className="overlay-container">
           <Overlay className="overlay">
             <OverlayPanel className="overlay-panel">
