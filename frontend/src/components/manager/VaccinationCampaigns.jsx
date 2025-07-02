@@ -615,7 +615,6 @@ const VaccinationCampaigns = () => {
                                   targetGrades: [],
                                   startDate: null,
                                   endDate: null,
-                                  status: "ACTIVE",
                               }
                     }
                     enableReinitialize
@@ -624,15 +623,15 @@ const VaccinationCampaigns = () => {
                             "Vui lòng nhập tên chiến dịch"
                         ),
                         vaccinationName: selectedCampaign
-                            ? Yup.string() // Optional when editing
+                            ? Yup.string()
                             : Yup.string().required(
                                   "Vui lòng chọn loại vaccine"
                               ),
                         startDate: selectedCampaign
-                            ? Yup.date() // Optional when editing
+                            ? Yup.date()
                             : Yup.date().required("Vui lòng chọn ngày bắt đầu"),
                         endDate: selectedCampaign
-                            ? Yup.date() // Optional when editing
+                            ? Yup.date()
                             : Yup.date()
                                   .required("Vui lòng chọn ngày kết thúc")
                                   .test(
@@ -649,9 +648,6 @@ const VaccinationCampaigns = () => {
                                           );
                                       }
                                   ),
-                        status: Yup.string().required(
-                            "Vui lòng chọn trạng thái"
-                        ),
                         description: Yup.string(),
                         targetGrades: Yup.array().min(
                             1,
@@ -662,7 +658,6 @@ const VaccinationCampaigns = () => {
                         let success = false;
 
                         if (selectedCampaign) {
-                            // For updates, only send the fields that the backend accepts
                             const updateData = {
                                 name: values.name,
                                 description: values.description,
@@ -674,7 +669,6 @@ const VaccinationCampaigns = () => {
                                 updateData
                             );
                         } else {
-                            // For creates, find the vaccine ID and send all required fields
                             const selectedVaccination = vaccinations.find(
                                 (v) => v.name === values.vaccinationName
                             );
@@ -887,38 +881,40 @@ const VaccinationCampaigns = () => {
                                     onBlur={handleBlur}
                                 />
                             </Form.Item>
-                            <Form.Item
-                                label="Trạng thái"
-                                help={
-                                    touched.status && errors.status
-                                        ? errors.status
-                                        : undefined
-                                }
-                                validateStatus={
-                                    touched.status && errors.status
-                                        ? "error"
-                                        : undefined
-                                }
-                            >
-                                <Select
-                                    value={values.status}
-                                    onChange={(val) =>
-                                        setFieldValue("status", val)
+                            {selectedCampaign && (
+                                <Form.Item
+                                    label="Trạng thái"
+                                    help={
+                                        touched.status && errors.status
+                                            ? errors.status
+                                            : undefined
                                     }
-                                    onBlur={handleBlur}
-                                    placeholder="Chọn trạng thái"
+                                    validateStatus={
+                                        touched.status && errors.status
+                                            ? "error"
+                                            : undefined
+                                    }
                                 >
-                                    <Select.Option value="ACTIVE">
-                                        Đang diễn ra
-                                    </Select.Option>
-                                    <Select.Option value="FINISHED">
-                                        Hoàn thành
-                                    </Select.Option>
-                                    <Select.Option value="CANCELLED">
-                                        Đã hủy
-                                    </Select.Option>
-                                </Select>
-                            </Form.Item>
+                                    <Select
+                                        name="status"
+                                        value={values.status}
+                                        onChange={(val) =>
+                                            setFieldValue("status", val)
+                                        }
+                                        onBlur={handleBlur}
+                                    >
+                                        <Select.Option value="ACTIVE">
+                                            Đang diễn ra
+                                        </Select.Option>
+                                        <Select.Option value="FINISHED">
+                                            Hoàn thành
+                                        </Select.Option>
+                                        <Select.Option value="CANCELLED">
+                                            Đã hủy
+                                        </Select.Option>
+                                    </Select>
+                                </Form.Item>
+                            )}
                             <Form.Item>
                                 <Button
                                     type="primary"

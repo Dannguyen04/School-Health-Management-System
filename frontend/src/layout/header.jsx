@@ -6,36 +6,38 @@ import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { useAuth } from "../context/authContext";
 import NotificationBell from "../components/shared/NotificationBell";
-import NotificationToast from "../components/shared/NotificationToast";
+import NotificationToastList from "../components/shared/NotificationToastList";
 import { useNotifications } from "../hooks/useNotifications";
 import { useEffect, useState } from "react";
 
 export const Header = ({ collapsed, setCollapsed }) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    const [toastNotification, setToastNotification] = useState(null);
-    const [dismissedNotificationId, setDismissedNotificationId] =
-        useState(null);
+    const [toastNotifications, setToastNotifications] = useState([]);
+    const [dismissedNotificationIds, setDismissedNotificationIds] = useState(
+        []
+    );
 
     const { notifications, markAsRead } = useNotifications(user?.id, {
         autoRefresh: true,
         refreshInterval: 30000,
     });
 
-    // Hiển thị toast cho thông báo mới
+    // Hiển thị toast cho tất cả thông báo mới (SENT) chưa bị đóng
     useEffect(() => {
         if (notifications.length > 0) {
-            const latestNotification = notifications[0];
-            // Chỉ hiển thị toast cho thông báo mới (SENT) và chưa bị đóng
-            if (
-                latestNotification.status === "SENT" &&
-                latestNotification.id !== toastNotification?.id &&
-                latestNotification.id !== dismissedNotificationId
-            ) {
-                setToastNotification(latestNotification);
+            const newToasts = notifications.filter(
+                (n) =>
+                    n.status === "SENT" &&
+                    !toastNotifications.some((t) => t.id === n.id) &&
+                    !dismissedNotificationIds.includes(n.id)
+            );
+            if (newToasts.length > 0) {
+                setToastNotifications((prev) => [...newToasts, ...prev]);
             }
         }
-    }, [notifications, toastNotification, dismissedNotificationId]);
+        // eslint-disable-next-line
+    }, [notifications, toastNotifications, dismissedNotificationIds]);
 
     const handleLogout = async () => {
         try {
@@ -60,14 +62,14 @@ export const Header = ({ collapsed, setCollapsed }) => {
         }
     };
 
-    const handleToastClose = () => {
-        setDismissedNotificationId(toastNotification?.id);
-        setToastNotification(null);
+    const handleToastClose = (id) => {
+        setDismissedNotificationIds((prev) => [...prev, id]);
+        setToastNotifications((prev) => prev.filter((t) => t.id !== id));
     };
 
-    const handleToastMarkAsRead = async (notificationId) => {
-        await markAsRead(notificationId);
-        setToastNotification(null);
+    const handleToastMarkAsRead = async (id) => {
+        await markAsRead(id);
+        setToastNotifications((prev) => prev.filter((t) => t.id !== id));
     };
 
     const menuItems = [
@@ -112,14 +114,12 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 </div>
             </header>
 
-            {/* Hiển thị NotificationToast */}
-            {toastNotification && (
-                <NotificationToast
-                    notification={toastNotification}
-                    onClose={handleToastClose}
-                    onMarkAsRead={handleToastMarkAsRead}
-                />
-            )}
+            {/* Hiển thị NotificationToastList */}
+            <NotificationToastList
+                notifications={toastNotifications}
+                onClose={handleToastClose}
+                onMarkAsRead={handleToastMarkAsRead}
+            />
         </>
     );
 };

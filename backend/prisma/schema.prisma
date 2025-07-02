@@ -143,8 +143,6 @@ model Student {
   class            String
   grade            String
   bloodType        String?
-  emergencyContact String
-  emergencyPhone   String
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -338,6 +336,8 @@ model StudentMedication {
   endDate   DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  image      String?
 
   student    Student    @relation(fields: [studentId], references: [id])
   parent     Parent     @relation(fields: [parentId], references: [id])

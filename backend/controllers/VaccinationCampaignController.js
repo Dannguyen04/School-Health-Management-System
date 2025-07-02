@@ -12,7 +12,6 @@ const createVaccinationCampaign = async (req, res) => {
             targetGrades,
             scheduledDate,
             deadline,
-            status = "ACTIVE",
         } = req.body;
 
         // Validation
@@ -51,8 +50,6 @@ const createVaccinationCampaign = async (req, res) => {
                 targetGrades: targetGrades.map((grade) => String(grade)),
                 scheduledDate: new Date(scheduledDate),
                 deadline: new Date(deadline),
-                status,
-                isActive: status === "ACTIVE",
             },
             include: {
                 vaccinations: true,

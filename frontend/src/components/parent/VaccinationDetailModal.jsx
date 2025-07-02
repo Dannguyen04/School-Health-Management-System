@@ -51,6 +51,17 @@ const getStatusTag = (status) => {
 };
 
 const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
+    // Kiểm tra trường hợp chưa tiêm
+    const isNotVaccinated = vaccination?.notVaccinated;
+    const campaign = isNotVaccinated
+        ? vaccination?.campaign
+        : vaccination?.campaign;
+    const student = isNotVaccinated
+        ? vaccination?.student
+        : vaccination?.student;
+    const consent = isNotVaccinated ? vaccination?.consent : null;
+    // Lấy thông tin phụ huynh đầu tiên (nếu có)
+    const parentInfo = student?.parents?.[0]?.parent?.user;
     return (
         <Modal
             title={
@@ -88,8 +99,7 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                             </div>
                             <div className="font-semibold flex items-center gap-2">
                                 <UserOutlined />
-                                {vaccination?.student?.user?.fullName ||
-                                    "Không có"}
+                                {student?.user?.fullName || "Không có"}
                             </div>
                         </Col>
                         <Col span={12}>
@@ -97,7 +107,7 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                                 Chiến dịch
                             </div>
                             <div className="font-semibold">
-                                {vaccination?.campaign?.name || "Không có"}
+                                {campaign?.name || "Không có"}
                             </div>
                         </Col>
                         <Col span={12}>
@@ -105,7 +115,9 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                                 Loại vắc xin
                             </div>
                             <div className="font-semibold">
-                                {vaccination?.vaccineName || "-"}
+                                {vaccination?.vaccineName ||
+                                    campaign?.vaccinations?.[0]?.name ||
+                                    "-"}
                             </div>
                         </Col>
                         <Col span={12}>
@@ -113,7 +125,11 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                                 Ngày tiêm
                             </div>
                             <div className="font-semibold">
-                                {vaccination?.administeredDate ? (
+                                {isNotVaccinated ? (
+                                    <span className="text-gray-400">
+                                        Chưa tiêm
+                                    </span>
+                                ) : vaccination?.administeredDate ? (
                                     dayjs(vaccination.administeredDate).format(
                                         "DD/MM/YYYY"
                                     )
@@ -124,6 +140,29 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                                 )}
                             </div>
                         </Col>
+                        {/* Nếu chưa tiêm, hiển thị ngày dự kiến tiêm và mô tả chiến dịch */}
+                        {isNotVaccinated && (
+                            <>
+                                <Col span={12}>
+                                    <div className="mb-2 text-base text-gray-500">
+                                        Ngày dự kiến tiêm
+                                    </div>
+                                    <div className="font-semibold">
+                                        {campaign?.scheduledDate
+                                            ? dayjs(
+                                                  campaign.scheduledDate
+                                              ).format("DD/MM/YYYY")
+                                            : "-"}
+                                    </div>
+                                </Col>
+                                <Col span={12}>
+                                    <div className="mb-2 text-base text-gray-500">
+                                        Mô tả chiến dịch
+                                    </div>
+                                    <div>{campaign?.description || "-"}</div>
+                                </Col>
+                            </>
+                        )}
                     </Row>
                     <Divider />
                     {/* Thông tin bổ sung */}
@@ -133,12 +172,6 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                                 Loại liều
                             </div>
                             <div>{getDoseLabel(vaccination?.dose)}</div>
-                        </Col>
-                        <Col span={12}>
-                            <div className="mb-2 text-base text-gray-500">
-                                Số lô vắc xin
-                            </div>
-                            <div>{vaccination?.batchNumber || "-"}</div>
                         </Col>
                         <Col span={12}>
                             <div className="mb-2 text-base text-gray-500">
@@ -154,6 +187,39 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                             </div>
                             <div>{getStatusTag(vaccination?.status)}</div>
                         </Col>
+                        {/* Nếu chưa tiêm, hiển thị trạng thái đồng ý tiêm và thông tin phụ huynh */}
+                        {isNotVaccinated && (
+                            <>
+                                <Col span={12}>
+                                    <div className="mb-2 text-base text-gray-500">
+                                        Trạng thái đồng ý tiêm
+                                    </div>
+                                    <div>
+                                        {consent
+                                            ? consent.consent
+                                                ? "Đồng ý"
+                                                : "Không đồng ý"
+                                            : "Chưa xác nhận"}
+                                    </div>
+                                </Col>
+                                <Col span={12}>
+                                    <div className="mb-2 text-base text-gray-500">
+                                        Phụ huynh
+                                    </div>
+                                    <div>{parentInfo?.fullName || "-"}</div>
+                                    <div>{parentInfo?.phone || "-"}</div>
+                                    <div>{parentInfo?.email || "-"}</div>
+                                </Col>
+                                {consent?.notes && (
+                                    <Col span={24}>
+                                        <div className="mb-2 text-base text-gray-500">
+                                            Ghi chú phụ huynh
+                                        </div>
+                                        <div>{consent.notes}</div>
+                                    </Col>
+                                )}
+                            </>
+                        )}
                     </Row>
                     <Divider />
                     {/* Tác dụng phụ & phản ứng */}

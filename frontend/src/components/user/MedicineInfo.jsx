@@ -13,6 +13,7 @@ import {
     FileTextOutlined,
     EyeOutlined,
     DeleteOutlined,
+    UploadOutlined,
 } from "@ant-design/icons";
 import {
     Alert,
@@ -40,6 +41,9 @@ import {
     Avatar,
     List,
     Tabs,
+    notification,
+    Upload,
+    Image,
 } from "antd";
 import axios from "axios";
 import { Formik } from "formik";
@@ -50,6 +54,7 @@ import dayjs from "dayjs";
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 const { Search } = Input;
+const { Dragger } = Upload;
 
 const validationSchema = Yup.object().shape({
     studentId: Yup.string().required("Vui lòng chọn học sinh"),
@@ -90,6 +95,11 @@ const MedicineInfo = () => {
     const [searchText, setSearchText] = useState("");
     const [filterStatus, setFilterStatus] = useState("all");
     const [activeTab, setActiveTab] = useState("all");
+    const [detailModalOpen, setDetailModalOpen] = useState(false);
+    const [selectedMedicine, setSelectedMedicine] = useState(null);
+    const [selectedImageFile, setSelectedImageFile] = useState(null);
+    const [imagePreview, setImagePreview] = useState(null);
+    const [imageError, setImageError] = useState("");
 
     useEffect(() => {
         fetchChildren();
@@ -153,25 +163,33 @@ const MedicineInfo = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem("token");
+            const formData = new FormData();
+            formData.append("medicationName", values.medicationName);
+            formData.append("dosage", values.dosage);
+            formData.append("frequency", values.frequency);
+            formData.append("instructions", values.instructions);
+            formData.append(
+                "startDate",
+                values.startDate ? values.startDate.toISOString() : ""
+            );
+            formData.append(
+                "endDate",
+                values.endDate ? values.endDate.toISOString() : ""
+            );
+            formData.append("description", values.description || "");
+            formData.append("unit", values.unit || "");
+            formData.append("stockQuantity", values.stockQuantity);
+            if (selectedImageFile) {
+                formData.append("medicineImage", selectedImageFile);
+            }
             const response = await axios.post(
                 `/api/parents/request-medication/${values.studentId}`,
+                formData,
                 {
-                    medicationName: values.medicationName,
-                    dosage: values.dosage,
-                    frequency: values.frequency,
-                    instructions: values.instructions,
-                    startDate: values.startDate
-                        ? values.startDate.toISOString()
-                        : null,
-                    endDate: values.endDate
-                        ? values.endDate.toISOString()
-                        : null,
-                    description: values.description,
-                    unit: values.unit,
-                    stockQuantity: values.stockQuantity,
-                },
-                {
-                    headers: { Authorization: `Bearer ${token}` },
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "multipart/form-data",
+                    },
                 }
             );
 
@@ -181,6 +199,8 @@ const MedicineInfo = () => {
                 setIsEditModalVisible(false);
                 setShowSuccess(true);
                 fetchStudentMedicines(selectedStudent);
+                setSelectedImageFile(null);
+                setImagePreview(null);
             } else {
                 message.error(
                     response.data.error || "Có lỗi xảy ra khi gửi thông tin"
@@ -285,6 +305,39 @@ const MedicineInfo = () => {
 
     const filteredMedicines = getFilteredMedicines();
     const stats = getStatistics();
+
+    // Hiện modal chi tiết khi phụ huynh bấm vào thuốc
+    const handleMedicineClick = (medicine) => {
+        setSelectedMedicine(medicine);
+        setDetailModalOpen(true);
+    };
+
+    // Xử lý chọn ảnh
+    const beforeUpload = (file) => {
+        const isImage = file.type.startsWith("image/");
+        const isLt10M = file.size / 1024 / 1024 < 10;
+        if (!isImage) {
+            setImageError("Chỉ hỗ trợ file ảnh (JPG, PNG, GIF, WebP)");
+            return Upload.LIST_IGNORE;
+        }
+        if (!isLt10M) {
+            setImageError("Ảnh phải nhỏ hơn 10MB!");
+            return Upload.LIST_IGNORE;
+        }
+        setImageError("");
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+        setSelectedImageFile(file);
+        return false; // Ngăn upload tự động
+    };
+    const handleRemoveImage = () => {
+        setSelectedImageFile(null);
+        setImagePreview(null);
+        setImageError("");
+    };
 
     if (loading) {
         return (
@@ -474,7 +527,7 @@ const MedicineInfo = () => {
                                             return (
                                                 <Card
                                                     key={medicine.id}
-                                                    className="rounded-2xl shadow-lg border-0 hover:shadow-xl transition-shadow duration-300"
+                                                    className="rounded-2xl shadow-lg border-0 hover:shadow-xl transition-shadow duration-300 cursor-pointer"
                                                     actions={[
                                                         <Tooltip title="Xem chi tiết">
                                                             <EyeOutlined
@@ -482,19 +535,13 @@ const MedicineInfo = () => {
                                                                 className="text-blue-500"
                                                             />
                                                         </Tooltip>,
-                                                        <Tooltip title="Chỉnh sửa">
-                                                            <EditOutlined
-                                                                key="edit"
-                                                                className="text-green-500"
-                                                            />
-                                                        </Tooltip>,
-                                                        <Tooltip title="Xóa">
-                                                            <DeleteOutlined
-                                                                key="delete"
-                                                                className="text-red-500"
-                                                            />
-                                                        </Tooltip>,
+                                                        // Phụ huynh chỉ có thể xem thông tin thuốc, không thể sửa hoặc xóa. Nếu cần thay đổi, hãy liên hệ với nhà trường hoặc gửi yêu cầu mới.
                                                     ]}
+                                                    onClick={() =>
+                                                        handleMedicineClick(
+                                                            medicine
+                                                        )
+                                                    }
                                                 >
                                                     <div className="flex items-start justify-between mb-4">
                                                         <div className="flex-1">
@@ -927,6 +974,73 @@ const MedicineInfo = () => {
                                             />
                                         </Form.Item>
                                     </Col>
+                                    <Col xs={24} md={12}>
+                                        <Form.Item label="Ảnh thuốc (nếu có)">
+                                            <Dragger
+                                                name="medicineImage"
+                                                multiple={false}
+                                                maxCount={1}
+                                                accept="image/*"
+                                                beforeUpload={beforeUpload}
+                                                showUploadList={false}
+                                                onRemove={handleRemoveImage}
+                                                style={{ padding: 8 }}
+                                            >
+                                                <p className="ant-upload-drag-icon">
+                                                    <UploadOutlined />
+                                                </p>
+                                                <p className="ant-upload-text">
+                                                    Kéo và thả ảnh vào đây hoặc
+                                                    nhấp để chọn ảnh
+                                                </p>
+                                                <p className="ant-upload-hint">
+                                                    Hỗ trợ: JPG, PNG, GIF, WebP
+                                                    - Kích thước tối đa 10MB
+                                                </p>
+                                            </Dragger>
+                                            {imageError && (
+                                                <div
+                                                    style={{
+                                                        color: "red",
+                                                        marginTop: 8,
+                                                    }}
+                                                >
+                                                    {imageError}
+                                                </div>
+                                            )}
+                                            {imagePreview && (
+                                                <div className="mt-4">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span
+                                                            style={{
+                                                                fontWeight: 600,
+                                                            }}
+                                                        >
+                                                            Xem trước:
+                                                        </span>
+                                                        <Button
+                                                            size="small"
+                                                            danger
+                                                            onClick={
+                                                                handleRemoveImage
+                                                            }
+                                                        >
+                                                            Xóa ảnh
+                                                        </Button>
+                                                    </div>
+                                                    <Image
+                                                        src={imagePreview}
+                                                        alt="Preview"
+                                                        style={{
+                                                            maxWidth: 180,
+                                                            maxHeight: 180,
+                                                            borderRadius: 8,
+                                                        }}
+                                                    />
+                                                </div>
+                                            )}
+                                        </Form.Item>
+                                    </Col>
                                 </Row>
 
                                 <Form.Item>
@@ -949,6 +1063,110 @@ const MedicineInfo = () => {
                             </Form>
                         )}
                     </Formik>
+                </Modal>
+
+                <Modal
+                    open={detailModalOpen}
+                    onCancel={() => setDetailModalOpen(false)}
+                    footer={[
+                        <Button
+                            key="close"
+                            type="primary"
+                            onClick={() => setDetailModalOpen(false)}
+                        >
+                            Đóng
+                        </Button>,
+                    ]}
+                    title={
+                        selectedMedicine?.medication?.name || "Chi tiết thuốc"
+                    }
+                    width={500}
+                >
+                    {selectedMedicine && (
+                        <div className="space-y-4">
+                            {selectedMedicine.image && (
+                                <div className="flex justify-center mb-4">
+                                    <Image
+                                        src={selectedMedicine.image}
+                                        alt="Ảnh thuốc"
+                                        style={{
+                                            maxWidth: 200,
+                                            maxHeight: 200,
+                                            borderRadius: 8,
+                                        }}
+                                    />
+                                </div>
+                            )}
+                            <div className="flex justify-between items-center">
+                                <Text type="secondary">Liều lượng:</Text>
+                                <Text strong>{selectedMedicine.dosage}</Text>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <Text type="secondary">Tần suất:</Text>
+                                <Text strong>
+                                    {frequencyLabel[
+                                        selectedMedicine.frequency
+                                    ] || selectedMedicine.frequency}
+                                </Text>
+                            </div>
+                            {selectedMedicine.startDate &&
+                                selectedMedicine.endDate && (
+                                    <div className="flex justify-between items-center">
+                                        <Text type="secondary">Thời gian:</Text>
+                                        <Text strong>
+                                            {dayjs(
+                                                selectedMedicine.startDate
+                                            ).format("DD/MM/YYYY")}{" "}
+                                            -{" "}
+                                            {dayjs(
+                                                selectedMedicine.endDate
+                                            ).format("DD/MM/YYYY")}
+                                        </Text>
+                                    </div>
+                                )}
+                            {selectedMedicine.instructions && (
+                                <div>
+                                    <Text type="secondary">
+                                        Hướng dẫn sử dụng:
+                                    </Text>
+                                    <div className="mt-1 p-2 bg-gray-50 rounded-lg">
+                                        <Text>
+                                            {selectedMedicine.instructions}
+                                        </Text>
+                                    </div>
+                                </div>
+                            )}
+                            {selectedMedicine.description && (
+                                <div>
+                                    <Text type="secondary">Mô tả:</Text>
+                                    <div className="mt-1 p-2 bg-gray-50 rounded-lg">
+                                        <Text>
+                                            {selectedMedicine.description}
+                                        </Text>
+                                    </div>
+                                </div>
+                            )}
+                            <div className="flex justify-between items-center">
+                                <Text type="secondary">Đơn vị:</Text>
+                                <Text strong>{selectedMedicine.unit}</Text>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <Text type="secondary">Số lượng:</Text>
+                                <Text strong>
+                                    {selectedMedicine.medication
+                                        ?.stockQuantity ?? "-"}
+                                </Text>
+                            </div>
+                            <div className="flex justify-between items-center">
+                                <Text type="secondary">Trạng thái:</Text>
+                                <Tag
+                                    color={statusColor[selectedMedicine.status]}
+                                >
+                                    {statusLabel[selectedMedicine.status]}
+                                </Tag>
+                            </div>
+                        </div>
+                    )}
                 </Modal>
             </div>
         </div>
