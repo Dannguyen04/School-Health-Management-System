@@ -351,7 +351,6 @@ const updateMedicalCheckResults = async (req, res) => {
             parentNotified,
             parentResponse,
         } = req.body;
-        // Không cho phép update các trường kết quả khám, nếu có sẽ bỏ qua hoặc trả về lỗi (ở đây sẽ bỏ qua)
         const medicalCheck = await prisma.medicalCheck.findUnique({
             where: { id },
             include: { student: true, campaign: true },
@@ -360,12 +359,6 @@ const updateMedicalCheckResults = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 error: "Không tìm thấy báo cáo kiểm tra",
-            });
-        }
-        if (medicalCheck.status === "COMPLETED") {
-            return res.status(400).json({
-                success: false,
-                error: "Báo cáo đã hoàn thành, không thể chỉnh sửa. Vui lòng liên hệ quản trị viên.",
             });
         }
         // Chỉ cho phép update các trường sau
@@ -390,7 +383,7 @@ const updateMedicalCheckResults = async (req, res) => {
         if (followUpDate !== undefined)
             updateData.followUpDate = followUpDate
                 ? new Date(followUpDate)
-                : null;
+                : medicalCheck.followUpDate;
         if (parentNotified !== undefined)
             updateData.parentNotified = parentNotified;
         if (parentResponse !== undefined)
