@@ -408,3 +408,49 @@ export const getNotificationById = async (req, res) => {
         });
     }
 };
+
+// Đánh dấu tất cả thông báo là đã đọc
+export const markAllAsRead = async (req, res) => {
+    try {
+        const { userId } = req.params;
+        const updated = await prisma.notification.updateMany({
+            where: {
+                userId,
+                status: { in: ["SENT", "DELIVERED"] },
+            },
+            data: {
+                status: "READ",
+                readAt: new Date(),
+            },
+        });
+        res.json({
+            success: true,
+            data: updated,
+            message: "All notifications marked as read",
+        });
+    } catch (error) {
+        console.error("Error marking all notifications as read:", error);
+        res.status(500).json({
+            success: false,
+            error: "Error marking all notifications as read",
+        });
+    }
+};
+
+export const deleteNotification = async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+        console.log(
+            "[deleteNotification] Bắt đầu xóa notification:",
+            notificationId
+        );
+        const deleted = await prisma.notification.delete({
+            where: { id: notificationId },
+        });
+        console.log("[deleteNotification] Đã xóa thành công:", deleted);
+        res.json({ success: true, message: "Notification deleted" });
+    } catch (error) {
+        console.error("[deleteNotification] Lỗi khi xóa notification:", error);
+        res.status(500).json({ error: "Error deleting notification" });
+    }
+};

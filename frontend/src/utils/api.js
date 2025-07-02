@@ -1,7 +1,12 @@
 import axios from "axios";
 
 // Use environment variable for production, fallback to proxy for development
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+//const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const API_BASE_URL =
+    import.meta.env.VITE_API_URL ||
+    (window.location.hostname === "localhost"
+        ? "http://localhost:5000/api"
+        : "https://school-health.onrender.com/api");
 
 // Create axios instance with default config
 const api = axios.create({
@@ -163,10 +168,12 @@ export const parentAPI = {
         api.patch(`/parents/notifications/${notificationId}/archive`),
     restoreNotification: (notificationId) =>
         api.patch(`/parents/notifications/${notificationId}/restore`),
-    getUnreadNotificationCount: () =>
-        api.get("/parents/notifications/unread-count"),
+    getUnreadNotificationCount: (userId) =>
+        api.get(`/notifications/user/${userId}/unread-count`),
     deleteNotification: (notificationId) =>
         api.delete(`/notifications/${notificationId}`),
+    markAllNotificationsAsRead: (userId) =>
+        api.patch(`/notifications/user/${userId}/read-all`),
 };
 
 // Auth API functions
