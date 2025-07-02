@@ -316,45 +316,6 @@ const Dashboard = () => {
           </Col>
         </Row>
       </Card>
-
-      {/* Summary Information */}
-      <Card
-        title="Tóm tắt hoạt động"
-        className="mt-4 shadow-sm"
-        styles={{
-          header: {
-            backgroundColor: "#f0f9ff",
-            borderBottom: "1px solid #91d5ff",
-          },
-        }}
-      >
-        <Row gutter={16}>
-          <Col span={8}>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {dashboardStats.totalStudents}
-              </div>
-              <div className="text-gray-600">Học sinh</div>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-orange-600">
-                {dashboardStats.totalMedicalEvents}
-              </div>
-              <div className="text-gray-600">Sự cố tháng này</div>
-            </div>
-          </Col>
-          <Col span={8}>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {dashboardStats.upcomingVaccinations}
-              </div>
-              <div className="text-gray-600">Tiêm chủng sắp tới</div>
-            </div>
-          </Col>
-        </Row>
-      </Card>
     </div>
   );
 };
