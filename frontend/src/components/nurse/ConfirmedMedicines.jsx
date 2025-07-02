@@ -32,6 +32,7 @@ const ConfirmedMedicines = () => {
     const [confirmationForm] = Form.useForm();
     const [detailModalOpen, setDetailModalOpen] = useState(false);
     const [detailData, setDetailData] = useState(null);
+    const [detailLoading, setDetailLoading] = useState(false);
 
     // Lấy danh sách yêu cầu thuốc đang chờ phê duyệt
     const fetchPendingRequests = async (filters = {}) => {
@@ -153,6 +154,8 @@ const ConfirmedMedicines = () => {
     };
 
     const handleViewDetails = async (record) => {
+        setDetailModalOpen(true);
+        setDetailLoading(true);
         try {
             const token = localStorage.getItem("token");
             const response = await axios.get(
@@ -165,11 +168,12 @@ const ConfirmedMedicines = () => {
             );
             if (response.data.success) {
                 setDetailData(response.data.data);
-                setDetailModalOpen(true);
+                setDetailLoading(false);
             }
         } catch (error) {
             console.error("Error fetching request details:", error);
             message.error("Lỗi khi tải chi tiết yêu cầu");
+            setDetailLoading(false);
         }
     };
 
@@ -217,12 +221,20 @@ const ConfirmedMedicines = () => {
     const renderDetailModal = () => (
         <Modal
             open={detailModalOpen}
-            onCancel={() => setDetailModalOpen(false)}
+            onCancel={() => {
+                setDetailModalOpen(false);
+                setDetailData(null);
+                setDetailLoading(false);
+            }}
             footer={[
                 <Button
                     key="close"
                     type="primary"
-                    onClick={() => setDetailModalOpen(false)}
+                    onClick={() => {
+                        setDetailModalOpen(false);
+                        setDetailData(null);
+                        setDetailLoading(false);
+                    }}
                 >
                     Đóng
                 </Button>,
@@ -230,123 +242,132 @@ const ConfirmedMedicines = () => {
             title={detailData?.medicationName || "Chi tiết yêu cầu thuốc"}
             width={600}
         >
-            {detailData && (
-                <div className="space-y-4">
-                    {detailData.image && (
-                        <div className="flex justify-center mb-4">
-                            <Image
-                                src={detailData.image}
-                                alt="Ảnh thuốc"
-                                style={{
-                                    maxWidth: 200,
-                                    maxHeight: 200,
-                                    borderRadius: 8,
-                                }}
-                            />
-                        </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <p>
-                                <strong>Học sinh:</strong>{" "}
-                                {detailData.studentName}
-                            </p>
-                            <p>
-                                <strong>Lớp:</strong> {detailData.studentGrade}
-                            </p>
-                            <p>
-                                <strong>Email học sinh:</strong>{" "}
-                                {detailData.studentEmail}
-                            </p>
-                        </div>
-                        <div>
-                            <p>
-                                <strong>Phụ huynh:</strong>{" "}
-                                {detailData.parentName}
-                            </p>
-                            <p>
-                                <strong>Email phụ huynh:</strong>{" "}
-                                {detailData.parentEmail}
-                            </p>
-                            <p>
-                                <strong>SĐT phụ huynh:</strong>{" "}
-                                {detailData.parentPhone || "N/A"}
-                            </p>
-                        </div>
-                    </div>
-                    <hr />
-                    <div>
-                        <p>
-                            <strong>Thuốc:</strong> {detailData.medicationName}
-                        </p>
-                        <p>
-                            <strong>Mô tả:</strong>{" "}
-                            {detailData.medicationDescription || "N/A"}
-                        </p>
-                        <p>
-                            <strong>Liều lượng:</strong> {detailData.dosage}
-                        </p>
-                        <p>
-                            <strong>Tần suất:</strong> {detailData.frequency}
-                        </p>
-                        <p>
-                            <strong>Thời gian:</strong>{" "}
-                            {detailData.duration || "N/A"}
-                        </p>
-                        <p>
-                            <strong>Hướng dẫn:</strong>{" "}
-                            {detailData.instructions || "N/A"}
-                        </p>
-                    </div>
-                    <hr />
-                    <div>
-                        <p>
-                            <strong>Ngày bắt đầu:</strong>{" "}
-                            {new Date(detailData.startDate).toLocaleDateString(
-                                "vi-VN"
-                            )}
-                        </p>
-                        <p>
-                            <strong>Ngày kết thúc:</strong>{" "}
-                            {detailData.endDate
-                                ? new Date(
-                                      detailData.endDate
-                                  ).toLocaleDateString("vi-VN")
-                                : "N/A"}
-                        </p>
-                        <p>
-                            <strong>Ngày tạo:</strong>{" "}
-                            {new Date(detailData.createdAt).toLocaleDateString(
-                                "vi-VN"
-                            )}
-                        </p>
-                    </div>
-                    {detailData.healthProfile && (
-                        <>
-                            <hr />
+            {detailLoading ? (
+                <div style={{ textAlign: "center", padding: 40 }}>
+                    <Spin size="large" />
+                </div>
+            ) : (
+                detailData && (
+                    <div className="space-y-4">
+                        {detailData.image && (
+                            <div className="flex justify-center mb-4">
+                                <Image
+                                    src={detailData.image}
+                                    alt="Ảnh thuốc"
+                                    style={{
+                                        maxWidth: 200,
+                                        maxHeight: 200,
+                                        borderRadius: 8,
+                                    }}
+                                />
+                            </div>
+                        )}
+                        <div className="grid grid-cols-2 gap-4">
                             <div>
                                 <p>
-                                    <strong>Thông tin sức khỏe:</strong>
+                                    <strong>Học sinh:</strong>{" "}
+                                    {detailData.studentName}
                                 </p>
                                 <p>
-                                    <strong>Dị ứng:</strong>{" "}
-                                    {detailData.healthProfile.allergies ||
-                                        "Không có"}
+                                    <strong>Lớp:</strong>{" "}
+                                    {detailData.studentGrade}
                                 </p>
                                 <p>
-                                    <strong>Bệnh mãn tính:</strong>{" "}
-                                    {detailData.healthProfile.chronicDiseases ||
-                                        "Không có"}
-                                </p>
-                                <p>
-                                    <strong>Thuốc đang dùng:</strong>{" "}
-                                    {detailData.healthProfile.medications ||
-                                        "Không có"}
+                                    <strong>Email học sinh:</strong>{" "}
+                                    {detailData.studentEmail}
                                 </p>
                             </div>
-                        </>
-                    )}
-                </div>
+                            <div>
+                                <p>
+                                    <strong>Phụ huynh:</strong>{" "}
+                                    {detailData.parentName}
+                                </p>
+                                <p>
+                                    <strong>Email phụ huynh:</strong>{" "}
+                                    {detailData.parentEmail}
+                                </p>
+                                <p>
+                                    <strong>SĐT phụ huynh:</strong>{" "}
+                                    {detailData.parentPhone || "N/A"}
+                                </p>
+                            </div>
+                        </div>
+                        <hr />
+                        <div>
+                            <p>
+                                <strong>Thuốc:</strong>{" "}
+                                {detailData.medicationName}
+                            </p>
+                            <p>
+                                <strong>Mô tả:</strong>{" "}
+                                {detailData.medicationDescription || "N/A"}
+                            </p>
+                            <p>
+                                <strong>Liều lượng:</strong> {detailData.dosage}
+                            </p>
+                            <p>
+                                <strong>Tần suất:</strong>{" "}
+                                {detailData.frequency}
+                            </p>
+                            <p>
+                                <strong>Thời gian:</strong>{" "}
+                                {detailData.duration || "N/A"}
+                            </p>
+                            <p>
+                                <strong>Hướng dẫn:</strong>{" "}
+                                {detailData.instructions || "N/A"}
+                            </p>
+                        </div>
+                        <hr />
+                        <div>
+                            <p>
+                                <strong>Ngày bắt đầu:</strong>{" "}
+                                {new Date(
+                                    detailData.startDate
+                                ).toLocaleDateString("vi-VN")}
+                            </p>
+                            <p>
+                                <strong>Ngày kết thúc:</strong>{" "}
+                                {detailData.endDate
+                                    ? new Date(
+                                          detailData.endDate
+                                      ).toLocaleDateString("vi-VN")
+                                    : "N/A"}
+                            </p>
+                            <p>
+                                <strong>Ngày tạo:</strong>{" "}
+                                {new Date(
+                                    detailData.createdAt
+                                ).toLocaleDateString("vi-VN")}
+                            </p>
+                        </div>
+                        {detailData.healthProfile && (
+                            <>
+                                <hr />
+                                <div>
+                                    <p>
+                                        <strong>Thông tin sức khỏe:</strong>
+                                    </p>
+                                    <p>
+                                        <strong>Dị ứng:</strong>{" "}
+                                        {detailData.healthProfile.allergies ||
+                                            "Không có"}
+                                    </p>
+                                    <p>
+                                        <strong>Bệnh mãn tính:</strong>{" "}
+                                        {detailData.healthProfile
+                                            .chronicDiseases || "Không có"}
+                                    </p>
+                                    <p>
+                                        <strong>Thuốc đang dùng:</strong>{" "}
+                                        {detailData.healthProfile.medications ||
+                                            "Không có"}
+                                    </p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                )
             )}
         </Modal>
     );
