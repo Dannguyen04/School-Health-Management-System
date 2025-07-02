@@ -31,6 +31,7 @@ import axios from "axios";
 import { Formik } from "formik";
 import { useEffect, useState } from "react";
 import * as Yup from "yup";
+import { useLocation } from "react-router-dom";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -56,10 +57,20 @@ const HealthProfile = () => {
     const [children, setChildren] = useState([]);
     const [selectedStudent, setSelectedStudent] = useState(null);
     const [healthProfile, setHealthProfile] = useState(null);
+    const location = useLocation();
 
     useEffect(() => {
         fetchChildren();
     }, []);
+
+    useEffect(() => {
+        // Ưu tiên lấy studentId từ query param nếu có
+        const params = new URLSearchParams(location.search);
+        const studentIdFromQuery = params.get("studentId");
+        if (studentIdFromQuery) {
+            setSelectedStudent(studentIdFromQuery);
+        }
+    }, [location.search]);
 
     const fetchChildren = async () => {
         try {

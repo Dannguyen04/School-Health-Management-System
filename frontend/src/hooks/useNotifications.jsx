@@ -41,7 +41,7 @@ export const useNotifications = (userId, options = {}) => {
         if (!userId || status === "ARCHIVED") return;
 
         try {
-            const response = await parentAPI.getUnreadNotificationCount();
+            const response = await parentAPI.getUnreadNotificationCount(userId);
             if (response.data.success) {
                 setUnreadCount(response.data.data.count);
             }
@@ -113,6 +113,18 @@ export const useNotifications = (userId, options = {}) => {
         [fetchUnreadCount, fetchNotifications]
     );
 
+    const markAllAsRead = useCallback(async () => {
+        try {
+            await parentAPI.markAllNotificationsAsRead(userId);
+            await fetchUnreadCount();
+            await fetchNotifications();
+            return true;
+        } catch (err) {
+            console.error("Error marking all notifications as read:", err);
+            return false;
+        }
+    }, [userId, fetchUnreadCount, fetchNotifications]);
+
     // Initial fetch
     useEffect(() => {
         fetchNotifications();
@@ -138,6 +150,7 @@ export const useNotifications = (userId, options = {}) => {
         error,
         refresh: fetchNotifications,
         markAsRead,
+        markAllAsRead,
         deleteNotification,
         archiveNotification,
         restoreNotification,

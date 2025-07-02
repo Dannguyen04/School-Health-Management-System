@@ -35,7 +35,6 @@ import VaccineConsentForm from "./components/user/ConsentForms";
 import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
 import MedicineInfo from "./components/user/MedicineInfo";
-import NotificationCenter from "./components/shared/NotificationCenter";
 import MedicalSchedule from "./components/user/MedicalSchedule";
 import VaccinationHistory from "./pages/VaccinationHistory";
 import AdminLayout from "./layouts/Admin";

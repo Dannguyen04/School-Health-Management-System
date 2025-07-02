@@ -47,12 +47,13 @@ const NotificationBell = () => {
         unreadCount,
         loading,
         markAsRead,
+        markAllAsRead,
         deleteNotification,
         archiveNotification,
         restoreNotification,
     } = useNotifications(user?.id, {
         autoRefresh: true,
-        refreshInterval: 30000, // 30 seconds
+        refreshInterval: 5000, // 5 seconds
     });
 
     const handleViewDetail = async (notification) => {
@@ -294,7 +295,7 @@ const NotificationBell = () => {
                         notification={notification}
                         onViewDetail={handleViewDetail}
                         onMarkAsRead={markAsRead}
-                        onDelete={deleteNotification}
+                        onDelete={async (id) => await deleteNotification(id)}
                         onNotificationClick={handleNotificationClick}
                         getNotificationIcon={getNotificationIcon}
                         getStatusColor={getStatusColor}
@@ -358,6 +359,14 @@ const NotificationBell = () => {
         },
     ].filter(Boolean);
 
+    // Khi mở dropdown chuông, đánh dấu tất cả là đã đọc
+    const handleDropdownOpenChange = async (open) => {
+        setDropdownVisible(open);
+        if (open && unreadCount > 0) {
+            await markAllAsRead();
+        }
+    };
+
     return (
         <>
             <Dropdown
@@ -365,7 +374,7 @@ const NotificationBell = () => {
                 placement="bottomRight"
                 trigger={["click"]}
                 open={dropdownVisible}
-                onOpenChange={setDropdownVisible}
+                onOpenChange={handleDropdownOpenChange}
             >
                 <Badge count={unreadCount} size="small">
                     <Button

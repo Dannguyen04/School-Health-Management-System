@@ -1,5 +1,14 @@
 import React, { useState } from "react";
-import { Button, Badge, Tag, Typography, Space, Tooltip } from "antd";
+import {
+    Button,
+    Badge,
+    Tag,
+    Typography,
+    Space,
+    Tooltip,
+    Modal,
+    message,
+} from "antd";
 import {
     CheckOutlined,
     DeleteOutlined,
@@ -24,6 +33,7 @@ const NotificationItem = ({
     getMedicalEventTypeLabel,
 }) => {
     const [isHovered, setIsHovered] = useState(false);
+    const [deleting, setDeleting] = useState(false);
 
     const handleClick = (e) => {
         e.stopPropagation();
@@ -35,9 +45,16 @@ const NotificationItem = ({
         onMarkAsRead(notification.id);
     };
 
-    const handleDelete = (e) => {
+    const handleDelete = async (e) => {
         e.stopPropagation();
-        onDelete(notification.id);
+        setDeleting(true);
+        const success = await onDelete(notification.id);
+        setDeleting(false);
+        if (success) {
+            message.success("Đã xóa thông báo!");
+        } else {
+            message.error("Xóa thông báo thất bại!");
+        }
     };
 
     const handleViewDetail = (e) => {
@@ -57,6 +74,23 @@ const NotificationItem = ({
         if (diffHours < 24) return `${diffHours} giờ trước`;
         if (diffDays < 7) return `${diffDays} ngày trước`;
         return notificationTime.format("DD/MM/YYYY");
+    };
+
+    const getIconBgColor = (type) => {
+        switch (type) {
+            case "medical_event":
+                return "#ff7875"; // đỏ nhạt
+            case "vaccination":
+                return "#40a9ff"; // xanh dương
+            case "vaccination_consent":
+                return "#36cfc9"; // xanh ngọc
+            case "vaccination_consent_update":
+                return "#ffd666"; // vàng
+            case "medication":
+                return "#9254de"; // tím
+            default:
+                return "#bfbfbf"; // xám
+        }
     };
 
     return (
@@ -90,10 +124,20 @@ const NotificationItem = ({
         >
             <div
                 style={{
-                    fontSize: "22px",
+                    fontSize: "28px",
                     marginTop: "2px",
                     opacity: notification.status === "READ" ? 0.7 : 1,
                     transition: "opacity 0.3s ease",
+                    background: getIconBgColor(notification.type),
+                    color: "#fff",
+                    borderRadius: "50%",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                    width: 40,
+                    height: 40,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border: "2px solid #fff",
                 }}
             >
                 {getNotificationIcon(notification.type)}
@@ -181,6 +225,7 @@ const NotificationItem = ({
                                     border: "none",
                                     padding: "2px 6px",
                                 }}
+                                loading={deleting}
                             />
                         </Tooltip>
                     </Space>

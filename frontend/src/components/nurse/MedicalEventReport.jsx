@@ -82,7 +82,6 @@ const MedicalEventReport = () => {
     try {
       const response = await nurseAPI.getStudentsForNurse();
       if (response.data.success) {
-        console.log(response.data.data);
         setStudents(response.data.data);
       } else {
         message.error("Không thể tải danh sách học sinh");
@@ -257,7 +256,9 @@ const MedicalEventReport = () => {
       render: (text, record) => (
         <div>
           <div className="font-medium">{text}</div>
-          <div className="text-sm text-gray-500">{record.grade}</div>
+          <div className="text-sm text-gray-500">
+            Khối: {record.grade || "-"}, Lớp: {record.class || "-"}
+          </div>
         </div>
       ),
     },

@@ -12,7 +12,6 @@ const createVaccinationCampaign = async (req, res) => {
             targetGrades,
             scheduledDate,
             deadline,
-            status = "ACTIVE",
         } = req.body;
 
         // Validation
@@ -51,8 +50,6 @@ const createVaccinationCampaign = async (req, res) => {
                 targetGrades: targetGrades.map((grade) => String(grade)),
                 scheduledDate: new Date(scheduledDate),
                 deadline: new Date(deadline),
-                status,
-                isActive: status === "ACTIVE",
             },
             include: {
                 vaccinations: true,
@@ -373,22 +370,38 @@ const sendConsentNotification = async (req, res) => {
             });
         }
 
-        // Gửi thông báo cho từng phụ huynh
-        const notifications = [];
-        for (const userId of parentUserIds) {
-            const notification = await prisma.notification.create({
-                data: {
-                    userId,
-                    title: `Phiếu đồng ý tiêm chủng: ${campaign.name}`,
-                    message: `Vui lòng xác nhận đồng ý tiêm chủng cho con em bạn trong chiến dịch: ${campaign.name}.`,
-                    type: "vaccination_consent",
-                    status: "SENT",
-                    sentAt: new Date(),
-                    vaccinationCampaignId: campaign.id,
-                },
-            });
-            notifications.push(notification);
-        }
+        // Gửi thông báo cho từng phụ huynh (song song)
+        const notifications = await Promise.all(
+            parentUserIds.map((userId) =>
+                prisma.notification.create({
+                    data: {
+                        userId,
+                        title: `Phiếu đồng ý tiêm chủng: ${campaign.name}`,
+                        message: `Vui lòng xác nhận đồng ý tiêm chủng cho con em bạn trong chiến dịch: ${campaign.name}.`,
+                        type: "vaccination_consent",
+                        status: "SENT",
+                        sentAt: new Date(),
+                        vaccinationCampaignId: campaign.id,
+                    },
+                })
+            )
+        );
+
+        // Gửi thông báo cho manager về việc gửi phiếu thành công
+        const managerId = req.user.id;
+        await prisma.notification.create({
+            data: {
+                userId: managerId,
+                title: "Gửi phiếu đồng ý tiêm chủng thành công",
+                message: `Bạn đã gửi phiếu đồng ý tiêm chủng cho các khối: ${selectedGrades.join(
+                    ", "
+                )}`,
+                type: "info",
+                status: "SENT",
+                sentAt: new Date(),
+                vaccinationCampaignId: campaign.id,
+            },
+        });
 
         res.json({
             success: true,

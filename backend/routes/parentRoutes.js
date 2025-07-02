@@ -12,6 +12,10 @@ import {
     getStudentVaccinationCampaigns,
 } from "../controllers/parentController.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
+import {
+    uploadMedicineImage,
+    handleUploadError,
+} from "../middleware/uploadMiddleware.js";
 
 const router = express.Router();
 
@@ -40,6 +44,8 @@ router.delete(
 router.post(
     "/request-medication/:studentId",
     authenticateToken,
+    uploadMedicineImage,
+    handleUploadError,
     requestMedication
 );
 
