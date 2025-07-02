@@ -60,7 +60,7 @@ const validateDateOfBirth = (dateOfBirth) => {
     const dob = new Date(dateOfBirth);
     const now = new Date();
     const minDate = new Date(now.getFullYear() - 100, 0, 1);
-    const maxDate = new Date(now.getFullYear() - 3, 11, 31);
+    const maxDate = new Date(now.getFullYear() - 6, 11, 31);
 
     return !isNaN(dob.getTime()) && dob >= minDate && dob <= maxDate;
 };

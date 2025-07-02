@@ -157,6 +157,7 @@ model Student {
   vaccinationConsents VaccinationConsent[]
   vaccinations        vaccinations[]
   medicationAdministrationLogs MedicationAdministrationLog[] 
+  vaccinationRecords  VaccinationRecord[] // Thêm trường đối ứng cho VaccinationRecord
 
   @@map("students")
 }
@@ -194,6 +195,7 @@ model SchoolNurse {
   medicalChecks MedicalCheck[]
   vaccinations  vaccinations[]
   medicationAdministrationLogs MedicationAdministrationLog[] 
+  vaccinationRecords  VaccinationRecord[] // Thêm trường đối ứng cho VaccinationRecord
 
 
   @@map("school_nurses")
@@ -282,7 +284,7 @@ model MedicalEvent {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
 
-  student   Student      @relation(fields: [studentId], references: [id])
+  student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
   nurse     SchoolNurse? @relation(fields: [nurseId], references: [id])
   createdBy users        @relation("EventCreator", fields: [createdById], references: [id])
 
@@ -396,6 +398,7 @@ model VaccinationCampaign {
   // Relations
   notifications Notification[]
   consents      VaccinationConsent[]
+  vaccinationRecords VaccinationRecord[] // Thêm trường đối ứng cho VaccinationRecord
 
   @@map("vaccination_campaigns")
 }
@@ -445,7 +448,32 @@ model VaccinationConsent {
   @@unique([campaignId, studentId, parentId])
   @@map("vaccination_consents")
 }
+model VaccinationRecord {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  name             String
+  requirement      VaccineRequirement
+  expiredDate      DateTime
+  administeredDate DateTime
+  dose             DoseType
+  sideEffects      String?
+  notes            String?
+  reaction         String?
+  status           VaccinationStatus @default(COMPLETED)
+  followUpRequired Boolean           @default(false)
 
+  campaignId String   @db.ObjectId
+  studentId  String   @db.ObjectId
+  nurseId    String   @db.ObjectId
+
+  campaign VaccinationCampaign @relation(fields: [campaignId], references: [id])
+  student  Student             @relation(fields: [studentId], references: [id])
+  nurse    SchoolNurse         @relation(fields: [nurseId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("vaccination_records")
+}
 // Medical Check Management
 model MedicalCheckCampaign {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
@@ -643,3 +671,5 @@ model MedicationAdministrationLog {
 
   @@map("medication_administration_logs")
 }
+
+
