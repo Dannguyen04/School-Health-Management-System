@@ -216,23 +216,52 @@ const HealthCheckups = () => {
 
     // Hàm gửi kết quả & lịch tư vấn (mock API)
     const handleSendConsult = async () => {
-        if (!consultContent || !consultRange.length) {
-            message.error(
-                "Vui lòng nhập đầy đủ nội dung và chọn khoảng thời gian tư vấn"
-            );
+        if (!consultRange.length) {
+            message.error("Vui lòng chọn khoảng thời gian tư vấn");
             return;
         }
         setConsultLoading(true);
         try {
-            // TODO: Gọi API thực tế ở đây
-            await new Promise((res) => setTimeout(res, 1000));
-            message.success("Đã gửi kết quả và lịch tư vấn cho phụ huynh!");
+            const [start, end] = consultRange;
+            await axios.post(
+                `/api/report-medical-check/${consultReport.id}/schedule-consultation`,
+                {
+                    consultationStart: start,
+                    consultationEnd: end,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${localStorage.getItem(
+                            "token"
+                        )}`,
+                    },
+                }
+            );
+            message.success(
+                "Đã đặt lịch tư vấn và gửi thông báo cho phụ huynh!"
+            );
             setConsultModalVisible(false);
             setConsultReport(null);
-            setConsultContent("");
             setConsultRange([]);
-        } catch {
-            message.error("Gửi thất bại, vui lòng thử lại");
+            // Refetch lại danh sách báo cáo nếu cần
+            if (selectedCampaign) {
+                const resReports = await axios.get(
+                    `/api/medical-checks/campaign/${selectedCampaign.id}`,
+                    {
+                        headers: {
+                            Authorization: `Bearer ${localStorage.getItem(
+                                "token"
+                            )}`,
+                        },
+                    }
+                );
+                setReports(resReports.data.data || []);
+            }
+        } catch (err) {
+            message.error(
+                err.response?.data?.error ||
+                    "Đặt lịch tư vấn thất bại, vui lòng thử lại"
+            );
         }
         setConsultLoading(false);
     };
