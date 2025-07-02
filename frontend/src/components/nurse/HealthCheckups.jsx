@@ -2,6 +2,7 @@ import { EyeOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
+  Col,
   DatePicker,
   Descriptions,
   Divider,
@@ -10,6 +11,7 @@ import {
   InputNumber,
   message,
   Modal,
+  Row,
   Select,
   Table,
   Tabs,
@@ -193,7 +195,7 @@ const HealthCheckups = () => {
             </Tag>
           );
         }
-        return <Tag color="default">Chưa khám</Tag>;
+        return <Tag color="orange">Chưa hoàn thành</Tag>;
       },
     },
     {
@@ -380,6 +382,57 @@ const HealthCheckups = () => {
       label: "Báo cáo khám sức khỏe",
       children: selectedCampaign ? (
         <Card title="Danh sách báo cáo khám sức khỏe">
+          {/* Alert thống kê học sinh cần chú ý, cần điều trị */}
+          {(() => {
+            const needsAttention = reports.filter(
+              (r) => r.overallHealth === "NEEDS_ATTENTION"
+            ).length;
+            const requiresTreatment = reports.filter(
+              (r) => r.overallHealth === "REQUIRES_TREATMENT"
+            ).length;
+            if (needsAttention + requiresTreatment === 0) return null;
+            return (
+              <div style={{ marginBottom: 16 }}>
+                <Row gutter={16}>
+                  {needsAttention > 0 && (
+                    <Col>
+                      <div
+                        style={{
+                          background: "#fffbe6",
+                          border: "1px solid #ffe58f",
+                          borderRadius: 4,
+                          padding: "8px 16px",
+                          color: "#faad14",
+                          fontWeight: 500,
+                          marginRight: 8,
+                        }}
+                      >
+                        {needsAttention} học sinh{" "}
+                        <span style={{ color: "#faad14" }}>cần chú ý</span>
+                      </div>
+                    </Col>
+                  )}
+                  {requiresTreatment > 0 && (
+                    <Col>
+                      <div
+                        style={{
+                          background: "#fff1f0",
+                          border: "1px solid #ffa39e",
+                          borderRadius: 4,
+                          padding: "8px 16px",
+                          color: "#cf1322",
+                          fontWeight: 500,
+                        }}
+                      >
+                        {requiresTreatment} học sinh{" "}
+                        <span style={{ color: "#cf1322" }}>cần điều trị</span>
+                      </div>
+                    </Col>
+                  )}
+                </Row>
+              </div>
+            );
+          })()}
           <Table
             dataSource={reports}
             columns={reportColumns}
