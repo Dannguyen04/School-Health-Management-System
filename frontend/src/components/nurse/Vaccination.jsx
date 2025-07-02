@@ -14,6 +14,7 @@ import {
   Select,
   Space,
   Table,
+  Tabs,
   Tag,
   Typography,
   message,
@@ -23,7 +24,7 @@ import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 
 const { TextArea } = Input;
-const { Title, Text } = Typography;
+const { Title } = Typography;
 
 const Vaccination = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -31,11 +32,14 @@ const Vaccination = () => {
   const [students, setStudents] = useState([]);
   const [displayedStudents, setDisplayedStudents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [searchForm] = Form.useForm();
   const [vaccinationForm] = Form.useForm();
+  const [searchForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [activeTab, setActiveTab] = useState("campaigns");
+  const [vaccinationReports, setVaccinationReports] = useState([]);
+  const [reportLoading, setReportLoading] = useState(false);
 
   const getAuthToken = () => {
     return localStorage.getItem("token");
@@ -54,12 +58,9 @@ const Vaccination = () => {
         headers: getHeaders(),
       });
       if (response.data.success) {
-        console.log(response.data.data);
-
         setCampaigns(response.data.data);
       }
-    } catch (error) {
-      console.error("Error fetching campaigns:", error);
+    } catch {
       message.error("Không thể tải danh sách chiến dịch tiêm chủng");
     } finally {
       setLoading(false);
@@ -79,14 +80,35 @@ const Vaccination = () => {
       if (response.data.success) {
         setStudents(response.data.data || []);
         setDisplayedStudents(response.data.data || []);
-        console.log("Fetched students:", response.data.data);
       }
-    } catch (error) {
-      console.error("Error fetching students:", error);
+    } catch {
       message.error("Không thể tải danh sách học sinh");
     } finally {
       setLoading(false);
     }
+  };
+
+  // Fetch vaccination reports for a specific campaign
+  const fetchVaccinationReports = async (campaignId) => {
+    setReportLoading(true);
+    try {
+      const response = await axios.get(
+        `/api/nurse/vaccination-report/${campaignId}`,
+        {
+          headers: getHeaders(),
+        }
+      );
+      if (response.data.success) {
+        console.log("Vaccination reports:", response.data.data);
+
+        setVaccinationReports(response.data.data || []);
+      } else {
+        setVaccinationReports([]);
+      }
+    } catch {
+      setVaccinationReports([]);
+    }
+    setReportLoading(false);
   };
 
   // Perform vaccination
@@ -101,7 +123,6 @@ const Vaccination = () => {
         },
         { headers: getHeaders() }
       );
-
       if (response.data.success) {
         message.success("Đã thực hiện tiêm chủng thành công");
         setIsModalVisible(false);
@@ -110,7 +131,6 @@ const Vaccination = () => {
         await fetchStudentsForCampaign(selectedCampaign.id);
       }
     } catch (error) {
-      console.error("Error performing vaccination:", error);
       message.error(
         error.response?.data?.error || "Lỗi khi thực hiện tiêm chủng"
       );
@@ -121,6 +141,9 @@ const Vaccination = () => {
   const normalizeReportValues = (values) => {
     return {
       ...values,
+      administeredDate: values.administeredDate
+        ? values.administeredDate.toISOString()
+        : undefined,
       followUpRequired:
         values.followUpRequired === true || values.followUpRequired === "true",
       followUpDate: values.followUpDate
@@ -133,6 +156,11 @@ const Vaccination = () => {
   const reportVaccinationResult = async (values) => {
     try {
       const normalized = normalizeReportValues(values);
+      console.log("Gửi lên backend:", {
+        ...normalized,
+        campaignId: selectedCampaign.id,
+        studentId: selectedStudent.id,
+      });
       const response = await axios.put(
         `/api/nurse/vaccinations/report`,
         {
@@ -142,10 +170,9 @@ const Vaccination = () => {
         },
         { headers: getHeaders() }
       );
-      console.log("API response:", response.data);
-
       if (response.data.success) {
         message.success("Đã báo cáo kết quả tiêm chủng");
+        fetchVaccinationReports(selectedCampaign.id);
         setIsReportModalVisible(false);
         setSelectedStudent(null);
         vaccinationForm.resetFields();
@@ -153,9 +180,7 @@ const Vaccination = () => {
       } else {
         message.error(response.data.error || "Lỗi khi báo cáo kết quả");
       }
-      fetchStudentsForCampaign(selectedCampaign.id);
     } catch (error) {
-      console.error("Error reporting vaccination:", error);
       message.error(error.response?.data?.error || "Lỗi khi báo cáo kết quả");
     }
   };
@@ -163,6 +188,8 @@ const Vaccination = () => {
   const handleCampaignSelect = (campaign) => {
     setSelectedCampaign(campaign);
     fetchStudentsForCampaign(campaign.id);
+    fetchVaccinationReports(campaign.id);
+    setActiveTab("students");
   };
 
   const handlePerformVaccination = (student) => {
@@ -170,9 +197,7 @@ const Vaccination = () => {
     setIsModalVisible(true);
   };
 
-  // Sửa handleReportResult để reset form khi mở modal
   const handleReportResult = (student) => {
-    console.log("student for report:", student);
     if (student.vaccinationStatus !== "COMPLETED") {
       message.warning("Chỉ có thể báo cáo kết quả cho học sinh đã tiêm chủng.");
       return;
@@ -183,15 +208,13 @@ const Vaccination = () => {
       administeredDate: student.administeredDate
         ? dayjs(student.administeredDate)
         : null,
-      dose: student.doseType || undefined,
+      dose: student.doseType || student.dose || undefined,
     });
     setIsReportModalVisible(true);
   };
 
   const handleSearch = (values) => {
-    // Filter students based on search criteria
     let filteredStudents = students;
-
     if (values.studentCode) {
       filteredStudents = filteredStudents.filter((student) =>
         student.studentCode
@@ -199,22 +222,17 @@ const Vaccination = () => {
           .includes(values.studentCode.toLowerCase())
       );
     }
-
     if (values.grade) {
       filteredStudents = filteredStudents.filter(
         (student) => student.grade === values.grade
       );
     }
-
     if (values.consentStatus !== undefined && values.consentStatus !== null) {
       filteredStudents = filteredStudents.filter(
         (student) => student.consentStatus === values.consentStatus
       );
     }
-
-    // Update the displayed students
     setDisplayedStudents(filteredStudents);
-    console.log("Filtered students:", filteredStudents);
   };
 
   const handleReset = () => {
@@ -252,16 +270,45 @@ const Vaccination = () => {
     }
   };
 
+  const getDoseText = (dose) => {
+    switch (dose) {
+      case "FIRST":
+        return "Liều đầu tiên";
+      case "SECOND":
+        return "Liều thứ hai";
+      case "BOOSTER":
+        return "Liều nhắc lại";
+      default:
+        return dose || "-";
+    }
+  };
+
+  const getReactionText = (reaction) => {
+    switch (reaction) {
+      case "NONE":
+        return "Không có phản ứng";
+      case "MILD":
+        return "Phản ứng nhẹ";
+      case "MODERATE":
+        return "Phản ứng vừa";
+      case "SEVERE":
+        return "Phản ứng nặng";
+      default:
+        return reaction || "-";
+    }
+  };
+
+  // Columns
   const campaignColumns = [
-    {
-      title: "Tên chiến dịch",
-      dataIndex: "name",
-      key: "name",
-    },
+    { title: "Tên chiến dịch", dataIndex: "name", key: "name" },
     {
       title: "Vắc xin",
       dataIndex: ["vaccinations", "name"],
       key: "vaccinationName",
+      render: (_, record) =>
+        Array.isArray(record.vaccinations) && record.vaccinations.length > 0
+          ? record.vaccinations[0]?.name
+          : "Không có",
     },
     {
       title: "Ngày bắt đầu",
@@ -295,21 +342,14 @@ const Vaccination = () => {
   ];
 
   const studentColumns = [
-    {
-      title: "Mã học sinh",
-      dataIndex: "studentCode",
-      key: "studentCode",
-    },
+    { title: "Mã học sinh", dataIndex: "studentCode", key: "studentCode" },
     {
       title: "Tên học sinh",
       dataIndex: ["user", "fullName"],
       key: "studentName",
+      render: (_, record) => record.user?.fullName || "",
     },
-    {
-      title: "Lớp",
-      dataIndex: "grade",
-      key: "grade",
-    },
+    { title: "Lớp", dataIndex: "grade", key: "grade" },
     {
       title: "Trạng thái consent",
       dataIndex: "consentStatus",
@@ -376,60 +416,168 @@ const Vaccination = () => {
     },
   ];
 
-  useEffect(() => {
-    fetchCampaigns();
-  }, []);
+  const vaccinationReportColumns = [
+    {
+      title: "Mã học sinh",
+      dataIndex: "studentCode",
+      key: "studentCode",
+      align: "center",
+      width: 110,
+    },
+    {
+      title: "Tên học sinh",
+      dataIndex: "studentName",
+      key: "studentName",
+      align: "left",
+      width: 140,
+    },
+    {
+      title: "Lớp",
+      dataIndex: "grade",
+      key: "grade",
+      align: "center",
+      width: 70,
+    },
+    {
+      title: "Ngày tiêm",
+      dataIndex: "administeredDate",
+      key: "administeredDate",
+      align: "center",
+      width: 120,
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Loại liều",
+      dataIndex: "dose",
+      key: "dose",
+      align: "center",
+      width: 120,
+      render: (dose) => {
+        switch (dose) {
+          case "FIRST":
+            return <Tag color="blue">Liều đầu tiên</Tag>;
+          case "SECOND":
+            return <Tag color="purple">Liều thứ hai</Tag>;
+          case "BOOSTER":
+            return <Tag color="green">Liều nhắc lại</Tag>;
+          default:
+            return dose || "-";
+        }
+      },
+    },
+    {
+      title: "Tác dụng phụ",
+      dataIndex: "sideEffects",
+      key: "sideEffects",
+      align: "left",
+      width: 160,
+      render: (val) => val || "-",
+    },
+    {
+      title: "Phản ứng",
+      dataIndex: "reaction",
+      key: "reaction",
+      align: "center",
+      width: 120,
+      render: (reaction) => {
+        switch (reaction) {
+          case "NONE":
+            return <Tag color="green">Không có</Tag>;
+          case "MILD":
+            return <Tag color="gold">Nhẹ</Tag>;
+          case "MODERATE":
+            return <Tag color="orange">Vừa</Tag>;
+          case "SEVERE":
+            return <Tag color="red">Nặng</Tag>;
+          default:
+            return reaction || "-";
+        }
+      },
+    },
+    {
+      title: "Cần theo dõi",
+      dataIndex: "followUpRequired",
+      key: "followUpRequired",
+      align: "center",
+      width: 120,
+      render: (val) =>
+        val ? (
+          <Tag
+            color="gold"
+            style={{ fontWeight: 600, fontSize: 14, padding: "2px 12px" }}
+          >
+            Có
+          </Tag>
+        ) : (
+          <Tag
+            color="default"
+            style={{ fontWeight: 600, fontSize: 14, padding: "2px 12px" }}
+          >
+            Không
+          </Tag>
+        ),
+    },
+    {
+      title: "Ngày theo dõi",
+      dataIndex: "followUpDate",
+      key: "followUpDate",
+      align: "center",
+      width: 120,
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "additionalNotes",
+      key: "additionalNotes",
+      align: "left",
+      width: 120,
+      render: (val) => val || "-",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      align: "center",
+      width: 110,
+      render: (status) => {
+        switch (status) {
+          case "COMPLETED":
+            return <Tag color="green">Đã tiêm</Tag>;
+          case "SCHEDULED":
+            return <Tag color="blue">Đã lên lịch</Tag>;
+          case "POSTPONED":
+            return <Tag color="orange">Hoãn</Tag>;
+          case "CANCELLED":
+            return <Tag color="red">Hủy</Tag>;
+          default:
+            return status || "-";
+        }
+      },
+    },
+  ];
 
-  return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <Title level={2}>Thực hiện tiêm chủng</Title>
-      </div>
-
-      {/* Campaign Selection */}
-      <Card title="Chọn chiến dịch tiêm chủng">
-        <Table
-          dataSource={campaigns}
-          columns={campaignColumns}
-          rowKey="id"
-          loading={loading}
-          pagination={false}
-        />
-      </Card>
-
-      {/* Selected Campaign Info */}
-      {selectedCampaign && (
-        <Card
-          title={`Chiến dịch: ${selectedCampaign.name}`}
-          extra={
-            <Button onClick={() => setSelectedCampaign(null)}>Đóng</Button>
-          }
-        >
-          <Descriptions bordered column={2}>
-            <Descriptions.Item label="Vắc xin">
-              {Array.isArray(selectedCampaign.vaccinations) &&
-              selectedCampaign.vaccinations.length > 0
-                ? selectedCampaign.vaccinations[0]?.name
-                : "Không có"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Mô tả">
-              {selectedCampaign.description || "Không có"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Ngày bắt đầu">
-              {dayjs(selectedCampaign.scheduledDate).format("DD/MM/YYYY")}
-            </Descriptions.Item>
-            <Descriptions.Item label="Ngày kết thúc">
-              {dayjs(selectedCampaign.deadline).format("DD/MM/YYYY")}
-            </Descriptions.Item>
-            <Descriptions.Item label="Trạng thái">
-              <Tag color={getStatusColor(selectedCampaign.status)}>
-                {getStatusText(selectedCampaign.status)}
-              </Tag>
-            </Descriptions.Item>
-          </Descriptions>
-
-          <Divider />
-
+  // Tabs items
+  const items = [
+    {
+      key: "campaigns",
+      label: "Chiến dịch tiêm chủng",
+      children: (
+        <Card title="Chọn chiến dịch tiêm chủng">
+          <Table
+            dataSource={campaigns}
+            columns={campaignColumns}
+            rowKey="id"
+            loading={loading}
+            pagination={false}
+          />
+        </Card>
+      ),
+    },
+    {
+      key: "students",
+      label: "Danh sách học sinh",
+      children: selectedCampaign ? (
+        <Card title="Danh sách học sinh">
           {/* Search Form */}
           <Form form={searchForm} onFinish={handleSearch} layout="vertical">
             <Row gutter={16}>
@@ -473,24 +621,122 @@ const Vaccination = () => {
               </Col>
             </Row>
           </Form>
-
           <Divider />
-
-          {/* Students Table */}
           <Table
             dataSource={displayedStudents}
             columns={studentColumns}
             rowKey="id"
             loading={loading}
-            pagination={{
-              pageSize: 10,
-              showQuickJumper: true,
-            }}
+            pagination={{ pageSize: 10, showQuickJumper: true }}
           />
         </Card>
-      )}
+      ) : (
+        <Card>
+          <div className="text-center text-gray-500">
+            Vui lòng chọn chiến dịch trước
+          </div>
+        </Card>
+      ),
+    },
+    {
+      key: "reports",
+      label: "Báo cáo tiêm chủng",
+      children: selectedCampaign ? (
+        <Card title="Danh sách báo cáo tiêm chủng">
+          {/* Thêm alert/box cho học sinh cần theo dõi */}
+          {(() => {
+            const followUpCount = vaccinationReports.filter(
+              (r) => r.followUpRequired
+            ).length;
+            return followUpCount > 0 ? (
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col>
+                  <div
+                    style={{
+                      background: "#fffbe6",
+                      border: "1px solid #ffe58f",
+                      borderRadius: 4,
+                      padding: "8px 16px",
+                      color: "#faad14",
+                      fontWeight: 500,
+                      marginRight: 8,
+                    }}
+                  >
+                    {followUpCount} học sinh cần theo dõi
+                  </div>
+                </Col>
+              </Row>
+            ) : null;
+          })()}
+          <Table
+            dataSource={vaccinationReports}
+            columns={vaccinationReportColumns}
+            rowKey="id"
+            loading={reportLoading}
+            locale={{ emptyText: "Chưa có dữ liệu báo cáo tiêm chủng" }}
+            pagination={{ pageSize: 10, showQuickJumper: true }}
+            size="middle"
+            bordered
+            style={{ borderRadius: 8, overflow: "hidden" }}
+          />
+        </Card>
+      ) : (
+        <Card>
+          <div className="text-center text-gray-500">
+            Vui lòng chọn chiến dịch trước
+          </div>
+        </Card>
+      ),
+    },
+  ];
 
-      {/* Perform Vaccination Modal */}
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <Title level={2}>Thực hiện tiêm chủng</Title>
+      </div>
+      {selectedCampaign && (
+        <Card
+          title={`Chiến dịch: ${selectedCampaign.name}`}
+          extra={
+            <Button onClick={() => setSelectedCampaign(null)}>Đóng</Button>
+          }
+        >
+          <Descriptions bordered column={2}>
+            <Descriptions.Item label="Vắc xin">
+              {Array.isArray(selectedCampaign.vaccinations) &&
+              selectedCampaign.vaccinations.length > 0
+                ? selectedCampaign.vaccinations[0]?.name
+                : "Không có"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Mô tả">
+              {selectedCampaign.description || "Không có"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày bắt đầu">
+              {dayjs(selectedCampaign.scheduledDate).format("DD/MM/YYYY")}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày kết thúc">
+              {dayjs(selectedCampaign.deadline).format("DD/MM/YYYY")}
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag color={getStatusColor(selectedCampaign.status)}>
+                {getStatusText(selectedCampaign.status)}
+              </Tag>
+            </Descriptions.Item>
+          </Descriptions>
+        </Card>
+      )}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={items}
+        size="large"
+      />
+      {/* Modal thực hiện tiêm chủng */}
       <Modal
         title="Thực hiện tiêm chủng"
         open={isModalVisible}
@@ -551,7 +797,7 @@ const Vaccination = () => {
         </Form>
       </Modal>
 
-      {/* Report Result Modal */}
+      {/* Modal báo cáo kết quả tiêm chủng */}
       <Modal
         title="Báo cáo kết quả tiêm chủng"
         open={isReportModalVisible}
@@ -577,10 +823,7 @@ const Vaccination = () => {
         <Form
           form={vaccinationForm}
           layout="vertical"
-          onFinish={(values) => {
-            console.log("Form values:", values);
-            reportVaccinationResult(values);
-          }}
+          onFinish={reportVaccinationResult}
           onFinishFailed={(err) => {
             console.log("Form failed:", err);
           }}

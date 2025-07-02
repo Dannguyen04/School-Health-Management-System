@@ -2673,3 +2673,43 @@ export const getVaccinationStats = async (req, res) => {
     });
   }
 };
+
+// Lấy danh sách báo cáo tiêm chủng cho một chiến dịch
+export const getVaccinationReport = async (req, res) => {
+  try {
+    const { campaignId } = req.params;
+    // Lấy tất cả vaccinationRecord của campaign này
+    const records = await prisma.vaccinationRecord.findMany({
+      where: { campaignId },
+      include: {
+        student: {
+          include: {
+            user: { select: { fullName: true } },
+          },
+        },
+      },
+      orderBy: { administeredDate: "desc" },
+    });
+    const reports = records.map((rec) => ({
+      id: rec.id,
+      studentId: rec.studentId,
+      studentCode: rec.student?.studentCode,
+      studentName: rec.student?.user?.fullName,
+      grade: rec.student?.grade,
+      administeredDate: rec.administeredDate,
+      dose: rec.dose,
+      sideEffects: rec.sideEffects,
+      reaction: rec.reaction,
+      followUpRequired: rec.followUpRequired,
+      followUpDate: rec.followUpDate,
+      additionalNotes: rec.notes,
+      status: rec.status,
+    }));
+    res.json({ success: true, data: reports });
+  } catch (error) {
+    console.error("Error getting vaccination report:", error);
+    res
+      .status(500)
+      .json({ success: false, error: "Lỗi khi lấy báo cáo tiêm chủng" });
+  }
+};
