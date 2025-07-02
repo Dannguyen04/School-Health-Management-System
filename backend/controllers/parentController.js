@@ -631,9 +631,50 @@ export const getVaccinationDetail = async (req, res) => {
             },
         });
         if (!vaccination) {
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy dữ liệu tiêm chủng",
+            // Nếu không có record tiêm chủng, trả về thông tin campaign, student, consent (nếu có)
+            const campaign = await prisma.VaccinationCampaign.findUnique({
+                where: { id: campaignId },
+                include: {
+                    vaccinations: true,
+                    consents: true,
+                },
+            });
+            const student = await prisma.Student.findUnique({
+                where: { id: studentId },
+                include: {
+                    user: true,
+                    parents: {
+                        include: {
+                            parent: {
+                                include: { user: true },
+                            },
+                        },
+                    },
+                    healthProfile: true,
+                },
+            });
+            // Lấy consent của học sinh này với campaign này (nếu có)
+            const consent = await prisma.VaccinationConsent.findFirst({
+                where: {
+                    campaignId: campaignId,
+                    studentId: studentId,
+                },
+            });
+            if (!campaign || !student) {
+                return res.status(404).json({
+                    success: false,
+                    error: "Không tìm thấy dữ liệu tiêm chủng hoặc chiến dịch",
+                });
+            }
+            return res.json({
+                success: true,
+                data: {
+                    campaign,
+                    student,
+                    consent,
+                    status: "SCHEDULED",
+                    notVaccinated: true,
+                },
             });
         }
         res.json({ success: true, data: vaccination });
