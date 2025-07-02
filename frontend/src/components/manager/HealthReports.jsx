@@ -1,8 +1,4 @@
-import {
-  FileExcelOutlined,
-  FilePdfOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
+import { FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -10,7 +6,6 @@ import {
   DatePicker,
   Form,
   Row,
-  Select,
   Space,
   Statistic,
   Table,
@@ -164,8 +159,8 @@ const HealthReports = () => {
     },
     {
       title: "Lớp",
-      dataIndex: ["student", "grade"],
-      key: "grade",
+      dataIndex: ["student", "class"],
+      key: "class",
     },
     {
       title: "Trạng thái sức khỏe",
@@ -184,13 +179,6 @@ const HealthReports = () => {
           </span>
         );
       },
-    },
-    {
-      title: "Ngày khám",
-      dataIndex: "completedDate",
-      key: "completedDate",
-      render: (date) =>
-        date ? new Date(date).toLocaleDateString("vi-VN") : "-",
     },
   ];
 
@@ -263,50 +251,6 @@ const HealthReports = () => {
           </Col>
         ))}
       </Row>
-
-      <Card>
-        <Form form={form} onFinish={handleSearch} layout="vertical">
-          <Row gutter={16}>
-            <Col xs={24} sm={8}>
-              <Form.Item name="dateRange" label="Khoảng thời gian">
-                <RangePicker style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name="grade" label="Lớp">
-                <Select placeholder="Chọn lớp" allowClear>
-                  <Select.Option value="Lớp 1">Lớp 1</Select.Option>
-                  <Select.Option value="Lớp 2">Lớp 2</Select.Option>
-                  <Select.Option value="Lớp 3">Lớp 3</Select.Option>
-                  <Select.Option value="Lớp 4">Lớp 4</Select.Option>
-                  <Select.Option value="Lớp 5">Lớp 5</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name="reportType" label="Loại báo cáo">
-                <Select placeholder="Chọn loại báo cáo" allowClear>
-                  <Select.Option value="COMPLETED">Đã hoàn thành</Select.Option>
-                  <Select.Option value="PENDING">Đang chờ</Select.Option>
-                  <Select.Option value="CANCELLED">Đã hủy</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row>
-            <Col span={24} className="text-right">
-              <Button
-                type="primary"
-                icon={<SearchOutlined />}
-                htmlType="submit"
-                loading={loading}
-              >
-                Tạo báo cáo
-              </Button>
-            </Col>
-          </Row>
-        </Form>
-      </Card>
 
       {/* Health Status Distribution */}
       {overviewData && (
@@ -395,35 +339,14 @@ const HealthReports = () => {
           rowKey="id"
           loading={studentsLoading}
           pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
+            pageSize: 5,
             showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} học sinh`,
           }}
           locale={{
             emptyText: "Không có học sinh nào cần chú ý",
           }}
         />
       </Card>
-
-      {/* Placeholder for charts */}
-      <Row gutter={16}>
-        <Col xs={24} lg={12}>
-          <Card title="Tiêm chủng tháng">
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              Biểu đồ tiêm chủng tháng (đang phát triển)
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Khám sức khỏe tháng">
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              Biểu đồ khám sức khỏe tháng (đang phát triển)
-            </div>
-          </Card>
-        </Col>
-      </Row>
     </div>
   );
 };
