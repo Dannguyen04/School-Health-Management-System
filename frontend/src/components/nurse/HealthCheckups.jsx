@@ -1130,7 +1130,7 @@ const HealthCheckups = () => {
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={
-          detailReport && detailReport.status !== "COMPLETED" ? (
+          detailReport ? (
             <Button
               type="primary"
               onClick={() => handleEditReport(detailReport)}
