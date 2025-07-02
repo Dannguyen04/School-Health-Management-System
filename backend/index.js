@@ -65,7 +65,7 @@ app.use("/api/notifications", NotificationRoutes);
 app.use("/api/medical-checks", MedicalCheckRoutes);
 app.use("/api/medical-campaigns", MedicalCampaignRoutes);
 app.use("/api/blogs", BlogRoutes);
-app.use("/api/report-medical-check-campaign", ReportMedicalChecknRoutes);
+app.use("/api/report-medical-check", ReportMedicalChecknRoutes);
 app.use("/api/upload", UploadRoutes);
 
 // 404 handler

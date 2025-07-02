@@ -4,6 +4,7 @@ import {
     getAttentionSummaryController,
     getComparisonSummary,
     getStudentsNeedingAttention,
+    scheduleConsultation,
 } from "../controllers/ReportMedicalCheck.Controller.js";
 import {
     authenticateToken,
@@ -37,6 +38,14 @@ router.get(
     authenticateToken,
     verifyManager,
     getStudentsNeedingAttention
+);
+
+// Đặt lịch tư vấn cho học sinh (nurse)
+router.post(
+    "/:id/schedule-consultation",
+    authenticateToken,
+    verifyNurse,
+    scheduleConsultation
 );
 
 export default router;

@@ -599,6 +599,70 @@ const getHealthTrends = async (req, res) => {
     }
 };
 
+// Đặt lịch tư vấn và gửi notification cho phụ huynh
+const scheduleConsultation = async (req, res) => {
+    try {
+        const { id } = req.params; // medicalCheckId
+        const { consultationStart, consultationEnd } = req.body;
+        if (!consultationStart || !consultationEnd) {
+            return res.status(400).json({
+                success: false,
+                error: "Thiếu thông tin thời gian tư vấn",
+            });
+        }
+        // Update MedicalCheck
+        const updatedCheck = await prisma.medicalCheck.update({
+            where: { id },
+            data: {
+                consultationStart: new Date(consultationStart),
+                consultationEnd: new Date(consultationEnd),
+            },
+            include: {
+                student: {
+                    include: {
+                        user: true,
+                        parents: {
+                            include: {
+                                parent: {
+                                    include: { user: true },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        });
+        // Lấy thông tin phụ huynh
+        const parentUsers = (updatedCheck.student.parents || [])
+            .map((sp) => sp.parent?.user)
+            .filter(Boolean);
+        // Tạo nội dung notification chi tiết
+        const studentName = updatedCheck.student.user.fullName;
+        const startStr = new Date(consultationStart).toLocaleString();
+        const endStr = new Date(consultationEnd).toLocaleString();
+        const title = `Lịch tư vấn sức khỏe cho học sinh ${studentName}`;
+        const message = `${studentName} đã có vấn đề về sức khỏe cần chú ý.\nNhà trường đã đặt lịch tư vấn sức khỏe cho học sinh từ ${startStr} đến ${endStr}.\n\nVui lòng kiểm tra chi tiết trong hệ thống hoặc liên hệ nhà trường để biết thêm thông tin.`;
+        // Log campaignId để debug
+        console.log("DEBUG campaignId:", updatedCheck.campaignId);
+        for (const parent of parentUsers) {
+            await prisma.notification.create({
+                data: {
+                    userId: parent.id,
+                    title,
+                    message,
+                    type: "medical_consultation",
+                    status: "SENT",
+                    sentAt: new Date(),
+                    medicalCheckCampaignId: updatedCheck.campaignId,
+                },
+            });
+        }
+        return res.status(200).json({ success: true, data: updatedCheck });
+    } catch (error) {
+        return handleError(error, res, "Đặt lịch tư vấn thất bại");
+    }
+};
+
 export {
     buildWhereClause,
     extractFilter,
@@ -615,4 +679,5 @@ export {
     categorizeBMI,
     categorizeVision,
     validateDate,
+    scheduleConsultation,
 };
