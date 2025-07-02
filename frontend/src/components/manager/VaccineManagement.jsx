@@ -434,6 +434,7 @@ const VaccineManagement = () => {
                 </Select>
               </Form.Item>
               {/* <Form.Item
+              <Form.Item
                 label="Liều lượng"
                 help={touched.dose && errors.dose ? errors.dose : undefined}
                 validateStatus={
