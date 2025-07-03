@@ -155,3 +155,30 @@ html,
         top: 12px !important;
     }
 }
+
+/* Xóa màu nền xanh khi focus input Antd */
+.ant-input:focus, 
+.ant-input-focused,
+.ant-input-affix-wrapper:focus, 
+.ant-input-affix-wrapper-focused {
+    background-color: #fff !important;
+    box-shadow: none !important;
+}
+
+/* Xóa nền xanh khi bôi đen (selected text) toàn bộ trang */
+::selection,
+input::selection,
+textarea::selection,
+.ant-input::selection,
+.ant-input input::selection,
+.ant-input-affix-wrapper input::selection,
+.ant-input-affix-wrapper::selection,
+.ant-input-password input::selection,
+.ant-input-password::selection,
+.ant-input input::-webkit-selection,
+.ant-input input::-moz-selection,
+input::-webkit-selection,
+input::-moz-selection {
+    background: #fff !important;
+    color: #222 !important;
+}
