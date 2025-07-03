@@ -1,4 +1,5 @@
 import styled from "styled-components";
+import { createGlobalStyle } from 'styled-components';
 
 // Container for the whole page
 export const PageContainer = styled.div`
@@ -10,216 +11,83 @@ export const PageContainer = styled.div`
   background: #f6f5f7;
 `;
 
+export const PageCenter = styled.div`
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f6f5f7;
+`;
+
 export const FormContainer = styled.div`
   background: #fff;
-  border-radius: 10px;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+  border-radius: 28px;
+  box-shadow: 0 6px 32px rgba(255,65,108,0.10), 0 0 0 4px rgba(255,75,43,0.08);
   position: relative;
   overflow: hidden;
-  width: 1200px;
-  max-width: 100%;
-  min-height: 600px;
+  width: 100%;
+  max-width: 400px;
+  min-height: 0;
   display: flex;
-  flex-direction: row;
-  @media (max-width: 768px) {
-    width: 100vw;
-    min-height: 100vh;
-    flex-direction: column;
+  flex-direction: column;
+  align-items: center;
+  padding: 44px 36px 36px 36px;
+  margin: 0 auto;
+  border: 2px solid transparent;
+  box-shadow: 0 8px 40px 0 rgba(255,65,108,0.13), 0 1.5px 8px 0 rgba(255,75,43,0.10);
+  transition: box-shadow 0.2s;
+  &:hover {
+    box-shadow: 0 12px 48px 0 rgba(255,65,108,0.18), 0 2px 12px 0 rgba(255,75,43,0.13);
+    border-color: #ff416c;
+  }
+  @media (max-width: 480px) {
+    max-width: 98vw;
+    padding: 24px 8px;
     border-radius: 0;
     box-shadow: none;
-    position: relative;
-  }
-  // hidden form sign up (chỉ giữ cho desktop)
-  &.signin-active .sign-up-container {
-    transform: translateX(0);
-    opacity: 0;
-    z-index: 1;
-  }
-  &.signin-active .sign-in-container {
-    transform: translateX(0);
-    opacity: 1;
-    z-index: 5;
-  }
-  &.signin-active .overlay-container {
-    transform: translateX(0);
-    @media (max-width: 768px) {
-      display: none;
-    }
-  }
-  &.signin-active .overlay {
-    left: -100%;
-    transform: translateX(50%);
-    @media (max-width: 768px) {
-      display: none;
-    }
-  }
-  // hidden form sign in (chỉ giữ cho desktop)
-  &.signup-active .sign-in-container {
-    transform: translateX(100%);
-    opacity: 0;
-    z-index: 1;
-  }
-  &.signup-active .sign-up-container {
-    transform: translateX(100%);
-    opacity: 1;
-    z-index: 5;
-  }
-  &.signup-active .overlay-container {
-    transform: translateX(-100%);
-    @media (max-width: 768px) {
-      display: none;
-    }
-  }
-  &.signup-active .overlay {
-    left: 0%;
-    transform: translateX(0);
-    @media (max-width: 768px) {
-      display: none;
-    }
-  }
-`;
-
-export const SignUpContainer = styled.div`
-  position: absolute;
-  top: 0;
-  height: 100%;
-  left: 0;
-  width: 50%;
-  max-width: 600px;
-  background: #fff;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  padding: 0 50px;
-  transition: all 0.5s ease-in-out;
-  @media (max-width: 768px) {
-    position: static;
-    width: 100vw;
-    max-width: 100vw;
-    height: auto;
-    padding: 24px 16px;
-    min-height: 100vh;
-    background: #fff;
-    z-index: 2;
-    box-shadow: none;
-    display: flex;
-  }
-`;
-
-export const SignInContainer = styled.div`
-  position: absolute;
-  top: 0;
-  height: 100%;
-  left: 0;
-  width: 50%;
-  max-width: 600px;
-  background: #fff;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-direction: column;
-  padding: 0 50px;
-  transition: all 0.5s ease-in-out;
-  @media (max-width: 768px) {
-    position: static;
-    width: 100vw;
-    max-width: 100vw;
-    height: auto;
-    padding: 24px 16px;
-    min-height: 100vh;
-    background: #fff;
-    z-index: 2;
-    box-shadow: none;
-    display: flex;
-  }
-`;
-
-export const OverlayContainer = styled.div`
-  position: absolute;
-  top: 0;
-  left: 50%;
-  width: 50%;
-  height: 100%;
-  overflow: hidden;
-  transition: transform 0.5s ease-in-out;
-  z-index: 100;
-  @media (max-width: 768px) {
-    display: none !important;
-  }
-`;
-
-export const Overlay = styled.div`
-  background: #ff416c;
-  background: linear-gradient(to right, #ff4b2b, #ff416c);
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: 0 0;
-  color: #ffffff;
-  position: relative;
-  height: 100%;
-  width: 200%;
-  transition: transform 0.5s ease-in-out;
-  @media (max-width: 768px) {
-    display: none !important;
-  }
-`;
-
-export const OverlayPanel = styled.div`
-  position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  padding: 0 40px;
-  text-align: center;
-  top: 0;
-  height: 100%;
-  width: 50%;
-  transform: translateX(0);
-  transition: transform 0.5s ease-in-out;
-  z-index: 101;
-  @media (max-width: 768px) {
-    display: none !important;
   }
 `;
 
 export const Form = styled.form`
-  background-color: #ffffff;
+  background-color: transparent;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 100%;
   width: 100%;
-  max-width: 520px;
+  max-width: 340px;
   text-align: center;
-  @media (max-width: 768px) {
-    max-width: 100vw;
-    padding: 0;
-  }
 `;
 
 export const Title = styled.h1`
-  font-size: 2.5vw;
+  font-size: 2.1rem;
   font-weight: bold;
-  margin: 0;
-  @media (max-width: 768px) {
-    font-size: 2rem;
-  }
+  margin: 0 0 12px 0;
+  background: linear-gradient(90deg, #ff4b2b 0%, #ff416c 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-fill-color: transparent;
+  letter-spacing: 1px;
 `;
 
 export const InputStyled = styled.input`
-  background-color: #eee;
-  border: none;
-  padding: 12px 15px;
-  margin: 8px 0;
+  background-color: #f7f7fa;
+  border: 2px solid #eee;
+  border-radius: 12px;
+  padding: 13px 16px;
+  margin: 10px 0;
   width: 100%;
   max-width: 500px;
-  color: #000;
-  @media (max-width: 768px) {
-    max-width: 100%;
-    font-size: 1rem;
+  color: #222;
+  font-size: 1rem;
+  transition: border 0.2s, box-shadow 0.2s;
+  &:focus {
+    border: 2px solid #ff416c;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(255,65,108,0.10);
   }
 `;
 
@@ -243,38 +111,55 @@ export const Button = styled.button`
   }
 `;
 
-export const GhostButton = styled(Button)`
-  background-color: transparent;
-  border-color: #ffffff;
-`;
-
-export const SocialContainer = styled.div`
-  margin: 20px 0;
-`;
-
-export const SocialButton = styled.a`
-  border: 1px solid #dddddd;
-  border-radius: 50%;
-  display: inline-flex;
-  cursor: pointer;
-  justify-content: center;
-  align-items: center;
-  margin: 0 5px;
-  height: 40px;
-  width: 40px;
-  color: #333333;
-`;
-
 export const Paragraph = styled.p`
-  font-size: 20px;
+  font-size: 1.1rem;
   font-weight: 400;
-  letter-spacing: 0.5px;
-  margin: 20px 0 10px;
+  letter-spacing: 0.2px;
+  margin: 12px 0 18px 0;
+  color: #555;
 `;
 
-export const ErrorMessage = styled.span`
-  color: red;
-  font-size: 12px;
+export const ErrorMessageDiv = styled.div`
+  color: #D8000C;
+  background: #FFD2D2;
+  border-radius: 4px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: 1rem;
+`;
+
+export const ErrorMessage = styled.p`
+  color: #D8000C;
+  background-color: #FFD2D2;
+  border: 1px solid #D8000C;
+  padding: 5px 10px;
+  border-radius: 3px;
+  font-size: 13px;
+  margin-top: 5px;
+  font-weight: bold;
+`;
+
+export const LargeButton = styled.button`
+  border-radius: 24px;
+  border: none;
+  background: linear-gradient(90deg, #ff4b2b 0%, #ff416c 100%);
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: bold;
+  padding: 16px 0;
+  width: 100%;
+  margin-top: 18px;
+  letter-spacing: 1px;
+  transition: background 0.2s, box-shadow 0.2s;
+  text-transform: uppercase;
+  box-shadow: 0 2px 12px rgba(255,65,108,0.10);
+  cursor: pointer;
+  &:hover {
+    background: linear-gradient(90deg, #ff416c 0%, #ff4b2b 100%);
+    box-shadow: 0 4px 20px rgba(255,65,108,0.18);
+    filter: brightness(1.08);
+  }
 `;
 
 export const MobileSwitchButton = styled.button`
@@ -289,5 +174,41 @@ export const MobileSwitchButton = styled.button`
     font-size: 1rem;
     cursor: pointer;
     text-decoration: underline;
+  }
+    
+`;
+
+export const FullScreenContainer = styled.div`
+  width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ff512f 0%, #dd2476 100%);
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999;
+`;
+
+export const CenteredBox = styled.div`
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+  padding: 48px 32px 32px 32px;
+  min-width: 340px;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  @media (max-width: 480px) {
+    min-width: unset;
+    max-width: 95vw;
+    padding: 24px 8px;
+    border-radius: 0;
+    box-shadow: none;
   }
 `;
