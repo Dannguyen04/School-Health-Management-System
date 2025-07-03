@@ -7,6 +7,7 @@ import {
     UserOutlined,
 } from "@ant-design/icons";
 import { publicAPI } from "../../utils/api";
+import "../nurse/blog-content-preview.css";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -170,11 +171,12 @@ const BlogDetail = () => {
                         <div className="mt-8">
                             <Title level={3}>Nội dung</Title>
                             <div
-                                className="mt-4 text-gray-800 leading-relaxed"
-                                style={{ whiteSpace: "pre-wrap" }}
-                            >
-                                {blog.content}
-                            </div>
+                                className="mt-4 text-gray-800 leading-relaxed blog-content-preview"
+                                style={{ whiteSpace: "normal" }}
+                                dangerouslySetInnerHTML={{
+                                    __html: blog.content || "",
+                                }}
+                            />
                         </div>
                     </div>
                 </Card>
