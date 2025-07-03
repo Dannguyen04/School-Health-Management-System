@@ -1,42 +1,25 @@
-import { Button, Modal, message } from "antd";
-import cn from "classnames";
-import { useEffect, useState } from "react";
+import { Button, Modal, message, Input as AntInput } from "antd";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import api from "../../utils/api";
-import { Input } from "../Input";
 import {
   Form,
   FormContainer,
-  GhostButton,
-  MobileSwitchButton,
-  Overlay,
-  OverlayContainer,
-  OverlayPanel,
-  Paragraph,
-  SignInContainer,
-  SignUpContainer,
   Title,
+  ErrorMessageDiv,
+  ErrorMessage,
+  LargeButton,
+  Paragraph,
 } from "./AuthStyles";
+import { MailOutlined, LockOutlined } from '@ant-design/icons';
 
-export const AuthTemplate = ({ isOpen, onCloseModal, signIn, setSignIn }) => {
+export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [errors, setErrors] = useState({});
   const { login, setScrollToServices } = useAuth();
   const navigate = useNavigate();
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    console.log("signIn:", signIn);
-  }, [signIn]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -79,498 +62,65 @@ export const AuthTemplate = ({ isOpen, onCloseModal, signIn, setSignIn }) => {
     }
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    setErrors({});
-    try {
-      const response = await api.post("/auth/register", {
-        name,
-        email,
-        password,
-      });
-      if (response.data.success) {
-        const { user, token } = response.data;
-        login(user, token);
-        navigate("/");
-      }
-    } catch (error) {
-      if (error.response && error.response.data && error.response.data.error) {
-        const backendError = error.response.data.error;
-        if (backendError.includes("Password must be at least 8 characters")) {
-          setErrors({ password: "Mật khẩu phải có ít nhất 8 ký tự" });
-        } else if (
-          backendError.includes("email") ||
-          backendError.includes("User already exists")
-        ) {
-          setErrors({ email: "Email đã tồn tại trong hệ thống" });
-        } else if (
-          backendError.includes("Name, email and password are required")
-        ) {
-          setErrors({
-            name: "Vui lòng nhập đầy đủ thông tin",
-            email: "Vui lòng nhập đầy đủ thông tin",
-            password: "Vui lòng nhập đầy đủ thông tin",
-          });
-        } else {
-          setErrors({ general: backendError });
-        }
-      } else {
-        setErrors({
-          general: "Đã xảy ra lỗi không mong muốn trong quá trình đăng ký.",
-        });
-      }
-    }
-  };
-
   return (
     <Modal
       open={isOpen}
       onCancel={onCloseModal}
       footer={null}
-      centered
       className="custom-modal"
       forceRender={true}
-      width={1200}
-      mask={false}  // Tắt phần backdrop màu xám
-      styles={{
-        mask: { display: 'none' },
-        body: {
-          height: 580,
-          padding: 0,
-        },
-        content: {
-          borderRadius: 10,
-        },
-        "@media (max-width: 768px)": {
-          body: {
-            height: "100vh",
-            padding: 0,
-          },
-          content: {
-            borderRadius: 0,
-            boxShadow: "none",
-            width: "100vw",
-            minHeight: "100vh",
-            margin: 0,
-          },
-        },
+      width={400}
+      centered
+      maskStyle={{ background: '#f6f5f7' }}
+      bodyStyle={{
+        padding: 0,
+        background: "transparent",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+      style={{
+        padding: 0,
       }}
     >
-      <FormContainer
-        className={isMobile
-          ? undefined
-          : cn({
-              "signin-active": signIn,
-              "signup-active": !signIn,
-            })
-        }
-      >
-        {isMobile ? (
-          signIn ? (
-            <SignInContainer className="sign-in-container">
-              {errors.general && (
-                <div
-                  style={{
-                    color: "red",
-                    marginBottom: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  {errors.general}
-                </div>
-              )}
-              <Form onSubmit={handleLogin}>
-                <Title>Đăng nhập</Title>
-                <Input
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Nhập email của bạn"
-                  required
-                />
-                <Input
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu của bạn"
-                  type="password"
-                  required
-                />
-                {errors.email && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.email}
-                  </p>
-                )}
-                {errors.password && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.password}
-                  </p>
-                )}
-                <Paragraph>Quên mật khẩu?</Paragraph>
-                <Button
-                  htmlType="submit"
-                  style={{
-                    borderRadius: "20px",
-                    border: "1px solid #ff4b2b",
-                    backgroundColor: "#ff4b2b",
-                    color: "#fff",
-                    fontSize: "15px",
-                    fontWeight: "bold",
-                    padding: "24px 47px",
-                    letterSpacing: "1px",
-                    transition: "transform 80ms ease-in",
-                    marginTop: "10px",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Đăng nhập
-                </Button>
-              </Form>
-              <MobileSwitchButton
-                onClick={() => {
-                  setSignIn(false);
-                  setErrors({});
-                }}
-              >
-                Bạn chưa có tài khoản? Đăng ký
-              </MobileSwitchButton>
-            </SignInContainer>
-          ) : (
-            <SignUpContainer className="sign-up-container">
-              {errors.general && (
-                <div
-                  style={{
-                    color: "red",
-                    marginBottom: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  {errors.general}
-                </div>
-              )}
-
-              <Form onSubmit={handleRegister}>
-                <Title>Tạo tài khoản</Title>
-                <Input
-                  placeholder="Nhập tên của bạn"
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-                {errors.name && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.name}
-                  </p>
-                )}
-                <Input
-                  placeholder="Nhập email của bạn"
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                {errors.email && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.email}
-                  </p>
-                )}
-                <Input
-                  placeholder="Nhập mật khẩu của bạn"
-                  type="password"
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                {errors.password && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.password}
-                  </p>
-                )}
-                <Button
-                  htmlType="submit"
-                  style={{
-                    borderRadius: "20px",
-                    border: "1px solid #ff4b2b",
-                    backgroundColor: "#ff4b2b",
-                    color: "#fff",
-                    fontSize: "15px",
-                    fontWeight: "bold",
-                    padding: "24px 47px",
-                    letterSpacing: "1px",
-                    transition: "transform 80ms ease-in",
-                    marginTop: "10px",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Đăng ký
-                </Button>
-              </Form>
-              <MobileSwitchButton
-                onClick={() => {
-                  setSignIn(true);
-                  setErrors({});
-                }}
-              >
-                Đã có tài khoản? Đăng nhập
-              </MobileSwitchButton>
-            </SignUpContainer>
-          )
-        ) : (
-          <>
-            <SignInContainer className="sign-in-container">
-              {errors.general && (
-                <div
-                  style={{
-                    color: "red",
-                    marginBottom: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  {errors.general}
-                </div>
-              )}
-              <Form onSubmit={handleLogin}>
-                <Title>Đăng nhập</Title>
-                <Input
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Nhập email của bạn"
-                  required
-                />
-                <Input
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Nhập mật khẩu của bạn"
-                  type="password"
-                  required
-                />
-                {errors.email && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.email}
-                  </p>
-                )}
-                {errors.password && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.password}
-                  </p>
-                )}
-                <Paragraph>Quên mật khẩu?</Paragraph>
-                <Button
-                  htmlType="submit"
-                  style={{
-                    borderRadius: "20px",
-                    border: "1px solid #ff4b2b",
-                    backgroundColor: "#ff4b2b",
-                    color: "#fff",
-                    fontSize: "15px",
-                    fontWeight: "bold",
-                    padding: "24px 47px",
-                    letterSpacing: "1px",
-                    transition: "transform 80ms ease-in",
-                    marginTop: "10px",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Đăng nhập
-                </Button>
-              </Form>
-            </SignInContainer>
-            <SignUpContainer className="sign-up-container">
-              {errors.general && (
-                <div
-                  style={{
-                    color: "red",
-                    marginBottom: "10px",
-                    textAlign: "center",
-                  }}
-                >
-                  {errors.general}
-                </div>
-              )}
-              <Form onSubmit={handleRegister}>
-                <Title>Tạo tài khoản</Title>
-                <Input
-                  placeholder="Nhập tên của bạn"
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-                {errors.name && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.name}
-                  </p>
-                )}
-                <Input
-                  placeholder="Nhập email của bạn"
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-                {errors.email && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.email}
-                  </p>
-                )}
-                <Input
-                  placeholder="Nhập mật khẩu của bạn"
-                  type="password"
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                {errors.password && (
-                  <p
-                    style={{
-                      color: "#D8000C",
-                      backgroundColor: "#FFD2D2",
-                      border: "1px solid #D8000C",
-                      padding: "5px 10px",
-                      borderRadius: "3px",
-                      fontSize: "13px",
-                      marginTop: "5px",
-                      fontWeight: "bold",
-                    }}
-                  >
-                    {errors.password}
-                  </p>
-                )}
-                <Button
-                  htmlType="submit"
-                  style={{
-                    borderRadius: "20px",
-                    border: "1px solid #ff4b2b",
-                    backgroundColor: "#ff4b2b",
-                    color: "#fff",
-                    fontSize: "15px",
-                    fontWeight: "bold",
-                    padding: "24px 47px",
-                    letterSpacing: "1px",
-                    transition: "transform 80ms ease-in",
-                    marginTop: "10px",
-                    textTransform: "uppercase",
-                  }}
-                >
-                  Đăng ký
-                </Button>
-              </Form>
-            </SignUpContainer>
-          </>
-        )}
-        <OverlayContainer className="overlay-container">
-          <Overlay className="overlay">
-            <OverlayPanel className="overlay-panel">
-              <Title>{signIn ? "Xin chào!" : "Chào mừng trở lại!"}</Title>
-              <Paragraph>
-                {signIn ? (
-                  <>
-                    Nhập thông tin cá nhân của bạn và bắt đầu <br /> hành trình
-                    với chúng tôi
-                  </>
-                ) : (
-                  <>
-                    Để kết nối với chúng tôi, vui lòng đăng nhập <br /> bằng
-                    thông tin cá nhân của bạn
-                  </>
-                )}
-              </Paragraph>
-              <GhostButton
-                onClick={() => {
-                  setSignIn(!signIn);
-                  setErrors({});
-                }}
-                className="!mt-20"
-              >
-                {signIn ? "Đăng ký" : "Đăng nhập"}
-              </GhostButton>
-            </OverlayPanel>
-          </Overlay>
-        </OverlayContainer>
+      <FormContainer style={{ minHeight: 0, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+        <Form onSubmit={handleLogin}>
+          <Title>Đăng nhập</Title>
+          <Paragraph>Chào mừng bạn quay lại! Vui lòng đăng nhập để tiếp tục.</Paragraph>
+          {errors.general && (
+            <ErrorMessageDiv>
+              {errors.general}
+            </ErrorMessageDiv>
+          )}
+          <AntInput
+            size="large"
+            prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="Nhập email của bạn"
+            type="email"
+            style={{ marginBottom: 16 }}
+            required
+          />
+          <AntInput.Password
+            size="large"
+            prefix={<LockOutlined style={{ color: '#bfbfbf' }} />}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Nhập mật khẩu của bạn"
+            style={{ marginBottom: 8 }}
+            required
+          />
+          {errors.email && (
+            <ErrorMessage>
+              {errors.email}
+            </ErrorMessage>
+          )}
+          {errors.password && (
+            <ErrorMessage>
+              {errors.password}
+            </ErrorMessage>
+          )}
+          <LargeButton htmlType="submit">Đăng nhập</LargeButton>
+        </Form>
       </FormContainer>
     </Modal>
   );
