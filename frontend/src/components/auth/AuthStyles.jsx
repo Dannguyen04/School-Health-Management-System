@@ -2,14 +2,13 @@ import styled from "styled-components";
 
 // Container for the whole page
 export const PageContainer = styled.div`
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   background: #f6f5f7;
 `;
-
 export const FormContainer = styled.div`
   background: #fff;
   border-radius: 10px;
@@ -290,4 +289,5 @@ export const MobileSwitchButton = styled.button`
     cursor: pointer;
     text-decoration: underline;
   }
+    
 `;

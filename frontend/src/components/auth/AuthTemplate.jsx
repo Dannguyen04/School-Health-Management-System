@@ -19,8 +19,7 @@ import {
   Title,
 } from "./AuthStyles";
 
-export const AuthTemplate = ({ isOpen, onCloseModal }) => {
-  const [signIn, setSignIn] = useState(true);
+export const AuthTemplate = ({ isOpen, onCloseModal, signIn, setSignIn }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -34,6 +33,10 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    console.log("signIn:", signIn);
+  }, [signIn]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -128,7 +131,9 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       className="custom-modal"
       forceRender={true}
       width={1200}
+      mask={false}  // Tắt phần backdrop màu xám
       styles={{
+        mask: { display: 'none' },
         body: {
           height: 580,
           padding: 0,
@@ -152,10 +157,13 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       }}
     >
       <FormContainer
-        className={cn({
-          "signin-active": signIn,
-          "signup-active": !signIn,
-        })}
+        className={isMobile
+          ? undefined
+          : cn({
+              "signin-active": signIn,
+              "signup-active": !signIn,
+            })
+        }
       >
         {isMobile ? (
           signIn ? (
