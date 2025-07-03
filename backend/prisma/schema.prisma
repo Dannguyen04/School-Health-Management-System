@@ -407,7 +407,6 @@ model vaccinations {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   name             String
   requirement      VaccineRequirement
-  expiredDate      DateTime
   administeredDate DateTime?
   dose             DoseType?
   sideEffects      String?
