@@ -22,10 +22,25 @@ const createVaccinationCampaign = async (req, res) => {
             });
         }
 
+        const start = new Date(scheduledDate);
+        if (start < new Date().setHours(0, 0, 0, 0)) {
+            return res.status(400).json({
+                success: false,
+                error: "Ngày bắt đầu phải ít nhất kể từ hôm nay",
+            });
+        }
+        const end = new Date(deadline);
+        if (end - start < 7 * 24 * 60 * 60 * 1000) {
+            return res.status(400).json({
+                success: false,
+                error: "Deadline phải cách ngày bắt đầu ít nhất 1 tuần.",
+            });
+        }
+
         if (!Array.isArray(targetGrades) || targetGrades.length === 0) {
             return res.status(400).json({
                 success: false,
-                error: "targetGrades phải là array không rỗng",
+                error: "phải có ít nhất một lớp cho chiến dịch",
             });
         }
 
