@@ -16,7 +16,7 @@ import VaccinationRoutes from "./routes/VaccinationRoutes.js";
 import ManagerStudentRoutes from "./routes/ManagerStudentRoutes.js";
 import MedicalCheckRoutes from "./routes/MedicalCheckRoutes.js";
 import MedicalCampaignRoutes from "./routes/MedicalCamapaignRoutes.js";
-import ReportMedicalChecknRoutes from "./routes/ReportMedicalCheckRoutes.js";
+import ReportMedicalCheckRoutes from "./routes/ReportMedicalCheckRoutes.js";
 import UploadRoutes from "./routes/UploadRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -65,7 +65,7 @@ app.use("/api/notifications", NotificationRoutes);
 app.use("/api/medical-checks", MedicalCheckRoutes);
 app.use("/api/medical-campaigns", MedicalCampaignRoutes);
 app.use("/api/blogs", BlogRoutes);
-app.use("/api/report-medical-check", ReportMedicalChecknRoutes);
+app.use("/api/report-medical-check", ReportMedicalCheckRoutes);
 app.use("/api/upload", UploadRoutes);
 
 // 404 handler
