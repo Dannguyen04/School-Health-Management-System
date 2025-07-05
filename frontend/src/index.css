@@ -182,3 +182,91 @@ input::-moz-selection {
     background: #fff !important;
     color: #222 !important;
 }
+
+/* Custom Select Dropdown Styles */
+.custom-select .ant-select-selector {
+    border-radius: 12px !important;
+    border: 2px solid #e5e7eb !important;
+    background: linear-gradient(135deg, #f8fffe 0%, #e8f5f2 100%) !important;
+    transition: all 0.3s ease !important;
+}
+
+.custom-select:hover .ant-select-selector {
+    border-color: #36ae9a !important;
+    box-shadow: 0 4px 12px rgba(54, 174, 154, 0.15) !important;
+}
+
+.custom-select.ant-select-focused .ant-select-selector {
+    border-color: #36ae9a !important;
+    box-shadow: 0 0 0 2px rgba(54, 174, 154, 0.2) !important;
+}
+
+.custom-select .ant-select-selection-item {
+    font-weight: 500 !important;
+    color: #374151 !important;
+}
+
+/* Dropdown Options Styling */
+.ant-select-dropdown {
+    border-radius: 12px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid #e5e7eb !important;
+}
+
+.ant-select-item {
+    border-radius: 8px !important;
+    margin: 4px 8px !important;
+    transition: all 0.2s ease !important;
+}
+
+.ant-select-item:hover {
+    background: linear-gradient(135deg, #f0fdfa 0%, #e0f2f1 100%) !important;
+    transform: translateX(4px) !important;
+}
+
+.ant-select-item-option-selected {
+    background: linear-gradient(135deg, #36ae9a 0%, #2a8a7a 100%) !important;
+    color: white !important;
+}
+
+.ant-select-item-option-selected:hover {
+    background: linear-gradient(135deg, #2a8a7a 0%, #1f6b5e 100%) !important;
+}
+
+/* Student Info Card Enhancements */
+.student-info-card {
+    background: linear-gradient(135deg, #36ae9a 0%, #2a8a7a 100%) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.student-info-card::before {
+    content: '' !important;
+    position: absolute !important;
+    top: -50% !important;
+    right: -50% !important;
+    width: 200% !important;
+    height: 200% !important;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%) !important;
+    animation: float 6s ease-in-out infinite !important;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0px) rotate(0deg); }
+    50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+/* Glass morphism effect for student info badges */
+.glass-badge {
+    background: rgba(255, 255, 255, 0.2) !important;
+    -webkit-backdrop-filter: blur(10px) !important;
+    backdrop-filter: blur(10px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.glass-badge:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
