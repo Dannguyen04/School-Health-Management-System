@@ -418,6 +418,9 @@ model vaccinations {
   followUpRequired Boolean            @default(false)
   followUpDate     DateTime?
   reaction         String?
+  manufacturer     String  
+  origin           String  
+  referenceUrl     String? 
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
@@ -460,6 +463,9 @@ model VaccinationRecord {
   status           VaccinationStatus @default(COMPLETED)
   followUpRequired Boolean           @default(false)
   followUpDate     DateTime?         
+  manufacturer     String?  // Nhà sản xuất vaccine
+  origin           String?  // Nguồn gốc vaccine
+  referenceUrl     String?  // Đường dẫn tham khảo thông tin vaccine
 
   campaignId String   @db.ObjectId
   studentId  String   @db.ObjectId
@@ -525,6 +531,7 @@ model MedicalCheck {
   dentalLowerJaw       String     // Kết quả khám hàm dưới
   clinicalNotes        String     // Ghi chú các bệnh lý từ khám lâm sàng (nhi khoa, tuần hoàn, hô hấp, tiêu hóa, thận-tiết niệu, thần kinh, tâm thần, mắt, tai mũi họng, răng hàm mặt)
 
+ 
   // Kết Luận Chung
   overallHealth        OverallHealthStatus  // Sức khỏe bình thường hoặc các vấn đề cần lưu ý
   recommendations      String?     // Khuyến nghị cho phụ huynh
@@ -534,9 +541,6 @@ model MedicalCheck {
 
   parentNotified       Boolean     @default(false)
   parentResponse       String?     // Phản hồi của phụ huynh
-
-  consultationStart    DateTime?
-  consultationEnd      DateTime?
 
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt

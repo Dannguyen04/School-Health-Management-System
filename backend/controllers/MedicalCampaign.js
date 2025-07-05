@@ -13,6 +13,12 @@ export const createMedicalCampaign = async (req, res) => {
     }
     // Kiểm tra deadline phải cách scheduledDate ít nhất 1 tuần
     const start = new Date(scheduledDate);
+    if (start < new Date().getDate()) {
+        return res.status(400).json({
+            success: false,
+            error: "Ngày bắt đầu phải ít nhất kể từ hôm nay",
+        });
+    }
     const end = new Date(deadline);
     if (end - start < 7 * 24 * 60 * 60 * 1000) {
         return res.status(400).json({

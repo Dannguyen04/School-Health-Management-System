@@ -172,7 +172,10 @@ const HealthReports = () => {
           NEEDS_ATTENTION: { text: "Cần chú ý", color: "orange" },
           REQUIRES_TREATMENT: { text: "Cần điều trị", color: "red" },
         };
-        const status = statusMap[health] || { text: health, color: "default" };
+        const status = statusMap[health] || {
+          text: health,
+          color: "default",
+        };
         return (
           <span style={{ color: status.color, fontWeight: "bold" }}>
             {status.text}

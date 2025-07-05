@@ -20,12 +20,21 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.json());
 
 const createVaccination = async (req, res) => {
-    const { name, requirement, dose, sideEffects, notes } = req.body;
+    const {
+        name,
+        requirement,
+        dose,
+        sideEffects,
+        notes,
+        manufacturer,
+        origin,
+        referenceUrl,
+    } = req.body;
 
-    if (!name || !requirement) {
-        return res.status(404).json({
+    if (!name || !requirement || !manufacturer || !origin) {
+        return res.status(400).json({
             success: false,
-            error: "Thiếu trường dữ liệu cần thiết",
+            error: "Thiếu trường dữ liệu cần thiết: tên, yêu cầu, nhà sản xuất, nguồn gốc",
         });
     }
 
@@ -47,6 +56,9 @@ const createVaccination = async (req, res) => {
                 dose,
                 sideEffects,
                 notes,
+                manufacturer,
+                origin,
+                referenceUrl,
             },
         });
 
@@ -193,7 +205,16 @@ const getVaccinations = async (req, res) => {
 
 const updateVaccination = async (req, res) => {
     const { id } = req.params;
-    const { name, requirement, dose, sideEffects, notes } = req.body;
+    const {
+        name,
+        requirement,
+        dose,
+        sideEffects,
+        notes,
+        manufacturer,
+        origin,
+        referenceUrl,
+    } = req.body;
     try {
         const existedVaccination = await prisma.vaccinations.findUnique({
             where: { id },
@@ -202,6 +223,14 @@ const updateVaccination = async (req, res) => {
             return res.status(404).json({
                 success: false,
                 error: "Không tìm thấy loại vaccine để cập nhật",
+            });
+        }
+
+        // Validate required fields
+        if (!name || !requirement || !manufacturer || !origin) {
+            return res.status(400).json({
+                success: false,
+                error: "Thiếu trường dữ liệu cần thiết: tên, yêu cầu, nhà sản xuất, nguồn gốc",
             });
         }
 
@@ -224,6 +253,9 @@ const updateVaccination = async (req, res) => {
                 dose,
                 sideEffects,
                 notes,
+                manufacturer,
+                origin,
+                referenceUrl,
             },
         });
 
