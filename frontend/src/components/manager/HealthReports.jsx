@@ -43,7 +43,7 @@ const HealthReports = () => {
       if (params.reportType) queryParams.append("status", params.reportType);
 
       const response = await axios.get(
-        `/api/report-medical-check-campaign/overview?${queryParams.toString()}`,
+        `/api/report-medical-check/overview?${queryParams.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -77,7 +77,7 @@ const HealthReports = () => {
       if (params.class) queryParams.append("class", params.class);
 
       const response = await axios.get(
-        `/api/report-medical-check-campaign/attention-summary?${queryParams.toString()}`,
+        `/api/report-medical-check/attention-summary?${queryParams.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
@@ -112,7 +112,7 @@ const HealthReports = () => {
       queryParams.append("limit", "50");
 
       const response = await axios.get(
-        `/api/report-medical-check-campaign/students-needing-attention?${queryParams.toString()}`,
+        `/api/report-medical-check/students-needing-attention?${queryParams.toString()}`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }

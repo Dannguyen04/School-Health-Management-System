@@ -7,17 +7,17 @@ import connectToDatabase from "./db/db.js";
 import AdminRoutes from "./routes/AdminRoutes.js";
 import authRouter from "./routes/auth.js";
 import BlogRoutes from "./routes/BlogRoutes.js";
+import ManagerStudentRoutes from "./routes/ManagerStudentRoutes.js";
+import MedicalCampaignRoutes from "./routes/MedicalCamapaignRoutes.js";
+import MedicalCheckRoutes from "./routes/MedicalCheckRoutes.js";
 import NotificationRoutes from "./routes/NotificationRoutes.js";
 import NurseRoutes from "./routes/NurseRoutes.js";
 import parentRoutes from "./routes/parentRoutes.js";
+import ReportMedicalCheckRoutes from "./routes/ReportMedicalCheckRoutes.js";
+import UploadRoutes from "./routes/UploadRoutes.js";
 import UserRoutes from "./routes/UserRoutes.js";
 import VaccinationCampaignRoutes from "./routes/VaccinationCampaignRoutes.js";
 import VaccinationRoutes from "./routes/VaccinationRoutes.js";
-import ManagerStudentRoutes from "./routes/ManagerStudentRoutes.js";
-import MedicalCheckRoutes from "./routes/MedicalCheckRoutes.js";
-import MedicalCampaignRoutes from "./routes/MedicalCamapaignRoutes.js";
-import ReportMedicalChecknRoutes from "./routes/ReportMedicalCheckRoutes.js";
-import UploadRoutes from "./routes/UploadRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,24 +28,22 @@ const app = express();
 
 // Log tất cả request để debug
 app.use((req, res, next) => {
-    console.log(
-        `[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`
-    );
-    next();
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
+  next();
 });
 
 // Connect to database
 connectToDatabase();
 
 app.use(
-    cors({
-        origin: [
-            "http://localhost:5173",
-            "https://school-health-oqsssvh2x-dannguyen04s-projects.vercel.app",
-            "https://school-health-delta.vercel.app",
-        ],
-        credentials: true,
-    })
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://school-health-oqsssvh2x-dannguyen04s-projects.vercel.app",
+      "https://school-health-delta.vercel.app",
+    ],
+    credentials: true,
+  })
 );
 app.use(express.json());
 
@@ -65,21 +63,21 @@ app.use("/api/notifications", NotificationRoutes);
 app.use("/api/medical-checks", MedicalCheckRoutes);
 app.use("/api/medical-campaigns", MedicalCampaignRoutes);
 app.use("/api/blogs", BlogRoutes);
-app.use("/api/report-medical-check", ReportMedicalChecknRoutes);
+app.use("/api/report-medical-check", ReportMedicalCheckRoutes);
 app.use("/api/upload", UploadRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {
-    res.status(404).json({ message: "Not Found" });
+  res.status(404).json({ message: "Not Found" });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-    console.error(err.stack);
-    res.status(500).json({ error: "Something went wrong" });
+  console.error(err.stack);
+  res.status(500).json({ error: "Something went wrong" });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-    console.log(`🚀 Server is running on PORT ${PORT}`);
+  console.log(`🚀 Server is running on PORT ${PORT}`);
 });
