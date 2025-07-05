@@ -13,39 +13,18 @@ const Footer = () => {
     }
   };
 
+  const handleParentNav = (path) => {
+    navigate(`/user/${path}`);
+  };
+
   return (
     <div className=" bg-[#36ae9a] text-white rounded-t-3xl mt-8 md:mt-0">
       <div className="flex flex-col md:flex-row justify-between p-8 md:px-32 px-5">
         <div className=" w-full md:w-1/4">
-          <h1 className=" font-semibold text-xl pb-4">Sức Khỏe Học Đường</h1>
+          <h1 className=" font-semibold text-xl pb-4">Hệ thống Quản lý Y tế Học đường</h1>
           <p className=" text-sm">
-            Đội ngũ bác sĩ tận tâm của chúng tôi, mỗi người đều chuyên sâu trong
-            các lĩnh vực như chỉnh hình, tim mạch, nhi khoa, thần kinh, da liễu
-            và nhiều chuyên ngành khác.
+            Kết nối nhà trường, phụ huynh và y tế để chăm sóc sức khỏe học sinh toàn diện.
           </p>
-        </div>
-        <div>
-          <h1 className=" font-medium text-xl pb-4 pt-5 md:pt-0">Giới thiệu</h1>
-          <nav className=" flex flex-col gap-2">
-            <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("about")}
-            >
-              Về chúng tôi
-            </span>
-            <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("services")}
-            >
-              Dịch vụ
-            </span>
-            <span
-              className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("doctors")}
-            >
-              Đội ngũ bác sĩ
-            </span>
-          </nav>
         </div>
         <div>
           <h1 className=" font-medium text-xl pb-4 pt-5 md:pt-0">Dịch vụ</h1>
@@ -54,28 +33,45 @@ const Footer = () => {
               className=" hover:text-[#FFC000] transition-all cursor-pointer"
               onClick={() => handleNav("services")}
             >
-              Lịch tiêm & khám
+              Dịch vụ y tế
             </span>
             <span
               className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("services")}
+              onClick={() => handleNav("doctors")}
             >
-              Hồ sơ sức khỏe
+              
+            </span>
+          </nav>
+        </div>
+        <div>
+          <h1 className=" font-medium text-xl pb-4 pt-5 md:pt-0">Dành cho phụ huynh</h1>
+          <nav className=" flex flex-col gap-2">
+            <span
+              className=" hover:text-[#FFC000] transition-all cursor-pointer"
+              onClick={() => handleParentNav("health-profile")}
+            >
+              Hồ sơ sức khỏe con
             </span>
             <span
               className=" hover:text-[#FFC000] transition-all cursor-pointer"
-              onClick={() => handleNav("services")}
+              onClick={() => handleParentNav("vaccination-history")}
             >
-              Gửi thuốc
+              Lịch sử tiêm chủng
+            </span>
+            <span
+              className=" hover:text-[#FFC000] transition-all cursor-pointer"
+              onClick={() => handleParentNav("health-checkup-results")}
+            >
+              Kết quả kiểm tra sức khỏe
             </span>
           </nav>
         </div>
         <div className=" w-full md:w-1/4">
           <h1 className=" font-medium text-xl pb-4 pt-5 md:pt-0">Liên hệ</h1>
           <nav className=" flex flex-col gap-2">
-            <span>Trường THCS/THPT ABC, Quận XYZ, TP. HCM</span>
-            <span>hotro@suckhoehocduong.vn</span>
-            <span>0123-456-789</span>
+            <span className="text-sm">Trường THCS ABC, Quận XYZ, TP.HCM</span>
+            <span className="text-sm">Email: phongyte@abc.edu.vn</span>
+            <span className="text-sm">ĐT: 0123 456 789</span>
           </nav>
         </div>
       </div>
