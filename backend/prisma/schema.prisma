@@ -245,17 +245,28 @@ model StudentParent {
 model HealthProfile {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   studentId        String   @unique @db.ObjectId
-  allergies        String[] // Array of allergy descriptions
-  chronicDiseases  String[] // Array of chronic diseases
-  medications      String[] // Current medications
-  treatmentHistory String? // Medical treatment history
-  vision           String? // Vision status
-  hearing          String? // Hearing status
-  height           Float? // Height in cm
-  weight           Float? // Weight in kg
-  notes            String? // Additional health notes
+  
+  // Basic health indicators
+  vision           String? // Vision status (e.g., "10/10", "8/10")
+  hearing          String? // Hearing status (e.g., "Bình thường", "Kém")
+  height           Float?  // Height in cm
+  weight           Float?  // Weight in kg
+  
+  // Allergies - stored as JSON array for structured data
+  allergies        Json[]  // Array of allergy objects with type, name, level, symptoms
+  
+  // Chronic diseases - stored as JSON array for structured data  
+  chronicDiseases  Json[]  // Array of disease objects with group, name, onsetDate, level, status, medications, doctor, notes
+  
+  // Additional information
+  medications      String[] // Current medications (legacy field)
+  treatmentHistory String?  // Medical treatment history
+  notes            String?  // Additional health notes
+  
+  // Metadata
+  lastUpdatedBy    String?  @db.ObjectId // ID of user who last updated
+  lastUpdatedAt    DateTime @updatedAt
   createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
 
   student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
