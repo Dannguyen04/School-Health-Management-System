@@ -155,7 +155,7 @@ model Student {
   medicalChecks       MedicalCheck[]
   medications         StudentMedication[]
   vaccinationConsents VaccinationConsent[]
-  vaccinations        vaccinations[]
+  vaccinations        Vaccine[]
   medicationAdministrationLogs MedicationAdministrationLog[] 
   vaccinationRecords  VaccinationRecord[] // Thêm trường đối ứng cho VaccinationRecord
 
@@ -193,7 +193,7 @@ model SchoolNurse {
   // Relations
   handledEvents MedicalEvent[]
   medicalChecks MedicalCheck[]
-  vaccinations  vaccinations[]
+  vaccinations  Vaccine[]
   medicationAdministrationLogs MedicationAdministrationLog[] 
   vaccinationRecords  VaccinationRecord[] // Thêm trường đối ứng cho VaccinationRecord
 
@@ -386,7 +386,7 @@ model VaccinationCampaign {
   name          String
   description   String?
   vaccinationId String         @unique @db.ObjectId
-  vaccinations       vaccinations   @relation(fields: [vaccinationId], references: [id])
+  vaccination   Vaccine        @relation(fields: [vaccinationId], references: [id])
   targetGrades  String[]
   scheduledDate DateTime
   deadline      DateTime
@@ -403,7 +403,7 @@ model VaccinationCampaign {
   @@map("vaccination_campaigns")
 }
 
-model vaccinations {
+model Vaccine {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   name             String
   requirement      VaccineRequirement
@@ -427,7 +427,7 @@ model vaccinations {
   // Relations
   student   Student?      @relation(fields: [studentId], references: [id])
   nurse     SchoolNurse?  @relation(fields: [nurseId], references: [id])
-  campaign  VaccinationCampaign?
+  campaigns VaccinationCampaign[]
 
   @@map("vaccinations")
 }
