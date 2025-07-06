@@ -348,7 +348,7 @@ model VaccinationCampaign {
   name          String
   description   String?
   vaccinationId String         @unique @db.ObjectId
-  vaccination   Vaccine        @relation(fields: [vaccinationId], references: [id])
+  vaccine       Vaccine        @relation(fields: [vaccinationId], references: [id])
   targetGrades  String[]
   scheduledDate DateTime
   deadline      DateTime

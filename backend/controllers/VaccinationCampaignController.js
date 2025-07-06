@@ -67,7 +67,7 @@ const createVaccinationCampaign = async (req, res) => {
                 deadline: new Date(deadline),
             },
             include: {
-                vaccinations: true,
+                vaccine: true,
             },
         });
 
@@ -127,7 +127,7 @@ const getAllVaccinationCampaigns = async (req, res) => {
                 createdAt: "desc",
             },
             include: {
-                vaccinations: true,
+                vaccine: true,
             },
         });
         res.status(200).json({
@@ -151,7 +151,7 @@ const getVaccinationCampaignById = async (req, res) => {
         const campaign = await prisma.vaccinationCampaign.findUnique({
             where: { id },
             include: {
-                vaccinations: true,
+                vaccine: true,
             },
         });
         if (!campaign) {
@@ -517,7 +517,7 @@ const submitVaccinationConsent = async (req, res) => {
         const campaign = await prisma.vaccinationCampaign.findUnique({
             where: { id: campaignId },
             include: {
-                vaccinations: true,
+                vaccine: true,
             },
         });
 
@@ -616,7 +616,7 @@ const getCampaignConsents = async (req, res) => {
         const campaign = await prisma.vaccinationCampaign.findUnique({
             where: { id },
             include: {
-                vaccinations: true, // Lấy loại vaccine từ bảng vaccinations (model mới)
+                vaccine: true, // Lấy loại vaccine từ bảng Vaccine (model mới)
             },
         });
 
@@ -654,7 +654,7 @@ const getCampaignConsents = async (req, res) => {
                     id: campaign.id,
                     name: campaign.name,
                     description: campaign.description,
-                    vaccinations: campaign.vaccinations, // Trả về loại vaccine
+                    vaccine: campaign.vaccine, // Trả về loại vaccine
                     scheduledDate: campaign.scheduledDate,
                     deadline: campaign.deadline,
                     targetGrades: campaign.targetGrades,
