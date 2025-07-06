@@ -288,44 +288,25 @@ model MedicalEvent {
   nurse     SchoolNurse? @relation(fields: [nurseId], references: [id])
   createdBy users        @relation("EventCreator", fields: [createdById], references: [id])
 
-  // Relations
-  medicationsUsed MedicalEventMedication[]
-  documents       MedicalDocument[]
+
 
   @@map("medical_events")
 }
 
-// Medications Management
-model Medication {
-  id            String    @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  description   String?
-  dosage        String
-  unit          String // "tablet", "ml", "mg", etc.
-  manufacturer  String?
-  expiryDate    DateTime?
-  stockQuantity Int       @default(0)
-  minStockLevel Int       @default(10)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
 
-  // Relations
-  studentMedications      StudentMedication[]
-  medicalEventMedications MedicalEventMedication[]
-  stockMovements          StockMovement[]
-  medicationAdministrationLogs MedicationAdministrationLog[] 
-
-
-  @@map("medications")
-}
 
 model StudentMedication {
   id           String @id @default(auto()) @map("_id") @db.ObjectId
   studentId    String @db.ObjectId
   parentId     String @db.ObjectId
-  medicationId String @db.ObjectId
 
+  // Thông tin thuốc (thay vì tham chiếu đến Medication)
+  name         String
+  description  String?
   dosage       String
+  unit         String // "tablet", "ml", "mg", etc.
+  manufacturer String?
+  
   frequency    String // "daily", "twice daily", "as needed", etc.
   duration     String? // How long to take
   instructions String? // Special instructions
@@ -341,44 +322,14 @@ model StudentMedication {
 
   student    Student    @relation(fields: [studentId], references: [id])
   parent     Parent     @relation(fields: [parentId], references: [id])
-  medication Medication @relation(fields: [medicationId], references: [id])
   medicationAdministrationLogs MedicationAdministrationLog[] 
 
   @@map("student_medications")
 }
 
-model MedicalEventMedication {
-  id             String @id @default(auto()) @map("_id") @db.ObjectId
-  medicalEventId String @db.ObjectId
-  medicationId   String @db.ObjectId
 
-  quantityUsed   Int
-  dosageGiven    String
-  administeredAt DateTime
-  notes          String?
 
-  medicalEvent MedicalEvent @relation(fields: [medicalEventId], references: [id])
-  medication   Medication   @relation(fields: [medicationId], references: [id])
 
-  @@map("medical_event_medications")
-}
-
-// Stock Management
-model StockMovement {
-  id           String @id @default(auto()) @map("_id") @db.ObjectId
-  medicationId String @db.ObjectId
-
-  type      String // "in", "out", "expired", "damaged"
-  quantity  Int
-  reason    String?
-  reference String? // Reference to purchase order, usage record, etc.
-
-  createdAt DateTime @default(now())
-
-  medication Medication @relation(fields: [medicationId], references: [id])
-
-  @@map("stock_movements")
-}
 
 // Vaccination Management
 model VaccinationCampaign {
@@ -552,24 +503,7 @@ model MedicalCheck {
   @@map("medical_checks")
 }
 
-// Document Management
-model MedicalDocument {
-  id             String  @id @default(auto()) @map("_id") @db.ObjectId
-  medicalEventId String? @db.ObjectId
 
-  title       String
-  description String?
-  fileName    String
-  filePath    String
-  fileSize    Int
-  mimeType    String
-
-  createdAt DateTime @default(now())
-
-  medicalEvent MedicalEvent? @relation(fields: [medicalEventId], references: [id])
-
-  @@map("medical_documents")
-}
 
 // Blog & Content Management
 model Post {
@@ -638,33 +572,12 @@ model AuditLog {
   @@map("audit_logs")
 }
 
-// School Information
-model SchoolInfo {
-  id          String  @id @default(auto()) @map("_id") @db.ObjectId
-  name        String
-  address     String
-  phone       String?
-  email       String?
-  website     String?
-  logo        String?
-  description String?
 
-  // Health department info
-  healthDeptHead  String?
-  healthDeptPhone String?
-  healthDeptEmail String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("school_info")
-}
 
 model MedicationAdministrationLog {
   id                  String   @id @default(auto()) @map("_id") @db.ObjectId
   studentMedicationId String   @db.ObjectId
   studentId           String   @db.ObjectId
-  medicationId        String   @db.ObjectId
   nurseId             String   @db.ObjectId
   givenAt             DateTime @default(now())
   dosageGiven         String
@@ -672,7 +585,6 @@ model MedicationAdministrationLog {
 
   studentMedication   StudentMedication @relation(fields: [studentMedicationId], references: [id])
   student             Student           @relation(fields: [studentId], references: [id])
-  medication          Medication        @relation(fields: [medicationId], references: [id])
   nurse               SchoolNurse       @relation(fields: [nurseId], references: [id])
 
   @@map("medication_administration_logs")
