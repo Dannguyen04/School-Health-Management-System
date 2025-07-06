@@ -1,6 +1,5 @@
 import {
   DeleteOutlined,
-  EditOutlined,
   EyeOutlined,
   ReloadOutlined,
   SearchOutlined,
@@ -16,11 +15,9 @@ import {
   Empty,
   Form,
   Input,
-  InputNumber,
   Modal,
   Popconfirm,
   Row,
-  Select,
   Space,
   Spin,
   Table,
@@ -31,8 +28,6 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 
 const { Title, Text } = Typography;
-const { TextArea } = Input;
-const { Option } = Select;
 
 const StudentHealthProfile = () => {
   const [loading, setLoading] = useState(true);
@@ -40,8 +35,6 @@ const StudentHealthProfile = () => {
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [form] = Form.useForm();
   const [error, setError] = useState(null);
   const [healthChecks, setHealthChecks] = useState([]);
   const [loadingChecks, setLoadingChecks] = useState(false);
@@ -89,44 +82,6 @@ const StudentHealthProfile = () => {
   const handleViewProfile = (student) => {
     setSelectedStudent(student);
     setIsProfileModalVisible(true);
-  };
-
-  const handleEditProfile = (student) => {
-    setSelectedStudent(student);
-    form.setFieldsValue({
-      allergies: student.healthProfile?.allergies || [],
-      chronicDiseases: student.healthProfile?.chronicDiseases || [],
-      medications: student.healthProfile?.medications || [],
-      treatmentHistory: student.healthProfile?.treatmentHistory || "",
-      vision: student.healthProfile?.vision || "",
-      hearing: student.healthProfile?.hearing || "",
-      height: student.healthProfile?.height || null,
-      weight: student.healthProfile?.weight || null,
-      notes: student.healthProfile?.notes || "",
-    });
-    setIsEditModalVisible(true);
-  };
-
-  const handleSaveProfile = async (values) => {
-    try {
-      console.log("Saving health profile:", values);
-
-      // Update local state
-      const updatedStudents = students.map((student) =>
-        student.id === selectedStudent.id
-          ? {
-              ...student,
-              healthProfile: { ...student.healthProfile, ...values },
-            }
-          : student
-      );
-      setStudents(updatedStudents);
-
-      setIsEditModalVisible(false);
-      setSelectedStudent(null);
-    } catch (err) {
-      console.error("Error saving health profile:", err);
-    }
   };
 
   // Xóa học sinh
@@ -246,11 +201,6 @@ const StudentHealthProfile = () => {
             icon={<EyeOutlined />}
             onClick={() => handleViewProfile(record)}
           ></Button>
-          <Button
-            size="small"
-            icon={<EditOutlined />}
-            onClick={() => handleEditProfile(record)}
-          ></Button>
           <Popconfirm
             title="Xóa học sinh"
             description="Bạn có chắc chắn muốn xóa học sinh này?"
@@ -295,7 +245,11 @@ const StudentHealthProfile = () => {
                 {profile.allergies && profile.allergies.length > 0 ? (
                   profile.allergies.map((allergy, idx) => (
                     <Tag color="red" key={idx} style={{ marginBottom: 4 }}>
-                      {allergy}
+                      {typeof allergy === "string"
+                        ? allergy
+                        : allergy.name ||
+                          allergy.type ||
+                          "Dị ứng không xác định"}
                     </Tag>
                   ))
                 ) : (
@@ -307,7 +261,9 @@ const StudentHealthProfile = () => {
                 profile.chronicDiseases.length > 0 ? (
                   profile.chronicDiseases.map((disease, idx) => (
                     <Tag color="orange" key={idx} style={{ marginBottom: 4 }}>
-                      {disease}
+                      {typeof disease === "string"
+                        ? disease
+                        : disease.name || disease.type || "Bệnh không xác định"}
                     </Tag>
                   ))
                 ) : (
@@ -318,7 +274,9 @@ const StudentHealthProfile = () => {
                 {profile.medications && profile.medications.length > 0 ? (
                   profile.medications.map((med, idx) => (
                     <Tag color="blue" key={idx} style={{ marginBottom: 4 }}>
-                      {med}
+                      {typeof med === "string"
+                        ? med
+                        : med.name || med.type || "Thuốc không xác định"}
                     </Tag>
                   ))
                 ) : (
@@ -352,21 +310,6 @@ const StudentHealthProfile = () => {
           </Col>
         </Row>
         <Row gutter={24}>
-          <Col xs={24} md={12}>
-            <Descriptions
-              title={<span style={{ fontWeight: 600 }}>Tiền sử điều trị</span>}
-              column={1}
-              size="middle"
-              labelStyle={{ fontWeight: 500, minWidth: 120 }}
-              contentStyle={{ fontSize: 16 }}
-            >
-              <Descriptions.Item label="">
-                {profile.treatmentHistory || (
-                  <Text type="secondary">Không có tiền sử điều trị</Text>
-                )}
-              </Descriptions.Item>
-            </Descriptions>
-          </Col>
           <Col xs={24} md={12}>
             {profile.notes && (
               <Descriptions
@@ -423,7 +366,7 @@ const StudentHealthProfile = () => {
             Hồ sơ sức khỏe học sinh
           </Title>
           <Text type="secondary">
-            Quản lý và theo dõi thông tin sức khỏe của học sinh
+            Xem và theo dõi thông tin sức khỏe của học sinh
           </Text>
         </div>
         <Button
@@ -511,16 +454,6 @@ const StudentHealthProfile = () => {
           setSelectedStudent(null);
         }}
         footer={[
-          <Button
-            key="edit"
-            type="primary"
-            onClick={() => {
-              setIsProfileModalVisible(false);
-              handleEditProfile(selectedStudent);
-            }}
-          >
-            Cập nhật
-          </Button>,
           <Button
             key="close"
             onClick={() => {
@@ -616,108 +549,6 @@ const StudentHealthProfile = () => {
             </Card>
           </div>
         )}
-      </Modal>
-
-      {/* Edit Profile Modal */}
-      <Modal
-        title="Cập nhật hồ sơ sức khỏe"
-        open={isEditModalVisible}
-        onCancel={() => {
-          setIsEditModalVisible(false);
-          setSelectedStudent(null);
-        }}
-        footer={null}
-        width={800}
-      >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSaveProfile}
-          className="space-y-4"
-        >
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="allergies" label="Dị ứng">
-                <Select mode="tags" placeholder="Nhập các dị ứng" allowClear />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="chronicDiseases" label="Bệnh mãn tính">
-                <Select
-                  mode="tags"
-                  placeholder="Nhập các bệnh mãn tính"
-                  allowClear
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="medications" label="Thuốc đang sử dụng">
-            <Select
-              mode="tags"
-              placeholder="Nhập các thuốc đang sử dụng"
-              allowClear
-            />
-          </Form.Item>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="height" label="Chiều cao (cm)">
-                <InputNumber
-                  min={0}
-                  max={300}
-                  placeholder="Nhập chiều cao"
-                  className="w-full"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="weight" label="Cân nặng (kg)">
-                <InputNumber
-                  min={0}
-                  max={500}
-                  placeholder="Nhập cân nặng"
-                  className="w-full"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="vision" label="Thị lực">
-                <Input placeholder="Ví dụ: 10/10, Cận thị -2.5 độ" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="hearing" label="Thính lực">
-                <Input placeholder="Ví dụ: Bình thường, Khiếm thính" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Form.Item name="treatmentHistory" label="Tiền sử điều trị">
-            <TextArea rows={3} placeholder="Nhập tiền sử điều trị y tế" />
-          </Form.Item>
-
-          <Form.Item name="notes" label="Ghi chú">
-            <TextArea rows={3} placeholder="Nhập các ghi chú về sức khỏe" />
-          </Form.Item>
-
-          <div className="flex justify-end space-x-2">
-            <Button
-              onClick={() => {
-                setIsEditModalVisible(false);
-                setSelectedStudent(null);
-              }}
-            >
-              Hủy
-            </Button>
-            <Button type="primary" htmlType="submit">
-              Lưu thay đổi
-            </Button>
-          </div>
-        </Form>
       </Modal>
 
       {/* Modal chi tiết kiểm tra sức khỏe */}

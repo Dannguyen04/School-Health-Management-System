@@ -20,6 +20,7 @@ import {
   message,
   Modal,
   Progress,
+  Radio,
   Select,
   Space,
   Spin,
@@ -232,6 +233,14 @@ const MedicineInfo = () => {
     twice: "2 lần/ngày",
     three: "3 lần/ngày",
     four: "4 lần/ngày",
+  };
+
+  // Helper: map frequency to number of times
+  const frequencyToTimes = {
+    once: 1,
+    twice: 2,
+    three: 3,
+    "6h": 4,
   };
 
   // Calculate statistics
@@ -701,7 +710,7 @@ const MedicineInfo = () => {
                   &larr;
                 </Button>
                 <b>Thông tin cơ bản</b>
-                <Tooltip title="Nhập thông tin trẻ và thuốc">
+                <Tooltip title="Nhập thông tin thuốc">
                   <span style={{ marginLeft: 8, color: "#888" }}>?</span>
                 </Tooltip>
                 <div style={{ flex: 1 }} />
@@ -715,31 +724,34 @@ const MedicineInfo = () => {
                 strokeColor="#36ae9a"
                 style={{ marginBottom: 16 }}
               />
+              {/* Hiển thị thông tin học sinh đã chọn */}
+              {children && selectedStudent && (
+                <div
+                  style={{
+                    background: "#f6fcfa",
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 16,
+                    fontWeight: 500,
+                    color: "#36ae9a",
+                    display: "flex",
+                    alignItems: "center",
+                  }}
+                >
+                  <UserOutlined style={{ marginRight: 8 }} />
+                  {(() => {
+                    const student = children.find(
+                      (c) => c.studentId === selectedStudent
+                    );
+                    return student
+                      ? `Gửi thuốc cho: ${student.fullName} - Lớp ${
+                          student.className || student.class || "?"
+                        }`
+                      : "Chưa chọn học sinh";
+                  })()}
+                </div>
+              )}
               <Form layout="vertical">
-                <Form.Item label="Tên trẻ *">
-                  <Input
-                    value={multiStepData.studentName}
-                    onChange={(e) =>
-                      setMultiStepData((d) => ({
-                        ...d,
-                        studentName: e.target.value,
-                      }))
-                    }
-                    placeholder="Nhập tên trẻ"
-                  />
-                </Form.Item>
-                <Form.Item label="Lớp *">
-                  <Input
-                    value={multiStepData.className}
-                    onChange={(e) =>
-                      setMultiStepData((d) => ({
-                        ...d,
-                        className: e.target.value,
-                      }))
-                    }
-                    placeholder="Nhập lớp"
-                  />
-                </Form.Item>
                 <Form.Item label="Tên thuốc *">
                   <Input
                     value={multiStepData.medicationName}
@@ -791,8 +803,6 @@ const MedicineInfo = () => {
                   onClick={() => setCurrentStep(2)}
                   disabled={
                     !(
-                      multiStepData.studentName &&
-                      multiStepData.className &&
                       multiStepData.medicationName &&
                       multiStepData.medicationType
                     )
@@ -836,85 +846,164 @@ const MedicineInfo = () => {
                 style={{ marginBottom: 16 }}
               />
               <Form layout="vertical">
+                {/* Liều lượng & Đơn vị trên 1 dòng */}
                 <Form.Item label="Liều lượng *">
-                  <Input
-                    value={multiStepData.dosage}
-                    onChange={(e) =>
+                  <Space>
+                    <Input
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={multiStepData.dosage}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^\d.]/g, "");
+                        setMultiStepData((d) => ({ ...d, dosage: val }));
+                      }}
+                      placeholder="Nhập liều lượng (vd: 250)"
+                      style={{ width: 120 }}
+                    />
+                    <Select
+                      value={multiStepData.unit}
+                      onChange={(v) =>
+                        setMultiStepData((d) => ({ ...d, unit: v }))
+                      }
+                      placeholder="Đơn vị"
+                      style={{ width: 100 }}
+                    >
+                      <Select.Option value="mg">mg</Select.Option>
+                      <Select.Option value="ml">ml</Select.Option>
+                      <Select.Option value="vien">viên</Select.Option>
+                      <Select.Option value="khac">Khác</Select.Option>
+                    </Select>
+                  </Space>
+                </Form.Item>
+                {/* Tần suất sử dụng */}
+                <Form.Item label="Tần suất sử dụng *">
+                  <Radio.Group
+                    value={multiStepData.frequency}
+                    onChange={(e) => {
+                      const freq = e.target.value;
+                      let newTimes = multiStepData.customTimes || [];
+                      if (freq !== "custom" && freq !== "as-needed") {
+                        const n = frequencyToTimes[freq] || 1;
+                        newTimes = Array(n)
+                          .fill("")
+                          .map((_, i) => newTimes[i] || "");
+                      } else if (freq === "as-needed") {
+                        newTimes = [];
+                      }
                       setMultiStepData((d) => ({
                         ...d,
-                        dosage: e.target.value,
-                      }))
-                    }
-                    placeholder="Nhập liều lượng (vd: 250)"
-                  />
-                </Form.Item>
-                <Form.Item label="Đơn vị *">
-                  <Select
-                    value={multiStepData.unit}
-                    onChange={(v) =>
-                      setMultiStepData((d) => ({ ...d, unit: v }))
-                    }
-                    placeholder="Chọn đơn vị"
+                        frequency: freq,
+                        customTimes: newTimes,
+                      }));
+                    }}
                   >
-                    <Select.Option value="mg">mg</Select.Option>
-                    <Select.Option value="ml">ml</Select.Option>
-                    <Select.Option value="vien">viên</Select.Option>
-                    <Select.Option value="khac">Khác</Select.Option>
-                  </Select>
+                    <Space direction="vertical">
+                      <Radio value="once">Ngày 1 lần</Radio>
+                      <Radio value="twice">Ngày 2 lần</Radio>
+                      <Radio value="three">Ngày 3 lần</Radio>
+                      <Radio value="6h">Mỗi 6 tiếng 1 lần</Radio>
+                      <Radio value="as-needed">Khi cần thiết</Radio>
+                      <Radio value="custom">Tùy chỉnh...</Radio>
+                    </Space>
+                  </Radio.Group>
                 </Form.Item>
-                <Form.Item label="Tần suất sử dụng *">
-                  <Select
-                    value={multiStepData.frequency}
-                    onChange={(v) =>
-                      setMultiStepData((d) => ({ ...d, frequency: v }))
+                {/* Giờ uống cụ thể: bắt buộc với mọi tần suất trừ 'Khi cần thiết' */}
+                {multiStepData.frequency !== "as-needed" && (
+                  <Form.Item
+                    label="Giờ uống cụ thể *"
+                    required
+                    validateStatus={
+                      (multiStepData.customTimes || []).some((t) => !t)
+                        ? "error"
+                        : undefined
                     }
-                    placeholder="Chọn tần suất"
+                    help={
+                      (multiStepData.customTimes || []).some((t) => !t)
+                        ? "Vui lòng nhập đủ giờ uống cho từng lần"
+                        : undefined
+                    }
                   >
-                    <Select.Option value="once">Ngày 1 lần</Select.Option>
-                    <Select.Option value="twice">Ngày 2 lần</Select.Option>
-                    <Select.Option value="three">Ngày 3 lần</Select.Option>
-                    <Select.Option value="6h">Mỗi 6 tiếng 1 lần</Select.Option>
-                    <Select.Option value="as-needed">
-                      Khi cần thiết
-                    </Select.Option>
-                    <Select.Option value="custom">Tùy chỉnh...</Select.Option>
-                  </Select>
-                </Form.Item>
-                {multiStepData.frequency === "custom" && (
-                  <Form.Item label="Giờ uống cụ thể">
-                    {/* Custom time picker, có thể dùng TimePicker hoặc Input */}
-                    <Input
-                      value={multiStepData.customTimes.join(", ")}
-                      onChange={(e) =>
-                        setMultiStepData((d) => ({
-                          ...d,
-                          customTimes: e.target.value
-                            .split(",")
-                            .map((s) => s.trim()),
-                        }))
-                      }
-                      placeholder="Nhập các giờ, cách nhau bởi dấu phẩy (vd: 08:00, 14:00, 20:00)"
-                    />
+                    <Space direction="vertical" style={{ width: "100%" }}>
+                      {(multiStepData.customTimes || []).map((time, idx) => (
+                        <Space key={idx}>
+                          <Input
+                            type="time"
+                            value={time}
+                            onChange={(e) => {
+                              const newTimes = [...multiStepData.customTimes];
+                              newTimes[idx] = e.target.value;
+                              setMultiStepData((d) => ({
+                                ...d,
+                                customTimes: newTimes,
+                              }));
+                            }}
+                            style={{ width: 120 }}
+                          />
+                          {multiStepData.frequency === "custom" && (
+                            <Button
+                              size="small"
+                              danger
+                              onClick={() => {
+                                const newTimes = [...multiStepData.customTimes];
+                                newTimes.splice(idx, 1);
+                                setMultiStepData((d) => ({
+                                  ...d,
+                                  customTimes: newTimes,
+                                }));
+                              }}
+                            >
+                              Xóa
+                            </Button>
+                          )}
+                        </Space>
+                      ))}
+                      {multiStepData.frequency === "custom" && (
+                        <Button
+                          type="dashed"
+                          icon={<PlusOutlined />}
+                          onClick={() =>
+                            setMultiStepData((d) => ({
+                              ...d,
+                              customTimes: [...(d.customTimes || []), ""],
+                            }))
+                          }
+                          style={{ width: 120 }}
+                        >
+                          Thêm lần uống
+                        </Button>
+                      )}
+                    </Space>
                   </Form.Item>
                 )}
+                {/* Thời gian sử dụng */}
                 <Form.Item label="Thời gian sử dụng *">
-                  <Space>
-                    <DatePicker
-                      placeholder="Từ ngày"
-                      value={multiStepData.startDate}
-                      onChange={(date) =>
-                        setMultiStepData((d) => ({ ...d, startDate: date }))
-                      }
-                    />
-                    <span>-</span>
-                    <DatePicker
-                      placeholder="Đến ngày"
-                      value={multiStepData.endDate}
-                      onChange={(date) =>
-                        setMultiStepData((d) => ({ ...d, endDate: date }))
-                      }
-                    />
-                  </Space>
+                  <DatePicker.RangePicker
+                    value={
+                      multiStepData.startDate && multiStepData.endDate
+                        ? [multiStepData.startDate, multiStepData.endDate]
+                        : []
+                    }
+                    onChange={(dates) => {
+                      setMultiStepData((d) => ({
+                        ...d,
+                        startDate: dates && dates[0] ? dates[0] : null,
+                        endDate: dates && dates[1] ? dates[1] : null,
+                      }));
+                    }}
+                    style={{ width: "100%" }}
+                    format="DD/MM/YYYY"
+                  />
+                  {multiStepData.startDate && multiStepData.endDate && (
+                    <div style={{ marginTop: 8, color: "#888" }}>
+                      (
+                      {multiStepData.endDate.diff(
+                        multiStepData.startDate,
+                        "day"
+                      ) + 1}{" "}
+                      ngày)
+                    </div>
+                  )}
                 </Form.Item>
                 <Button
                   type="primary"
@@ -926,7 +1015,10 @@ const MedicineInfo = () => {
                       multiStepData.unit &&
                       multiStepData.frequency &&
                       multiStepData.startDate &&
-                      multiStepData.endDate
+                      multiStepData.endDate &&
+                      (multiStepData.frequency === "as-needed" ||
+                        ((multiStepData.customTimes || []).length > 0 &&
+                          (multiStepData.customTimes || []).every((t) => !!t)))
                     )
                   }
                 >
@@ -991,6 +1083,32 @@ const MedicineInfo = () => {
                     <Select.Option value="other">Khác</Select.Option>
                   </Select>
                 </Form.Item>
+                {/* Nếu chọn Khác, hiển thị ô nhập chi tiết */}
+                {multiStepData.usageNote === "other" && (
+                  <Form.Item
+                    label="Nhập cách sử dụng cụ thể *"
+                    required
+                    validateStatus={
+                      multiStepData.usageNoteDetail ? undefined : "error"
+                    }
+                    help={
+                      multiStepData.usageNoteDetail
+                        ? undefined
+                        : "Vui lòng nhập cách sử dụng cụ thể"
+                    }
+                  >
+                    <Input
+                      value={multiStepData.usageNoteDetail || ""}
+                      onChange={(e) =>
+                        setMultiStepData((d) => ({
+                          ...d,
+                          usageNoteDetail: e.target.value,
+                        }))
+                      }
+                      placeholder="Nhập cách sử dụng cụ thể"
+                    />
+                  </Form.Item>
+                )}
                 <Form.Item label="Hướng dẫn chi tiết">
                   <TextArea
                     value={multiStepData.instructions}
@@ -1022,6 +1140,33 @@ const MedicineInfo = () => {
                     }
                   />
                 </Form.Item>
+                {/* Nếu tick Khác, hiển thị ô nhập chi tiết */}
+                {multiStepData.importantNotes &&
+                  multiStepData.importantNotes.includes("other") && (
+                    <Form.Item
+                      label="Nhập lưu ý quan trọng khác *"
+                      required
+                      validateStatus={
+                        multiStepData.importantNotesDetail ? undefined : "error"
+                      }
+                      help={
+                        multiStepData.importantNotesDetail
+                          ? undefined
+                          : "Vui lòng nhập lưu ý quan trọng khác"
+                      }
+                    >
+                      <Input
+                        value={multiStepData.importantNotesDetail || ""}
+                        onChange={(e) =>
+                          setMultiStepData((d) => ({
+                            ...d,
+                            importantNotesDetail: e.target.value,
+                          }))
+                        }
+                        placeholder="Nhập lưu ý quan trọng khác"
+                      />
+                    </Form.Item>
+                  )}
                 <Form.Item label="SĐT phụ huynh *">
                   <Input
                     value={multiStepData.emergencyContact}
@@ -1039,7 +1184,15 @@ const MedicineInfo = () => {
                   block
                   onClick={() => setCurrentStep(4)}
                   disabled={
-                    !(multiStepData.usageNote && multiStepData.emergencyContact)
+                    !(
+                      multiStepData.usageNote &&
+                      multiStepData.emergencyContact &&
+                      (multiStepData.usageNote !== "other" ||
+                        !!multiStepData.usageNoteDetail) &&
+                      (!multiStepData.importantNotes ||
+                        !multiStepData.importantNotes.includes("other") ||
+                        !!multiStepData.importantNotesDetail)
+                    )
                   }
                 >
                   Tiếp theo →

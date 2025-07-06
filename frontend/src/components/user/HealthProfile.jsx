@@ -23,18 +23,21 @@ import {
   Row,
   Select,
   Spin,
+  Steps,
   Switch,
   Tag,
   Typography,
 } from "antd";
 import axios from "axios";
-import { Formik } from "formik";
+import dayjs from "dayjs";
+import { FieldArray, Formik } from "formik";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import * as Yup from "yup";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
+const { Step } = Steps;
 
 const validationSchema = Yup.object().shape({
   hasAllergy: Yup.boolean(),
@@ -62,13 +65,14 @@ const validationSchema = Yup.object().shape({
           onsetDate: Yup.string().required("Chọn thời gian mắc"),
           level: Yup.string().required("Chọn mức độ"),
           status: Yup.string().required("Chọn tình trạng hiện tại"),
-          medications: Yup.string(),
           doctor: Yup.string(),
+          hospital: Yup.string(),
           notes: Yup.string(),
         })
       ),
     otherwise: (schema) => schema,
   }),
+  medications: Yup.array().of(Yup.string().required("Nhập tên thuốc")),
   vision: Yup.string(),
   hearing: Yup.string(),
   height: Yup.number().nullable(),
@@ -83,6 +87,10 @@ const HealthProfile = () => {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [healthProfile, setHealthProfile] = useState(null);
   const location = useLocation();
+  const [currentStep, setCurrentStep] = useState(0);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [draftData, setDraftData] = useState(null);
+  const [lastSaved, setLastSaved] = useState(null);
 
   useEffect(() => {
     fetchChildren();
@@ -153,10 +161,25 @@ const HealthProfile = () => {
 
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
+      // Transform dayjs objects to strings for backend
+      const transformChronicDiseases = (diseases) => {
+        return diseases.map((disease) => ({
+          ...disease,
+          onsetDate: disease.onsetDate
+            ? typeof disease.onsetDate === "object"
+              ? disease.onsetDate.format("YYYY-MM-DD")
+              : disease.onsetDate
+            : dayjs().format("YYYY-MM-DD"),
+        }));
+      };
+
       const transformedValues = {
         ...values,
         allergies: values.hasAllergy ? values.allergies : [],
-        chronicDiseases: values.hasDisease ? values.chronicDiseases : [],
+        chronicDiseases: values.hasDisease
+          ? transformChronicDiseases(values.chronicDiseases)
+          : [],
+        medications: values.medications.filter((med) => med.trim() !== ""),
         vision: values.vision === "" ? null : values.vision,
         hearing: values.hearing === "" ? null : values.hearing,
         height:
@@ -169,7 +192,7 @@ const HealthProfile = () => {
             : parseFloat(values.weight),
       };
       const token = localStorage.getItem("token");
-      const response = await axios.post(
+      await axios.post(
         `/api/parents/health-profile/${selectedStudent}`,
         transformedValues,
         {
@@ -180,6 +203,7 @@ const HealthProfile = () => {
       setIsEditModalVisible(false);
       setShowSuccess(true);
       fetchHealthProfile();
+      clearDraft(); // Clear draft after successful submission
     } catch (error) {
       message.error(
         error.response?.data?.error || "Có lỗi xảy ra khi cập nhật hồ sơ"
@@ -189,20 +213,36 @@ const HealthProfile = () => {
     }
   };
 
-  const getInitialValues = () => ({
-    hasAllergy:
-      Array.isArray(healthProfile?.allergies) &&
-      healthProfile.allergies.length > 0,
-    allergies: healthProfile?.allergies || [],
-    hasDisease:
-      Array.isArray(healthProfile?.chronicDiseases) &&
-      healthProfile.chronicDiseases.length > 0,
-    chronicDiseases: healthProfile?.chronicDiseases || [],
-    vision: healthProfile?.vision || "",
-    hearing: healthProfile?.hearing || "",
-    height: healthProfile?.height || null,
-    weight: healthProfile?.weight || null,
-  });
+  const getInitialValues = () => {
+    // Transform date strings to dayjs objects for DatePicker
+    const transformChronicDiseases = (diseases) => {
+      if (!Array.isArray(diseases)) return [];
+      return diseases.map((disease) => ({
+        ...disease,
+        onsetDate: disease.onsetDate
+          ? typeof disease.onsetDate === "string"
+            ? dayjs(disease.onsetDate)
+            : disease.onsetDate
+          : dayjs(),
+      }));
+    };
+
+    return {
+      hasAllergy:
+        Array.isArray(healthProfile?.allergies) &&
+        healthProfile.allergies.length > 0,
+      allergies: healthProfile?.allergies || [],
+      hasDisease:
+        Array.isArray(healthProfile?.chronicDiseases) &&
+        healthProfile.chronicDiseases.length > 0,
+      chronicDiseases: transformChronicDiseases(healthProfile?.chronicDiseases),
+      medications: healthProfile?.medications || [],
+      vision: healthProfile?.vision || "",
+      hearing: healthProfile?.hearing || "",
+      height: healthProfile?.height || null,
+      weight: healthProfile?.weight || null,
+    };
+  };
 
   // Calculate BMI if height and weight are available
   const calculateBMI = () => {
@@ -223,6 +263,87 @@ const HealthProfile = () => {
 
   const bmi = calculateBMI();
   const bmiCategory = bmi ? getBMICategory(parseFloat(bmi)) : null;
+
+  // Auto-save draft function
+  const saveDraft = (data) => {
+    try {
+      const draft = {
+        data: data,
+        timestamp: new Date().toISOString(),
+        studentId: selectedStudent,
+      };
+      localStorage.setItem(
+        `healthProfile_draft_${selectedStudent}`,
+        JSON.stringify(draft)
+      );
+      setLastSaved(new Date());
+      setHasChanges(false);
+      message.success("Đã lưu nháp tự động", 1);
+    } catch (error) {
+      console.error("Error saving draft:", error);
+    }
+  };
+
+  // Load draft function
+  const loadDraft = () => {
+    try {
+      const savedDraft = localStorage.getItem(
+        `healthProfile_draft_${selectedStudent}`
+      );
+      if (savedDraft) {
+        const draft = JSON.parse(savedDraft);
+        setDraftData(draft);
+        return draft.data;
+      }
+    } catch (error) {
+      console.error("Error loading draft:", error);
+    }
+    return null;
+  };
+
+  // Clear draft function
+  const clearDraft = () => {
+    localStorage.removeItem(`healthProfile_draft_${selectedStudent}`);
+    setDraftData(null);
+    setLastSaved(null);
+  };
+
+  // Auto-save effect
+  useEffect(() => {
+    if (hasChanges && selectedStudent) {
+      const interval = setInterval(() => {
+        // Get current form data from Formik context
+        const currentFormData = {
+          hasAllergy: false,
+          allergies: [],
+          hasDisease: false,
+          chronicDiseases: [],
+          vision: "",
+          hearing: "",
+          height: null,
+          weight: null,
+        };
+        saveDraft(currentFormData);
+      }, 30000); // 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [hasChanges, selectedStudent]);
+
+  // Load draft when student changes
+  useEffect(() => {
+    if (selectedStudent) {
+      const draft = loadDraft();
+      if (draft) {
+        setDraftData(draft);
+      }
+    }
+  }, [selectedStudent]);
+
+  // Track form changes
+  const handleFormChange = () => {
+    setHasChanges(true);
+  };
 
   if (loading) {
     return (
@@ -462,15 +583,46 @@ const HealthProfile = () => {
                         {healthProfile.allergies &&
                         healthProfile.allergies.length > 0 ? (
                           <div className="space-y-3">
-                            <div className="flex flex-wrap gap-2">
+                            <div className="space-y-3">
                               {healthProfile.allergies.map((allergy, index) => (
-                                <Tag
+                                <div
                                   key={index}
-                                  color="red"
-                                  className="text-sm px-3 py-1 border-2 border-red-300 bg-red-100 text-red-700 font-medium"
+                                  className="bg-white p-4 rounded-lg border border-red-200"
                                 >
-                                  ⚠️ {allergy}
-                                </Tag>
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <Tag color="red" className="text-xs">
+                                      {allergy.type === "food"
+                                        ? "🍽️ Thực phẩm"
+                                        : allergy.type === "medicine"
+                                        ? "💊 Thuốc"
+                                        : allergy.type === "environment"
+                                        ? "🌍 Môi trường"
+                                        : "❓ Khác"}
+                                    </Tag>
+                                    <Tag
+                                      color={
+                                        allergy.level === "severe"
+                                          ? "red"
+                                          : allergy.level === "moderate"
+                                          ? "orange"
+                                          : "green"
+                                      }
+                                      className="text-xs"
+                                    >
+                                      {allergy.level === "severe"
+                                        ? "Nặng"
+                                        : allergy.level === "moderate"
+                                        ? "Trung bình"
+                                        : "Nhẹ"}
+                                    </Tag>
+                                  </div>
+                                  <div className="font-medium text-red-700 mb-1">
+                                    {allergy.name}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    Triệu chứng: {allergy.symptoms}
+                                  </div>
+                                </div>
                               ))}
                             </div>
                             <div className="mt-4 p-3 bg-red-100 rounded-lg border border-red-200">
@@ -512,16 +664,80 @@ const HealthProfile = () => {
                         {healthProfile.chronicDiseases &&
                         healthProfile.chronicDiseases.length > 0 ? (
                           <div className="space-y-3">
-                            <div className="flex flex-wrap gap-2">
+                            <div className="space-y-3">
                               {healthProfile.chronicDiseases.map(
                                 (disease, index) => (
-                                  <Tag
+                                  <div
                                     key={index}
-                                    color="orange"
-                                    className="text-sm px-3 py-1 border-2 border-orange-300 bg-orange-100 text-orange-700 font-medium"
+                                    className="bg-white p-4 rounded-lg border border-orange-200"
                                   >
-                                    🏥 {disease}
-                                  </Tag>
+                                    <div className="flex items-center gap-2 mb-2">
+                                      <Tag color="orange" className="text-xs">
+                                        {disease.group === "tim-mach"
+                                          ? "❤️ Tim mạch"
+                                          : disease.group === "ho-hap"
+                                          ? "🫁 Hô hấp"
+                                          : disease.group === "tieu-duong"
+                                          ? "🩸 Tiểu đường"
+                                          : disease.group === "than-kinh"
+                                          ? "🧠 Thần kinh"
+                                          : "🏥 Khác"}
+                                      </Tag>
+                                      <Tag
+                                        color={
+                                          disease.level === "severe"
+                                            ? "red"
+                                            : disease.level === "moderate"
+                                            ? "orange"
+                                            : "green"
+                                        }
+                                        className="text-xs"
+                                      >
+                                        {disease.level === "severe"
+                                          ? "Nặng"
+                                          : disease.level === "moderate"
+                                          ? "Trung bình"
+                                          : "Nhẹ"}
+                                      </Tag>
+                                      <Tag
+                                        color={
+                                          disease.status === "stable"
+                                            ? "green"
+                                            : disease.status === "treating"
+                                            ? "blue"
+                                            : "orange"
+                                        }
+                                        className="text-xs"
+                                      >
+                                        {disease.status === "stable"
+                                          ? "Ổn định"
+                                          : disease.status === "treating"
+                                          ? "Đang điều trị"
+                                          : "Tái phát"}
+                                      </Tag>
+                                    </div>
+                                    <div className="font-medium text-orange-700 mb-1">
+                                      {disease.name}
+                                    </div>
+                                    <div className="text-sm text-gray-600 space-y-1">
+                                      <div>
+                                        Mắc từ:{" "}
+                                        {dayjs(disease.onsetDate).format(
+                                          "DD/MM/YYYY"
+                                        )}
+                                      </div>
+
+                                      {disease.doctor && (
+                                        <div>Bác sĩ: {disease.doctor}</div>
+                                      )}
+                                      {disease.hospital && (
+                                        <div>Nơi khám: {disease.hospital}</div>
+                                      )}
+                                      {disease.notes && (
+                                        <div>Ghi chú: {disease.notes}</div>
+                                      )}
+                                    </div>
+                                  </div>
                                 )
                               )}
                             </div>
@@ -636,7 +852,43 @@ const HealthProfile = () => {
 
       {/* Edit Modal */}
       <Modal
-        title="Cập nhật hồ sơ sức khỏe"
+        title={
+          <div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <Steps current={currentStep} size="small" style={{ flex: 1 }}>
+                <Step title="Thông tin cơ bản" />
+                <Step title="Dị ứng & Bệnh nền" />
+                <Step title="Chỉ số sức khỏe" />
+                <Step title="Xác nhận" />
+              </Steps>
+              {draftData && (
+                <Button
+                  type="link"
+                  size="small"
+                  onClick={() => {
+                    // Restore draft data
+                    message.info("Đã khôi phục dữ liệu nháp");
+                    clearDraft();
+                  }}
+                  style={{ marginLeft: 16 }}
+                >
+                  Khôi phục nháp
+                </Button>
+              )}
+            </div>
+            {lastSaved && (
+              <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
+                Lần lưu cuối: {lastSaved.toLocaleTimeString()}
+              </div>
+            )}
+          </div>
+        }
         open={isEditModalVisible}
         onCancel={() => setIsEditModalVisible(false)}
         footer={null}
@@ -650,462 +902,845 @@ const HealthProfile = () => {
         >
           {({
             values,
-            errors,
-            touched,
             handleChange,
             handleBlur,
             handleSubmit,
-            setFieldValue,
             isSubmitting,
-          }) => (
-            <Form layout="vertical" onFinish={handleSubmit}>
-              <Title level={4}>Thông tin cơ bản</Title>
-              <Row gutter={24}>
-                <Col xs={24} md={12}>
-                  <Form.Item label="Có dị ứng không?">
-                    <Switch
-                      checked={values.hasAllergy}
-                      onChange={(checked) =>
-                        setFieldValue("hasAllergy", checked)
-                      }
-                    />
-                  </Form.Item>
-                  {values.hasAllergy && (
-                    <Form.List name="allergies">
-                      {(fields, { add, remove }) => (
-                        <>
-                          {fields.map(({ key, name, ...restField }) => (
-                            <Card
-                              key={key}
-                              className="mb-4"
-                              size="small"
-                              bordered
-                              style={{
-                                background: "#f6ffed",
-                                borderColor: "#b7eb8f",
-                                position: "relative",
-                                boxShadow: "0 2px 8px #f0f1f2",
-                                paddingTop: 24,
-                                paddingBottom: 16,
-                                marginBottom: 24,
-                              }}
-                            >
-                              <div
+            setFieldValue,
+            validateForm,
+          }) => {
+            return (
+              <Form layout="vertical" onFinish={handleSubmit}>
+                {/* Step 0: Thông tin cơ bản */}
+                {currentStep === 0 && (
+                  <div>
+                    <Title level={4} style={{ marginBottom: 16 }}>
+                      Thông tin cơ bản
+                    </Title>
+                    <Row gutter={24}>
+                      <Col xs={24} md={12}>
+                        <Form.Item label="Thị lực">
+                          <Input
+                            name="vision"
+                            onChange={(e) => {
+                              handleChange(e);
+                              handleFormChange();
+                            }}
+                            onBlur={handleBlur}
+                            value={values.vision}
+                            placeholder="VD: 10/10"
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <Form.Item label="Thính lực">
+                          <Input
+                            name="hearing"
+                            onChange={(e) => {
+                              handleChange(e);
+                              handleFormChange();
+                            }}
+                            onBlur={handleBlur}
+                            value={values.hearing}
+                            placeholder="VD: Bình thường"
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <Row gutter={24}>
+                      <Col xs={24} md={12}>
+                        <Form.Item label="Chiều cao (cm)">
+                          <Input
+                            name="height"
+                            type="number"
+                            onChange={(e) => {
+                              handleChange(e);
+                              handleFormChange();
+                            }}
+                            onBlur={handleBlur}
+                            value={values.height}
+                            placeholder="VD: 150"
+                          />
+                        </Form.Item>
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <Form.Item label="Cân nặng (kg)">
+                          <Input
+                            name="weight"
+                            type="number"
+                            onChange={(e) => {
+                              handleChange(e);
+                              handleFormChange();
+                            }}
+                            onBlur={handleBlur}
+                            value={values.weight}
+                            placeholder="VD: 45"
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                    <div style={{ textAlign: "right", marginTop: 24 }}>
+                      <Button
+                        type="primary"
+                        onClick={async () => {
+                          await validateForm();
+                          setCurrentStep(1);
+                        }}
+                      >
+                        Tiếp theo →
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 1: Dị ứng & Bệnh nền */}
+                {currentStep === 1 && (
+                  <div>
+                    <Title level={4} style={{ marginBottom: 16 }}>
+                      Dị ứng & Bệnh nền
+                    </Title>
+
+                    {/* Medications Section */}
+                    <div style={{ marginBottom: 24 }}>
+                      <Title level={5} style={{ marginBottom: 16 }}>
+                        Thuốc đang sử dụng
+                      </Title>
+                      <FieldArray name="medications">
+                        {({ push, remove }) => (
+                          <>
+                            {values.medications.map((medication, index) => (
+                              <Card
+                                key={index}
+                                className="mb-4"
+                                size="small"
+                                bordered
                                 style={{
-                                  position: "absolute",
-                                  top: 8,
-                                  right: 8,
+                                  background: "#f0f8ff",
+                                  borderColor: "#91d5ff",
+                                  position: "relative",
+                                  boxShadow: "0 2px 8px #f0f1f2",
+                                  paddingTop: 24,
+                                  paddingBottom: 16,
+                                  marginBottom: 16,
                                 }}
                               >
-                                <Button
-                                  danger
-                                  type="text"
-                                  icon={<DeleteOutlined />}
-                                  onClick={() => remove(name)}
-                                />
-                              </div>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  marginBottom: 12,
-                                }}
-                              >
-                                <ExclamationCircleOutlined
+                                <div
                                   style={{
-                                    color: "#52c41a",
-                                    fontSize: 20,
-                                    marginRight: 8,
+                                    position: "absolute",
+                                    top: 8,
+                                    right: 8,
                                   }}
-                                />
-                                <span
-                                  style={{ fontWeight: 600, color: "#389e0d" }}
                                 >
-                                  Dị ứng #{key + 1}
-                                </span>
-                              </div>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "type"]}
-                                label={<b>Loại</b>}
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "Chọn loại dị ứng",
-                                  },
-                                ]}
+                                  <Button
+                                    danger
+                                    type="text"
+                                    icon={<DeleteOutlined />}
+                                    onClick={() => {
+                                      remove(index);
+                                      handleFormChange();
+                                    }}
+                                  />
+                                </div>
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    marginBottom: 12,
+                                  }}
+                                >
+                                  <MedicineBoxOutlined
+                                    style={{
+                                      color: "#1890ff",
+                                      fontSize: 20,
+                                      marginRight: 8,
+                                    }}
+                                  />
+                                  <span
+                                    style={{
+                                      fontWeight: 600,
+                                      color: "#096dd9",
+                                    }}
+                                  >
+                                    Thuốc #{index + 1}
+                                  </span>
+                                </div>
+                                <Form.Item label={<b>Tên thuốc</b>} required>
+                                  <Input
+                                    name={`medications[${index}]`}
+                                    value={medication}
+                                    onChange={handleChange}
+                                    placeholder="Tên thuốc đang sử dụng"
+                                  />
+                                </Form.Item>
+                              </Card>
+                            ))}
+                            <div style={{ textAlign: "center", marginTop: 16 }}>
+                              <Button
+                                type="dashed"
+                                onClick={() => {
+                                  push("");
+                                  handleFormChange();
+                                }}
+                                icon={<PlusOutlined />}
+                                style={{
+                                  color: "#096dd9",
+                                  borderColor: "#91d5ff",
+                                  width: 200,
+                                }}
                               >
-                                <Select placeholder="Ví dụ: Thực phẩm, Thuốc, ...">
-                                  <Select.Option value="food">
-                                    Thực phẩm
-                                  </Select.Option>
-                                  <Select.Option value="medicine">
-                                    Thuốc
-                                  </Select.Option>
-                                  <Select.Option value="environment">
-                                    Môi trường
-                                  </Select.Option>
-                                  <Select.Option value="other">
-                                    Khác
-                                  </Select.Option>
-                                </Select>
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "name"]}
-                                label={<b>Tên</b>}
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "Nhập tên dị ứng",
-                                  },
-                                ]}
-                              >
-                                <Input placeholder="Ví dụ: Hải sản, Penicillin..." />
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "level"]}
-                                label={<b>Mức độ</b>}
-                                rules={[
-                                  { required: true, message: "Chọn mức độ" },
-                                ]}
-                              >
-                                <Select placeholder="Chọn mức độ">
-                                  <Select.Option value="mild">
-                                    Nhẹ
-                                  </Select.Option>
-                                  <Select.Option value="moderate">
-                                    Trung bình
-                                  </Select.Option>
-                                  <Select.Option value="severe">
-                                    Nặng
-                                  </Select.Option>
-                                </Select>
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "symptoms"]}
-                                label={<b>Triệu chứng</b>}
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "Nhập triệu chứng",
-                                  },
-                                ]}
-                              >
-                                <Input placeholder="Ví dụ: Nổi mề đay, khó thở..." />
-                              </Form.Item>
-                            </Card>
-                          ))}
-                          <div style={{ textAlign: "center", marginTop: 24 }}>
-                            <Button
-                              type="dashed"
-                              onClick={() => add()}
-                              icon={<PlusOutlined />}
-                              style={{
-                                color: "#389e0d",
-                                borderColor: "#b7eb8f",
-                                width: 200,
-                              }}
-                            >
-                              Thêm dị ứng
-                            </Button>
-                          </div>
-                          {errors.allergies && touched.allergies && (
-                            <div className="text-red-500 text-xs mt-1">
-                              {typeof errors.allergies === "string"
-                                ? errors.allergies
-                                : ""}
+                                Thêm thuốc
+                              </Button>
                             </div>
-                          )}
-                        </>
-                      )}
-                    </Form.List>
-                  )}
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item label="Có bệnh nền không?">
-                    <Switch
-                      checked={values.hasDisease}
-                      onChange={(checked) =>
-                        setFieldValue("hasDisease", checked)
-                      }
-                    />
-                  </Form.Item>
-                  {values.hasDisease && (
-                    <Form.List name="chronicDiseases">
-                      {(fields, { add, remove }) => (
-                        <>
-                          {fields.map(({ key, name, ...restField }) => (
-                            <Card
-                              key={key}
-                              className="mb-4"
-                              size="small"
-                              bordered
-                              style={{
-                                background: "#fffbe6",
-                                borderColor: "#ffe58f",
-                                position: "relative",
-                                boxShadow: "0 2px 8px #f0f1f2",
-                                paddingTop: 24,
-                                paddingBottom: 16,
-                                marginBottom: 24,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  position: "absolute",
-                                  top: 8,
-                                  right: 8,
-                                }}
-                              >
-                                <Button
-                                  danger
-                                  type="text"
-                                  icon={<DeleteOutlined />}
-                                  onClick={() => remove(name)}
-                                />
-                              </div>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  marginBottom: 12,
-                                }}
-                              >
-                                <MedicineBoxOutlined
-                                  style={{
-                                    color: "#faad14",
-                                    fontSize: 20,
-                                    marginRight: 8,
-                                  }}
-                                />
-                                <span
-                                  style={{ fontWeight: 600, color: "#d48806" }}
+                          </>
+                        )}
+                      </FieldArray>
+                    </div>
+
+                    <Row gutter={24}>
+                      <Col xs={24} md={12}>
+                        <Form.Item label="Có dị ứng không?">
+                          <Switch
+                            checked={values.hasAllergy}
+                            onChange={(checked) => {
+                              setFieldValue("hasAllergy", checked);
+                              if (!checked) setFieldValue("allergies", []);
+                              handleFormChange();
+                            }}
+                          />
+                        </Form.Item>
+                        {values.hasAllergy && (
+                          <FieldArray name="allergies">
+                            {({ push, remove }) => (
+                              <>
+                                {values.allergies.map((allergy, index) => (
+                                  <Card
+                                    key={index}
+                                    className="mb-4"
+                                    size="small"
+                                    bordered
+                                    style={{
+                                      background: "#f6ffed",
+                                      borderColor: "#b7eb8f",
+                                      position: "relative",
+                                      boxShadow: "0 2px 8px #f0f1f2",
+                                      paddingTop: 24,
+                                      paddingBottom: 16,
+                                      marginBottom: 24,
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        position: "absolute",
+                                        top: 8,
+                                        right: 8,
+                                      }}
+                                    >
+                                      <Button
+                                        danger
+                                        type="text"
+                                        icon={<DeleteOutlined />}
+                                        onClick={() => {
+                                          remove(index);
+                                          handleFormChange();
+                                        }}
+                                      />
+                                    </div>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        marginBottom: 12,
+                                      }}
+                                    >
+                                      <ExclamationCircleOutlined
+                                        style={{
+                                          color: "#52c41a",
+                                          fontSize: 20,
+                                          marginRight: 8,
+                                        }}
+                                      />
+                                      <span
+                                        style={{
+                                          fontWeight: 600,
+                                          color: "#389e0d",
+                                        }}
+                                      >
+                                        Dị ứng #{index + 1}
+                                      </span>
+                                    </div>
+                                    <Form.Item label={<b>Loại</b>} required>
+                                      <Select
+                                        name={`allergies[${index}].type`}
+                                        value={allergy.type}
+                                        onChange={(value) => {
+                                          setFieldValue(
+                                            `allergies[${index}].type`,
+                                            value
+                                          );
+                                          handleFormChange();
+                                        }}
+                                        placeholder="Chọn loại"
+                                      >
+                                        <Select.Option value="food">
+                                          Thực phẩm
+                                        </Select.Option>
+                                        <Select.Option value="medicine">
+                                          Thuốc
+                                        </Select.Option>
+                                        <Select.Option value="environment">
+                                          Môi trường
+                                        </Select.Option>
+                                        <Select.Option value="other">
+                                          Khác
+                                        </Select.Option>
+                                      </Select>
+                                    </Form.Item>
+                                    <Form.Item label={<b>Tên</b>} required>
+                                      <Input
+                                        name={`allergies[${index}].name`}
+                                        value={allergy.name}
+                                        onChange={handleChange}
+                                        placeholder="Tên dị ứng"
+                                      />
+                                    </Form.Item>
+                                    <Form.Item label={<b>Mức độ</b>} required>
+                                      <Select
+                                        name={`allergies[${index}].level`}
+                                        value={allergy.level}
+                                        onChange={(value) => {
+                                          setFieldValue(
+                                            `allergies[${index}].level`,
+                                            value
+                                          );
+                                          handleFormChange();
+                                        }}
+                                        placeholder="Chọn mức độ"
+                                      >
+                                        <Select.Option value="mild">
+                                          Nhẹ
+                                        </Select.Option>
+                                        <Select.Option value="moderate">
+                                          Trung bình
+                                        </Select.Option>
+                                        <Select.Option value="severe">
+                                          Nặng
+                                        </Select.Option>
+                                      </Select>
+                                    </Form.Item>
+                                    <Form.Item
+                                      label={<b>Triệu chứng</b>}
+                                      required
+                                    >
+                                      <Input
+                                        name={`allergies[${index}].symptoms`}
+                                        value={allergy.symptoms}
+                                        onChange={handleChange}
+                                        placeholder="Triệu chứng"
+                                      />
+                                    </Form.Item>
+                                  </Card>
+                                ))}
+                                <div
+                                  style={{ textAlign: "center", marginTop: 24 }}
                                 >
-                                  Bệnh nền #{key + 1}
-                                </span>
-                              </div>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "group"]}
-                                label={<b>Nhóm bệnh</b>}
-                                rules={[
-                                  { required: true, message: "Chọn nhóm bệnh" },
-                                ]}
-                              >
-                                <Select placeholder="Ví dụ: Tim mạch, Hô hấp...">
-                                  <Select.Option value="tim-mach">
-                                    Tim mạch
-                                  </Select.Option>
-                                  <Select.Option value="ho-hap">
-                                    Hô hấp
-                                  </Select.Option>
-                                  <Select.Option value="tieu-duong">
-                                    Tiểu đường
-                                  </Select.Option>
-                                  <Select.Option value="than-kinh">
-                                    Thần kinh
-                                  </Select.Option>
-                                  <Select.Option value="other">
-                                    Khác
-                                  </Select.Option>
-                                </Select>
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "name"]}
-                                label={<b>Tên bệnh</b>}
-                                rules={[
-                                  { required: true, message: "Nhập tên bệnh" },
-                                ]}
-                              >
-                                <Input placeholder="Ví dụ: Tim bẩm sinh, Hen phế quản..." />
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "onsetDate"]}
-                                label={<b>Thời gian mắc</b>}
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "Chọn thời gian mắc",
-                                  },
-                                ]}
-                              >
-                                <DatePicker
-                                  style={{ width: "100%" }}
-                                  format="YYYY-MM-DD"
-                                  placeholder="Chọn ngày"
-                                />
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "level"]}
-                                label={<b>Mức độ</b>}
-                                rules={[
-                                  { required: true, message: "Chọn mức độ" },
-                                ]}
-                              >
-                                <Select placeholder="Chọn mức độ">
-                                  <Select.Option value="mild">
-                                    Nhẹ
-                                  </Select.Option>
-                                  <Select.Option value="moderate">
-                                    Trung bình
-                                  </Select.Option>
-                                  <Select.Option value="severe">
-                                    Nặng
-                                  </Select.Option>
-                                </Select>
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "status"]}
-                                label={<b>Tình trạng hiện tại</b>}
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "Chọn tình trạng",
-                                  },
-                                ]}
-                              >
-                                <Select placeholder="Chọn tình trạng">
-                                  <Select.Option value="stable">
-                                    Ổn định
-                                  </Select.Option>
-                                  <Select.Option value="treating">
-                                    Đang điều trị
-                                  </Select.Option>
-                                  <Select.Option value="relapse">
-                                    Tái phát
-                                  </Select.Option>
-                                  <Select.Option value="other">
-                                    Khác
-                                  </Select.Option>
-                                </Select>
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "medications"]}
-                                label={<b>Thuốc đang dùng</b>}
-                              >
-                                <Input placeholder="Ví dụ: Aspirin, Insulin..." />
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "doctor"]}
-                                label={<b>Bác sĩ điều trị</b>}
-                              >
-                                <Input placeholder="Tên bác sĩ hoặc cơ sở y tế" />
-                              </Form.Item>
-                              <Form.Item
-                                {...restField}
-                                name={[name, "notes"]}
-                                label={<b>Ghi chú</b>}
-                              >
-                                <Input placeholder="Ghi chú thêm (nếu có)" />
-                              </Form.Item>
-                            </Card>
-                          ))}
-                          <div style={{ textAlign: "center", marginTop: 24 }}>
-                            <Button
-                              type="dashed"
-                              onClick={() => add()}
-                              icon={<PlusOutlined />}
+                                  <Button
+                                    type="dashed"
+                                    onClick={() => {
+                                      push({
+                                        type: "",
+                                        name: "",
+                                        level: "",
+                                        symptoms: "",
+                                      });
+                                      handleFormChange();
+                                    }}
+                                    icon={<PlusOutlined />}
+                                    style={{
+                                      color: "#389e0d",
+                                      borderColor: "#b7eb8f",
+                                      width: 200,
+                                    }}
+                                  >
+                                    Thêm dị ứng
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                          </FieldArray>
+                        )}
+                      </Col>
+                      <Col xs={24} md={12}>
+                        <Form.Item label="Có bệnh nền không?">
+                          <Switch
+                            checked={values.hasDisease}
+                            onChange={(checked) => {
+                              setFieldValue("hasDisease", checked);
+                              if (!checked)
+                                setFieldValue("chronicDiseases", []);
+                              handleFormChange();
+                            }}
+                          />
+                        </Form.Item>
+                        {values.hasDisease && (
+                          <FieldArray name="chronicDiseases">
+                            {({ push, remove }) => (
+                              <>
+                                {values.chronicDiseases.map(
+                                  (disease, index) => (
+                                    <Card
+                                      key={index}
+                                      className="mb-4"
+                                      size="small"
+                                      bordered
+                                      style={{
+                                        background: "#fffbe6",
+                                        borderColor: "#ffe58f",
+                                        position: "relative",
+                                        boxShadow: "0 2px 8px #f0f1f2",
+                                        paddingTop: 24,
+                                        paddingBottom: 16,
+                                        marginBottom: 24,
+                                      }}
+                                    >
+                                      <div
+                                        style={{
+                                          position: "absolute",
+                                          top: 8,
+                                          right: 8,
+                                        }}
+                                      >
+                                        <Button
+                                          danger
+                                          type="text"
+                                          icon={<DeleteOutlined />}
+                                          onClick={() => {
+                                            remove(index);
+                                            handleFormChange();
+                                          }}
+                                        />
+                                      </div>
+                                      <div
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          marginBottom: 12,
+                                        }}
+                                      >
+                                        <MedicineBoxOutlined
+                                          style={{
+                                            color: "#faad14",
+                                            fontSize: 20,
+                                            marginRight: 8,
+                                          }}
+                                        />
+                                        <span
+                                          style={{
+                                            fontWeight: 600,
+                                            color: "#d48806",
+                                          }}
+                                        >
+                                          Bệnh nền #{index + 1}
+                                        </span>
+                                      </div>
+                                      <Form.Item
+                                        label={<b>Nhóm bệnh</b>}
+                                        required
+                                      >
+                                        <Select
+                                          name={`chronicDiseases[${index}].group`}
+                                          value={disease.group}
+                                          onChange={(value) => {
+                                            setFieldValue(
+                                              `chronicDiseases[${index}].group`,
+                                              value
+                                            );
+                                            handleFormChange();
+                                          }}
+                                          placeholder="Ví dụ: Tim mạch, Hô hấp..."
+                                        >
+                                          <Select.Option value="tim-mach">
+                                            Tim mạch
+                                          </Select.Option>
+                                          <Select.Option value="ho-hap">
+                                            Hô hấp
+                                          </Select.Option>
+                                          <Select.Option value="tieu-duong">
+                                            Tiểu đường
+                                          </Select.Option>
+                                          <Select.Option value="than-kinh">
+                                            Thần kinh
+                                          </Select.Option>
+                                          <Select.Option value="other">
+                                            Khác
+                                          </Select.Option>
+                                        </Select>
+                                      </Form.Item>
+                                      <Form.Item
+                                        label={<b>Tên bệnh</b>}
+                                        required
+                                      >
+                                        <Input
+                                          name={`chronicDiseases[${index}].name`}
+                                          value={disease.name}
+                                          onChange={handleChange}
+                                          placeholder="Ví dụ: Tim bẩm sinh, Hen phế quản..."
+                                        />
+                                      </Form.Item>
+                                      <Form.Item
+                                        label={<b>Thời gian mắc</b>}
+                                        required
+                                      >
+                                        <DatePicker
+                                          style={{ width: "100%" }}
+                                          format="YYYY-MM-DD"
+                                          placeholder="Chọn ngày"
+                                          value={disease.onsetDate}
+                                          onChange={(date) => {
+                                            setFieldValue(
+                                              `chronicDiseases[${index}].onsetDate`,
+                                              date
+                                            );
+                                            handleFormChange();
+                                          }}
+                                        />
+                                      </Form.Item>
+                                      <Form.Item label={<b>Mức độ</b>} required>
+                                        <Select
+                                          name={`chronicDiseases[${index}].level`}
+                                          value={disease.level}
+                                          onChange={(value) => {
+                                            setFieldValue(
+                                              `chronicDiseases[${index}].level`,
+                                              value
+                                            );
+                                            handleFormChange();
+                                          }}
+                                          placeholder="Chọn mức độ"
+                                        >
+                                          <Select.Option value="mild">
+                                            Nhẹ
+                                          </Select.Option>
+                                          <Select.Option value="moderate">
+                                            Trung bình
+                                          </Select.Option>
+                                          <Select.Option value="severe">
+                                            Nặng
+                                          </Select.Option>
+                                        </Select>
+                                      </Form.Item>
+                                      <Form.Item
+                                        label={<b>Tình trạng hiện tại</b>}
+                                        required
+                                      >
+                                        <Select
+                                          name={`chronicDiseases[${index}].status`}
+                                          value={disease.status}
+                                          onChange={(value) => {
+                                            setFieldValue(
+                                              `chronicDiseases[${index}].status`,
+                                              value
+                                            );
+                                            handleFormChange();
+                                          }}
+                                          placeholder="Chọn tình trạng"
+                                        >
+                                          <Select.Option value="stable">
+                                            Ổn định
+                                          </Select.Option>
+                                          <Select.Option value="treating">
+                                            Đang điều trị
+                                          </Select.Option>
+                                          <Select.Option value="relapse">
+                                            Tái phát
+                                          </Select.Option>
+                                          <Select.Option value="other">
+                                            Khác
+                                          </Select.Option>
+                                        </Select>
+                                      </Form.Item>
+
+                                      <Row gutter={16}>
+                                        <Col span={12}>
+                                          <Form.Item label={<b>Bác sĩ khám</b>}>
+                                            <Input
+                                              name={`chronicDiseases[${index}].doctor`}
+                                              value={disease.doctor}
+                                              onChange={handleChange}
+                                              placeholder="Tên bác sĩ"
+                                            />
+                                          </Form.Item>
+                                        </Col>
+                                        <Col span={12}>
+                                          <Form.Item label={<b>Nơi khám</b>}>
+                                            <Input
+                                              name={`chronicDiseases[${index}].hospital`}
+                                              value={disease.hospital}
+                                              onChange={handleChange}
+                                              placeholder="Bệnh viện, phòng khám..."
+                                            />
+                                          </Form.Item>
+                                        </Col>
+                                      </Row>
+                                      <Form.Item label={<b>Ghi chú</b>}>
+                                        <Input
+                                          name={`chronicDiseases[${index}].notes`}
+                                          value={disease.notes}
+                                          onChange={handleChange}
+                                          placeholder="Ghi chú thêm (nếu có)"
+                                        />
+                                      </Form.Item>
+                                    </Card>
+                                  )
+                                )}
+                                <div
+                                  style={{ textAlign: "center", marginTop: 24 }}
+                                >
+                                  <Button
+                                    type="dashed"
+                                    onClick={() => {
+                                      push({
+                                        group: "",
+                                        name: "",
+                                        onsetDate: dayjs(),
+                                        level: "",
+                                        status: "",
+                                        doctor: "",
+                                        hospital: "",
+                                        notes: "",
+                                      });
+                                      handleFormChange();
+                                    }}
+                                    icon={<PlusOutlined />}
+                                    style={{
+                                      color: "#d48806",
+                                      borderColor: "#ffe58f",
+                                      width: 200,
+                                    }}
+                                  >
+                                    Thêm bệnh nền
+                                  </Button>
+                                </div>
+                              </>
+                            )}
+                          </FieldArray>
+                        )}
+                      </Col>
+                    </Row>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginTop: 24,
+                      }}
+                    >
+                      <Button onClick={() => setCurrentStep(0)}>
+                        ← Quay lại
+                      </Button>
+                      <Button
+                        type="primary"
+                        onClick={async () => {
+                          await validateForm();
+                          setCurrentStep(2);
+                        }}
+                      >
+                        Tiếp theo →
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2: Chỉ số sức khỏe */}
+                {currentStep === 2 && (
+                  <div>
+                    <Title level={4} style={{ marginBottom: 16 }}>
+                      Chỉ số sức khỏe
+                    </Title>
+                    <div
+                      style={{
+                        background: "#f6fcfa",
+                        padding: 24,
+                        borderRadius: 8,
+                        marginBottom: 24,
+                      }}
+                    >
+                      <Title level={5}>Tóm tắt thông tin</Title>
+                      <Row gutter={16}>
+                        <Col span={4}>
+                          <div style={{ textAlign: "center" }}>
+                            <div
                               style={{
-                                color: "#d48806",
-                                borderColor: "#ffe58f",
-                                width: 200,
+                                fontSize: 24,
+                                fontWeight: "bold",
+                                color: "#36ae9a",
                               }}
                             >
-                              Thêm bệnh nền
-                            </Button>
+                              {values.height || "--"} cm
+                            </div>
+                            <div style={{ color: "#666" }}>Chiều cao</div>
                           </div>
-                          {errors.chronicDiseases &&
-                            touched.chronicDiseases && (
-                              <div className="text-red-500 text-xs mt-1">
-                                {typeof errors.chronicDiseases === "string"
-                                  ? errors.chronicDiseases
-                                  : ""}
-                              </div>
-                            )}
-                        </>
-                      )}
-                    </Form.List>
-                  )}
-                </Col>
-              </Row>
-              <Row gutter={24}>
-                <Col xs={24} md={12}>
-                  <Form.Item label="Thị lực">
-                    <Input
-                      name="vision"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      value={values.vision}
-                      placeholder="VD: 10/10"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item label="Thính lực">
-                    <Input
-                      name="hearing"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      value={values.hearing}
-                      placeholder="VD: Bình thường"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Row gutter={24}>
-                <Col xs={24} md={12}>
-                  <Form.Item label="Chiều cao (cm)">
-                    <Input
-                      name="height"
-                      type="number"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      value={values.height}
-                      placeholder="VD: 150"
-                    />
-                  </Form.Item>
-                </Col>
-                <Col xs={24} md={12}>
-                  <Form.Item label="Cân nặng (kg)">
-                    <Input
-                      name="weight"
-                      type="number"
-                      onChange={handleChange}
-                      onBlur={handleBlur}
-                      value={values.weight}
-                      placeholder="VD: 45"
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
-                <Button
-                  onClick={() => setIsEditModalVisible(false)}
-                  size="large"
-                >
-                  Hủy
-                </Button>
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  size="large"
-                  loading={isSubmitting}
-                  className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
-                >
-                  Lưu thay đổi
-                </Button>
-              </div>
-            </Form>
-          )}
+                        </Col>
+                        <Col span={4}>
+                          <div style={{ textAlign: "center" }}>
+                            <div
+                              style={{
+                                fontSize: 24,
+                                fontWeight: "bold",
+                                color: "#36ae9a",
+                              }}
+                            >
+                              {values.weight || "--"} kg
+                            </div>
+                            <div style={{ color: "#666" }}>Cân nặng</div>
+                          </div>
+                        </Col>
+                        <Col span={4}>
+                          <div style={{ textAlign: "center" }}>
+                            <div
+                              style={{
+                                fontSize: 24,
+                                fontWeight: "bold",
+                                color: "#36ae9a",
+                              }}
+                            >
+                              {Array.isArray(values.allergies) &&
+                              values.hasAllergy
+                                ? values.allergies.length
+                                : 0}
+                            </div>
+                            <div style={{ color: "#666" }}>Dị ứng</div>
+                          </div>
+                        </Col>
+                        <Col span={4}>
+                          <div style={{ textAlign: "center" }}>
+                            <div
+                              style={{
+                                fontSize: 24,
+                                fontWeight: "bold",
+                                color: "#36ae9a",
+                              }}
+                            >
+                              {Array.isArray(values.chronicDiseases) &&
+                              values.hasDisease
+                                ? values.chronicDiseases.length
+                                : 0}
+                            </div>
+                            <div style={{ color: "#666" }}>Bệnh nền</div>
+                          </div>
+                        </Col>
+                        <Col span={4}>
+                          <div style={{ textAlign: "center" }}>
+                            <div
+                              style={{
+                                fontSize: 24,
+                                fontWeight: "bold",
+                                color: "#36ae9a",
+                              }}
+                            >
+                              {Array.isArray(values.medications)
+                                ? values.medications.filter(
+                                    (med) => med.trim() !== ""
+                                  ).length
+                                : 0}
+                            </div>
+                            <div style={{ color: "#666" }}>Thuốc</div>
+                          </div>
+                        </Col>
+                      </Row>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginTop: 24,
+                      }}
+                    >
+                      <Button onClick={() => setCurrentStep(1)}>
+                        ← Quay lại
+                      </Button>
+                      <Button
+                        type="primary"
+                        onClick={async () => {
+                          await validateForm();
+                          setCurrentStep(3);
+                        }}
+                      >
+                        Tiếp theo →
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3: Xác nhận */}
+                {currentStep === 3 && (
+                  <div>
+                    <Title level={4} style={{ marginBottom: 16 }}>
+                      Xác nhận thông tin
+                    </Title>
+                    <div
+                      style={{
+                        background: "#f9f9f9",
+                        padding: 24,
+                        borderRadius: 8,
+                        marginBottom: 24,
+                      }}
+                    >
+                      <Title level={5}>Thông tin đã nhập:</Title>
+                      <div style={{ marginBottom: 16 }}>
+                        <strong>Chỉ số cơ bản:</strong>
+                        <div>Thị lực: {values.vision || "Chưa nhập"}</div>
+                        <div>Thính lực: {values.hearing || "Chưa nhập"}</div>
+                        <div>Chiều cao: {values.height || "Chưa nhập"} cm</div>
+                        <div>Cân nặng: {values.weight || "Chưa nhập"} kg</div>
+                      </div>
+                      <div style={{ marginBottom: 16 }}>
+                        <strong>Dị ứng:</strong>{" "}
+                        {Array.isArray(values.allergies) && values.hasAllergy
+                          ? `${values.allergies.length} loại`
+                          : "Không có"}
+                      </div>
+                      <div style={{ marginBottom: 16 }}>
+                        <strong>Bệnh nền:</strong>{" "}
+                        {Array.isArray(values.chronicDiseases) &&
+                        values.hasDisease
+                          ? `${values.chronicDiseases.length} bệnh`
+                          : "Không có"}
+                      </div>
+                      <div>
+                        <strong>Thuốc đang dùng:</strong>{" "}
+                        {Array.isArray(values.medications) &&
+                        values.medications.filter((med) => med.trim() !== "")
+                          .length > 0
+                          ? `${
+                              values.medications.filter(
+                                (med) => med.trim() !== ""
+                              ).length
+                            } loại`
+                          : "Không có"}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        marginTop: 24,
+                      }}
+                    >
+                      <Button onClick={() => setCurrentStep(2)}>
+                        ← Quay lại
+                      </Button>
+                      <Button
+                        type="primary"
+                        htmlType="submit"
+                        loading={isSubmitting}
+                      >
+                        Lưu hồ sơ
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Form>
+            );
+          }}
         </Formik>
       </Modal>
     </div>
