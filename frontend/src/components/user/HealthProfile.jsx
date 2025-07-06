@@ -7,6 +7,7 @@ import {
     WarningOutlined,
     MedicineBoxOutlined,
     ExclamationCircleOutlined,
+    BookOutlined,
 } from "@ant-design/icons";
 import {
     Alert,
@@ -248,33 +249,39 @@ const HealthProfile = () => {
                 </div>
 
                 {/* Student Selection */}
-                <Card className="rounded-2xl shadow-lg border-0 mb-6">
-                    <div className="flex flex-col lg:flex-row justify-between items-center gap-4">
+                <Card className="rounded-2xl shadow-lg border-0 mb-6 bg-gradient-to-r from-[#f8fffe] to-[#e8f5f2]">
+                    <div className="flex flex-col lg:flex-row justify-between items-center gap-6 p-6">
                         <div>
-                            <Title level={4} className="mb-2">
+                            <Title level={4} className="mb-2 text-[#36ae9a]">
                                 Chọn học sinh
                             </Title>
-                            <Text type="secondary">
+                            <Text type="secondary" className="text-gray-600">
                                 Chọn học sinh để xem và cập nhật hồ sơ sức khỏe
                             </Text>
                         </div>
                         <div className="flex items-center gap-4">
                             {children && children.length > 0 ? (
                                 <Select
-                                    style={{ width: 250 }}
+                                    style={{ 
+                                        width: 300,
+                                        borderRadius: '12px',
+                                    }}
                                     value={selectedStudent}
                                     onChange={handleStudentChange}
                                     placeholder="Chọn học sinh"
                                     size="large"
+                                    className="custom-select"
                                 >
                                     {children.map((child) => (
                                         <Select.Option
                                             key={child.studentId}
                                             value={child.studentId}
                                         >
-                                            <div className="flex items-center gap-2">
-                                                <UserOutlined />
-                                                <span>{child.fullName}</span>
+                                            <div className="flex items-center justify-between py-2">
+                                                <span className="font-semibold text-gray-800">{child.fullName}</span>
+                                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                                                    Lớp {child.class} - Khối {child.grade}
+                                                </span>
                                             </div>
                                         </Select.Option>
                                     ))}
@@ -290,7 +297,8 @@ const HealthProfile = () => {
                                 onClick={() => setIsEditModalVisible(true)}
                                 disabled={!selectedStudent}
                                 size="large"
-                                className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
+                                className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a] shadow-lg"
+                                style={{ borderRadius: '12px' }}
                             >
                                 Cập nhật thông tin
                             </Button>
@@ -350,6 +358,38 @@ const HealthProfile = () => {
 
                 {healthProfile && (
                     <>
+                        {/* Student Information Card */}
+                        <Card className="rounded-2xl shadow-xl border-0 mb-6 overflow-hidden student-info-card">
+                            <div className="bg-gradient-to-r from-[#36ae9a] to-[#2a8a7a] p-8 text-white relative">
+                                <div className="flex items-center gap-8 relative z-10">
+                                    <div className="p-5 glass-badge rounded-full shadow-lg">
+                                        <BookOutlined className="text-white text-3xl" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="mb-4">
+                                            <div className="text-sm opacity-80 mb-1">Học sinh</div>
+                                            <Title level={1} className="mb-0 text-white">
+                                                {children.find(child => child.studentId === selectedStudent)?.fullName}
+                                            </Title>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="flex items-center gap-3 glass-badge px-5 py-3 rounded-full shadow-md">
+                                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                <span className="font-medium">Lớp:</span>
+                                                <span className="font-bold text-lg">{children.find(child => child.studentId === selectedStudent)?.class}</span>
+                                            </div>
+                                            <div className="flex items-center gap-3 glass-badge px-5 py-3 rounded-full shadow-md">
+                                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                <span className="font-medium">Khối:</span>
+                                                <span className="font-bold text-lg">{children.find(child => child.studentId === selectedStudent)?.grade}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                </div>
+                            </div>
+                        </Card>
+
                         {/* Separator */}
                         <div className="my-8">
                             <div className="flex items-center">

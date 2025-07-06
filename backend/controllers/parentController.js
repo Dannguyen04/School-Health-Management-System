@@ -64,6 +64,8 @@ export const getMyChildren = async (req, res) => {
         const children = childrenRelations.map((rel) => ({
             studentId: rel.student.id,
             fullName: rel.student.user.fullName,
+            class: rel.student.class,
+            grade: rel.student.grade,
         }));
 
         console.log("[getMyChildren] children response:", children);
