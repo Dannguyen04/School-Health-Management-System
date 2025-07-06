@@ -64,6 +64,8 @@ export const getMyChildren = async (req, res) => {
         const children = childrenRelations.map((rel) => ({
             studentId: rel.student.id,
             fullName: rel.student.user.fullName,
+            class: rel.student.class,
+            grade: rel.student.grade,
         }));
 
         console.log("[getMyChildren] children response:", children);
@@ -619,7 +621,7 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
 export const getVaccinationDetail = async (req, res) => {
     try {
         const { campaignId, studentId } = req.params;
-        const vaccination = await prisma.vaccinations.findFirst({
+        const vaccination = await prisma.vaccine.findFirst({
             where: {
                 studentId,
                 campaign: { id: campaignId },
@@ -713,7 +715,7 @@ export const getVaccinationHistory = async (req, res) => {
         }
 
         // Lấy lịch sử tiêm chủng của các con
-        const vaccinations = await prisma.vaccinations.findMany({
+        const vaccinations = await prisma.vaccine.findMany({
             where: {
                 studentId: { in: studentIds },
                 status: "COMPLETED",
@@ -817,24 +819,20 @@ export const getStudentHealthCheckups = async (req, res) => {
         const { studentId } = req.params;
         // Kiểm tra quyền truy cập: phụ huynh phải là cha/mẹ của học sinh này
         if (!req.user.parentProfile) {
-            return res
-                .status(403)
-                .json({
-                    success: false,
-                    error: "You must be a parent to access this resource",
-                });
+            return res.status(403).json({
+                success: false,
+                error: "You must be a parent to access this resource",
+            });
         }
         const parentId = req.user.parentProfile.id;
         const studentParent = await prisma.studentParent.findFirst({
             where: { parentId, studentId },
         });
         if (!studentParent) {
-            return res
-                .status(403)
-                .json({
-                    success: false,
-                    error: "You are not authorized to view this student's health checkups",
-                });
+            return res.status(403).json({
+                success: false,
+                error: "You are not authorized to view this student's health checkups",
+            });
         }
         // Lấy toàn bộ kết quả khám sức khỏe
         const checkups = await prisma.medicalCheck.findMany({

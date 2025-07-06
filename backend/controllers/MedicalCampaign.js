@@ -13,7 +13,7 @@ export const createMedicalCampaign = async (req, res) => {
     }
     // Kiểm tra deadline phải cách scheduledDate ít nhất 1 tuần
     const start = new Date(scheduledDate);
-    if (start < new Date().getDate()) {
+    if (start < new Date().setHours(0, 0, 0, 0)) {
         return res.status(400).json({
             success: false,
             error: "Ngày bắt đầu phải ít nhất kể từ hôm nay",

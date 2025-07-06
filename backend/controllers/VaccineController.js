@@ -38,7 +38,7 @@ const createVaccination = async (req, res) => {
         });
     }
 
-    const existedVaccination = await prisma.vaccinations.findFirst({
+    const existedVaccination = await prisma.vaccine.findFirst({
         where: { name: name },
     });
 
@@ -49,7 +49,7 @@ const createVaccination = async (req, res) => {
     }
 
     try {
-        const vaccination = await prisma.vaccinations.create({
+        const vaccination = await prisma.vaccine.create({
             data: {
                 name,
                 requirement,
@@ -109,7 +109,7 @@ const createVaccination = async (req, res) => {
 
 const getAllVaccination = async () => {
     try {
-        const vaccination = await prisma.vaccinations.findMany({
+        const vaccination = await prisma.vaccine.findMany({
             orderBy: { createdAt: "desc" },
         });
         if (!vaccination) return "";
@@ -129,7 +129,7 @@ const getAllRequiredVaccination = async (req, res) => {
                 error: "Không có loại vaccine trong hệ thống",
             });
 
-        const requireVaccination = await prisma.vaccinations.findMany({
+        const requireVaccination = await prisma.vaccine.findMany({
             where: { requirement: "REQUIRED" },
         });
 
@@ -162,7 +162,7 @@ const getAllOptionalVaccination = async (req, res) => {
                 error: "Không có loại vaccine trong hệ thống",
             });
 
-        const optionalVaccination = await prisma.vaccinations.findMany({
+        const optionalVaccination = await prisma.vaccine.findMany({
             where: { requirement: "OPTIONAL" },
         });
 
@@ -216,7 +216,7 @@ const updateVaccination = async (req, res) => {
         referenceUrl,
     } = req.body;
     try {
-        const existedVaccination = await prisma.vaccinations.findUnique({
+        const existedVaccination = await prisma.vaccine.findUnique({
             where: { id },
         });
         if (!existedVaccination) {
@@ -235,7 +235,7 @@ const updateVaccination = async (req, res) => {
         }
 
         if (name && name !== existedVaccination.name) {
-            const nameExists = await prisma.vaccinations.findFirst({
+            const nameExists = await prisma.vaccine.findFirst({
                 where: { name },
             });
             if (nameExists) {
@@ -245,7 +245,7 @@ const updateVaccination = async (req, res) => {
                 });
             }
         }
-        const updated = await prisma.vaccinations.update({
+        const updated = await prisma.vaccine.update({
             where: { id },
             data: {
                 name,
@@ -302,7 +302,7 @@ const updateVaccination = async (req, res) => {
 const deleteVaccination = async (req, res) => {
     const { id } = req.params;
     try {
-        const existedVaccination = await prisma.vaccinations.findUnique({
+        const existedVaccination = await prisma.vaccine.findUnique({
             where: { id },
             include: {
                 campaign: true,
@@ -327,7 +327,7 @@ const deleteVaccination = async (req, res) => {
         // Lưu tên vaccine trước khi xóa để hiển thị trong thông báo
         const vaccineName = existedVaccination.name;
 
-        await prisma.vaccinations.delete({ where: { id } });
+        await prisma.vaccine.delete({ where: { id } });
 
         // Tạo thông báo cho manager sau khi xóa vaccine thành công
         try {
