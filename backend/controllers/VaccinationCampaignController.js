@@ -45,7 +45,7 @@ const createVaccinationCampaign = async (req, res) => {
         }
 
         // Validate vaccination exists
-        const vaccination = await prisma.vaccinations.findUnique({
+        const vaccination = await prisma.vaccine.findUnique({
             where: { id: vaccinationId },
         });
 
@@ -177,7 +177,7 @@ const getVaccinationCampaignById = async (req, res) => {
 const updateVaccinationCampaign = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, status, targetGrades } = req.body;
+        const { name, description, targetGrades } = req.body;
 
         // Check if campaign exists
         const existingCampaign = await prisma.vaccinationCampaign.findUnique({
@@ -212,17 +212,6 @@ const updateVaccinationCampaign = async (req, res) => {
 
         if (description !== undefined) {
             updateData.description = description;
-        }
-
-        if (status !== undefined) {
-            if (!["ACTIVE", "FINISHED", "CANCELLED"].includes(status)) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Trạng thái không hợp lệ",
-                });
-            }
-            updateData.status = status;
-            updateData.isActive = status === "ACTIVE";
         }
 
         if (targetGrades !== undefined) {
@@ -278,6 +267,63 @@ const updateVaccinationCampaign = async (req, res) => {
             error: "Lỗi server khi cập nhật chiến dịch",
         });
     }
+};
+
+//update tiến độ chiến dịch
+const updateProgress = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const campaign = await prisma.vaccinationCampaign.findUnique({
+            where: { id: id },
+        });
+
+        if (!campaign)
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy chiến dịch",
+            });
+
+        if (!status || !["FINISHED", "CANCELED"].includes(status))
+            return res.status(404).json({
+                success: false,
+                error: "Không thể cập nhật tiến trình",
+            });
+
+        const updatedCampaign = await prisma.vaccinationCampaign.update({
+            where: { id: id },
+            data: { status: status },
+        });
+
+        try {
+            const managerId = req.user.id; // Lấy ID của manager hiện tại
+
+            await prisma.notification.create({
+                data: {
+                    userId: managerId,
+                    title: `Cập nhật chiến dịch tiêm chủng: ${updatedCampaign.name}`,
+                    message: `Bạn đã cập nhật thành công chiến dịch tiêm chủng "${updatedCampaign.name}".`,
+                    type: "vaccination_campaign_updated",
+                    status: "SENT",
+                    sentAt: new Date(),
+                    vaccinationCampaignId: updatedCampaign.id,
+                },
+            });
+        } catch (notificationError) {
+            console.error(
+                "Error creating notification for manager:",
+                notificationError
+            );
+            // Không fail toàn bộ request nếu tạo thông báo thất bại
+        }
+
+        res.status(200).json({
+            success: true,
+            data: updatedCampaign,
+            message: "Cập nhật tiến độ chiến dịch tiểm chủng",
+        });
+    } catch (error) {}
 };
 
 // DELETE - Xóa chiến dịch tiêm chủng
@@ -637,4 +683,5 @@ export {
     sendConsentNotification,
     submitVaccinationConsent,
     updateVaccinationCampaign,
+    updateProgress,
 };

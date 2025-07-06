@@ -8,6 +8,7 @@ import {
     sendConsentNotification,
     submitVaccinationConsent,
     getCampaignConsents,
+    updateProgress,
 } from "../controllers/VaccinationCampaignController.js";
 import {
     authenticateToken,
@@ -31,6 +32,7 @@ router.get(
 );
 
 router.put("/:id", authenticateToken, verifyManager, updateVaccinationCampaign);
+router.put("/:id/status", authenticateToken, verifyManager, updateProgress);
 
 router.delete(
     "/:id",
