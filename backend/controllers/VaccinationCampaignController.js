@@ -2,23 +2,76 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Helper function to update campaign statistics
+const updateCampaignStatistics = async (campaignId) => {
+    try {
+        // Count consented students
+        const consentedCount = await prisma.vaccinationConsent.count({
+            where: {
+                campaignId,
+                consent: true,
+            },
+        });
+
+        // Count vaccinated students (unique students)
+        const vaccinatedCount = await prisma.vaccinationRecord.count({
+            where: { campaignId },
+        });
+
+        // Get campaign to calculate completion rate
+        const campaign = await prisma.vaccinationCampaign.findUnique({
+            where: { id: campaignId },
+            select: { totalStudents: true },
+        });
+
+        const completionRate =
+            campaign?.totalStudents > 0
+                ? (vaccinatedCount / campaign.totalStudents) * 100
+                : 0;
+
+        // Update campaign statistics
+        await prisma.vaccinationCampaign.update({
+            where: { id: campaignId },
+            data: {
+                consentedStudents: consentedCount,
+                vaccinatedStudents: vaccinatedCount,
+                completionRate: Math.round(completionRate * 100) / 100, // Round to 2 decimal places
+            },
+        });
+    } catch (error) {
+        console.error("Error updating campaign statistics:", error);
+    }
+};
+
 // CREATE - Tạo chiến dịch tiêm chủng mới
 const createVaccinationCampaign = async (req, res) => {
     try {
         const {
             name,
             description,
-            vaccinationId,
+            vaccineId,
             targetGrades,
             scheduledDate,
             deadline,
+            totalStudents,
         } = req.body;
 
         // Validation
-        if (!name || !vaccinationId || !scheduledDate || !deadline) {
+        if (!name || !vaccineId || !scheduledDate || !deadline) {
             return res.status(400).json({
                 success: false,
-                error: "Thiếu thông tin bắt buộc: name, vaccinationId, scheduledDate, deadline",
+                error: "Thiếu thông tin bắt buộc: name, vaccineId, scheduledDate, deadline",
+            });
+        }
+
+        // Validate totalStudents if provided
+        if (
+            totalStudents !== undefined &&
+            (!Number.isInteger(totalStudents) || totalStudents < 0)
+        ) {
+            return res.status(400).json({
+                success: false,
+                error: "Tổng số học sinh phải là số nguyên không âm",
             });
         }
 
@@ -45,26 +98,32 @@ const createVaccinationCampaign = async (req, res) => {
         }
 
         // Validate vaccination exists
-        const vaccination = await prisma.vaccine.findUnique({
-            where: { id: vaccinationId },
+        const vaccine = await prisma.vaccine.findUnique({
+            where: { id: vaccineId },
         });
 
-        if (!vaccination) {
+        if (!vaccine) {
             return res.status(400).json({
                 success: false,
                 error: "Loại vaccine không tồn tại",
             });
         }
 
-        // Create campaign
+        // Create campaign with denormalized data
         const campaign = await prisma.vaccinationCampaign.create({
             data: {
                 name: name.trim(),
                 description: description || "",
-                vaccinationId,
+                vaccineId,
+                // Denormalized vaccine data
+                vaccineName: vaccine.name,
+                vaccineManufacturer: vaccine.manufacturer,
+                vaccineRequirement: vaccine.requirement,
                 targetGrades: targetGrades.map((grade) => String(grade)),
                 scheduledDate: new Date(scheduledDate),
                 deadline: new Date(deadline),
+                // User-provided total students (ước lượng)
+                totalStudents: totalStudents || 0,
             },
             include: {
                 vaccine: true,
@@ -82,7 +141,7 @@ const createVaccinationCampaign = async (req, res) => {
                     message: `Bạn đã tạo thành công chiến dịch tiêm chủng "${
                         campaign.name
                     }" với vaccine ${
-                        vaccination.name
+                        vaccine.name
                     }. Chiến dịch sẽ diễn ra từ ${new Date(
                         scheduledDate
                     ).toLocaleDateString("vi-VN")} đến ${new Date(
@@ -177,7 +236,7 @@ const getVaccinationCampaignById = async (req, res) => {
 const updateVaccinationCampaign = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, description, targetGrades } = req.body;
+        const { name, description, targetGrades, totalStudents } = req.body;
 
         // Check if campaign exists
         const existingCampaign = await prisma.vaccinationCampaign.findUnique({
@@ -224,6 +283,16 @@ const updateVaccinationCampaign = async (req, res) => {
             updateData.targetGrades = targetGrades.map((grade) =>
                 String(grade)
             );
+        }
+
+        if (totalStudents !== undefined) {
+            if (!Number.isInteger(totalStudents) || totalStudents < 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Tổng số học sinh phải là số nguyên không âm",
+                });
+            }
+            updateData.totalStudents = totalStudents;
         }
 
         // Update campaign
@@ -285,10 +354,10 @@ const updateProgress = async (req, res) => {
                 error: "Không tìm thấy chiến dịch",
             });
 
-        if (!status || !["FINISHED", "CANCELED"].includes(status))
-            return res.status(404).json({
+        if (!status || !["FINISHED", "CANCELLED"].includes(status))
+            return res.status(400).json({
                 success: false,
-                error: "Không thể cập nhật tiến trình",
+                error: "Status phải là FINISHED hoặc CANCELLED",
             });
 
         const updatedCampaign = await prisma.vaccinationCampaign.update({
@@ -343,8 +412,12 @@ const deleteVaccinationCampaign = async (req, res) => {
             });
         }
 
-        // Trước khi xóa campaign, xóa các bản ghi VaccinationRecord liên quan:
+        // Trước khi xóa campaign, xóa các bản ghi liên quan:
         await prisma.vaccinationRecord.deleteMany({
+            where: { campaignId: id },
+        });
+
+        await prisma.vaccinationConsent.deleteMany({
             where: { campaignId: id },
         });
 
@@ -538,6 +611,9 @@ const submitVaccinationConsent = async (req, res) => {
                     },
                 },
             },
+            include: {
+                user: true,
+            },
         });
 
         if (!student) {
@@ -546,6 +622,12 @@ const submitVaccinationConsent = async (req, res) => {
                 error: "Không tìm thấy học sinh hoặc học sinh không thuộc quyền quản lý của bạn",
             });
         }
+
+        // Get parent info
+        const parent = await prisma.parent.findUnique({
+            where: { id: parentId },
+            include: { user: true },
+        });
 
         // Kiểm tra xem đã có consent cho campaign và student này chưa
         const existingConsent = await prisma.vaccinationConsent.findUnique({
@@ -572,8 +654,17 @@ const submitVaccinationConsent = async (req, res) => {
                     consent,
                     notes,
                     updatedAt: new Date(),
+                    // Update denormalized data if needed
+                    campaignName: campaign.name,
+                    vaccineName: campaign.vaccineName,
+                    studentName: student.user.fullName,
+                    parentName: parent.user.fullName,
+                    studentGrade: student.grade,
                 },
             });
+
+            // Update campaign statistics
+            await updateCampaignStatistics(campaignId);
 
             res.json({
                 success: true,
@@ -581,7 +672,7 @@ const submitVaccinationConsent = async (req, res) => {
                 message: "Cập nhật phiếu đồng ý tiêm chủng thành công",
             });
         } else {
-            // Create new consent
+            // Create new consent with denormalized data
             const newConsent = await prisma.vaccinationConsent.create({
                 data: {
                     campaignId,
@@ -589,8 +680,17 @@ const submitVaccinationConsent = async (req, res) => {
                     parentId,
                     consent,
                     notes,
+                    // Denormalized data
+                    campaignName: campaign.name,
+                    vaccineName: campaign.vaccineName,
+                    studentName: student.user.fullName,
+                    parentName: parent.user.fullName,
+                    studentGrade: student.grade,
                 },
             });
+
+            // Update campaign statistics
+            await updateCampaignStatistics(campaignId);
 
             res.status(201).json({
                 success: true,
@@ -684,4 +784,5 @@ export {
     submitVaccinationConsent,
     updateVaccinationCampaign,
     updateProgress,
+    updateCampaignStatistics,
 };

@@ -386,10 +386,10 @@ model Vaccine {
   requirement      VaccineRequirement
   manufacturer     String  
   origin           String  
-  referenceUrl     String? 
-  description      String?
-  sideEffects      String?
-  contraindications String?
+  referenceUrl     String?  // đường dẫn tới web của vaccine đó
+  description      String?  // mô tả vaccine
+  sideEffects      String?  // tác dụng phụ
+  contraindications String? //cấm chỉ định
   recommendedAge   String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -555,7 +555,7 @@ model MedicalCheck {
   updatedAt            DateTime    @updatedAt
 
   student              Student              @relation(fields: [studentId], references: [id])
-  campaign             MedicalCheckCampaign @relation(fields: [campaignId], references: [id])
+  campaign             MedicalCheckCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   nurse                SchoolNurse   ?      @relation(fields: [nurseId], references: [id])
 
   @@map("medical_checks")
@@ -604,9 +604,9 @@ model Notification {
 
   createdAt DateTime @default(now())
 
-  user                 users                 @relation(fields: [userId], references: [id])
-  vaccinationCampaign  VaccinationCampaign?  @relation(fields: [vaccinationCampaignId], references: [id])
-  medicalCheckCampaign MedicalCheckCampaign? @relation(fields: [medicalCheckCampaignId], references: [id])
+  user                 users                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vaccinationCampaign  VaccinationCampaign?  @relation(fields: [vaccinationCampaignId], references: [id], onDelete: Cascade)
+  medicalCheckCampaign MedicalCheckCampaign? @relation(fields: [medicalCheckCampaignId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
 }
