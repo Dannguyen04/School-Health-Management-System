@@ -12,6 +12,7 @@ import {
   Checkbox,
   Col,
   DatePicker,
+  Descriptions,
   Form,
   Input,
   message,
@@ -123,15 +124,15 @@ const VaccinationCampaigns = () => {
       if (response.data.success) {
         message.success("Thêm chiến dịch thành công");
         fetchCampaigns();
-        return true;
+        return { success: true };
       } else {
         message.error(response.data.error || "Không thể thêm chiến dịch");
-        return false;
+        return { success: false, error: response.data.error };
       }
     } catch (error) {
-      console.error("Error creating campaign:", error);
-      message.error(error.response?.data?.error || "Không thể thêm chiến dịch");
-      return false;
+      const backendMsg = error.response?.data?.error;
+      message.error(backendMsg || "Không thể thêm chiến dịch");
+      return { success: false, error: backendMsg };
     }
   };
 
@@ -206,7 +207,7 @@ const VaccinationCampaigns = () => {
         setAllGrades([]);
         setSelectedGrades([]);
       }
-    } catch (err) {
+    } catch {
       setAllGrades([]);
       setSelectedGrades([]);
     }
@@ -346,7 +347,7 @@ const VaccinationCampaigns = () => {
     },
     {
       title: "Loại vaccine",
-      dataIndex: ["vaccinations", "name"],
+      dataIndex: ["vaccine", "name"],
       key: "vaccinationName",
       width: 120,
       align: "center",
@@ -424,6 +425,15 @@ const VaccinationCampaigns = () => {
           >
             Xem phiếu đồng ý
           </Button>
+          <Popconfirm
+            title="Bạn muốn cập nhật trạng thái chiến dịch này thành?"
+            okText="Hoàn thành"
+            cancelText="Hủy"
+            onConfirm={() => updateCampaignStatus(record.id, "FINISHED")}
+            onCancel={() => updateCampaignStatus(record.id, "CANCELLED")}
+          >
+            <Button type="default">Cập nhật trạng thái</Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -464,6 +474,26 @@ const VaccinationCampaigns = () => {
   const handleModalCancel = () => {
     setIsModalVisible(false);
     setSelectedCampaign(null);
+  };
+
+  const updateCampaignStatus = async (id, status) => {
+    try {
+      const response = await axios.put(
+        `/api/manager/vaccination-campaigns/${id}/status`,
+        { status },
+        { headers: getHeaders() }
+      );
+      if (response.data.success) {
+        message.success("Cập nhật trạng thái thành công");
+        fetchCampaigns();
+      } else {
+        message.error(response.data.error || "Không thể cập nhật trạng thái");
+      }
+    } catch (error) {
+      message.error(
+        error.response?.data?.error || "Không thể cập nhật trạng thái"
+      );
+    }
   };
 
   return (
@@ -559,14 +589,13 @@ const VaccinationCampaigns = () => {
                   name: selectedCampaign.name,
                   description: selectedCampaign.description,
                   targetGrades: selectedCampaign.targetGrades || [],
-                  vaccinationName: selectedCampaign.vaccination?.name || "",
+                  vaccinationName: selectedCampaign.vaccine?.name || "",
                   startDate: selectedCampaign.scheduledDate
                     ? dayjs(selectedCampaign.scheduledDate)
                     : null,
                   endDate: selectedCampaign.deadline
                     ? dayjs(selectedCampaign.deadline)
                     : null,
-                  status: selectedCampaign.status,
                 }
               : {
                   name: "",
@@ -604,17 +633,21 @@ const VaccinationCampaigns = () => {
             description: Yup.string(),
             targetGrades: Yup.array().min(1, "Vui lòng chọn khối áp dụng"),
           })}
-          onSubmit={async (values, { setSubmitting }) => {
+          onSubmit={async (values, { setSubmitting, setFieldError }) => {
             let success = false;
+            let errorMsg = "";
 
             if (selectedCampaign) {
               const updateData = {
                 name: values.name,
                 description: values.description,
-                status: values.status,
                 targetGrades: values.targetGrades,
               };
-              success = await updateCampaign(selectedCampaign.id, updateData);
+              const result = await updateCampaign(
+                selectedCampaign.id,
+                updateData
+              );
+              success = result;
             } else {
               const selectedVaccination = vaccinations.find(
                 (v) => v.name === values.vaccinationName
@@ -628,7 +661,7 @@ const VaccinationCampaigns = () => {
               const createData = {
                 name: values.name,
                 description: values.description,
-                vaccinationId: selectedVaccination.id,
+                vaccineId: selectedVaccination.id,
                 targetGrades: values.targetGrades,
                 scheduledDate: values.startDate
                   ? typeof values.startDate === "string"
@@ -641,7 +674,20 @@ const VaccinationCampaigns = () => {
                     : values.endDate.toISOString()
                   : null,
               };
-              success = await createCampaign(createData);
+              const result = await createCampaign(createData);
+              success = result.success;
+              errorMsg = result.error;
+              // Nếu có lỗi về ngày từ backend, setFieldError cho trường liên quan
+              if (!success && errorMsg) {
+                if (errorMsg.includes("Ngày bắt đầu")) {
+                  setFieldError("startDate", errorMsg);
+                } else if (
+                  errorMsg.includes("Deadline") ||
+                  errorMsg.includes("kết thúc")
+                ) {
+                  setFieldError("endDate", errorMsg);
+                }
+              }
             }
 
             setSubmitting(false);
@@ -660,174 +706,205 @@ const VaccinationCampaigns = () => {
             handleSubmit,
             setFieldValue,
             isSubmitting,
-          }) => (
-            <Form layout="vertical" onFinish={handleSubmit}>
-              <Form.Item
-                label="Tên chiến dịch"
-                help={touched.name && errors.name ? errors.name : undefined}
-                validateStatus={
-                  touched.name && errors.name ? "error" : undefined
-                }
-              >
-                <Input
-                  name="name"
-                  value={values.name}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                />
-              </Form.Item>
-              <Form.Item
-                label="Loại vaccine"
-                help={
-                  touched.vaccinationName && errors.vaccinationName
-                    ? errors.vaccinationName
-                    : undefined
-                }
-                validateStatus={
-                  touched.vaccinationName && errors.vaccinationName
-                    ? "error"
-                    : undefined
-                }
-              >
-                <Select
-                  value={values.vaccinationName}
-                  onChange={(val) => setFieldValue("vaccinationName", val)}
-                  onBlur={handleBlur}
-                  disabled={!!selectedCampaign}
-                  placeholder="Chọn loại vaccine"
-                >
-                  {vaccinations.map((vaccination) => (
-                    <Select.Option
-                      key={vaccination.id}
-                      value={vaccination.name}
-                    >
-                      {vaccination.name}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-              <Form.Item
-                label="Khối áp dụng"
-                help={
-                  touched.targetGrades && errors.targetGrades
-                    ? errors.targetGrades
-                    : undefined
-                }
-                validateStatus={
-                  touched.targetGrades && errors.targetGrades
-                    ? "error"
-                    : undefined
-                }
-              >
-                <Select
-                  mode="multiple"
-                  value={values.targetGrades}
-                  onChange={(val) => setFieldValue("targetGrades", val)}
-                  onBlur={handleBlur}
-                  options={["1", "2", "3", "4", "5"].map((g) => ({
-                    label: g,
-                    value: g,
-                  }))}
-                />
-              </Form.Item>
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    label="Ngày bắt đầu"
-                    help={
-                      touched.startDate && errors.startDate
-                        ? errors.startDate
-                        : undefined
-                    }
-                    validateStatus={
-                      touched.startDate && errors.startDate
-                        ? "error"
-                        : undefined
-                    }
-                  >
-                    <DatePicker
-                      style={{ width: "100%" }}
-                      value={values.startDate ? dayjs(values.startDate) : null}
-                      onChange={(date) => setFieldValue("startDate", date)}
-                      onBlur={handleBlur}
-                      disabled={!!selectedCampaign}
-                    />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    label="Ngày kết thúc"
-                    help={
-                      touched.endDate && errors.endDate
-                        ? errors.endDate
-                        : undefined
-                    }
-                    validateStatus={
-                      touched.endDate && errors.endDate ? "error" : undefined
-                    }
-                  >
-                    <DatePicker
-                      style={{ width: "100%" }}
-                      value={values.endDate ? dayjs(values.endDate) : null}
-                      onChange={(date) => setFieldValue("endDate", date)}
-                      onBlur={handleBlur}
-                      disabled={!!selectedCampaign}
-                    />
-                  </Form.Item>
-                </Col>
-              </Row>
-              <Form.Item
-                label="Mô tả"
-                help={
-                  touched.description && errors.description
-                    ? errors.description
-                    : undefined
-                }
-                validateStatus={
-                  touched.description && errors.description
-                    ? "error"
-                    : undefined
-                }
-              >
-                <TextArea
-                  name="description"
-                  value={values.description}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                />
-              </Form.Item>
-              {selectedCampaign && (
+          }) => {
+            // Lấy vaccine được chọn
+            const selectedVaccination = vaccinations.find(
+              (v) => v.name === values.vaccinationName
+            );
+            return (
+              <Form layout="vertical" onFinish={handleSubmit}>
                 <Form.Item
-                  label="Trạng thái"
+                  label="Tên chiến dịch"
+                  help={touched.name && errors.name ? errors.name : undefined}
+                  validateStatus={
+                    touched.name && errors.name ? "error" : undefined
+                  }
+                >
+                  <Input
+                    name="name"
+                    value={values.name}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                  />
+                </Form.Item>
+                <Form.Item
+                  label="Loại vaccine"
                   help={
-                    touched.status && errors.status ? errors.status : undefined
+                    touched.vaccinationName && errors.vaccinationName
+                      ? errors.vaccinationName
+                      : undefined
                   }
                   validateStatus={
-                    touched.status && errors.status ? "error" : undefined
+                    touched.vaccinationName && errors.vaccinationName
+                      ? "error"
+                      : undefined
                   }
                 >
                   <Select
-                    name="status"
-                    value={values.status}
-                    onChange={(val) => setFieldValue("status", val)}
+                    value={values.vaccinationName}
+                    onChange={(val) => setFieldValue("vaccinationName", val)}
                     onBlur={handleBlur}
+                    disabled={!!selectedCampaign}
+                    placeholder="Chọn loại vaccine"
                   >
-                    <Select.Option value="ACTIVE">Đang diễn ra</Select.Option>
-                    <Select.Option value="FINISHED">Hoàn thành</Select.Option>
-                    <Select.Option value="CANCELLED">Đã hủy</Select.Option>
+                    {vaccinations.map((vaccination) => (
+                      <Select.Option
+                        key={vaccination.id}
+                        value={vaccination.name}
+                      >
+                        {vaccination.name}
+                      </Select.Option>
+                    ))}
                   </Select>
                 </Form.Item>
-              )}
-              <Form.Item>
-                <Button type="primary" htmlType="submit" loading={isSubmitting}>
-                  {selectedCampaign ? "Cập nhật" : "Thêm"}
-                </Button>
-                <Button style={{ marginLeft: 8 }} onClick={handleModalCancel}>
-                  Hủy
-                </Button>
-              </Form.Item>
-            </Form>
-          )}
+                {/* Hiển thị thông tin vaccine được chọn */}
+                {selectedVaccination && (
+                  <Card size="small" style={{ marginBottom: 16 }}>
+                    <Descriptions column={1} size="small">
+                      <Descriptions.Item label="Nhà sản xuất">
+                        {selectedVaccination.manufacturer || "Không có"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Nguồn gốc">
+                        {selectedVaccination.origin || "Không có"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Yêu cầu">
+                        {selectedVaccination.requirement === "REQUIRED"
+                          ? "Bắt buộc"
+                          : "Tùy chọn"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Tác dụng phụ">
+                        {selectedVaccination.sideEffects || "Không có"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Chống chỉ định">
+                        {selectedVaccination.contraindications || "Không có"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Độ tuổi khuyến nghị">
+                        {selectedVaccination.recommendedAge || "Không có"}
+                      </Descriptions.Item>
+                      <Descriptions.Item label="Mô tả">
+                        {selectedVaccination.description || "Không có"}
+                      </Descriptions.Item>
+                      {selectedVaccination.referenceUrl && (
+                        <Descriptions.Item label="Tham khảo">
+                          <a
+                            href={selectedVaccination.referenceUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Link
+                          </a>
+                        </Descriptions.Item>
+                      )}
+                    </Descriptions>
+                  </Card>
+                )}
+                <Form.Item
+                  label="Khối áp dụng"
+                  help={
+                    touched.targetGrades && errors.targetGrades
+                      ? errors.targetGrades
+                      : undefined
+                  }
+                  validateStatus={
+                    touched.targetGrades && errors.targetGrades
+                      ? "error"
+                      : undefined
+                  }
+                >
+                  <Select
+                    mode="multiple"
+                    value={values.targetGrades}
+                    onChange={(val) => setFieldValue("targetGrades", val)}
+                    onBlur={handleBlur}
+                    options={["1", "2", "3", "4", "5"].map((g) => ({
+                      label: g,
+                      value: g,
+                    }))}
+                  />
+                </Form.Item>
+                <Row gutter={16}>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Ngày bắt đầu"
+                      help={
+                        touched.startDate && errors.startDate
+                          ? errors.startDate
+                          : undefined
+                      }
+                      validateStatus={
+                        touched.startDate && errors.startDate
+                          ? "error"
+                          : undefined
+                      }
+                    >
+                      <DatePicker
+                        style={{ width: "100%" }}
+                        value={
+                          values.startDate ? dayjs(values.startDate) : null
+                        }
+                        onChange={(date) => setFieldValue("startDate", date)}
+                        onBlur={handleBlur}
+                        disabled={!!selectedCampaign}
+                      />
+                    </Form.Item>
+                  </Col>
+                  <Col span={12}>
+                    <Form.Item
+                      label="Ngày kết thúc"
+                      help={
+                        touched.endDate && errors.endDate
+                          ? errors.endDate
+                          : undefined
+                      }
+                      validateStatus={
+                        touched.endDate && errors.endDate ? "error" : undefined
+                      }
+                    >
+                      <DatePicker
+                        style={{ width: "100%" }}
+                        value={values.endDate ? dayjs(values.endDate) : null}
+                        onChange={(date) => setFieldValue("endDate", date)}
+                        onBlur={handleBlur}
+                        disabled={!!selectedCampaign}
+                      />
+                    </Form.Item>
+                  </Col>
+                </Row>
+                <Form.Item
+                  label="Mô tả"
+                  help={
+                    touched.description && errors.description
+                      ? errors.description
+                      : undefined
+                  }
+                  validateStatus={
+                    touched.description && errors.description
+                      ? "error"
+                      : undefined
+                  }
+                >
+                  <TextArea
+                    name="description"
+                    value={values.description}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                  />
+                </Form.Item>
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={isSubmitting}
+                  >
+                    {selectedCampaign ? "Cập nhật" : "Thêm"}
+                  </Button>
+                  <Button style={{ marginLeft: 8 }} onClick={handleModalCancel}>
+                    Hủy
+                  </Button>
+                </Form.Item>
+              </Form>
+            );
+          }}
         </Formik>
       </Modal>
 

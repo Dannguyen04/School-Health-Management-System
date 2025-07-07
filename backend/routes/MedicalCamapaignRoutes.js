@@ -1,10 +1,11 @@
 import express from "express";
 import {
-    createMedicalCampaign,
-    getAllMedicalCampaigns,
-    getMedicalCampaignById,
-    updateMedicalCampaign,
-    deleteMedicalCampaign,
+  createMedicalCampaign,
+  deleteMedicalCampaign,
+  getAllMedicalCampaigns,
+  getMedicalCampaignById,
+  updateMedicalCampaign,
+  updateProgress,
 } from "../controllers/MedicalCampaign.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 
@@ -21,6 +22,9 @@ router.get("/:id", authenticateToken, getMedicalCampaignById);
 
 // Cập nhật campaign
 router.put("/:id", authenticateToken, updateMedicalCampaign);
+
+// Cập nhật tiến độ campaign
+router.put("/:id/status", authenticateToken, updateProgress);
 
 // Xóa campaign
 router.delete("/:id", authenticateToken, deleteMedicalCampaign);

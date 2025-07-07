@@ -108,16 +108,15 @@ const HealthCheckupCampaigns = () => {
       if (res.data.success) {
         message.success("Thêm chiến dịch thành công");
         fetchCampaigns();
-        return true;
+        return { success: true };
       } else {
         message.error(res.data.error || "Không thể thêm chiến dịch");
-        return false;
+        return { success: false, error: res.data.error };
       }
     } catch (err) {
-      // Hiển thị lỗi trả về từ backend nếu có
       const backendMsg = err.response?.data?.error;
       message.error(backendMsg || "Không thể thêm chiến dịch");
-      return false;
+      return { success: false, error: backendMsg };
     }
   };
 
@@ -250,6 +249,15 @@ const HealthCheckupCampaigns = () => {
           >
             <Button danger icon={<DeleteOutlined />}></Button>
           </Popconfirm>
+          <Popconfirm
+            title="Bạn muốn cập nhật trạng thái chiến dịch này thành?"
+            okText="Hoàn thành"
+            cancelText="Hủy"
+            onConfirm={() => updateCampaignStatus(record.id, "FINISHED")}
+            onCancel={() => updateCampaignStatus(record.id, "CANCELLED")}
+          >
+            <Button type="default">Cập nhật trạng thái</Button>
+          </Popconfirm>
         </Space>
       ),
     },
@@ -292,6 +300,27 @@ const HealthCheckupCampaigns = () => {
   const handleResetFilters = () => {
     searchForm.resetFields();
     setCampaigns(allCampaigns);
+  };
+
+  // Add updateCampaignStatus function
+  const updateCampaignStatus = async (id, status) => {
+    try {
+      const res = await axios.put(
+        `/api/medical-campaigns/${id}/status`,
+        { status },
+        { headers: getHeaders() }
+      );
+      if (res.data.success) {
+        message.success("Cập nhật trạng thái thành công");
+        fetchCampaigns();
+      } else {
+        message.error(res.data.error || "Không thể cập nhật trạng thái");
+      }
+    } catch (err) {
+      message.error(
+        err.response?.data?.error || "Không thể cập nhật trạng thái"
+      );
+    }
   };
 
   return (
@@ -396,7 +425,6 @@ const HealthCheckupCampaigns = () => {
                   deadline: selectedCampaign.deadline
                     ? dayjs(selectedCampaign.deadline)
                     : null,
-                  status: selectedCampaign.status,
                 }
               : {
                   name: "",
@@ -404,7 +432,6 @@ const HealthCheckupCampaigns = () => {
                   targetGrades: [],
                   scheduledDate: null,
                   deadline: null,
-                  status: "ACTIVE",
                 }
           }
           enableReinitialize
@@ -417,7 +444,7 @@ const HealthCheckupCampaigns = () => {
               .required("Vui lòng chọn ngày kết thúc")
               .test(
                 "is-at-least-7-days",
-                "Ngày kết thúc phải cách ngày bắt đầu ít nhất 1 tuần",
+                "Deadline phải cách ngày bắt đầu ít nhất 1 tuần",
                 function (value) {
                   const { scheduledDate } = this.parent;
                   if (!scheduledDate || !value) return true;
@@ -426,24 +453,19 @@ const HealthCheckupCampaigns = () => {
                   return end - start >= 7 * 24 * 60 * 60 * 1000;
                 }
               ),
-            status: Yup.string().required("Vui lòng chọn trạng thái"),
           })}
-          onSubmit={async (values, { setSubmitting }) => {
+          onSubmit={async (values, { setSubmitting, setFieldError }) => {
             let success = false;
-
+            let errorMsg = "";
             if (selectedCampaign) {
-              // Try sending data in a format that works with backend's incorrect Prisma usage
               const updateData = {};
               if (values.name) updateData.name = values.name;
               if (values.description !== undefined)
                 updateData.description = values.description;
               if (values.targetGrades)
                 updateData.targetGrades = values.targetGrades;
-              if (values.status) updateData.status = values.status;
-
               success = await updateCampaign(selectedCampaign.id, updateData);
             } else {
-              // For create, send all required fields
               const data = {
                 name: values.name,
                 description: values.description,
@@ -460,9 +482,34 @@ const HealthCheckupCampaigns = () => {
                   : "",
                 status: "ACTIVE",
               };
-              success = await createCampaign(data);
+              const result = await createCampaign(data);
+              success = result.success;
+              errorMsg = result.error;
+              // Nếu có lỗi về ngày từ backend, setFieldError cho trường liên quan
+              if (!success && errorMsg) {
+                let matched = false;
+                const lowerMsg = errorMsg ? errorMsg.toLowerCase() : "";
+                if (
+                  lowerMsg.includes("ngày bắt đầu") ||
+                  lowerMsg.includes("khởi tạo") ||
+                  lowerMsg.includes("scheduled")
+                ) {
+                  setFieldError("scheduledDate", errorMsg);
+                  matched = true;
+                }
+                if (
+                  lowerMsg.includes("deadline") ||
+                  lowerMsg.includes("kết thúc")
+                ) {
+                  setFieldError("deadline", errorMsg);
+                  matched = true;
+                }
+                if (!matched) {
+                  setFieldError("scheduledDate", errorMsg);
+                  setFieldError("deadline", errorMsg);
+                }
+              }
             }
-
             setSubmitting(false);
             if (success) {
               setIsModalVisible(false);
@@ -570,15 +617,9 @@ const HealthCheckupCampaigns = () => {
                   <Form.Item
                     label="Ngày bắt đầu"
                     help={
-                      touched.scheduledDate && errors.scheduledDate
-                        ? errors.scheduledDate
-                        : undefined
+                      errors.scheduledDate ? errors.scheduledDate : undefined
                     }
-                    validateStatus={
-                      touched.scheduledDate && errors.scheduledDate
-                        ? "error"
-                        : undefined
-                    }
+                    validateStatus={errors.scheduledDate ? "error" : undefined}
                   >
                     <DatePicker
                       style={{ width: "100%" }}
@@ -596,14 +637,8 @@ const HealthCheckupCampaigns = () => {
                 <Col span={12}>
                   <Form.Item
                     label="Ngày kết thúc"
-                    help={
-                      touched.deadline && errors.deadline
-                        ? errors.deadline
-                        : undefined
-                    }
-                    validateStatus={
-                      touched.deadline && errors.deadline ? "error" : undefined
-                    }
+                    help={errors.deadline ? errors.deadline : undefined}
+                    validateStatus={errors.deadline ? "error" : undefined}
                   >
                     <DatePicker
                       style={{ width: "100%" }}
@@ -615,28 +650,6 @@ const HealthCheckupCampaigns = () => {
                   </Form.Item>
                 </Col>
               </Row>
-              {selectedCampaign && (
-                <Form.Item
-                  label="Trạng thái"
-                  help={
-                    touched.status && errors.status ? errors.status : undefined
-                  }
-                  validateStatus={
-                    touched.status && errors.status ? "error" : undefined
-                  }
-                >
-                  <Select
-                    value={values.status}
-                    onChange={(val) => setFieldValue("status", val)}
-                    onBlur={handleBlur}
-                    options={[
-                      { label: "Đang diễn ra", value: "ACTIVE" },
-                      { label: "Hoàn thành", value: "FINISHED" },
-                      { label: "Đã hủy", value: "CANCELLED" },
-                    ]}
-                  />
-                </Form.Item>
-              )}
               <Form.Item>
                 <Button type="primary" htmlType="submit" loading={isSubmitting}>
                   {selectedCampaign ? "Cập nhật" : "Thêm"}
