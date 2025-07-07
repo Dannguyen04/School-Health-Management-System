@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import api from "../../utils/api";
+import { Checkbox } from "antd";
 import {
   Form,
   FormContainer,
@@ -20,6 +21,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const [errors, setErrors] = useState({});
   const { login, setScrollToServices } = useAuth();
   const navigate = useNavigate();
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -81,7 +83,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       }}
       style={{
         padding: 0,
-        margin: 0,                
+        margin: 0,
         maxWidth: '100vw',
       }}
     >
@@ -121,6 +123,13 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
               {errors.password}
             </ErrorMessage>
           )}
+          <Checkbox
+  checked={rememberMe}
+  onChange={(e) => setRememberMe(e.target.checked)}
+  style={{ marginBottom: 16 }}
+>
+  Ghi nhớ đăng nhập
+</Checkbox>
           <div style={{ textAlign: 'right', marginBottom: 16 }}>
             <a href="/forgot-password" style={{ fontSize: 14 }}>Quên mật khẩu?</a>
           </div>
