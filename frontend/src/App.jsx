@@ -41,7 +41,7 @@ import AdminLayout from "./layouts/Admin";
 import ManagerLayout from "./layouts/Manager";
 import NurseLayout from "./layouts/Nurse";
 import User from "./layouts/User";
-import AuthPage from "./pages/AuthPage";
+import AuthPage, { ForgotPassword } from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
@@ -54,6 +54,7 @@ const App = () => {
             <Routes>
                 <Route path="/" element={<Homepage />} />
                 <Route path="/auth" element={<AuthPage />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/blog/:id" element={<BlogDetail />} />
                 {/* Nurse Routes */}
                 <Route
