@@ -81,6 +81,8 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       }}
       style={{
         padding: 0,
+        margin: 0,                
+        maxWidth: '100vw',
       }}
     >
       <FormContainer style={{ minHeight: 0, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>

@@ -40,7 +40,7 @@ export const FormContainer = styled.div`
   transition: box-shadow 0.2s;
   &:hover {
     box-shadow: 0 12px 48px 0 rgba(255,65,108,0.18), 0 2px 12px 0 rgba(255,75,43,0.13);
-    border-color: #ff416c;
+    border-color: #36AE9A;
   }
   @media (max-width: 480px) {
     max-width: 98vw;
@@ -65,7 +65,7 @@ export const Title = styled.h1`
   font-size: 2.1rem;
   font-weight: bold;
   margin: 0 0 12px 0;
-  background: linear-gradient(90deg, #ff4b2b 0%, #ff416c 100%);
+  background: linear-gradient(90deg, #36AE9A 0%, #36AE9A 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -143,7 +143,7 @@ export const ErrorMessage = styled.p`
 export const LargeButton = styled.button`
   border-radius: 24px;
   border: none;
-  background: linear-gradient(90deg, #ff4b2b 0%, #ff416c 100%);
+  background: linear-gradient(90deg, #36AE9A 0%, #36AE9A 100%);
   color: #fff;
   font-size: 1.1rem;
   font-weight: bold;
@@ -156,7 +156,7 @@ export const LargeButton = styled.button`
   box-shadow: 0 2px 12px rgba(255,65,108,0.10);
   cursor: pointer;
   &:hover {
-    background: linear-gradient(90deg, #ff416c 0%, #ff4b2b 100%);
+    background: linear-gradient(90deg,rgb(17, 90, 78) 0%,rgb(20, 80, 70) 100%);
     box-shadow: 0 4px 20px rgba(255,65,108,0.18);
     filter: brightness(1.08);
   }
