@@ -119,6 +119,9 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
               {errors.password}
             </ErrorMessage>
           )}
+          <div style={{ textAlign: 'right', marginBottom: 16 }}>
+            <a href="/forgot-password" style={{ fontSize: 14 }}>Quên mật khẩu?</a>
+          </div>
           <LargeButton htmlType="submit">Đăng nhập</LargeButton>
         </Form>
       </FormContainer>
