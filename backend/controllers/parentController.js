@@ -3,921 +3,926 @@ const prisma = new PrismaClient();
 
 // Thêm hàm gửi notification nếu thiếu số điện thoại
 async function notifyParentToUpdatePhone(user) {
-  if (!user.phone) {
-    // Kiểm tra đã có notification chưa đọc cùng loại chưa
-    const existing = await prisma.notification.findFirst({
-      where: {
-        userId: user.id,
-        type: "update_phone",
-        status: { in: ["SENT", "DELIVERED"] },
-      },
-    });
-    if (!existing) {
-      await prisma.notification.create({
-        data: {
-          userId: user.id,
-          title: "Cập nhật số điện thoại",
-          message:
-            "Vui lòng cập nhật số điện thoại để nhận đầy đủ thông báo từ nhà trường.",
-          type: "update_phone",
-          status: "SENT",
-          sentAt: new Date(),
-        },
-      });
+    if (!user.phone) {
+        // Kiểm tra đã có notification chưa đọc cùng loại chưa
+        const existing = await prisma.notification.findFirst({
+            where: {
+                userId: user.id,
+                type: "update_phone",
+                status: { in: ["SENT", "DELIVERED"] },
+            },
+        });
+        if (!existing) {
+            await prisma.notification.create({
+                data: {
+                    userId: user.id,
+                    title: "Cập nhật số điện thoại",
+                    message:
+                        "Vui lòng cập nhật số điện thoại để nhận đầy đủ thông báo từ nhà trường.",
+                    type: "update_phone",
+                    status: "SENT",
+                    sentAt: new Date(),
+                },
+            });
+        }
     }
-  }
 }
 
 export const getMyChildren = async (req, res) => {
-  try {
-    if (!req.user.parentProfile) {
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
-    }
-    // Kiểm tra và gửi notification nếu thiếu số điện thoại
-    await notifyParentToUpdatePhone(req.user);
+    try {
+        if (!req.user.parentProfile) {
+            return res.status(403).json({
+                success: false,
+                error: "You must be a parent to access this resource",
+            });
+        }
+        // Kiểm tra và gửi notification nếu thiếu số điện thoại
+        await notifyParentToUpdatePhone(req.user);
 
-    const parentId = req.user.parentProfile.id;
-    console.log("[getMyChildren] parentId:", parentId);
+        const parentId = req.user.parentProfile.id;
+        console.log("[getMyChildren] parentId:", parentId);
 
-    const childrenRelations = await prisma.studentParent.findMany({
-      where: {
-        parentId: parentId,
-      },
-      include: {
-        student: {
-          include: {
-            user: {
-              select: {
-                fullName: true,
-              },
+        const childrenRelations = await prisma.studentParent.findMany({
+            where: {
+                parentId: parentId,
             },
-          },
-        },
-      },
-    });
+            include: {
+                student: {
+                    include: {
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
 
-    console.log("[getMyChildren] childrenRelations:", childrenRelations);
+        console.log("[getMyChildren] childrenRelations:", childrenRelations);
 
-    const children = childrenRelations.map((rel) => ({
-      studentId: rel.student.id,
-      fullName: rel.student.user.fullName,
-      class: rel.student.class,
-      grade: rel.student.grade,
-    }));
+        const children = childrenRelations.map((rel) => ({
+            studentId: rel.student.id,
+            fullName: rel.student.user.fullName,
+            class: rel.student.class,
+            grade: rel.student.grade,
+        }));
 
-    console.log("[getMyChildren] children response:", children);
+        console.log("[getMyChildren] children response:", children);
 
-    res.json({
-      success: true,
-      data: children,
-    });
-  } catch (error) {
-    console.error("Error fetching children:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
+        res.json({
+            success: true,
+            data: children,
+        });
+    } catch (error) {
+        console.error("Error fetching children:", error);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
+    }
 };
 
 export const getHealthProfile = async (req, res) => {
-  try {
-    console.log("getHealthProfile called with params:", req.params);
-    console.log("User data:", req.user);
+    try {
+        console.log("getHealthProfile called with params:", req.params);
+        console.log("User data:", req.user);
 
-    const { studentId } = req.params;
+        const { studentId } = req.params;
 
-    // Check if user has parent profile
-    if (!req.user.parentProfile) {
-      console.log("No parent profile found for user");
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
-    }
+        // Check if user has parent profile
+        if (!req.user.parentProfile) {
+            console.log("No parent profile found for user");
+            return res.status(403).json({
+                success: false,
+                error: "You must be a parent to access this resource",
+            });
+        }
 
-    const parentId = req.user.parentProfile.id;
+        const parentId = req.user.parentProfile.id;
 
-    // Find student through parent-student relationship
-    const studentParent = await prisma.studentParent.findFirst({
-      where: {
-        parentId: parentId,
-        studentId: studentId,
-      },
-      include: {
-        student: {
-          include: {
-            healthProfile: true,
-            user: {
-              select: {
-                fullName: true,
-                email: true,
-              },
+        // Find student through parent-student relationship
+        const studentParent = await prisma.studentParent.findFirst({
+            where: {
+                parentId: parentId,
+                studentId: studentId,
             },
-          },
-        },
-      },
-    });
+            include: {
+                student: {
+                    include: {
+                        healthProfile: true,
+                        user: {
+                            select: {
+                                fullName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
 
-    if (!studentParent) {
-      return res.status(404).json({
-        success: false,
-        error: "Health profile not found or you are not authorized to view it",
-      });
+        if (!studentParent) {
+            return res.status(404).json({
+                success: false,
+                error: "Health profile not found or you are not authorized to view it",
+            });
+        }
+
+        if (!studentParent.student.healthProfile) {
+            return res.status(404).json({
+                success: false,
+                error: "Health profile not found",
+            });
+        }
+
+        // Transform data to ensure proper format for frontend
+        const healthProfile = studentParent.student.healthProfile;
+
+        const transformedHealthProfile = {
+            ...healthProfile,
+            // Ensure arrays are properly formatted
+            allergies: Array.isArray(healthProfile.allergies)
+                ? healthProfile.allergies
+                : [],
+            chronicDiseases: Array.isArray(healthProfile.chronicDiseases)
+                ? healthProfile.chronicDiseases
+                : [],
+            // Ensure other fields are properly formatted
+            vision: healthProfile.vision || "",
+            hearing: healthProfile.hearing || "",
+            height: healthProfile.height || null,
+            weight: healthProfile.weight || null,
+        };
+
+        // Log for debugging
+        console.log("Student Parent:", studentParent);
+        console.log("Original Health Profile:", healthProfile);
+        console.log("Transformed Health Profile:", transformedHealthProfile);
+
+        res.json({
+            success: true,
+            data: {
+                healthProfile: transformedHealthProfile,
+                student: {
+                    id: studentParent.student.id,
+                    fullName: studentParent.student.user.fullName,
+                    email: studentParent.student.user.email,
+                },
+            },
+        });
+    } catch (error) {
+        console.error("Error fetching health profile:", error);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
     }
-
-    if (!studentParent.student.healthProfile) {
-      return res.status(404).json({
-        success: false,
-        error: "Health profile not found",
-      });
-    }
-
-    // Transform data to ensure proper format for frontend
-    const healthProfile = studentParent.student.healthProfile;
-
-    const transformedHealthProfile = {
-      ...healthProfile,
-      // Ensure arrays are properly formatted
-      allergies: Array.isArray(healthProfile.allergies)
-        ? healthProfile.allergies
-        : [],
-      chronicDiseases: Array.isArray(healthProfile.chronicDiseases)
-        ? healthProfile.chronicDiseases
-        : [],
-      // Ensure other fields are properly formatted
-      vision: healthProfile.vision || "",
-      hearing: healthProfile.hearing || "",
-      height: healthProfile.height || null,
-      weight: healthProfile.weight || null,
-    };
-
-    // Log for debugging
-    console.log("Student Parent:", studentParent);
-    console.log("Original Health Profile:", healthProfile);
-    console.log("Transformed Health Profile:", transformedHealthProfile);
-
-    res.json({
-      success: true,
-      data: {
-        healthProfile: transformedHealthProfile,
-        student: {
-          id: studentParent.student.id,
-          fullName: studentParent.student.user.fullName,
-          email: studentParent.student.user.email,
-        },
-      },
-    });
-  } catch (error) {
-    console.error("Error fetching health profile:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
 };
 
 export const upsertHealthProfile = async (req, res) => {
-  try {
-    const { studentId } = req.params;
+    try {
+        const { studentId } = req.params;
 
-    // Check if user has parent profile
-    if (!req.user.parentProfile) {
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
-    }
-
-    const parentId = req.user.parentProfile.id;
-    const {
-      allergies,
-      chronicDiseases,
-      medications,
-      treatmentHistory,
-      vision,
-      hearing,
-      height,
-      weight,
-      notes,
-    } = req.body;
-
-    // Validate input data
-    if (allergies && !Array.isArray(allergies)) {
-      return res.status(400).json({
-        success: false,
-        error: "Allergies must be an array",
-      });
-    }
-
-    if (chronicDiseases && !Array.isArray(chronicDiseases)) {
-      return res.status(400).json({
-        success: false,
-        error: "Chronic diseases must be an array",
-      });
-    }
-
-    // Validate allergy objects
-    if (allergies) {
-      for (let i = 0; i < allergies.length; i++) {
-        const allergy = allergies[i];
-        if (
-          !allergy.type ||
-          !allergy.name ||
-          !allergy.level ||
-          !allergy.symptoms
-        ) {
-          return res.status(400).json({
-            success: false,
-            error: `Allergy at index ${i} is missing required fields: type, name, level, symptoms`,
-          });
+        // Check if user has parent profile
+        if (!req.user.parentProfile) {
+            return res.status(403).json({
+                success: false,
+                error: "You must be a parent to access this resource",
+            });
         }
-      }
-    }
 
-    // Validate chronic disease objects
-    if (chronicDiseases) {
-      for (let i = 0; i < chronicDiseases.length; i++) {
-        const disease = chronicDiseases[i];
-        if (
-          !disease.group ||
-          !disease.name ||
-          !disease.onsetDate ||
-          !disease.level ||
-          !disease.status
-        ) {
-          return res.status(400).json({
-            success: false,
-            error: `Chronic disease at index ${i} is missing required fields: group, name, onsetDate, level, status`,
-          });
+        const parentId = req.user.parentProfile.id;
+        const {
+            allergies,
+            chronicDiseases,
+            medications,
+            treatmentHistory,
+            vision,
+            hearing,
+            height,
+            weight,
+            notes,
+        } = req.body;
+
+        // Validate input data
+        if (allergies && !Array.isArray(allergies)) {
+            return res.status(400).json({
+                success: false,
+                error: "Allergies must be an array",
+            });
         }
-      }
+
+        if (chronicDiseases && !Array.isArray(chronicDiseases)) {
+            return res.status(400).json({
+                success: false,
+                error: "Chronic diseases must be an array",
+            });
+        }
+
+        // Validate allergy objects
+        if (allergies) {
+            for (let i = 0; i < allergies.length; i++) {
+                const allergy = allergies[i];
+                if (
+                    !allergy.type ||
+                    !allergy.name ||
+                    !allergy.level ||
+                    !allergy.symptoms
+                ) {
+                    return res.status(400).json({
+                        success: false,
+                        error: `Allergy at index ${i} is missing required fields: type, name, level, symptoms`,
+                    });
+                }
+            }
+        }
+
+        // Validate chronic disease objects
+        if (chronicDiseases) {
+            for (let i = 0; i < chronicDiseases.length; i++) {
+                const disease = chronicDiseases[i];
+                if (
+                    !disease.group ||
+                    !disease.name ||
+                    !disease.onsetDate ||
+                    !disease.level ||
+                    !disease.status
+                ) {
+                    return res.status(400).json({
+                        success: false,
+                        error: `Chronic disease at index ${i} is missing required fields: group, name, onsetDate, level, status`,
+                    });
+                }
+            }
+        }
+
+        const studentParent = await prisma.studentParent.findFirst({
+            where: {
+                parentId: parentId,
+                studentId: studentId,
+            },
+            include: {
+                student: true,
+            },
+        });
+
+        if (!studentParent) {
+            return res.status(403).json({
+                success: false,
+                error: "You are not authorized to update this health profile",
+            });
+        }
+
+        // Transform data for storage
+        const healthProfileData = {
+            vision: vision || null,
+            hearing: hearing || null,
+            height: height ? parseFloat(height) : null,
+            weight: weight ? parseFloat(weight) : null,
+            allergies: allergies || [],
+            chronicDiseases: chronicDiseases || [],
+            medications: medications || [],
+            treatmentHistory: treatmentHistory || null,
+            notes: notes || null,
+            lastUpdatedBy: req.user.id,
+        };
+
+        const healthProfile = await prisma.healthProfile.upsert({
+            where: {
+                studentId: studentId,
+            },
+            update: healthProfileData,
+            create: {
+                studentId: studentId,
+                ...healthProfileData,
+            },
+        });
+
+        // Log the update for audit
+        await prisma.auditLog.create({
+            data: {
+                userId: req.user.id,
+                action: "update",
+                resource: "health_profile",
+                resourceId: healthProfile.id,
+                details: {
+                    studentId: studentId,
+                    updatedFields: Object.keys(healthProfileData).filter(
+                        (key) => healthProfileData[key] !== null
+                    ),
+                },
+            },
+        });
+
+        res.json({
+            success: true,
+            data: healthProfile,
+            message: "Health profile updated successfully",
+        });
+    } catch (error) {
+        console.error("Error upserting health profile:", error);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
     }
-
-    const studentParent = await prisma.studentParent.findFirst({
-      where: {
-        parentId: parentId,
-        studentId: studentId,
-      },
-      include: {
-        student: true,
-      },
-    });
-
-    if (!studentParent) {
-      return res.status(403).json({
-        success: false,
-        error: "You are not authorized to update this health profile",
-      });
-    }
-
-    // Transform data for storage
-    const healthProfileData = {
-      vision: vision || null,
-      hearing: hearing || null,
-      height: height ? parseFloat(height) : null,
-      weight: weight ? parseFloat(weight) : null,
-      allergies: allergies || [],
-      chronicDiseases: chronicDiseases || [],
-      medications: medications || [],
-      treatmentHistory: treatmentHistory || null,
-      notes: notes || null,
-      lastUpdatedBy: req.user.id,
-    };
-
-    const healthProfile = await prisma.healthProfile.upsert({
-      where: {
-        studentId: studentId,
-      },
-      update: healthProfileData,
-      create: {
-        studentId: studentId,
-        ...healthProfileData,
-      },
-    });
-
-    // Log the update for audit
-    await prisma.auditLog.create({
-      data: {
-        userId: req.user.id,
-        action: "update",
-        resource: "health_profile",
-        resourceId: healthProfile.id,
-        details: {
-          studentId: studentId,
-          updatedFields: Object.keys(healthProfileData).filter(
-            (key) => healthProfileData[key] !== null
-          ),
-        },
-      },
-    });
-
-    res.json({
-      success: true,
-      data: healthProfile,
-      message: "Health profile updated successfully",
-    });
-  } catch (error) {
-    console.error("Error upserting health profile:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
 };
 
 export const deleteHealthProfile = async (req, res) => {
-  try {
-    const { studentId } = req.params;
+    try {
+        const { studentId } = req.params;
 
-    // Check if user has parent profile
-    if (!req.user.parentProfile) {
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
+        // Check if user has parent profile
+        if (!req.user.parentProfile) {
+            return res.status(403).json({
+                success: false,
+                error: "You must be a parent to access this resource",
+            });
+        }
+
+        const parentId = req.user.parentProfile.id;
+
+        const studentParent = await prisma.studentParent.findFirst({
+            where: {
+                parentId: parentId,
+                studentId: studentId,
+            },
+            include: {
+                student: true,
+            },
+        });
+
+        if (!studentParent) {
+            return res.status(403).json({
+                success: false,
+                error: "You are not authorized to delete this health profile",
+            });
+        }
+
+        await prisma.healthProfile.delete({
+            where: {
+                studentId: studentId,
+            },
+        });
+
+        res.json({
+            success: true,
+            message: "Health profile deleted successfully",
+        });
+    } catch (error) {
+        console.error("Error deleting health profile:", error);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
     }
-
-    const parentId = req.user.parentProfile.id;
-
-    const studentParent = await prisma.studentParent.findFirst({
-      where: {
-        parentId: parentId,
-        studentId: studentId,
-      },
-      include: {
-        student: true,
-      },
-    });
-
-    if (!studentParent) {
-      return res.status(403).json({
-        success: false,
-        error: "You are not authorized to delete this health profile",
-      });
-    }
-
-    await prisma.healthProfile.delete({
-      where: {
-        studentId: studentId,
-      },
-    });
-
-    res.json({
-      success: true,
-      message: "Health profile deleted successfully",
-    });
-  } catch (error) {
-    console.error("Error deleting health profile:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
 };
 
 export const requestMedication = async (req, res) => {
-  try {
-    console.log("[requestMedication] Body:", req.body);
-    console.log("[requestMedication] File:", req.file);
-    const { studentId } = req.params;
-    const {
-      medicationName,
-      dosage,
-      frequency,
-      instructions,
-      startDate,
-      endDate,
-      description,
-      unit,
-      stockQuantity,
-    } = req.body;
-
-    // Validate dữ liệu đầu vào
-    if (!medicationName || !dosage || !frequency || !startDate || !unit) {
-      return res.status(400).json({
-        success: false,
-        error:
-          "Thiếu thông tin bắt buộc: medicationName, dosage, frequency, startDate, unit",
-      });
-    }
-    if (isNaN(Number(stockQuantity))) {
-      return res.status(400).json({
-        success: false,
-        error: "Số lượng thuốc (stockQuantity) phải là số",
-      });
-    }
-    let parsedStartDate = null;
-    let parsedEndDate = null;
     try {
-      parsedStartDate = new Date(startDate);
-      if (endDate) parsedEndDate = new Date(endDate);
-      if (
-        isNaN(parsedStartDate.getTime()) ||
-        (endDate && isNaN(parsedEndDate.getTime()))
-      ) {
-        throw new Error();
-      }
-    } catch {
-      return res.status(400).json({
-        success: false,
-        error: "Ngày bắt đầu/kết thúc không hợp lệ",
-      });
-    }
+        console.log("[requestMedication] Body:", req.body);
+        console.log("[requestMedication] File:", req.file);
+        const { studentId } = req.params;
+        const {
+            medicationName,
+            dosage,
+            frequency,
+            instructions,
+            startDate,
+            endDate,
+            description,
+            unit,
+            stockQuantity,
+        } = req.body;
 
-    // Check if user has parent profile
-    if (!req.user.parentProfile) {
-      console.log("User is not a parent.");
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
-    }
+        // Validate dữ liệu đầu vào
+        if (!medicationName || !dosage || !frequency || !startDate || !unit) {
+            return res.status(400).json({
+                success: false,
+                error: "Thiếu thông tin bắt buộc: medicationName, dosage, frequency, startDate, unit",
+            });
+        }
+        if (isNaN(Number(stockQuantity))) {
+            return res.status(400).json({
+                success: false,
+                error: "Số lượng thuốc (stockQuantity) phải là số",
+            });
+        }
+        let parsedStartDate = null;
+        let parsedEndDate = null;
+        try {
+            parsedStartDate = new Date(startDate);
+            if (endDate) parsedEndDate = new Date(endDate);
+            if (
+                isNaN(parsedStartDate.getTime()) ||
+                (endDate && isNaN(parsedEndDate.getTime()))
+            ) {
+                throw new Error();
+            }
+        } catch {
+            return res.status(400).json({
+                success: false,
+                error: "Ngày bắt đầu/kết thúc không hợp lệ",
+            });
+        }
 
-    const parentId = req.user.parentProfile.id;
+        // Check if user has parent profile
+        if (!req.user.parentProfile) {
+            console.log("User is not a parent.");
+            return res.status(403).json({
+                success: false,
+                error: "You must be a parent to access this resource",
+            });
+        }
 
-    // Verify parent-student relationship
-    const studentParent = await prisma.studentParent.findFirst({
-      where: {
-        parentId: parentId,
-        studentId: studentId,
-      },
-    });
+        const parentId = req.user.parentProfile.id;
 
-    if (!studentParent) {
-      console.log("Parent-student relationship not found.");
-      return res.status(403).json({
-        success: false,
-        error: "You are not authorized to request medication for this student",
-      });
-    }
-
-    // Find or create medication based on name
-    let medication = await prisma.medication.findFirst({
-      where: {
-        name: medicationName,
-      },
-    });
-
-    if (!medication) {
-      console.log("Medication not found, creating new one.");
-      medication = await prisma.medication.create({
-        data: {
-          name: medicationName,
-          description: description || "",
-          dosage: dosage || "",
-          unit: unit || "",
-          stockQuantity: stockQuantity ? parseInt(stockQuantity) : 0,
-        },
-      });
-    }
-
-    // Create medication request using the found/created medication's ID
-    let image = null;
-    if (req.file) {
-      // Đường dẫn public để client truy cập
-      image = `/api/uploads/medicine-images/${req.file.filename}`;
-    }
-    const studentMedication = await prisma.studentMedication.create({
-      data: {
-        studentId,
-        parentId,
-        medicationId: medication.id,
-        dosage,
-        frequency,
-        instructions,
-        startDate: parsedStartDate,
-        endDate: parsedEndDate || null,
-        status: "PENDING_APPROVAL",
-        image,
-      },
-      include: {
-        medication: true,
-        student: {
-          include: {
-            user: {
-              select: {
-                fullName: true,
-              },
+        // Verify parent-student relationship
+        const studentParent = await prisma.studentParent.findFirst({
+            where: {
+                parentId: parentId,
+                studentId: studentId,
             },
-          },
-        },
-      },
-    });
+        });
 
-    console.log(
-      "Medication request submitted successfully:",
-      studentMedication
-    );
-    res.json({
-      success: true,
-      data: studentMedication,
-      message: "Medication request submitted successfully",
-    });
-  } catch (error) {
-    console.error("Error requesting medication:", error.message, error.stack);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
+        if (!studentParent) {
+            console.log("Parent-student relationship not found.");
+            return res.status(403).json({
+                success: false,
+                error: "You are not authorized to request medication for this student",
+            });
+        }
+
+        // Find or create medication based on name
+        let medication = await prisma.medication.findFirst({
+            where: {
+                name: medicationName,
+            },
+        });
+
+        if (!medication) {
+            console.log("Medication not found, creating new one.");
+            medication = await prisma.medication.create({
+                data: {
+                    name: medicationName,
+                    description: description || "",
+                    dosage: dosage || "",
+                    unit: unit || "",
+                    stockQuantity: stockQuantity ? parseInt(stockQuantity) : 0,
+                },
+            });
+        }
+
+        // Create medication request using the found/created medication's ID
+        let image = null;
+        if (req.file) {
+            // Đường dẫn public để client truy cập
+            image = `/api/uploads/medicine-images/${req.file.filename}`;
+        }
+        const studentMedication = await prisma.studentMedication.create({
+            data: {
+                studentId,
+                parentId,
+                medicationId: medication.id,
+                dosage,
+                frequency,
+                instructions,
+                startDate: parsedStartDate,
+                endDate: parsedEndDate || null,
+                status: "PENDING_APPROVAL",
+                image,
+            },
+            include: {
+                medication: true,
+                student: {
+                    include: {
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        console.log(
+            "Medication request submitted successfully:",
+            studentMedication
+        );
+        res.json({
+            success: true,
+            data: studentMedication,
+            message: "Medication request submitted successfully",
+        });
+    } catch (error) {
+        console.error(
+            "Error requesting medication:",
+            error.message,
+            error.stack
+        );
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
+    }
 };
 
 export const getStudentMedicines = async (req, res) => {
-  try {
-    const { studentId } = req.params;
+    try {
+        const { studentId } = req.params;
 
-    if (!req.user.parentProfile) {
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
-    }
+        if (!req.user.parentProfile) {
+            return res.status(403).json({
+                success: false,
+                error: "You must be a parent to access this resource",
+            });
+        }
 
-    const parentId = req.user.parentProfile.id;
+        const parentId = req.user.parentProfile.id;
 
-    const studentParent = await prisma.studentParent.findFirst({
-      where: {
-        parentId: parentId,
-        studentId: studentId,
-      },
-    });
-
-    if (!studentParent) {
-      return res.status(403).json({
-        success: false,
-        error: "You are not authorized to view this student's medicines",
-      });
-    }
-
-    const studentMedicines = await prisma.studentMedication.findMany({
-      where: {
-        studentId: studentId,
-      },
-      include: {
-        medication: true,
-        student: {
-          include: {
-            user: {
-              select: {
-                fullName: true,
-              },
+        const studentParent = await prisma.studentParent.findFirst({
+            where: {
+                parentId: parentId,
+                studentId: studentId,
             },
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
-      },
-    });
+        });
 
-    res.json({
-      success: true,
-      data: studentMedicines,
-    });
-  } catch (error) {
-    console.error("Error fetching student medicines:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
+        if (!studentParent) {
+            return res.status(403).json({
+                success: false,
+                error: "You are not authorized to view this student's medicines",
+            });
+        }
+
+        const studentMedicines = await prisma.studentMedication.findMany({
+            where: {
+                studentId: studentId,
+            },
+            include: {
+                medication: true,
+                student: {
+                    include: {
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: {
+                createdAt: "desc",
+            },
+        });
+
+        res.json({
+            success: true,
+            data: studentMedicines,
+        });
+    } catch (error) {
+        console.error("Error fetching student medicines:", error);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
+    }
 };
 
 export const getVaccinationCampaignsForParent = async (req, res) => {
-  try {
-    if (!req.user.parentProfile) {
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
-    }
+    try {
+        if (!req.user.parentProfile) {
+            return res.status(403).json({
+                success: false,
+                error: "You must be a parent to access this resource",
+            });
+        }
 
-    const parentId = req.user.parentProfile.id;
+        const parentId = req.user.parentProfile.id;
 
-    // Get parent's children with their grades
-    const children = await prisma.studentParent.findMany({
-      where: {
-        parentId: parentId,
-      },
-      include: {
-        student: {
-          include: {
-            user: {
-              select: {
-                fullName: true,
-              },
+        // Get parent's children with their grades
+        const children = await prisma.studentParent.findMany({
+            where: {
+                parentId: parentId,
             },
-          },
-        },
-      },
-    });
-
-    if (!children || children.length === 0) {
-      return res.status(200).json({
-        success: true,
-        data: [],
-        message: "No children found for this parent",
-      });
-    }
-
-    // Get grades of parent's children
-    const childGrades = children
-      .map((child) => child.student.grade)
-      .filter(Boolean);
-
-    console.log("Parent children grades:", childGrades);
-
-    // Get vaccination campaigns that target the grades of parent's children
-    const campaigns = await prisma.vaccinationCampaign.findMany({
-      where: {
-        isActive: true,
-        targetGrades: {
-          hasSome: childGrades,
-        },
-      },
-      include: {
-        vaccinations: true,
-        consents: {
-          where: {
-            studentId: {
-              in: children.map((child) => child.studentId),
+            include: {
+                student: {
+                    include: {
+                        user: {
+                            select: {
+                                fullName: true,
+                            },
+                        },
+                    },
+                },
             },
-          },
-        },
-      },
-      orderBy: { scheduledDate: "asc" },
-    });
+        });
 
-    console.log("Found campaigns:", campaigns.length);
+        if (!children || children.length === 0) {
+            return res.status(200).json({
+                success: true,
+                data: [],
+                message: "No children found for this parent",
+            });
+        }
 
-    // Add consent status for each child
-    const campaignsWithConsent = campaigns.map((campaign) => {
-      const campaignData = {
-        ...campaign,
-        childrenConsent: children.map((child) => {
-          const existingConsent = campaign.consents.find(
-            (consent) => consent.studentId === child.studentId
-          );
-          return {
-            studentId: child.studentId,
-            studentName: child.student.user.fullName,
-            consent: existingConsent ? existingConsent.consent : null,
-            consentDate: existingConsent ? existingConsent.createdAt : null,
-          };
-        }),
-      };
-      delete campaignData.consents; // Remove the raw consents data
-      return campaignData;
-    });
+        // Get grades of parent's children
+        const childGrades = children
+            .map((child) => child.student.grade)
+            .filter(Boolean);
 
-    res.status(200).json({
-      success: true,
-      data: campaignsWithConsent,
-      children: children.map((child) => ({
-        id: child.studentId,
-        fullName: child.student.user.fullName,
-        grade: child.student.grade,
-      })),
-    });
-  } catch (error) {
-    console.error("Error fetching vaccination campaigns for parent:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
+        console.log("Parent children grades:", childGrades);
+
+        // Get vaccination campaigns that target the grades of parent's children
+        const campaigns = await prisma.vaccinationCampaign.findMany({
+            where: {
+                isActive: true,
+                targetGrades: {
+                    hasSome: childGrades,
+                },
+            },
+            include: {
+                vaccinations: true,
+                consents: {
+                    where: {
+                        studentId: {
+                            in: children.map((child) => child.studentId),
+                        },
+                    },
+                },
+            },
+            orderBy: { scheduledDate: "asc" },
+        });
+
+        console.log("Found campaigns:", campaigns.length);
+
+        // Add consent status for each child
+        const campaignsWithConsent = campaigns.map((campaign) => {
+            const campaignData = {
+                ...campaign,
+                childrenConsent: children.map((child) => {
+                    const existingConsent = campaign.consents.find(
+                        (consent) => consent.studentId === child.studentId
+                    );
+                    return {
+                        studentId: child.studentId,
+                        studentName: child.student.user.fullName,
+                        consent: existingConsent
+                            ? existingConsent.consent
+                            : null,
+                        consentDate: existingConsent
+                            ? existingConsent.createdAt
+                            : null,
+                    };
+                }),
+            };
+            delete campaignData.consents; // Remove the raw consents data
+            return campaignData;
+        });
+
+        res.status(200).json({
+            success: true,
+            data: campaignsWithConsent,
+            children: children.map((child) => ({
+                id: child.studentId,
+                fullName: child.student.user.fullName,
+                grade: child.student.grade,
+            })),
+        });
+    } catch (error) {
+        console.error(
+            "Error fetching vaccination campaigns for parent:",
+            error
+        );
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
+    }
 };
 
 export const getVaccinationDetail = async (req, res) => {
-  try {
-    const { campaignId, studentId } = req.params;
-    const vaccination = await prisma.vaccine.findFirst({
-      where: {
-        studentId,
-        campaign: { id: campaignId },
-      },
-      include: {
-        campaign: true,
-        nurse: { include: { user: true } },
-        student: { include: { user: true } },
-      },
-    });
-    if (!vaccination) {
-      // Nếu không có record tiêm chủng, trả về thông tin campaign, student, consent (nếu có)
-      const campaign = await prisma.VaccinationCampaign.findUnique({
-        where: { id: campaignId },
-        include: {
-          vaccinations: true,
-          consents: true,
-        },
-      });
-      const student = await prisma.Student.findUnique({
-        where: { id: studentId },
-        include: {
-          user: true,
-          parents: {
-            include: {
-              parent: {
-                include: { user: true },
-              },
+    try {
+        const { campaignId, studentId } = req.params;
+        const vaccination = await prisma.vaccinationRecord.findFirst({
+            where: {
+                studentId,
+                campaignId,
             },
-          },
-          healthProfile: true,
-        },
-      });
-      // Lấy consent của học sinh này với campaign này (nếu có)
-      const consent = await prisma.VaccinationConsent.findFirst({
-        where: {
-          campaignId: campaignId,
-          studentId: studentId,
-        },
-      });
-      if (!campaign || !student) {
-        return res.status(404).json({
-          success: false,
-          error: "Không tìm thấy dữ liệu tiêm chủng hoặc chiến dịch",
+            include: {
+                campaign: true,
+                nurse: { include: { user: true } },
+                student: { include: { user: true } },
+            },
         });
-      }
-      return res.json({
-        success: true,
-        data: {
-          campaign,
-          student,
-          consent,
-          status: "SCHEDULED",
-          notVaccinated: true,
-        },
-      });
+        if (!vaccination) {
+            // Nếu không có record tiêm chủng, trả về thông tin campaign, student, consent (nếu có)
+            const campaign = await prisma.vaccinationCampaign.findUnique({
+                where: { id: campaignId },
+                include: {
+                    vaccinationRecords: true,
+                    consents: true,
+                },
+            });
+            const student = await prisma.student.findUnique({
+                where: { id: studentId },
+                include: {
+                    user: true,
+                    parents: {
+                        include: {
+                            parent: {
+                                include: { user: true },
+                            },
+                        },
+                    },
+                    healthProfile: true,
+                },
+            });
+            // Lấy consent của học sinh này với campaign này (nếu có)
+            const consent = await prisma.vaccinationConsent.findFirst({
+                where: {
+                    campaignId: campaignId,
+                    studentId: studentId,
+                },
+            });
+            if (!campaign || !student) {
+                return res.status(404).json({
+                    success: false,
+                    error: "Không tìm thấy dữ liệu tiêm chủng hoặc chiến dịch",
+                });
+            }
+            return res.json({
+                success: true,
+                data: {
+                    campaign,
+                    student,
+                    consent,
+                    status: "SCHEDULED",
+                    notVaccinated: true,
+                },
+            });
+        }
+        res.json({ success: true, data: vaccination });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
-    res.json({ success: true, data: vaccination });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
 };
 
 export const getVaccinationHistory = async (req, res) => {
-  try {
-    const parentId = req.user.parentProfile.id;
-    const { studentId } = req.params;
+    try {
+        const parentId = req.user.parentProfile.id;
+        const { studentId } = req.params;
 
-    // Lấy danh sách con của phụ huynh
-    const children = await prisma.studentParent.findMany({
-      where: { parentId },
-      include: {
-        student: {
-          include: {
-            user: { select: { fullName: true } },
-          },
-        },
-      },
-    });
-
-    let studentIds = children.map((child) => child.student.id);
-    if (studentId) {
-      // Kiểm tra studentId có thuộc parent không
-      if (!studentIds.includes(studentId)) {
-        return res.status(403).json({
-          success: false,
-          error: "Bạn không có quyền xem lịch sử tiêm chủng của học sinh này.",
+        // Lấy danh sách con của phụ huynh
+        const children = await prisma.studentParent.findMany({
+            where: { parentId },
+            include: {
+                student: {
+                    include: {
+                        user: { select: { fullName: true } },
+                    },
+                },
+            },
         });
-      }
-      studentIds = [studentId];
+
+        let studentIds = children.map((child) => child.student.id);
+        if (studentId) {
+            // Kiểm tra studentId có thuộc parent không
+            if (!studentIds.includes(studentId)) {
+                return res.status(403).json({
+                    success: false,
+                    error: "Bạn không có quyền xem lịch sử tiêm chủng của học sinh này.",
+                });
+            }
+            studentIds = [studentId];
+        }
+
+        // Lấy lịch sử tiêm chủng của các con
+        const vaccinations = await prisma.vaccinationRecord.findMany({
+            where: {
+                studentId: { in: studentIds },
+                status: "COMPLETED",
+            },
+            include: {
+                campaign: true,
+                nurse: { include: { user: { select: { fullName: true } } } },
+                student: { include: { user: { select: { fullName: true } } } },
+            },
+            orderBy: { administeredDate: "desc" },
+        });
+
+        res.json({ success: true, data: vaccinations });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
-
-    // Lấy lịch sử tiêm chủng của các con
-    const vaccinations = await prisma.vaccine.findMany({
-      where: {
-        studentId: { in: studentIds },
-        status: "COMPLETED",
-      },
-      include: {
-        campaign: true,
-        nurse: { include: { user: { select: { fullName: true } } } },
-        student: { include: { user: { select: { fullName: true } } } },
-      },
-      orderBy: { administeredDate: "desc" },
-    });
-
-    // Bổ sung trường vaccineName cho mỗi vaccination
-    const vaccinationsWithVaccineName = vaccinations.map((vac) => ({
-      ...vac,
-      vaccineName: vac.name || "",
-    }));
-
-    res.json({ success: true, data: vaccinationsWithVaccineName });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
 };
 
 export const getStudentVaccinationCampaigns = async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    const parentId = req.user.parentProfile.id;
+    try {
+        const { studentId } = req.params;
+        const parentId = req.user.parentProfile.id;
 
-    // Verify that the student belongs to the parent using StudentParent relationship
-    const studentParent = await prisma.studentParent.findFirst({
-      where: {
-        parentId: parentId,
-        studentId: studentId,
-      },
-      include: {
-        student: true,
-      },
-    });
+        // Verify that the student belongs to the parent using StudentParent relationship
+        const studentParent = await prisma.studentParent.findFirst({
+            where: {
+                parentId: parentId,
+                studentId: studentId,
+            },
+            include: {
+                student: true,
+            },
+        });
 
-    if (!studentParent) {
-      return res.status(404).json({
-        success: false,
-        message: "Không tìm thấy học sinh hoặc bạn không có quyền truy cập",
-      });
+        if (!studentParent) {
+            return res.status(404).json({
+                success: false,
+                message:
+                    "Không tìm thấy học sinh hoặc bạn không có quyền truy cập",
+            });
+        }
+
+        // Get vaccination campaigns for the student
+        const campaigns = await prisma.vaccinationCampaign.findMany({
+            where: {
+                OR: [
+                    {
+                        vaccinations: {
+                            studentId: studentId,
+                        },
+                    },
+                    {
+                        targetGrades: {
+                            hasSome: [studentParent.student.grade],
+                        },
+                        status: "ACTIVE",
+                    },
+                ],
+            },
+            include: {
+                vaccinations: true,
+            },
+            orderBy: {
+                scheduledDate: "desc",
+            },
+        });
+
+        // Transform the data
+        const transformedCampaigns = campaigns.map((campaign) => ({
+            id: campaign.id,
+            name: campaign.name,
+            description: campaign.description,
+            scheduledDate: campaign.scheduledDate,
+            deadline: campaign.deadline,
+            status: campaign.status,
+            vaccineName: campaign.vaccinations?.name || "",
+        }));
+
+        return res.status(200).json({
+            success: true,
+            data: transformedCampaigns,
+        });
+    } catch (error) {
+        console.error("Error in getStudentVaccinationCampaigns:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Đã xảy ra lỗi khi lấy thông tin chiến dịch tiêm chủng",
+        });
     }
-
-    // Get vaccination campaigns for the student
-    const campaigns = await prisma.vaccinationCampaign.findMany({
-      where: {
-        OR: [
-          {
-            vaccinations: {
-              studentId: studentId,
-            },
-          },
-          {
-            targetGrades: {
-              hasSome: [studentParent.student.grade],
-            },
-            status: "ACTIVE",
-          },
-        ],
-      },
-      include: {
-        vaccinations: true,
-      },
-      orderBy: {
-        scheduledDate: "desc",
-      },
-    });
-
-    // Transform the data
-    const transformedCampaigns = campaigns.map((campaign) => ({
-      id: campaign.id,
-      name: campaign.name,
-      description: campaign.description,
-      scheduledDate: campaign.scheduledDate,
-      deadline: campaign.deadline,
-      status: campaign.status,
-      vaccineName: campaign.vaccinations?.name || "",
-    }));
-
-    return res.status(200).json({
-      success: true,
-      data: transformedCampaigns,
-    });
-  } catch (error) {
-    console.error("Error in getStudentVaccinationCampaigns:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Đã xảy ra lỗi khi lấy thông tin chiến dịch tiêm chủng",
-    });
-  }
 };
 
 // Lấy toàn bộ kết quả khám sức khỏe của học sinh cho phụ huynh
 export const getStudentHealthCheckups = async (req, res) => {
-  try {
-    const { studentId } = req.params;
-    // Kiểm tra quyền truy cập: phụ huynh phải là cha/mẹ của học sinh này
-    if (!req.user.parentProfile) {
-      return res.status(403).json({
-        success: false,
-        error: "You must be a parent to access this resource",
-      });
+    try {
+        const { studentId } = req.params;
+        // Kiểm tra quyền truy cập: phụ huynh phải là cha/mẹ của học sinh này
+        if (!req.user.parentProfile) {
+            return res.status(403).json({
+                success: false,
+                error: "You must be a parent to access this resource",
+            });
+        }
+        const parentId = req.user.parentProfile.id;
+        const studentParent = await prisma.studentParent.findFirst({
+            where: { parentId, studentId },
+        });
+        if (!studentParent) {
+            return res.status(403).json({
+                success: false,
+                error: "You are not authorized to view this student's health checkups",
+            });
+        }
+        // Lấy toàn bộ kết quả khám sức khỏe
+        const checkups = await prisma.medicalCheck.findMany({
+            where: { studentId },
+            orderBy: { scheduledDate: "desc" },
+        });
+        res.json({ success: true, data: checkups });
+    } catch (error) {
+        console.error("Error fetching health checkups:", error);
+        res.status(500).json({
+            success: false,
+            error: "Internal server error",
+        });
     }
-    const parentId = req.user.parentProfile.id;
-    const studentParent = await prisma.studentParent.findFirst({
-      where: { parentId, studentId },
-    });
-    if (!studentParent) {
-      return res.status(403).json({
-        success: false,
-        error: "You are not authorized to view this student's health checkups",
-      });
-    }
-    // Lấy toàn bộ kết quả khám sức khỏe
-    const checkups = await prisma.medicalCheck.findMany({
-      where: { studentId },
-      orderBy: { scheduledDate: "desc" },
-    });
-    res.json({ success: true, data: checkups });
-  } catch (error) {
-    console.error("Error fetching health checkups:", error);
-    res.status(500).json({
-      success: false,
-      error: "Internal server error",
-    });
-  }
 };
