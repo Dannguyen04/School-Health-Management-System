@@ -155,11 +155,12 @@ model Student {
   medicalChecks       MedicalCheck[]
   medications         StudentMedication[]
   vaccinationConsents VaccinationConsent[]
-  vaccinations        Vaccine[]
-  medicationAdministrationLogs MedicationAdministrationLog[] 
-  vaccinationRecords  VaccinationRecord[] // Thêm trường đối ứng cho VaccinationRecord
+  vaccinationRecords  VaccinationRecord[]
+  medicationAdministrationLogs MedicationAdministrationLog[]
 
   @@map("students")
+  @@index([grade])
+  @@index([class])
 }
 
 model Parent {
@@ -193,10 +194,8 @@ model SchoolNurse {
   // Relations
   handledEvents MedicalEvent[]
   medicalChecks MedicalCheck[]
-  vaccinations  Vaccine[]
-  medicationAdministrationLogs MedicationAdministrationLog[] 
-  vaccinationRecords  VaccinationRecord[] // Thêm trường đối ứng cho VaccinationRecord
-
+  vaccinationRecords  VaccinationRecord[]
+  medicationAdministrationLogs MedicationAdministrationLog[]
 
   @@map("school_nurses")
 }
@@ -342,56 +341,67 @@ model StudentMedication {
 
 
 
-// Vaccination Management
+// Vaccination Campaign
 model VaccinationCampaign {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
   name          String
   description   String?
-  vaccinationId String         @unique @db.ObjectId
-  vaccine       Vaccine        @relation(fields: [vaccinationId], references: [id])
+  vaccineId     String         @db.ObjectId
+  
+  // Denormalized vaccine data for faster queries
+  vaccineName   String         // Embedded for quick access
+  vaccineManufacturer String   // Embedded for quick access
+  vaccineRequirement VaccineRequirement // Embedded for quick access
+  
   targetGrades  String[]
   scheduledDate DateTime
   deadline      DateTime
   isActive      Boolean        @default(true)
+  status        CampaignStatus @default(ACTIVE)
+  
+  // Aggregated statistics for performance
+  totalStudents     Int @default(0)  // Total eligible students
+  consentedStudents Int @default(0)  // Students with consent
+  vaccinatedStudents Int @default(0) // Students vaccinated
+  completionRate    Float @default(0) // Calculated completion rate
+  
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  status        CampaignStatus @default(ACTIVE)
 
   // Relations
-  notifications Notification[]
-  consents      VaccinationConsent[]
-  vaccinationRecords VaccinationRecord[] // Thêm trường đối ứng cho VaccinationRecord
+  vaccine             Vaccine              @relation(fields: [vaccineId], references: [id])
+  notifications       Notification[]
+  consents            VaccinationConsent[]
+  vaccinationRecords  VaccinationRecord[]
 
   @@map("vaccination_campaigns")
+  @@index([vaccineId])
+  @@index([status])
+  @@index([scheduledDate])
+  @@index([targetGrades])
+  @@index([vaccineName]) // For quick vaccine name searches
+  @@index([completionRate]) // For sorting by completion
 }
 
 model Vaccine {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  name             String
+  name             String   @unique
   requirement      VaccineRequirement
-  administeredDate DateTime?
-  dose             DoseType?
-  sideEffects      String?
-  notes            String?
-  studentId        String?  @db.ObjectId
-  nurseId          String?  @db.ObjectId
-  batchNumber      String?
-  status           VaccinationStatus  @default(UNSCHEDULED)
-  followUpRequired Boolean            @default(false)
-  followUpDate     DateTime?
-  reaction         String?
   manufacturer     String  
   origin           String  
   referenceUrl     String? 
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  description      String?
+  sideEffects      String?
+  contraindications String?
+  recommendedAge   String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
   // Relations
-  student   Student?      @relation(fields: [studentId], references: [id])
-  nurse     SchoolNurse?  @relation(fields: [nurseId], references: [id])
-  campaigns VaccinationCampaign[]
+  campaigns        VaccinationCampaign[]
+  vaccinationRecords VaccinationRecord[]
 
-  @@map("vaccinations")
+  @@map("vaccines")
 }
 
 model VaccinationConsent {
@@ -399,8 +409,16 @@ model VaccinationConsent {
   campaignId  String   @db.ObjectId
   studentId   String   @db.ObjectId
   parentId    String   @db.ObjectId
-  consent     Boolean // true = đồng ý, false = từ chối
-  notes       String? // Ghi chú của phụ huynh
+  
+  // Denormalized data for faster queries
+  campaignName String  // Embedded campaign name
+  vaccineName  String  // Embedded vaccine name
+  studentName  String  // Embedded student name
+  parentName   String  // Embedded parent name
+  studentGrade String  // Embedded student grade
+  
+  consent     Boolean
+  notes       String?
   submittedAt DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -411,37 +429,69 @@ model VaccinationConsent {
 
   @@unique([campaignId, studentId, parentId])
   @@map("vaccination_consents")
+  @@index([campaignId])
+  @@index([studentId])
+  @@index([parentId])
+  @@index([consent])
+  @@index([campaignName]) // For quick campaign searches
+  @@index([studentName]) // For quick student searches
+  @@index([studentGrade]) // For grade-based queries
 }
+
 model VaccinationRecord {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  name             String
-  requirement      VaccineRequirement
-  expiredDate      DateTime
+  
+  // References
+  vaccineId        String   @db.ObjectId
+  campaignId       String   @db.ObjectId
+  studentId        String   @db.ObjectId
+  nurseId          String   @db.ObjectId
+  
+  // Denormalized data for faster queries
+  vaccineName      String   // Embedded vaccine name
+  campaignName     String   // Embedded campaign name
+  studentName      String   // Embedded student name
+  nurseName        String   // Embedded nurse name
+  studentGrade     String   // Embedded student grade
+  studentClass     String   // Embedded student class
+  
+  // Vaccination details
   administeredDate DateTime
   dose             DoseType
+  batchNumber      String?
+  lotNumber        String?
+  
+  // Results and follow-up
   sideEffects      String?
-  notes            String?
   reaction         String?
+  notes            String?
   status           VaccinationStatus @default(COMPLETED)
   followUpRequired Boolean           @default(false)
-  followUpDate     DateTime?         
-  manufacturer     String?  // Nhà sản xuất vaccine
-  origin           String?  // Nguồn gốc vaccine
-  referenceUrl     String?  // Đường dẫn tham khảo thông tin vaccine
+  followUpDate     DateTime?
+  
+  // Metadata
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 
-  campaignId String   @db.ObjectId
-  studentId  String   @db.ObjectId
-  nurseId    String   @db.ObjectId
-
-  campaign VaccinationCampaign @relation(fields: [campaignId], references: [id])
-  student  Student             @relation(fields: [studentId], references: [id])
-  nurse    SchoolNurse         @relation(fields: [nurseId], references: [id])
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Relations
+  vaccine    Vaccine             @relation(fields: [vaccineId], references: [id])
+  campaign   VaccinationCampaign @relation(fields: [campaignId], references: [id])
+  student    Student             @relation(fields: [studentId], references: [id])
+  nurse      SchoolNurse         @relation(fields: [nurseId], references: [id])
 
   @@map("vaccination_records")
+  @@index([vaccineId])
+  @@index([campaignId])
+  @@index([studentId])
+  @@index([nurseId])
+  @@index([administeredDate])
+  @@index([status])
+  @@index([vaccineName]) // For quick vaccine searches
+  @@index([studentName]) // For quick student searches
+  @@index([studentGrade]) // For grade-based queries
+  @@unique([studentId, vaccineId, dose])
 }
+
 // Medical Check Management
 model MedicalCheckCampaign {
   id            String         @id @default(auto()) @map("_id") @db.ObjectId
