@@ -1,54 +1,60 @@
 import { PrismaClient } from "@prisma/client";
-import bodyParser from "body-parser";
-import cors from "cors";
-import dotenv from "dotenv";
-import express from "express";
 
-dotenv.config();
-
-const app = express();
 const prisma = new PrismaClient();
 
-app.use(
-    cors({
-        origin: "http://localhost:5173",
-        credentials: true,
-    })
-);
-
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.json());
-
-const createVaccination = async (req, res) => {
-    const {
-        name,
-        requirement,
-        dose,
-        sideEffects,
-        notes,
-        manufacturer,
-        origin,
-        referenceUrl,
-    } = req.body;
-
-    if (!name || !requirement || !manufacturer || !origin) {
-        return res.status(400).json({
-            success: false,
-            error: "Thiếu trường dữ liệu cần thiết: tên, yêu cầu, nhà sản xuất, nguồn gốc",
-        });
-    }
-
-    const existedVaccination = await prisma.vaccine.findFirst({
-        where: { name: name },
-    });
-
-    if (existedVaccination) {
-        req.params.id = existedVaccination.id;
-        if (!req.user) req.user = { id: null };
-        return updateVaccination(req, res);
+// Tạo thông báo cho manager
+const createManagerNotification = async (managerId, title, message, type) => {
+    if (!managerId) {
+        console.warn("Không tìm thấy thông tin manager để gửi thông báo");
+        return;
     }
 
     try {
+        await prisma.notification.create({
+            data: {
+                userId: managerId,
+                title,
+                message,
+                type,
+                status: "SENT",
+                sentAt: new Date(),
+            },
+        });
+    } catch (error) {
+        console.error("Error creating notification for manager:", error);
+    }
+};
+
+const createVaccination = async (req, res) => {
+    try {
+        const {
+            name,
+            requirement,
+            dose,
+            sideEffects,
+            notes,
+            manufacturer,
+            origin,
+            referenceUrl,
+        } = req.body;
+
+        if (!name || !requirement || !manufacturer || !origin) {
+            return res.status(400).json({
+                success: false,
+                error: "Thiếu trường dữ liệu cần thiết: tên, yêu cầu, nhà sản xuất, nguồn gốc",
+            });
+        }
+
+        const existedVaccination = await prisma.vaccine.findFirst({
+            where: { name: name },
+        });
+
+        if (existedVaccination) {
+            req.params.id = existedVaccination.id;
+            if (!req.user) req.user = { id: null };
+            return updateVaccination(req, res);
+        }
+
         const vaccination = await prisma.vaccine.create({
             data: {
                 name,
@@ -62,36 +68,18 @@ const createVaccination = async (req, res) => {
             },
         });
 
-        // Tạo thông báo cho manager sau khi tạo vaccine thành công
-        try {
-            // Kiểm tra req.user và req.user.id
-            const managerId = req.user && req.user.id ? req.user.id : null;
-            if (managerId) {
-                await prisma.notification.create({
-                    data: {
-                        userId: managerId,
-                        title: `Vaccine mới: ${vaccination.name}`,
-                        message: `Bạn đã tạo thành công vaccine "${
-                            vaccination.name
-                        }" với yêu cầu: ${
-                            requirement === "REQUIRED" ? "Bắt buộc" : "Tùy chọn"
-                        }.`,
-                        type: "vaccine_created",
-                        status: "SENT",
-                        sentAt: new Date(),
-                    },
-                });
-            } else {
-                console.warn(
-                    "Không tìm thấy thông tin manager để gửi thông báo"
-                );
-            }
-        } catch (notificationError) {
-            console.error(
-                "Error creating notification for manager:",
-                notificationError
+        // Gửi thông báo cho manager
+        const manager = await prisma.user.findFirst({
+            where: { role: "MANAGER" },
+        });
+
+        if (manager) {
+            await createManagerNotification(
+                manager.id,
+                "Thêm vaccine mới",
+                `Vaccine "${name}" đã được thêm vào hệ thống`,
+                "VACCINE"
             );
-            // Không fail toàn bộ request nếu tạo thông báo thất bại
         }
 
         res.status(201).json({
@@ -99,10 +87,10 @@ const createVaccination = async (req, res) => {
             data: vaccination,
         });
     } catch (error) {
-        console.log(error);
+        console.error("Error creating vaccination:", error);
         res.status(500).json({
             success: false,
-            error: error.message,
+            error: "Lỗi khi tạo vaccine",
         });
     }
 };
@@ -259,31 +247,18 @@ const updateVaccination = async (req, res) => {
             },
         });
 
-        // Tạo thông báo cho manager sau khi cập nhật vaccine thành công
-        try {
-            const managerId = req.user && req.user.id ? req.user.id : null;
-            if (managerId) {
-                await prisma.notification.create({
-                    data: {
-                        userId: managerId,
-                        title: `Cập nhật vaccine: ${updated.name}`,
-                        message: `Bạn đã cập nhật thành công vaccine "${updated.name}".`,
-                        type: "vaccine_updated",
-                        status: "SENT",
-                        sentAt: new Date(),
-                    },
-                });
-            } else {
-                console.warn(
-                    "Không tìm thấy thông tin manager để gửi thông báo"
-                );
-            }
-        } catch (notificationError) {
-            console.error(
-                "Error creating notification for manager:",
-                notificationError
+        // Gửi thông báo cho manager
+        const manager = await prisma.user.findFirst({
+            where: { role: "MANAGER" },
+        });
+
+        if (manager) {
+            await createManagerNotification(
+                manager.id,
+                "Cập nhật vaccine",
+                `Vaccine "${updated.name}" đã được cập nhật`,
+                "VACCINE"
             );
-            // Không fail toàn bộ request nếu tạo thông báo thất bại
         }
 
         res.status(200).json({
@@ -304,9 +279,6 @@ const deleteVaccination = async (req, res) => {
     try {
         const existedVaccination = await prisma.vaccine.findUnique({
             where: { id },
-            include: {
-                campaign: true,
-            },
         });
         if (!existedVaccination) {
             return res.status(404).json({
@@ -315,13 +287,26 @@ const deleteVaccination = async (req, res) => {
             });
         }
 
-        if (existedVaccination.campaign) {
+        const existedCampaignInUesed =
+            await prisma.vaccinationCampaign.findFirst({
+                where: { vaccineId: existedVaccination.id },
+            });
+
+        if (existedCampaignInUesed) {
             return res.status(409).json({
                 success: false,
-                error:
-                    "Vaccine đang được sử dụng trong một chiến dịch " +
-                    existedVaccination.campaign.name +
-                    " nên không thể xóa",
+                error: "Vaccine đang được sử dụng trong chiến dịch tiêm chủng, không thể xóa",
+            });
+        }
+
+        const existedVaccineRecord = await prisma.vaccinationRecord.findFirst({
+            where: { vaccineId: existedVaccination.id },
+        });
+
+        if (existedVaccineRecord) {
+            return res.status(409).json({
+                success: false,
+                error: "Vaccine đang được sử dụng để lưu thông tin tiêm chủng của học sinh, không thể xoa",
             });
         }
         // Lưu tên vaccine trước khi xóa để hiển thị trong thông báo
@@ -329,26 +314,18 @@ const deleteVaccination = async (req, res) => {
 
         await prisma.vaccine.delete({ where: { id } });
 
-        // Tạo thông báo cho manager sau khi xóa vaccine thành công
-        try {
-            const managerId = req.user.id; // Lấy ID của manager hiện tại
+        // Gửi thông báo cho manager
+        const manager = await prisma.user.findFirst({
+            where: { role: "MANAGER" },
+        });
 
-            await prisma.notification.create({
-                data: {
-                    userId: managerId,
-                    title: `Xóa vaccine: ${vaccineName}`,
-                    message: `Bạn đã xóa thành công vaccine "${vaccineName}".`,
-                    type: "vaccine_deleted",
-                    status: "SENT",
-                    sentAt: new Date(),
-                },
-            });
-        } catch (notificationError) {
-            console.error(
-                "Error creating notification for manager:",
-                notificationError
+        if (manager) {
+            await createManagerNotification(
+                manager.id,
+                "Xóa vaccine",
+                `Vaccine "${vaccineName}" đã được xóa khỏi hệ thống`,
+                "VACCINE"
             );
-            // Không fail toàn bộ request nếu tạo thông báo thất bại
         }
 
         res.status(200).json({
@@ -356,10 +333,10 @@ const deleteVaccination = async (req, res) => {
             message: "Xoá loại vaccine thành công",
         });
     } catch (error) {
-        console.log(error);
+        console.error("Error deleting vaccination:", error);
         res.status(500).json({
             success: false,
-            error: error.message,
+            error: "Lỗi khi xóa vaccine",
         });
     }
 };
