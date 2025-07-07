@@ -1,0 +1,155 @@
+{
+  "info": {
+    "name": "Vaccination Campaign API Tests",
+    "description": "Collection để test các API endpoints của Vaccination Campaign",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Create Vaccination Campaign",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE",
+            "description": "Thay YOUR_JWT_TOKEN_HERE bằng JWT token thực tế"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Chiến dịch tiêm COVID-19 học kỳ 1 năm 2025\",\n  \"description\": \"Chiến dịch tiêm chủng COVID-19 cho học sinh các khối 6, 7, 8 nhằm đảm bảo an toàn sức khỏe trong môi trường học đường\",\n  \"vaccineId\": \"VACCINE_ID_HERE\",\n  \"targetGrades\": [\"6\", \"7\", \"8\"],\n  \"scheduledDate\": \"2025-02-15T08:00:00.000Z\",\n  \"deadline\": \"2025-02-28T17:00:00.000Z\",\n  \"totalStudents\": 450\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/manager/vaccination-campaigns",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "manager", "vaccination-campaigns"]
+        },
+        "description": "Tạo chiến dịch tiêm chủng mới"
+      }
+    },
+    {
+      "name": "Create Campaign - Required Vaccine",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Tiêm phòng Sởi - Rubella bắt buộc\",\n  \"description\": \"Chiến dịch tiêm phòng Sởi - Rubella cho học sinh lớp 1 theo quy định của Bộ Y tế\",\n  \"vaccineId\": \"VACCINE_ID_HERE\",\n  \"targetGrades\": [\"1\"],\n  \"scheduledDate\": \"2025-03-01T08:00:00.000Z\",\n  \"deadline\": \"2025-03-15T17:00:00.000Z\",\n  \"totalStudents\": 120\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/manager/vaccination-campaigns",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "manager", "vaccination-campaigns"]
+        }
+      }
+    },
+    {
+      "name": "Create Campaign - Optional Vaccine",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Tiêm phòng Cúm mùa 2025\",\n  \"description\": \"Chiến dịch tiêm phòng cúm mùa tự nguyện cho học sinh các khối 9, 10, 11, 12\",\n  \"vaccineId\": \"VACCINE_ID_HERE\",\n  \"targetGrades\": [\"9\", \"10\", \"11\", \"12\"],\n  \"scheduledDate\": \"2025-04-01T08:00:00.000Z\",\n  \"deadline\": \"2025-04-30T17:00:00.000Z\",\n  \"totalStudents\": 800\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/manager/vaccination-campaigns",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "manager", "vaccination-campaigns"]
+        }
+      }
+    },
+    {
+      "name": "Create Campaign - Minimal Data",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Chiến dịch test tối thiểu\",\n  \"vaccineId\": \"VACCINE_ID_HERE\",\n  \"targetGrades\": [\"5\"],\n  \"scheduledDate\": \"2025-05-01T08:00:00.000Z\",\n  \"deadline\": \"2025-05-15T17:00:00.000Z\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/manager/vaccination-campaigns",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "manager", "vaccination-campaigns"]
+        },
+        "description": "Test với dữ liệu tối thiểu (không có description và totalStudents)"
+      }
+    },
+    {
+      "name": "Create Campaign - Validation Error Test",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer YOUR_JWT_TOKEN_HERE"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"\",\n  \"vaccineId\": \"invalid_vaccine_id\",\n  \"targetGrades\": [],\n  \"scheduledDate\": \"2025-01-01T08:00:00.000Z\",\n  \"deadline\": \"2025-01-02T17:00:00.000Z\",\n  \"totalStudents\": -10\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/manager/vaccination-campaigns",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "manager", "vaccination-campaigns"]
+        },
+        "description": "Test case với dữ liệu không hợp lệ để kiểm tra validation"
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    }
+  ]
+}

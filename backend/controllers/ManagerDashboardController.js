@@ -32,10 +32,12 @@ export const getDashboardStats = async (req, res) => {
         });
 
         // Số học sinh đã tiêm chủng (unique studentId trong vaccinationRecord, status = COMPLETED)
-        const vaccinatedStudents = await prisma.vaccinationRecord.aggregate({
-            _count: { studentId: true },
-            where: { status: "COMPLETED", studentId: { not: null } },
+        const vaccinatedStudentsData = await prisma.vaccinationRecord.findMany({
+            where: { status: "COMPLETED" },
+            select: { studentId: true },
+            distinct: ["studentId"],
         });
+        const vaccinatedStudents = vaccinatedStudentsData.length;
 
         // Số sự cố (MedicalEvent)
         const incidents = await prisma.medicalEvent.count();
@@ -66,15 +68,21 @@ export const getDashboardStats = async (req, res) => {
             gradeMap[s.grade].push(s.id);
         });
         const vaccinations = await prisma.vaccinationRecord.findMany({
-            where: { status: "COMPLETED", studentId: { not: null } },
+            where: { status: "COMPLETED" },
             select: { studentId: true },
         });
         const vaccinatedByGrade = {};
+        const vaccinatedStudentIds = new Set(); // Để track unique students
+
         vaccinations.forEach((v) => {
-            for (const grade in gradeMap) {
-                if (gradeMap[grade].includes(v.studentId)) {
-                    vaccinatedByGrade[grade] =
-                        (vaccinatedByGrade[grade] || 0) + 1;
+            if (!vaccinatedStudentIds.has(v.studentId)) {
+                vaccinatedStudentIds.add(v.studentId);
+                for (const grade in gradeMap) {
+                    if (gradeMap[grade].includes(v.studentId)) {
+                        vaccinatedByGrade[grade] =
+                            (vaccinatedByGrade[grade] || 0) + 1;
+                        break; // Thoát khỏi loop một khi tìm thấy grade
+                    }
                 }
             }
         });
@@ -121,7 +129,7 @@ export const getDashboardStats = async (req, res) => {
                     agreedConsents,
                     declinedConsents,
                     healthCheckups,
-                    vaccinatedStudents: vaccinatedStudents._count.studentId,
+                    vaccinatedStudents: vaccinatedStudents,
                     incidents,
                     needsAttention,
                 },
