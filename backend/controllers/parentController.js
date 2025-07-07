@@ -695,10 +695,10 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
 export const getVaccinationDetail = async (req, res) => {
   try {
     const { campaignId, studentId } = req.params;
-    const vaccination = await prisma.vaccine.findFirst({
+    const vaccination = await prisma.vaccinationRecord.findFirst({
       where: {
         studentId,
-        campaign: { id: campaignId },
+        campaignId,
       },
       include: {
         campaign: true,
@@ -708,14 +708,14 @@ export const getVaccinationDetail = async (req, res) => {
     });
     if (!vaccination) {
       // Nếu không có record tiêm chủng, trả về thông tin campaign, student, consent (nếu có)
-      const campaign = await prisma.VaccinationCampaign.findUnique({
+      const campaign = await prisma.vaccinationCampaign.findUnique({
         where: { id: campaignId },
         include: {
-          vaccinations: true,
+          vaccinationRecords: true,
           consents: true,
         },
       });
-      const student = await prisma.Student.findUnique({
+      const student = await prisma.student.findUnique({
         where: { id: studentId },
         include: {
           user: true,
@@ -730,7 +730,7 @@ export const getVaccinationDetail = async (req, res) => {
         },
       });
       // Lấy consent của học sinh này với campaign này (nếu có)
-      const consent = await prisma.VaccinationConsent.findFirst({
+      const consent = await prisma.vaccinationConsent.findFirst({
         where: {
           campaignId: campaignId,
           studentId: studentId,
@@ -789,7 +789,7 @@ export const getVaccinationHistory = async (req, res) => {
     }
 
     // Lấy lịch sử tiêm chủng của các con
-    const vaccinations = await prisma.vaccine.findMany({
+    const vaccinations = await prisma.vaccinationRecord.findMany({
       where: {
         studentId: { in: studentIds },
         status: "COMPLETED",
@@ -802,13 +802,7 @@ export const getVaccinationHistory = async (req, res) => {
       orderBy: { administeredDate: "desc" },
     });
 
-    // Bổ sung trường vaccineName cho mỗi vaccination
-    const vaccinationsWithVaccineName = vaccinations.map((vac) => ({
-      ...vac,
-      vaccineName: vac.name || "",
-    }));
-
-    res.json({ success: true, data: vaccinationsWithVaccineName });
+    res.json({ success: true, data: vaccinations });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }

@@ -31,8 +31,8 @@ export const getDashboardStats = async (req, res) => {
             ).length;
         });
 
-        // Số học sinh đã tiêm chủng (unique studentId trong vaccinations, status = COMPLETED)
-        const vaccinatedStudents = await prisma.vaccine.aggregate({
+        // Số học sinh đã tiêm chủng (unique studentId trong vaccinationRecord, status = COMPLETED)
+        const vaccinatedStudents = await prisma.vaccinationRecord.aggregate({
             _count: { studentId: true },
             where: { status: "COMPLETED", studentId: { not: null } },
         });
@@ -65,7 +65,7 @@ export const getDashboardStats = async (req, res) => {
             if (!gradeMap[s.grade]) gradeMap[s.grade] = [];
             gradeMap[s.grade].push(s.id);
         });
-        const vaccinations = await prisma.vaccine.findMany({
+        const vaccinations = await prisma.vaccinationRecord.findMany({
             where: { status: "COMPLETED", studentId: { not: null } },
             select: { studentId: true },
         });
