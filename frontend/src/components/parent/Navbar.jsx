@@ -1,7 +1,6 @@
 import { CloseOutlined, MenuOutlined, UserOutlined } from "@ant-design/icons";
 import { Avatar, Dropdown } from "antd";
 import { useEffect, useState } from "react";
-import { FaHeartbeat } from "react-icons/fa";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import { useNotifications } from "../../hooks/useNotifications";
@@ -104,7 +103,15 @@ const Navbar = () => {
             >
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-10 h-10 bg-white/20 rounded-xl group-hover:bg-white/30 transition-all duration-300">
-                  <FaHeartbeat className="text-2xl text-white group-hover:scale-110 transition-transform duration-300" />
+                  <img
+                    src="/img/logo.png"
+                    alt="School Health Logo"
+                    style={{
+                      width: 32,
+                      height: 32,
+                      objectFit: "contain",
+                    }}
+                  />
                 </div>
                 <div>
                   <h1
