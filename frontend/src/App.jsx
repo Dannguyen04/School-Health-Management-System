@@ -40,7 +40,7 @@ import AdminLayout from "./layouts/Admin";
 import ManagerLayout from "./layouts/Manager";
 import NurseLayout from "./layouts/Nurse";
 import User from "./layouts/User";
-import AuthPage, { ForgotPassword } from "./pages/AuthPage";
+import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
 import MedicalEvents from "./pages/MedicalEvents";
 import VaccinationHistory from "./pages/VaccinationHistory";
@@ -48,60 +48,6 @@ import PrivateRoutes from "./utils/PrivateRoutes";
 import RoleBaseRoutes from "./utils/RoleBaseRoutes";
 
 const App = () => {
-    return (
-        <Router>
-            <ScrollToTop />
-            <Routes>
-                <Route path="/" element={<Homepage />} />
-                <Route path="/auth" element={<AuthPage />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/blog/:id" element={<BlogDetail />} />
-                {/* Nurse Routes */}
-                <Route
-                    path="/nurse"
-                    element={
-                        <PrivateRoutes>
-                            <RoleBaseRoutes requiredRole={["SCHOOL_NURSE"]}>
-                                <NurseLayout />
-                            </RoleBaseRoutes>
-                        </PrivateRoutes>
-                    }
-                >
-                    <Route index element={<Dashboard />} />
-                    <Route
-                        path="student-health-profile"
-                        element={<StudentHealthProfile />}
-                    />
-                    <Route
-                        path="medical-inventory"
-                        element={<MedicalInventory />}
-                    />
-                    <Route
-                        path="student-treatment"
-                        element={<StudentTreatment />}
-                    />
-                    <Route
-                        path="vaccination-report"
-                        element={<Vaccination />}
-                    />
-                    <Route
-                        path="health-checkups"
-                        element={<HealthCheckups />}
-                    />
-                    <Route
-                        path="confirmed-medicines"
-                        element={<ConfirmedMedicines />}
-                    />
-                    <Route
-                        path="medical-event"
-                        element={<MedicalEventReport />}
-                    />
-                    <Route path="profile" element={<UserProfile />} />
-                    <Route
-                        path="blog-management"
-                        element={<BlogManagement />}
-                    />
-                </Route>
   return (
     <Router>
       <ScrollToTop />
