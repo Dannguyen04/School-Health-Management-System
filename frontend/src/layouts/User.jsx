@@ -106,11 +106,11 @@ const User = () => {
                         setMissingStudents(missing);
                         setShowHealthProfileToast(true);
                         // Thông báo antd
-                        notification.warning({
-                            message: "Cảnh báo thiếu khai báo sức khỏe",
-                            description: `Bạn có ${missing.length} con chưa được khai báo sức khỏe. Vui lòng cập nhật thông tin sức khỏe cho các bé!`,
-                            duration: 6,
-                        });
+                        // notification.warning({
+                        //     message: "Cảnh báo thiếu khai báo sức khỏe",
+                        //     description: `Bạn có ${missing.length} con chưa được khai báo sức khỏe. Vui lòng cập nhật thông tin sức khỏe cho các bé!`,
+                        //     duration: 6,
+                        // });
                     } else {
                         setShowHealthProfileToast(false);
                         setMissingStudents([]);
