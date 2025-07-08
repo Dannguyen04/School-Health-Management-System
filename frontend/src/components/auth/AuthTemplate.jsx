@@ -1,18 +1,18 @@
-import { Button, Modal, message, Input as AntInput } from "antd";
+import { LockOutlined, MailOutlined } from "@ant-design/icons";
+import { Input as AntInput, Modal, message } from "antd";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/authContext";
 import api from "../../utils/api";
 import {
+  ErrorMessage,
+  ErrorMessageDiv,
   Form,
   FormContainer,
-  Title,
-  ErrorMessageDiv,
-  ErrorMessage,
   LargeButton,
   Paragraph,
+  Title,
 } from "./AuthStyles";
-import { MailOutlined, LockOutlined } from '@ant-design/icons';
 
 export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const [email, setEmail] = useState("");
@@ -40,7 +40,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         } else if (user.role === "MANAGER") {
           navigate("/manager");
         } else {
-          navigate("/user");
+          navigate("/parent");
           setScrollToServices(true);
         }
       }
@@ -71,7 +71,7 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       forceRender={true}
       width={400}
       centered
-      maskStyle={{ background: '#f6f5f7' }}
+      maskStyle={{ background: "#f6f5f7" }}
       bodyStyle={{
         padding: 0,
         background: "transparent",
@@ -83,18 +83,25 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
         padding: 0,
       }}
     >
-      <FormContainer style={{ minHeight: 0, width: '100%', maxWidth: 400, boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+      <FormContainer
+        style={{
+          minHeight: 0,
+          width: "100%",
+          maxWidth: 400,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+        }}
+      >
         <Form onSubmit={handleLogin}>
           <Title>Đăng nhập</Title>
-          <Paragraph>Chào mừng bạn quay lại! Vui lòng đăng nhập để tiếp tục.</Paragraph>
+          <Paragraph>
+            Chào mừng bạn quay lại! Vui lòng đăng nhập để tiếp tục.
+          </Paragraph>
           {errors.general && (
-            <ErrorMessageDiv>
-              {errors.general}
-            </ErrorMessageDiv>
+            <ErrorMessageDiv>{errors.general}</ErrorMessageDiv>
           )}
           <AntInput
             size="large"
-            prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
+            prefix={<MailOutlined style={{ color: "#bfbfbf" }} />}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Nhập email của bạn"
             type="email"
@@ -103,22 +110,14 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
           />
           <AntInput.Password
             size="large"
-            prefix={<LockOutlined style={{ color: '#bfbfbf' }} />}
+            prefix={<LockOutlined style={{ color: "#bfbfbf" }} />}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Nhập mật khẩu của bạn"
             style={{ marginBottom: 8 }}
             required
           />
-          {errors.email && (
-            <ErrorMessage>
-              {errors.email}
-            </ErrorMessage>
-          )}
-          {errors.password && (
-            <ErrorMessage>
-              {errors.password}
-            </ErrorMessage>
-          )}
+          {errors.email && <ErrorMessage>{errors.email}</ErrorMessage>}
+          {errors.password && <ErrorMessage>{errors.password}</ErrorMessage>}
           <LargeButton htmlType="submit">Đăng nhập</LargeButton>
         </Form>
       </FormContainer>

@@ -1,12 +1,9 @@
-import { FileExcelOutlined, FilePdfOutlined } from "@ant-design/icons";
 import {
-  Button,
   Card,
   Col,
   DatePicker,
   Form,
   Row,
-  Space,
   Statistic,
   Table,
   message,
@@ -216,26 +213,18 @@ const HealthReports = () => {
     ];
   };
 
-  const handleExportPDF = () => {
-    message.info("Tính năng xuất PDF đang được phát triển");
-  };
+  // const handleExportPDF = () => {
+  //   message.info("Tính năng xuất PDF đang được phát triển");
+  // };
 
-  const handleExportExcel = () => {
-    message.info("Tính năng xuất Excel đang được phát triển");
-  };
+  // const handleExportExcel = () => {
+  //   message.info("Tính năng xuất Excel đang được phát triển");
+  // };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Báo cáo sức khỏe</h1>
-        <Space>
-          <Button icon={<FilePdfOutlined />} onClick={handleExportPDF}>
-            Xuất PDF
-          </Button>
-          <Button icon={<FileExcelOutlined />} onClick={handleExportExcel}>
-            Xuất Excel
-          </Button>
-        </Space>
       </div>
 
       {/* Statistics Cards */}
