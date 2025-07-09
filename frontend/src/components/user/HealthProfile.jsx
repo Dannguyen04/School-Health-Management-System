@@ -73,10 +73,14 @@ const validationSchema = Yup.object().shape({
     otherwise: (schema) => schema,
   }),
   medications: Yup.array().of(Yup.string().required("Nhập tên thuốc")),
-  vision: Yup.string(),
-  hearing: Yup.string(),
-  height: Yup.number().nullable(),
-  weight: Yup.number().nullable(),
+  vision: Yup.string().required("Vui lòng nhập thị lực"),
+  hearing: Yup.string().required("Vui lòng nhập thính lực"),
+  height: Yup.number()
+    .typeError("Vui lòng nhập chiều cao")
+    .required("Vui lòng nhập chiều cao"),
+  weight: Yup.number()
+    .typeError("Vui lòng nhập cân nặng")
+    .required("Vui lòng nhập cân nặng"),
 });
 
 const HealthProfile = () => {
@@ -908,6 +912,8 @@ const HealthProfile = () => {
             isSubmitting,
             setFieldValue,
             validateForm,
+            errors,
+            touched,
           }) => {
             return (
               <Form layout="vertical" onFinish={handleSubmit}>
@@ -919,7 +925,19 @@ const HealthProfile = () => {
                     </Title>
                     <Row gutter={24}>
                       <Col xs={24} md={12}>
-                        <Form.Item label="Thị lực">
+                        <Form.Item
+                          label="Thị lực"
+                          validateStatus={
+                            errors.vision && touched.vision
+                              ? "error"
+                              : undefined
+                          }
+                          help={
+                            touched.vision && errors.vision
+                              ? errors.vision
+                              : undefined
+                          }
+                        >
                           <Input
                             name="vision"
                             onChange={(e) => {
@@ -933,7 +951,19 @@ const HealthProfile = () => {
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={12}>
-                        <Form.Item label="Thính lực">
+                        <Form.Item
+                          label="Thính lực"
+                          validateStatus={
+                            errors.hearing && touched.hearing
+                              ? "error"
+                              : undefined
+                          }
+                          help={
+                            touched.hearing && errors.hearing
+                              ? errors.hearing
+                              : undefined
+                          }
+                        >
                           <Input
                             name="hearing"
                             onChange={(e) => {
@@ -949,7 +979,19 @@ const HealthProfile = () => {
                     </Row>
                     <Row gutter={24}>
                       <Col xs={24} md={12}>
-                        <Form.Item label="Chiều cao (cm)">
+                        <Form.Item
+                          label="Chiều cao (cm)"
+                          validateStatus={
+                            errors.height && touched.height
+                              ? "error"
+                              : undefined
+                          }
+                          help={
+                            touched.height && errors.height
+                              ? errors.height
+                              : undefined
+                          }
+                        >
                           <Input
                             name="height"
                             type="number"
@@ -964,7 +1006,19 @@ const HealthProfile = () => {
                         </Form.Item>
                       </Col>
                       <Col xs={24} md={12}>
-                        <Form.Item label="Cân nặng (kg)">
+                        <Form.Item
+                          label="Cân nặng (kg)"
+                          validateStatus={
+                            errors.weight && touched.weight
+                              ? "error"
+                              : undefined
+                          }
+                          help={
+                            touched.weight && errors.weight
+                              ? errors.weight
+                              : undefined
+                          }
+                        >
                           <Input
                             name="weight"
                             type="number"
@@ -983,8 +1037,19 @@ const HealthProfile = () => {
                       <Button
                         type="primary"
                         onClick={async () => {
-                          await validateForm();
-                          setCurrentStep(1);
+                          const errors = await validateForm();
+                          if (
+                            !errors.vision &&
+                            !errors.hearing &&
+                            !errors.height &&
+                            !errors.weight
+                          ) {
+                            setCurrentStep(1);
+                          } else {
+                            message.error(
+                              "Vui lòng nhập đầy đủ thông tin cơ bản!"
+                            );
+                          }
                         }}
                       >
                         Tiếp theo →
@@ -1539,8 +1604,30 @@ const HealthProfile = () => {
                       <Button
                         type="primary"
                         onClick={async () => {
-                          await validateForm();
-                          setCurrentStep(2);
+                          const errors = await validateForm();
+                          let hasError = false;
+                          // Validate medications
+                          if (Array.isArray(values.medications)) {
+                            values.medications.forEach((med, idx) => {
+                              if (errors.medications && errors.medications[idx])
+                                hasError = true;
+                            });
+                          }
+                          // Validate allergies if hasAllergy
+                          if (values.hasAllergy) {
+                            if (errors.allergies) hasError = true;
+                          }
+                          // Validate chronicDiseases if hasDisease
+                          if (values.hasDisease) {
+                            if (errors.chronicDiseases) hasError = true;
+                          }
+                          if (!hasError) {
+                            setCurrentStep(2);
+                          } else {
+                            message.error(
+                              "Vui lòng nhập đầy đủ thông tin dị ứng, bệnh nền và thuốc!"
+                            );
+                          }
                         }}
                       >
                         Tiếp theo →
@@ -1660,7 +1747,6 @@ const HealthProfile = () => {
                       <Button
                         type="primary"
                         onClick={async () => {
-                          await validateForm();
                           setCurrentStep(3);
                         }}
                       >
