@@ -60,6 +60,31 @@ export const createMedicalCampaign = async (req, res) => {
                 isActive: typeof isActive === "boolean" ? isActive : true,
             },
         });
+        // Notify all nurses about the new campaign
+        try {
+            const nurses = await prisma.schoolNurse.findMany({
+                select: { userId: true },
+            });
+            const nurseNotifications = nurses.map((nurse) =>
+                prisma.notification.create({
+                    data: {
+                        userId: nurse.userId,
+                        title: `Chiến dịch khám sức khỏe mới: ${campaign.name}`,
+                        message: `Bạn có một chiến dịch khám sức khỏe mới được tạo, bắt đầu từ ${campaign.scheduledDate.toLocaleDateString()}.`,
+                        type: "medical_check_campaign",
+                        status: "SENT",
+                        sentAt: new Date(),
+                        medicalCheckCampaignId: campaign.id,
+                    },
+                })
+            );
+            await Promise.all(nurseNotifications);
+        } catch (notifyError) {
+            console.error(
+                "Error notifying nurses about new campaign:",
+                notifyError
+            );
+        }
         res.status(201).json({
             success: true,
             data: campaign,
@@ -227,6 +252,9 @@ export const deleteMedicalCampaign = async (req, res) => {
                 error: "Không tìm thấy chiến dịch",
             });
         }
+        await prisma.notification.deleteMany({
+            where: { medicalCheckCampaignId: id },
+        });
         await prisma.medicalCheckCampaign.delete({ where: { id } });
         res.status(200).json({
             success: true,

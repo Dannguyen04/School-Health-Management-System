@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { notification, Button, Space } from "antd";
 import { BellOutlined, CloseOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { navigateByNotificationType } from "../../utils/notificationNavigation";
 
 const NotificationToast = ({
     notification: notificationData,
@@ -28,67 +29,7 @@ const NotificationToast = ({
         if (notificationData.status !== "READ") {
             onMarkAsRead(notificationData.id);
         }
-
-        if (notificationData.type === "update_phone") {
-            navigate("/parent/profile");
-            setIsVisible(false);
-            setTimeout(() => {
-                onClose();
-            }, 300);
-            return;
-        }
-
-        if (notificationData.id === "missing-health-profile" && studentId) {
-            navigate(`/parent/health-profile?studentId=${studentId}`);
-            setIsVisible(false);
-            setTimeout(() => {
-                onClose();
-            }, 300);
-            return;
-        }
-
-        switch (notificationData.type) {
-            case "vaccination_consent":
-                navigate("/parent/consent-forms");
-                break;
-            case "vaccination_consent_update":
-                navigate("/manager/vaccination-campaigns");
-                break;
-            case "vaccination":
-                navigate("/parent/medical-schedule");
-                break;
-            case "medical_check":
-                navigate("/parent/health-checkup-results");
-                break;
-            case "medical_campaign":
-                navigate("/parent/medical-schedule", {
-                    state: { scrollToMedicalTab: true },
-                });
-                break;
-            case "medication":
-                navigate("/parent/medicine-info");
-                break;
-            case "vaccination_campaign_created":
-            case "vaccination_campaign_updated":
-            case "vaccination_campaign_deleted":
-            case "vaccine_updated":
-            case "vaccine_deleted":
-                navigate("/manager/vaccination-campaigns");
-                break;
-            case "medical_event":
-                // Chuyển hướng sang trang medical-events và truyền notificationId
-                navigate("/parent/medical-events", {
-                    state: { notificationId: notificationData.id },
-                });
-                break;
-            case "medical_consultation":
-                navigate("/parent/health-checkup-results");
-                break;
-            default:
-                // For other types, just close the toast
-                break;
-        }
-
+        navigateByNotificationType(notificationData, navigate);
         setIsVisible(false);
         setTimeout(() => {
             onClose();
@@ -115,10 +56,11 @@ const NotificationToast = ({
             case "vaccination_campaign_created":
             case "vaccination_campaign_updated":
             case "vaccination_campaign_deleted":
-            case "vaccine_created":
             case "vaccine_updated":
             case "vaccine_deleted":
                 return "📋";
+            case "medical_check_campaign":
+                return "👨‍⚕️";
             case "update_phone":
                 return "📱";
             default:
@@ -148,6 +90,8 @@ const NotificationToast = ({
                 return "Cập nhật vaccine";
             case "vaccine_deleted":
                 return "Xóa vaccine";
+            case "medical_check_campaign":
+                return "Chiến dịch khám sức khỏe";
             case "update_phone":
                 return "Cập nhật số điện thoại";
             default:
@@ -172,6 +116,8 @@ const NotificationToast = ({
             case "vaccine_updated":
             case "vaccine_deleted":
                 return "#ffd666"; // vàng
+            case "medical_check_campaign":
+                return "#36cfc9"; // xanh ngọc
             default:
                 return "#bfbfbf"; // xám
         }
