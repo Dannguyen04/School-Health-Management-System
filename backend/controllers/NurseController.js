@@ -1169,6 +1169,7 @@ export const performVaccination = async (req, res) => {
             reaction,
             dose,
             doseAmount,
+            batchNumber,
         } = req.body;
 
         // Kiểm tra xem user có phải là nurse không
@@ -1268,7 +1269,8 @@ export const performVaccination = async (req, res) => {
         const vacciationDate = new Date(administeredDate);
         if (
             vacciationDate < new Date().setHours(0, 0, 0, 0) ||
-            vacciationDate < campaign.scheduledDate ||
+            vacciationDate <
+                new Date(campaign.scheduledDate).setHours(0, 0, 0, 0) ||
             vacciationDate > campaign.deadline
         ) {
             return res.status(400).json({
@@ -1287,6 +1289,7 @@ export const performVaccination = async (req, res) => {
                 studentClass: student.class,
                 nurseName: req.user.fullName,
                 sideEffects: sideEffects || null,
+                batchNumber: batchNumber || null,
                 notes: notes || null,
                 reaction: reaction || null,
                 dose: dose || "FIRST",
