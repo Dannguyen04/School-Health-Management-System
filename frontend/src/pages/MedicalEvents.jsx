@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../context/authContext";
 import { parentAPI } from "../utils/api";
+import { useLocation } from "react-router-dom";
 import {
     Card,
     Modal,
@@ -114,6 +115,7 @@ const getStatusLabel = (status) => {
 
 const MedicalEvents = () => {
     const { user } = useAuth();
+    const location = useLocation();
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
@@ -126,6 +128,20 @@ const MedicalEvents = () => {
             fetchEvents();
         }
     }, [user]);
+
+    // Xử lý notificationId từ state khi navigate từ notification
+    useEffect(() => {
+        if (location.state?.notificationId && events.length > 0) {
+            const targetEvent = events.find(
+                (event) => event.id === location.state.notificationId
+            );
+            if (targetEvent) {
+                handleEventClick(targetEvent);
+                // Clear state để tránh mở lại khi refresh
+                window.history.replaceState({}, document.title);
+            }
+        }
+    }, [location.state?.notificationId, events]);
 
     const fetchEvents = async () => {
         setLoading(true);

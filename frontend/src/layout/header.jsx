@@ -58,7 +58,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
         } else if (user?.role === "MANAGER") {
             navigate("/manager/profile");
         } else if (user?.role === "PARENT") {
-            navigate("/user/profile");
+            navigate("/parent/profile");
         }
     };
 
