@@ -457,8 +457,6 @@ model VaccinationRecord {
   dose             DoseType
   doseAmount       Float?  // liều lượng tiêm (tiêu chuẩn là 0.5 ml)
   batchNumber      String?
-
-
   
   // Results and follow-up
   sideEffects      String?
