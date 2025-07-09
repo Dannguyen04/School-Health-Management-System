@@ -42,6 +42,7 @@ const Vaccination = () => {
   const [vaccinationReports, setVaccinationReports] = useState([]);
   const [reportLoading, setReportLoading] = useState(false);
   const [batchNumberDisabled, setBatchNumberDisabled] = useState(false);
+  const [campaignBatchNumber, setCampaignBatchNumber] = useState("");
 
   const getAuthToken = () => {
     return localStorage.getItem("token");
@@ -104,11 +105,22 @@ const Vaccination = () => {
         console.log("Vaccination reports:", response.data.data);
 
         setVaccinationReports(response.data.data || []);
+        // Lấy batchNumber đầu tiên có trong report (ưu tiên học sinh đã tiêm)
+        const firstBatch = (response.data.data || []).find(
+          (r) => r.batchNumber
+        );
+        if (firstBatch && firstBatch.batchNumber) {
+          setCampaignBatchNumber(firstBatch.batchNumber);
+        } else {
+          setCampaignBatchNumber("");
+        }
       } else {
         setVaccinationReports([]);
+        setCampaignBatchNumber("");
       }
     } catch {
       setVaccinationReports([]);
+      setCampaignBatchNumber("");
     }
     setReportLoading(false);
   };
@@ -130,16 +142,14 @@ const Vaccination = () => {
         message.success("Đã thực hiện tiêm chủng thành công");
         setIsModalVisible(false);
         vaccinationForm.resetFields();
-        // Lưu batchNumber vào localStorage theo campaignId
-        if (selectedCampaign && values.batchNumber) {
-          localStorage.setItem(
-            "batchNumber_" + selectedCampaign.id,
-            values.batchNumber
-          );
+        // Lấy batchNumber từ response nếu có
+        const newBatchNumber =
+          response.data.data?.batchNumber || values.batchNumber;
+        if (newBatchNumber) {
+          setCampaignBatchNumber(newBatchNumber);
         }
-        // Bỏ mở modal báo cáo kết quả
-        // setIsReportModalVisible(true);
         await fetchStudentsForCampaign(selectedCampaign.id);
+        await fetchVaccinationReports(selectedCampaign.id);
       }
     } catch (error) {
       message.error(
@@ -197,30 +207,40 @@ const Vaccination = () => {
     }
   };
 
-  // Khi nurse chọn campaign, kiểm tra batchNumber
+  // Khi nurse chọn campaign, lấy batchNumber từ vaccinationReports (nếu có)
   const handleCampaignSelect = (campaign) => {
     setSelectedCampaign(campaign);
     fetchStudentsForCampaign(campaign.id);
     fetchVaccinationReports(campaign.id);
     setActiveTab("students");
+    // Reset batchNumber khi chọn campaign mới
+    setCampaignBatchNumber("");
   };
 
+  // Khi mở modal tiêm cho học sinh
   const handlePerformVaccination = (student) => {
     setSelectedStudent(student);
-    // Lấy batchNumber từ localStorage theo campaignId
-    const batchNumber =
-      selectedCampaign &&
-      localStorage.getItem("batchNumber_" + selectedCampaign.id)
-        ? localStorage.getItem("batchNumber_" + selectedCampaign.id)
-        : "";
+    // Ưu tiên lấy batchNumber từ state (vừa tiêm xong)
+    let latestBatchNumber = campaignBatchNumber;
+    // Nếu state chưa có, lấy từ vaccinationReports
+    if (
+      !latestBatchNumber &&
+      vaccinationReports &&
+      vaccinationReports.length > 0
+    ) {
+      const firstBatch = vaccinationReports.find((r) => r.batchNumber);
+      if (firstBatch && firstBatch.batchNumber) {
+        latestBatchNumber = firstBatch.batchNumber;
+      }
+    }
     vaccinationForm.setFieldsValue({
-      batchNumber,
+      batchNumber: latestBatchNumber || "",
       administeredDate: null,
       dose: undefined,
       doseAmount: 0.5,
       notes: "",
     });
-    setBatchNumberDisabled(!!batchNumber); // Nếu đã có batchNumber thì disable
+    setBatchNumberDisabled(!!latestBatchNumber); // Nếu đã có batchNumber thì disable
     setIsModalVisible(true);
   };
 
@@ -853,14 +873,6 @@ const Vaccination = () => {
               placeholder="Nhập số lô vaccine"
               maxLength={50}
               disabled={batchNumberDisabled}
-              onChange={(e) => {
-                if (selectedCampaign) {
-                  localStorage.setItem(
-                    "batchNumber_" + selectedCampaign.id,
-                    e.target.value
-                  );
-                }
-              }}
             />
           </Form.Item>
           <Form.Item name="notes" label="Ghi chú">
