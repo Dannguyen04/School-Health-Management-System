@@ -129,6 +129,11 @@ const NotificationBell = () => {
             case "medical_check":
                 navigate("/user/health-checkup-results");
                 break;
+            case "medical_campaign":
+                navigate("/parent/medical-schedule", {
+                    state: { scrollToMedicalTab: true },
+                });
+                break;
             case "medication":
                 navigate("/user/medicine-info");
                 break;

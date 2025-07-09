@@ -1,11 +1,12 @@
 import express from "express";
 import {
-  createMedicalCampaign,
-  deleteMedicalCampaign,
-  getAllMedicalCampaigns,
-  getMedicalCampaignById,
-  updateMedicalCampaign,
-  updateProgress,
+    createMedicalCampaign,
+    deleteMedicalCampaign,
+    getAllMedicalCampaigns,
+    getMedicalCampaignById,
+    updateMedicalCampaign,
+    updateProgress,
+    notifyParentsAboutCampaign, // thêm hàm mới
 } from "../controllers/MedicalCampaign.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 
@@ -28,5 +29,12 @@ router.put("/:id/status", authenticateToken, updateProgress);
 
 // Xóa campaign
 router.delete("/:id", authenticateToken, deleteMedicalCampaign);
+
+// Gửi thông báo chiến dịch về cho phụ huynh
+router.post(
+    "/:id/notify-parents",
+    authenticateToken,
+    notifyParentsAboutCampaign
+);
 
 export default router;
