@@ -1164,13 +1164,12 @@ export const performVaccination = async (req, res) => {
             campaignId,
             studentId,
             administeredDate,
-            batchNumber,
             notes,
             sideEffects,
             reaction,
-            dose = "FIRST",
         } = req.body;
 
+        console.log(req.user);
         // Kiểm tra xem user có phải là nurse không
         if (!req.user.nurseProfile) {
             return res.status(403).json({
@@ -1244,11 +1243,13 @@ export const performVaccination = async (req, res) => {
         // Tạo bản ghi tiêm chủng
         const vaccination = await prisma.vaccinationRecord.create({
             data: {
-                name: campaign.name,
-                requirement: "REQUIRED",
+                campaignName: campaign.name,
+                requirement: campaign.vaccineRequirement,
                 expiredDate: campaign.deadline,
                 administeredDate: new Date(administeredDate),
-                dose: dose,
+                vaccineName: campaign.vaccineName,
+                studentName: student.users.fullName,
+                nurseName: nurse.users.fullName,
                 sideEffects: sideEffects || null,
                 notes: notes || null,
                 reaction: reaction || null,
