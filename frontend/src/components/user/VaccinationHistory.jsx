@@ -193,18 +193,29 @@ const VaccinationHistory = () => {
                     >
                         Lịch sử tiêm chủng
                     </Title>
-                    <Space>
-                        <Select
-                            style={{ width: 200 }}
-                            value={selectedStudent}
-                            onChange={setSelectedStudent}
-                            options={children.map((child) => ({
-                                value: child.studentId,
-                                label: child.fullName,
-                            }))}
-                            placeholder="Chọn học sinh"
-                        />
-                    </Space>
+                    <Select
+                        style={{ width: 320, minWidth: 220 }}
+                        dropdownStyle={{ borderRadius: 18, boxShadow: '0 8px 32px rgba(54, 174, 154, 0.15)' }}
+                        dropdownClassName="custom-student-dropdown"
+                        value={selectedStudent}
+                        onChange={setSelectedStudent}
+                        placeholder="Chọn học sinh"
+                        size="large"
+                    >
+                        {children.map((child) => (
+                            <Select.Option
+                                key={child.studentId}
+                                value={child.studentId}
+                                className="!py-3 !px-5 !text-lg hover:bg-[#e8f5f2]"
+                                style={{ display: 'flex', alignItems: 'center', gap: 14 }}
+                            >
+                                <span className="font-semibold text-gray-800 truncate max-w-[140px]">{child.fullName}</span>
+                                <span className={`ml-3 px-3 py-1 rounded-full text-sm font-bold border transition-all duration-200 ${child.class ? 'bg-[#d5f2ec] text-[#36ae9a] border-[#36ae9a]' : 'bg-gray-100 text-gray-400 border-gray-300'}`}>
+                                    {child.class || 'Chưa có lớp'}
+                                </span>
+                            </Select.Option>
+                        ))}
+                    </Select>
                 </div>
 
                 <Table
