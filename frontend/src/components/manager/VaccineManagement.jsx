@@ -19,6 +19,7 @@ import {
   Space,
   Table,
   Tag,
+  Tooltip,
 } from "antd";
 import axios from "axios";
 import { Formik } from "formik";
@@ -183,13 +184,59 @@ const VaccineManagement = () => {
       title: "Tác dụng phụ",
       dataIndex: "sideEffects",
       key: "sideEffects",
-      render: (sideEffects) => sideEffects || "Không có",
+      render: (sideEffects) =>
+        sideEffects && sideEffects.length > 50 ? (
+          <Tooltip
+            title={
+              <div
+                style={{
+                  maxWidth: 350,
+                  maxHeight: 200,
+                  overflow: "auto",
+                  whiteSpace: "pre-line",
+                }}
+              >
+                {sideEffects}
+              </div>
+            }
+          >
+            {sideEffects.slice(0, 50)}...{" "}
+            <span style={{ color: "#1677ff", cursor: "pointer" }}>
+              (Xem thêm)
+            </span>
+          </Tooltip>
+        ) : (
+          sideEffects || "Không có"
+        ),
     },
     {
       title: "Chống chỉ định",
       dataIndex: "contraindications",
       key: "contraindications",
-      render: (contraindications) => contraindications || "Không có",
+      render: (contraindications) =>
+        contraindications && contraindications.length > 50 ? (
+          <Tooltip
+            title={
+              <div
+                style={{
+                  maxWidth: 350,
+                  maxHeight: 200,
+                  overflow: "auto",
+                  whiteSpace: "pre-line",
+                }}
+              >
+                {contraindications}
+              </div>
+            }
+          >
+            {contraindications.slice(0, 50)}...{" "}
+            <span style={{ color: "#1677ff", cursor: "pointer" }}>
+              (Xem thêm)
+            </span>
+          </Tooltip>
+        ) : (
+          contraindications || "Không có"
+        ),
     },
     {
       title: "Độ tuổi khuyến nghị",
@@ -201,7 +248,30 @@ const VaccineManagement = () => {
       title: "Mô tả",
       dataIndex: "description",
       key: "description",
-      render: (description) => description || "Không có",
+      render: (description) =>
+        description && description.length > 50 ? (
+          <Tooltip
+            title={
+              <div
+                style={{
+                  maxWidth: 350,
+                  maxHeight: 200,
+                  overflow: "auto",
+                  whiteSpace: "pre-line",
+                }}
+              >
+                {description}
+              </div>
+            }
+          >
+            {description.slice(0, 50)}...{" "}
+            <span style={{ color: "#1677ff", cursor: "pointer" }}>
+              (Xem thêm)
+            </span>
+          </Tooltip>
+        ) : (
+          description || "Không có"
+        ),
     },
     {
       title: "Tham khảo",
