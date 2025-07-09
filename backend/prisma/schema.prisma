@@ -550,6 +550,10 @@ model MedicalCheck {
   followUpDate         DateTime?
   notes                String?     // Ghi chú tổng quát, bao gồm các bệnh lý khác
 
+  // Lịch tư vấn
+  consultationStart     DateTime?  // Thời gian bắt đầu tư vấn
+  consultationEnd       DateTime?  // Thời gian kết thúc tư vấn
+
   parentNotified       Boolean     @default(false)
   parentResponse       String?     // Phản hồi của phụ huynh
 

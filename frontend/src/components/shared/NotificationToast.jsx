@@ -30,7 +30,7 @@ const NotificationToast = ({
         }
 
         if (notificationData.type === "update_phone") {
-            navigate("/user/profile");
+            navigate("/parent/profile");
             setIsVisible(false);
             setTimeout(() => {
                 onClose();
@@ -39,7 +39,7 @@ const NotificationToast = ({
         }
 
         if (notificationData.id === "missing-health-profile" && studentId) {
-            navigate(`/user/health-profile?studentId=${studentId}`);
+            navigate(`/parent/health-profile?studentId=${studentId}`);
             setIsVisible(false);
             setTimeout(() => {
                 onClose();
@@ -49,16 +49,16 @@ const NotificationToast = ({
 
         switch (notificationData.type) {
             case "vaccination_consent":
-                navigate("/user/consent-forms");
+                navigate("/parent/consent-forms");
                 break;
             case "vaccination_consent_update":
                 navigate("/manager/vaccination-campaigns");
                 break;
             case "vaccination":
-                navigate("/user/medical-schedule");
+                navigate("/parent/medical-schedule");
                 break;
             case "medical_check":
-                navigate("/user/health-checkup-results");
+                navigate("/parent/health-checkup-results");
                 break;
             case "medical_campaign":
                 navigate("/parent/medical-schedule", {
@@ -66,18 +66,26 @@ const NotificationToast = ({
                 });
                 break;
             case "medication":
-                navigate("/user/medicine-info");
+                navigate("/parent/medicine-info");
                 break;
             case "vaccination_campaign_created":
             case "vaccination_campaign_updated":
             case "vaccination_campaign_deleted":
-            case "vaccine_created":
             case "vaccine_updated":
             case "vaccine_deleted":
                 navigate("/manager/vaccination-campaigns");
                 break;
+            case "medical_event":
+                // Chuyển hướng sang trang medical-events và truyền notificationId
+                navigate("/parent/medical-events", {
+                    state: { notificationId: notificationData.id },
+                });
+                break;
+            case "medical_consultation":
+                navigate("/parent/health-checkup-results");
+                break;
             default:
-                // For medical_event and others, just close the toast
+                // For other types, just close the toast
                 break;
         }
 
@@ -235,10 +243,8 @@ const NotificationToast = ({
                                     color: "#666",
                                     marginBottom: "8px",
                                     lineHeight: "1.4",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                    overflow: "hidden",
+                                    whiteSpace: "pre-line",
+                                    wordBreak: "break-word",
                                 }}
                             >
                                 {notificationData.message}

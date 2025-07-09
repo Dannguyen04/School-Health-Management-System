@@ -55,6 +55,11 @@ const App = () => {
                 <Route path="/" element={<Homepage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/blog/:id" element={<BlogDetail />} />
+                {/* Redirect /user to /parent for backward compatibility */}
+                <Route
+                    path="/user/*"
+                    element={<Navigate to="/parent" replace />}
+                />
                 {/* Nurse Routes */}
                 <Route
                     path="/nurse"

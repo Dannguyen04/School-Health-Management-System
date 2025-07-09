@@ -112,22 +112,25 @@ const NotificationBell = () => {
             markAsRead(notification.id);
         }
 
+        // Đóng dropdown notification trước khi điều hướng
+        setDropdownVisible(false);
+
         // Navigation dựa trên loại thông báo
         switch (notification.type) {
             case "update_phone":
-                navigate("/user/profile");
+                navigate("/parent/profile");
                 break;
             case "vaccination_consent":
-                navigate("/user/consent-forms");
+                navigate("/parent/consent-forms");
                 break;
             case "vaccination_consent_update":
                 navigate("/manager/vaccination-campaigns");
                 break;
             case "vaccination":
-                navigate("/user/medical-schedule");
+                navigate("/parent/medical-schedule");
                 break;
             case "medical_check":
-                navigate("/user/health-checkup-results");
+                navigate("/parent/health-checkup-results");
                 break;
             case "medical_campaign":
                 navigate("/parent/medical-schedule", {
@@ -135,7 +138,7 @@ const NotificationBell = () => {
                 });
                 break;
             case "medication":
-                navigate("/user/medicine-info");
+                navigate("/parent/medicine-info");
                 break;
             case "vaccination_campaign_created":
             case "vaccination_campaign_updated":
@@ -147,12 +150,12 @@ const NotificationBell = () => {
                 break;
             case "medical_event":
                 // Chuyển hướng sang trang medical-events và truyền notificationId
-                navigate("/user/medical-events", {
+                navigate("/parent/medical-events", {
                     state: { notificationId: notification.id },
                 });
                 break;
             case "medical_consultation":
-                navigate("/user/health-checkup-results");
+                navigate("/parent/health-checkup-results");
                 break;
             default:
                 setSelectedNotification(notification);
