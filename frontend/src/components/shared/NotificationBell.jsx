@@ -127,7 +127,7 @@ const NotificationBell = () => {
                 navigate("/user/medical-schedule");
                 break;
             case "medical_check":
-                navigate("/user/health-checkup-results");
+                navigate("/parent/health-checkup-results");
                 break;
             case "medical_campaign":
                 navigate("/parent/medical-schedule", {
@@ -152,7 +152,7 @@ const NotificationBell = () => {
                 });
                 break;
             case "medical_consultation":
-                navigate("/user/health-checkup-results");
+                navigate("/parent/health-checkup-results");
                 break;
             default:
                 setSelectedNotification(notification);
