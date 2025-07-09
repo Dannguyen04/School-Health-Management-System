@@ -2639,6 +2639,7 @@ export const getVaccinationReport = async (req, res) => {
             followUpDate: rec.followUpDate,
             additionalNotes: rec.notes,
             status: rec.status,
+            batchNumber: rec.batchNumber
         }));
         res.json({ success: true, data: reports });
     } catch (error) {
