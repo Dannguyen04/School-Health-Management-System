@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { notification, Button, Space } from "antd";
 import { BellOutlined, CloseOutlined } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
+import { navigateByNotificationType } from "../../utils/notificationNavigation";
 
 const NotificationToast = ({
     notification: notificationData,
@@ -28,54 +29,7 @@ const NotificationToast = ({
         if (notificationData.status !== "READ") {
             onMarkAsRead(notificationData.id);
         }
-
-        if (notificationData.type === "update_phone") {
-            navigate("/user/profile");
-            setIsVisible(false);
-            setTimeout(() => {
-                onClose();
-            }, 300);
-            return;
-        }
-
-        if (notificationData.id === "missing-health-profile" && studentId) {
-            navigate(`/user/health-profile?studentId=${studentId}`);
-            setIsVisible(false);
-            setTimeout(() => {
-                onClose();
-            }, 300);
-            return;
-        }
-
-        switch (notificationData.type) {
-            case "vaccination_consent":
-                navigate("/user/consent-forms");
-                break;
-            case "vaccination_consent_update":
-                navigate("/manager/vaccination-campaigns");
-                break;
-            case "vaccination":
-                navigate("/user/medical-schedule");
-                break;
-            case "medical_check":
-                navigate("/user/health-checkup-results");
-                break;
-            case "medication":
-                navigate("/user/medicine-info");
-                break;
-            case "vaccination_campaign_created":
-            case "vaccination_campaign_updated":
-            case "vaccination_campaign_deleted":
-            case "vaccine_created":
-            case "vaccine_updated":
-            case "vaccine_deleted":
-                navigate("/manager/vaccination-campaigns");
-                break;
-            default:
-                // For medical_event and others, just close the toast
-                break;
-        }
-
+        navigateByNotificationType(notificationData, navigate);
         setIsVisible(false);
         setTimeout(() => {
             onClose();
@@ -102,10 +56,11 @@ const NotificationToast = ({
             case "vaccination_campaign_created":
             case "vaccination_campaign_updated":
             case "vaccination_campaign_deleted":
-            case "vaccine_created":
             case "vaccine_updated":
             case "vaccine_deleted":
                 return "📋";
+            case "medical_check_campaign":
+                return "👨‍⚕️";
             case "update_phone":
                 return "📱";
             default:
@@ -135,6 +90,8 @@ const NotificationToast = ({
                 return "Cập nhật vaccine";
             case "vaccine_deleted":
                 return "Xóa vaccine";
+            case "medical_check_campaign":
+                return "Chiến dịch khám sức khỏe";
             case "update_phone":
                 return "Cập nhật số điện thoại";
             default:
@@ -159,6 +116,8 @@ const NotificationToast = ({
             case "vaccine_updated":
             case "vaccine_deleted":
                 return "#ffd666"; // vàng
+            case "medical_check_campaign":
+                return "#36cfc9"; // xanh ngọc
             default:
                 return "#bfbfbf"; // xám
         }
@@ -230,10 +189,8 @@ const NotificationToast = ({
                                     color: "#666",
                                     marginBottom: "8px",
                                     lineHeight: "1.4",
-                                    display: "-webkit-box",
-                                    WebkitLineClamp: 2,
-                                    WebkitBoxOrient: "vertical",
-                                    overflow: "hidden",
+                                    whiteSpace: "pre-line",
+                                    wordBreak: "break-word",
                                 }}
                             >
                                 {notificationData.message}

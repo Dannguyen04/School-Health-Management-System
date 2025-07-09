@@ -1164,11 +1164,11 @@ export const performVaccination = async (req, res) => {
             campaignId,
             studentId,
             administeredDate,
-            batchNumber,
             notes,
             sideEffects,
             reaction,
-            dose = "FIRST",
+            dose,
+            doseAmount,
         } = req.body;
 
         // Kiểm tra xem user có phải là nurse không
@@ -1241,20 +1241,60 @@ export const performVaccination = async (req, res) => {
             });
         }
 
+        const existedVaccination = await prisma.vaccinationRecord.findFirst({
+            where: {
+                studentId: studentId,
+                vaccineId: campaign.vaccineId,
+                dose: dose,
+            },
+        });
+        if (existedVaccination) {
+            const doseInfor =
+                existedVaccination.dose === "FIRST"
+                    ? "đầu tiên"
+                    : existedVaccination.dose === "SECOND"
+                    ? "thứ hai"
+                    : "nhắc lại";
+            return res.status(400).json({
+                success: false,
+                error:
+                    "Học sinh này đã được tiêm chủng với loại vaccine và liều này trước đây trong chiến dịch " +
+                    existedVaccination.campaignName +
+                    " liều " +
+                    doseInfor,
+            });
+        }
+
+        const vacciationDate = new Date(administeredDate);
+        if (
+            vacciationDate < new Date().setHours(0, 0, 0, 0) ||
+            vacciationDate < campaign.scheduledDate ||
+            vacciationDate > campaign.deadline
+        ) {
+            return res.status(400).json({
+                success: false,
+                error: "Ngày tiêm chủng không hợp lệ",
+            });
+        }
         // Tạo bản ghi tiêm chủng
         const vaccination = await prisma.vaccinationRecord.create({
             data: {
-                name: campaign.name,
-                requirement: "REQUIRED",
-                expiredDate: campaign.deadline,
-                administeredDate: new Date(administeredDate),
-                dose: dose,
+                campaignName: campaign.name,
+                administeredDate: vacciationDate,
+                vaccineName: campaign.vaccineName,
+                studentName: student.user.fullName,
+                studentGrade: student.grade,
+                studentClass: student.class,
+                nurseName: req.user.fullName,
                 sideEffects: sideEffects || null,
                 notes: notes || null,
                 reaction: reaction || null,
+                dose: dose || "FIRST",
+                doseAmount: doseAmount || 0.5,
                 campaign: { connect: { id: campaignId } },
                 student: { connect: { id: studentId } },
                 nurse: { connect: { id: nurseId } },
+                vaccine: { connect: { id: campaign.vaccineId } },
                 status: "COMPLETED",
                 followUpRequired: false,
             },

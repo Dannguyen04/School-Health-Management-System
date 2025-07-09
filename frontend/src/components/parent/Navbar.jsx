@@ -211,7 +211,7 @@ const Navbar = () => {
                   <div className="mt-2 space-y-1">
                     <button
                       className="w-full text-left text-gray-700 py-2 px-4 rounded-lg hover:bg-[#36ae9a]/10 hover:text-[#36ae9a] transition-all duration-300"
-                      onClick={() => navigate("/user/profile")}
+                      onClick={() => navigate("/parent/profile")}
                     >
                       Hồ sơ cá nhân
                     </button>

@@ -26,6 +26,7 @@ import { useNotifications } from "../../hooks/useNotifications";
 import { parentAPI } from "../../utils/api.js";
 import NotificationItem from "./NotificationItem.jsx";
 import VaccinationDetailModal from "../parent/VaccinationDetailModal";
+import { navigateByNotificationType } from "../../utils/notificationNavigation";
 
 const { Text } = Typography;
 const { Title } = Typography;
@@ -106,54 +107,19 @@ const NotificationBell = () => {
     };
 
     const handleNotificationClick = (notification) => {
-        console.log("CLICKED NOTI:", notification);
         // Đánh dấu đã đọc nếu chưa đọc
         if (notification.status !== "READ") {
             markAsRead(notification.id);
         }
-
-        // Navigation dựa trên loại thông báo
-        switch (notification.type) {
-            case "update_phone":
-                navigate("/user/profile");
-                break;
-            case "vaccination_consent":
-                navigate("/user/consent-forms");
-                break;
-            case "vaccination_consent_update":
-                navigate("/manager/vaccination-campaigns");
-                break;
-            case "vaccination":
-                navigate("/user/medical-schedule");
-                break;
-            case "medical_check":
-                navigate("/user/health-checkup-results");
-                break;
-            case "medication":
-                navigate("/user/medicine-info");
-                break;
-            case "vaccination_campaign_created":
-            case "vaccination_campaign_updated":
-            case "vaccination_campaign_deleted":
-            case "vaccine_created":
-            case "vaccine_updated":
-            case "vaccine_deleted":
-                navigate("/manager/vaccination-campaigns");
-                break;
-            case "medical_event":
-                // Chuyển hướng sang trang medical-events và truyền notificationId
-                navigate("/user/medical-events", {
-                    state: { notificationId: notification.id },
-                });
-                break;
-            case "medical_consultation":
-                navigate("/user/health-checkup-results");
-                break;
-            default:
-                setSelectedNotification(notification);
-                setDetailModalVisible(true);
-                break;
-        }
+        // Đóng dropdown notification trước khi điều hướng
+        setDropdownVisible(false);
+        // Sử dụng hàm điều hướng chung
+        navigateByNotificationType(
+            notification,
+            navigate,
+            setSelectedNotification,
+            setDetailModalVisible
+        );
     };
 
     const getNotificationIcon = (type) => {
@@ -174,6 +140,8 @@ const NotificationBell = () => {
             case "vaccine_deleted":
                 return "📋";
             case "medical_check":
+                return "👨‍⚕️";
+            case "medical_check_campaign":
                 return "👨‍⚕️";
             case "medication":
                 return "💊";
@@ -219,6 +187,8 @@ const NotificationBell = () => {
                 return "Xóa vaccine";
             case "medical_check":
                 return "Khám sức khỏe";
+            case "medical_check_campaign":
+                return "Chiến dịch khám sức khỏe";
             case "medication":
                 return "Thuốc";
             default:

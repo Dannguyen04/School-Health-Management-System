@@ -10,6 +10,7 @@ import {
     ScheduleOutlined,
 } from "@ant-design/icons";
 import MedicalCampaignDetailModal from "../parent/MedicalCampaignDetailModal";
+import { useLocation } from "react-router-dom";
 
 const { Title } = Typography;
 
@@ -27,6 +28,8 @@ const MedicalSchedule = () => {
     const [medicalModalVisible, setMedicalModalVisible] = useState(false);
     const [medicalDetail, setMedicalDetail] = useState(null);
 
+    const location = useLocation();
+
     // Lấy danh sách học sinh
     useEffect(() => {
         parentAPI.getChildren().then((res) => {
@@ -40,6 +43,13 @@ const MedicalSchedule = () => {
             }
         });
     }, []);
+
+    // Nếu nhận state scrollToMedicalTab, tự động chuyển tab
+    useEffect(() => {
+        if (location.state && location.state.scrollToMedicalTab) {
+            setTab("medical");
+        }
+    }, [location.state]);
 
     // Lấy lịch tiêm chủng
     useEffect(() => {

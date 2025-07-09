@@ -31,8 +31,6 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
   const [errors, setErrors] = useState({});
   const { login, setScrollToServices } = useAuth();
   const navigate = useNavigate();
-  const [rememberMe, setRememberMe] = useState(false);
-
   const handleLogin = async (e) => {
     e.preventDefault();
     setErrors({});
@@ -44,6 +42,8 @@ export const AuthTemplate = ({ isOpen, onCloseModal }) => {
       if (response.data.success) {
         const { user, token } = response.data;
         login(user, token);
+        localStorage.setItem("token", token);
+        localStorage.setItem("user", JSON.stringify(user));
         message.success("Đăng nhập thành công");
         if (user.role === "ADMIN") {
           navigate("/admin");

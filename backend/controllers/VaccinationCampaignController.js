@@ -421,6 +421,11 @@ const deleteVaccinationCampaign = async (req, res) => {
             where: { campaignId: id },
         });
 
+        // Xóa tất cả notification liên quan đến campaign này
+        await prisma.notification.deleteMany({
+            where: { vaccinationCampaignId: id },
+        });
+
         // Delete campaign
         await prisma.vaccinationCampaign.delete({
             where: { id },

@@ -100,12 +100,6 @@ const User = () => {
           if (missing.length > 0) {
             setMissingStudents(missing);
             setShowHealthProfileToast(true);
-            // Thông báo antd
-            // notification.warning({
-            //     message: "Cảnh báo thiếu khai báo sức khỏe",
-            //     description: `Bạn có ${missing.length} con chưa được khai báo sức khỏe. Vui lòng cập nhật thông tin sức khỏe cho các bé!`,
-            //     duration: 6,
-            // });
           } else {
             setShowHealthProfileToast(false);
             setMissingStudents([]);
@@ -193,7 +187,7 @@ const User = () => {
                 e.stopPropagation();
                 if (missingStudents[0]) {
                   navigate(
-                    `/user/health-profile?studentId=${missingStudents[0].studentId}`
+                    `/parent/health-profile?studentId=${missingStudents[0].studentId}`
                   );
                   setShowHealthProfileToast(false);
                 }

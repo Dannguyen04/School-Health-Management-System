@@ -163,10 +163,8 @@ const NotificationItem = ({
                         color: "#666",
                         marginBottom: "6px",
                         lineHeight: "1.5",
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
+                        whiteSpace: "pre-line",
+                        wordBreak: "break-word",
                     }}
                 >
                     {notification.message}
