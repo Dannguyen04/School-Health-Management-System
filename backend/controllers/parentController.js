@@ -567,7 +567,7 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
                     where: { studentId: { in: childIds } },
                 },
             },
-            orderBy: { scheduledDate: "asc" },
+            orderBy: [{ scheduledDate: "desc" }, { createdAt: "desc" }],
         });
         const campaignsWithConsent = campaigns.map((campaign) => {
             const campaignData = {

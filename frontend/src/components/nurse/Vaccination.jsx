@@ -819,7 +819,10 @@ const Vaccination = () => {
             name="doseAmount"
             label="Liều lượng"
             rules={[
-              { required: true, message: "Vui lòng nhập liều lượng" },
+              {
+                required: true,
+                message: "Vui lòng nhập liều lượng",
+              },
               {
                 type: "number",
                 min: 0.01,
@@ -839,7 +842,12 @@ const Vaccination = () => {
           <Form.Item
             name="batchNumber"
             label="Số lô vaccine"
-            rules={[{ required: true, message: "Vui lòng nhập số lô vaccine" }]}
+            rules={[
+              {
+                required: true,
+                message: "Vui lòng nhập số lô vaccine",
+              },
+            ]}
           >
             <Input
               placeholder="Nhập số lô vaccine"
