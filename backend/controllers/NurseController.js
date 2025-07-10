@@ -1585,8 +1585,10 @@ export const approveMedicationRequest = async (req, res) => {
                         user: {
                             select: {
                                 fullName: true,
+                                email: true,
                             },
                         },
+                        healthProfile: true,
                     },
                 },
                 parent: {
@@ -1594,12 +1596,13 @@ export const approveMedicationRequest = async (req, res) => {
                         user: {
                             select: {
                                 fullName: true,
-                                id: true,
+                                email: true,
+                                phone: true,
                             },
                         },
                     },
                 },
-                medication: true,
+                // XÓA medication: true
             },
         });
 
@@ -1623,34 +1626,6 @@ export const approveMedicationRequest = async (req, res) => {
         if (action === "APPROVE") {
             newStatus = "APPROVED";
             message = "Yêu cầu thuốc đã được phê duyệt";
-
-            // Nếu approve, thêm thuốc vào inventory nếu chưa có
-            const existingMedication = await prisma.medication.findUnique({
-                where: { id: medicationRequest.medicationId },
-            });
-
-            if (existingMedication) {
-                // Cập nhật số lượng tồn kho (tăng lên 1 đơn vị)
-                await prisma.medication.update({
-                    where: { id: medicationRequest.medicationId },
-                    data: {
-                        stockQuantity: {
-                            increment: 1,
-                        },
-                    },
-                });
-
-                // Tạo bản ghi stock movement
-                await prisma.stockMovement.create({
-                    data: {
-                        medicationId: medicationRequest.medicationId,
-                        type: "in",
-                        quantity: 1,
-                        reason: `Phê duyệt yêu cầu thuốc từ phụ huynh - ${medicationRequest.parent.user.fullName}`,
-                        reference: `Request ID: ${requestId}`,
-                    },
-                });
-            }
         } else if (action === "REJECT") {
             newStatus = "REJECTED";
             message = "Yêu cầu thuốc đã bị từ chối";
@@ -1687,7 +1662,7 @@ export const approveMedicationRequest = async (req, res) => {
                         },
                     },
                 },
-                medication: true,
+                // XÓA medication: true
             },
         });
 
@@ -1696,9 +1671,9 @@ export const approveMedicationRequest = async (req, res) => {
             await prisma.notification.create({
                 data: {
                     userId: medicationRequest.parent.user.id,
-                    title: `Yêu cầu thuốc - ${medicationRequest.medication.name}`,
+                    title: `Yêu cầu thuốc - ${medicationRequest.name}`,
                     message: `Yêu cầu thuốc ${
-                        medicationRequest.medication.name
+                        medicationRequest.name
                     } cho học sinh ${
                         medicationRequest.student.user.fullName
                     } đã được ${
@@ -1720,7 +1695,7 @@ export const approveMedicationRequest = async (req, res) => {
                 status: updatedRequest.status,
                 studentName: updatedRequest.student.user.fullName,
                 parentName: updatedRequest.parent.user.fullName,
-                medicationName: updatedRequest.medication.name,
+                medicationName: updatedRequest.name,
                 action: action,
                 notes: notes,
             },
@@ -1848,7 +1823,7 @@ export const getMedicationRequestById = async (req, res) => {
                         },
                     },
                 },
-                medication: true,
+                // XÓA medication: true
             },
         });
 
@@ -1869,11 +1844,11 @@ export const getMedicationRequestById = async (req, res) => {
             parentName: medicationRequest.parent.user.fullName,
             parentEmail: medicationRequest.parent.user.email,
             parentPhone: medicationRequest.parent.user.phone,
-            medicationId: medicationRequest.medicationId,
-            medicationName: medicationRequest.medication.name,
-            medicationDescription: medicationRequest.medication.description,
-            medicationDosage: medicationRequest.medication.dosage,
-            medicationUnit: medicationRequest.medication.unit,
+            // medicationId: medicationRequest.medicationId, // KHÔNG CÓ
+            medicationName: medicationRequest.name,
+            medicationDescription: medicationRequest.description,
+            medicationDosage: medicationRequest.dosage,
+            medicationUnit: medicationRequest.unit,
             dosage: medicationRequest.dosage,
             frequency: medicationRequest.frequency,
             duration: medicationRequest.duration,
@@ -1920,7 +1895,12 @@ export const getApprovedMedications = async (req, res) => {
             },
             orderBy: { updatedAt: "desc" },
         });
-        res.json({ success: true, data: meds });
+        // Map lại để luôn có duration (nếu null thì trả về rỗng)
+        const mapped = meds.map((med) => ({
+            ...med,
+            duration: med.duration || "",
+        }));
+        res.json({ success: true, data: mapped });
     } catch (error) {
         console.error("Error getting approved medications:", error);
         res.status(500).json({
@@ -2639,7 +2619,7 @@ export const getVaccinationReport = async (req, res) => {
             followUpDate: rec.followUpDate,
             additionalNotes: rec.notes,
             status: rec.status,
-            batchNumber: rec.batchNumber
+            batchNumber: rec.batchNumber,
         }));
         res.json({ success: true, data: reports });
     } catch (error) {

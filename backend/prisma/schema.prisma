@@ -315,7 +315,7 @@ model StudentMedication {
   manufacturer String?
   
   frequency    String // "daily", "twice daily", "as needed", etc.
-  duration     String? // How long to take
+  customTimes  String[] // Giờ uống cụ thể (mảng string)
   instructions String? // Special instructions
   status       MedicationStatus @default(PENDING_APPROVAL)
   treatmentStatus TreatmentStatus @default(ONGOING)

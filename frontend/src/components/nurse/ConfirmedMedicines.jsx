@@ -249,10 +249,13 @@ const ConfirmedMedicines = () => {
             ) : (
                 detailData && (
                     <div className="space-y-4">
-                        {detailData.image && (
+                        {(detailData.image || detailData.prescriptionImage) && (
                             <div className="flex justify-center mb-4">
                                 <Image
-                                    src={detailData.image}
+                                    src={
+                                        detailData.image ||
+                                        detailData.prescriptionImage
+                                    }
                                     alt="Ảnh thuốc"
                                     style={{
                                         maxWidth: 200,
@@ -350,18 +353,53 @@ const ConfirmedMedicines = () => {
                                     </p>
                                     <p>
                                         <strong>Dị ứng:</strong>{" "}
-                                        {detailData.healthProfile.allergies ||
-                                            "Không có"}
+                                        {Array.isArray(
+                                            detailData.healthProfile.allergies
+                                        )
+                                            ? detailData.healthProfile.allergies
+                                                  .map(
+                                                      (item) =>
+                                                          item.name ||
+                                                          item.group ||
+                                                          JSON.stringify(item)
+                                                  )
+                                                  .join(", ")
+                                            : detailData.healthProfile
+                                                  .allergies || "Không có"}
                                     </p>
                                     <p>
                                         <strong>Bệnh mãn tính:</strong>{" "}
-                                        {detailData.healthProfile
-                                            .chronicDiseases || "Không có"}
+                                        {Array.isArray(
+                                            detailData.healthProfile
+                                                .chronicDiseases
+                                        )
+                                            ? detailData.healthProfile.chronicDiseases
+                                                  .map(
+                                                      (item) =>
+                                                          item.name ||
+                                                          item.group ||
+                                                          JSON.stringify(item)
+                                                  )
+                                                  .join(", ")
+                                            : detailData.healthProfile
+                                                  .chronicDiseases ||
+                                              "Không có"}
                                     </p>
                                     <p>
                                         <strong>Thuốc đang dùng:</strong>{" "}
-                                        {detailData.healthProfile.medications ||
-                                            "Không có"}
+                                        {Array.isArray(
+                                            detailData.healthProfile.medications
+                                        )
+                                            ? detailData.healthProfile.medications
+                                                  .map(
+                                                      (item) =>
+                                                          item.name ||
+                                                          item.group ||
+                                                          JSON.stringify(item)
+                                                  )
+                                                  .join(", ")
+                                            : detailData.healthProfile
+                                                  .medications || "Không có"}
                                     </p>
                                 </div>
                             </>

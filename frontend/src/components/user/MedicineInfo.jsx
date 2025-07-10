@@ -94,6 +94,14 @@ const unitLabel = {
     khac: "Khác",
 };
 
+const usageNoteLabel = {
+    "before-meal": "Uống trước ăn",
+    "after-meal": "Uống sau ăn",
+    "with-food": "Uống cùng thức ăn",
+    "empty-stomach": "Uống lúc đói",
+    other: "Khác",
+};
+
 const MedicineInfo = () => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
@@ -107,7 +115,7 @@ const MedicineInfo = () => {
     const [activeTab, setActiveTab] = useState("all");
     const [detailModalOpen, setDetailModalOpen] = useState(false);
     const [selectedMedicine, setSelectedMedicine] = useState(null);
-    const [selectedImageFile, setSelectedImageFile] = useState(null);
+    const [prescriptionImage, setPrescriptionImage] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [imageError, setImageError] = useState("");
     const [currentStep, setCurrentStep] = useState(0);
@@ -186,13 +194,31 @@ const MedicineInfo = () => {
                 }
             );
             if (response.data.success) {
-                // Map dữ liệu sang tiếng Việt
                 const mapped = (response.data.data || []).map((item) => ({
-                    ...item,
+                    id: item.id,
+                    medicationName: item.name || "",
+                    description: item.description || "",
+                    dosage: item.dosage || "",
+                    unit: unitLabel[item.unit] || item.unit || "",
+                    frequency:
+                        frequencyLabel[item.frequency] || item.frequency || "",
+                    instructions: item.instructions || "",
+                    status: item.status,
                     statusLabel: statusLabel[item.status] || item.status,
-                    frequencyLabel:
-                        frequencyLabel[item.frequency] || item.frequency,
-                    unitLabel: unitLabel[item.unit] || item.unit,
+                    startDate: item.startDate,
+                    endDate: item.endDate,
+                    // Đảm bảo lấy đúng trường số lượng thuốc
+                    stockQuantity:
+                        item.stockQuantity !== undefined
+                            ? item.stockQuantity
+                            : item.quantity !== undefined
+                            ? item.quantity
+                            : "",
+                    usageNote: item.usageNote || "",
+                    image: item.image || "",
+                    prescriptionImage: item.prescriptionImage || "",
+                    createdAt: item.createdAt,
+                    updatedAt: item.updatedAt,
                 }));
                 setStudentMedicines(mapped);
             } else {
@@ -232,9 +258,15 @@ const MedicineInfo = () => {
             formData.append("unit", values.unit || "");
             formData.append("stockQuantity", values.stockQuantity);
             formData.append("usageNote", values.usageNote || "");
+            formData.append(
+                "customTimes",
+                JSON.stringify(
+                    values.customTimes || multiStepData.customTimes || []
+                )
+            );
             if (multiStepData.prescriptionImage) {
                 formData.append(
-                    "prescriptionImage",
+                    "medicineImage",
                     multiStepData.prescriptionImage
                 );
             }
@@ -301,9 +333,13 @@ const MedicineInfo = () => {
             formData.append("unit", multiStepData.unit || "");
             formData.append("stockQuantity", multiStepData.stockQuantity);
             formData.append("usageNote", multiStepData.usageNote || "");
+            formData.append(
+                "customTimes",
+                JSON.stringify(multiStepData.customTimes || [])
+            );
             if (multiStepData.prescriptionImage) {
                 formData.append(
-                    "prescriptionImage",
+                    "medicineImage",
                     multiStepData.prescriptionImage
                 );
             }
@@ -382,7 +418,7 @@ const MedicineInfo = () => {
         if (searchText) {
             filtered = filtered.filter(
                 (medicine) =>
-                    medicine.medication?.name
+                    medicine.medicationName
                         ?.toLowerCase()
                         .includes(searchText.toLowerCase()) ||
                     medicine.dosage
@@ -452,7 +488,8 @@ const MedicineInfo = () => {
             setImagePreview(reader.result);
         };
         reader.readAsDataURL(file);
-        setSelectedImageFile(file);
+        setPrescriptionImage(file);
+        setMultiStepData((d) => ({ ...d, prescriptionImage: file }));
         return false; // Ngăn upload tự động
     };
     const handleRemoveImage = () => {
@@ -574,18 +611,26 @@ const MedicineInfo = () => {
             message.error("Vui lòng nhập đầy đủ thông tin bắt buộc!");
             return;
         }
+        if (!multiStepData.stockQuantity || multiStepData.stockQuantity < 1) {
+            message.error("Vui lòng nhập số lượng thuốc hợp lệ!");
+            return;
+        }
+        const medicineData = { ...multiStepData, prescriptionImage };
         if (editIndex !== null) {
             setPendingMedicines((list) =>
                 list.map((item, idx) =>
-                    idx === editIndex ? { ...multiStepData } : item
+                    idx === editIndex ? medicineData : item
                 )
             );
         } else {
-            setPendingMedicines((list) => [...list, { ...multiStepData }]);
+            setPendingMedicines((list) => [...list, medicineData]);
         }
         setShowForm(false);
         setEditIndex(null);
         setCurrentStep(1);
+        setPrescriptionImage(null);
+        setImagePreview(null);
+        setImageError("");
         message.success("Đã lưu thuốc vào danh sách!");
     };
     // Xóa thuốc khỏi danh sách tạm
@@ -618,8 +663,12 @@ const MedicineInfo = () => {
                 formData.append("unit", med.unit || "");
                 formData.append("stockQuantity", med.stockQuantity);
                 formData.append("usageNote", med.usageNote || "");
+                formData.append(
+                    "customTimes",
+                    JSON.stringify(med.customTimes || [])
+                );
                 if (med.prescriptionImage) {
-                    formData.append("prescriptionImage", med.prescriptionImage);
+                    formData.append("medicineImage", med.prescriptionImage);
                 }
                 await axios.post(
                     `/api/parents/request-medication/${med.studentId}`,
@@ -797,61 +846,7 @@ const MedicineInfo = () => {
                                         Gửi thuốc cho học sinh
                                     </Button>
                                 </div>
-                                <Tabs
-                                    activeKey={activeTab}
-                                    onChange={setActiveTab}
-                                    items={[
-                                        {
-                                            key: "all",
-                                            label: (
-                                                <span>
-                                                    Tất cả
-                                                    <Badge
-                                                        count={stats.total}
-                                                        className="ml-2"
-                                                    />
-                                                </span>
-                                            ),
-                                        },
-                                        {
-                                            key: "active",
-                                            label: (
-                                                <span>
-                                                    Đang dùng
-                                                    <Badge
-                                                        count={stats.approved}
-                                                        className="ml-2"
-                                                    />
-                                                </span>
-                                            ),
-                                        },
-                                        {
-                                            key: "pending",
-                                            label: (
-                                                <span>
-                                                    Chờ duyệt
-                                                    <Badge
-                                                        count={stats.pending}
-                                                        className="ml-2"
-                                                    />
-                                                </span>
-                                            ),
-                                        },
-                                        {
-                                            key: "expiring",
-                                            label: (
-                                                <span>
-                                                    Sắp hết hạn
-                                                    <Badge
-                                                        count={stats.expiring}
-                                                        className="ml-2"
-                                                    />
-                                                </span>
-                                            ),
-                                        },
-                                    ]}
-                                />
-
+                                {/* XÓA các tab, badge, filter, tag, hoặc logic liên quan đến 'Sắp hết hạn' (expiring) trong danh sách thuốc */}
                                 {loadingMedicines ? (
                                     <Spin />
                                 ) : studentMedicines.length === 0 ? (
@@ -859,9 +854,7 @@ const MedicineInfo = () => {
                                         image={Empty.PRESENTED_IMAGE_SIMPLE}
                                         description={
                                             <span>
-                                                {searchText ||
-                                                filterStatus !== "all" ||
-                                                activeTab !== "all"
+                                                {searchText
                                                     ? "Không tìm thấy thuốc phù hợp"
                                                     : "Chưa có thông tin thuốc nào"}
                                             </span>
@@ -919,9 +912,7 @@ const MedicineInfo = () => {
                                                                 level={5}
                                                                 className="mb-2 text-gray-800"
                                                             >
-                                                                {medicine
-                                                                    .medication
-                                                                    ?.name ||
+                                                                {medicine.medicationName ||
                                                                     "Không có tên"}
                                                             </Title>
                                                             <Tag
@@ -940,25 +931,6 @@ const MedicineInfo = () => {
                                                                     ]
                                                                 }
                                                             </Tag>
-                                                            {isExpiring &&
-                                                                !isExpired && (
-                                                                    <Tag
-                                                                        color="warning"
-                                                                        className="mb-2"
-                                                                    >
-                                                                        ⚠️ Sắp
-                                                                        hết hạn
-                                                                    </Tag>
-                                                                )}
-                                                            {isExpired && (
-                                                                <Tag
-                                                                    color="error"
-                                                                    className="mb-2"
-                                                                >
-                                                                    ❌ Đã hết
-                                                                    hạn
-                                                                </Tag>
-                                                            )}
                                                         </div>
                                                         <Avatar
                                                             size={48}
@@ -1410,6 +1382,25 @@ const MedicineInfo = () => {
                                                 </Select.Option>
                                             </Select>
                                         </Form.Item>
+                                        <Form.Item
+                                            label="Số lượng thuốc *"
+                                            required
+                                        >
+                                            <InputNumber
+                                                min={1}
+                                                value={
+                                                    multiStepData.stockQuantity
+                                                }
+                                                onChange={(value) =>
+                                                    setMultiStepData((d) => ({
+                                                        ...d,
+                                                        stockQuantity: value,
+                                                    }))
+                                                }
+                                                placeholder="Nhập số lượng thuốc gửi"
+                                                style={{ width: "100%" }}
+                                            />
+                                        </Form.Item>
                                         <Button
                                             type="primary"
                                             block
@@ -1475,7 +1466,7 @@ const MedicineInfo = () => {
                                     />
                                     <Form layout="vertical">
                                         {/* Liều lượng & Đơn vị trên 1 dòng */}
-                                        <Form.Item label="Liều lượng *">
+                                        <Form.Item label="Liều lượng cho một lần sử dụng *">
                                             <Space>
                                                 <Input
                                                     type="number"
@@ -2051,39 +2042,62 @@ const MedicineInfo = () => {
                                     />
                                     <Form layout="vertical">
                                         <Form.Item label="Ảnh đơn thuốc (nếu có)">
-                                            <Dragger
-                                                name="prescriptionImage"
-                                                multiple={false}
-                                                maxCount={1}
+                                            <Upload
                                                 accept="image/*"
+                                                showUploadList={false}
                                                 beforeUpload={(file) => {
-                                                    setMultiStepData((d) => ({
-                                                        ...d,
-                                                        prescriptionImage: file,
-                                                    }));
+                                                    const isImage =
+                                                        file.type.startsWith(
+                                                            "image/"
+                                                        );
+                                                    const isLt10M =
+                                                        file.size /
+                                                            1024 /
+                                                            1024 <
+                                                        10;
+                                                    if (!isImage) {
+                                                        setImageError(
+                                                            "Chỉ hỗ trợ file ảnh (JPG, PNG, GIF, WebP)"
+                                                        );
+                                                        return false;
+                                                    }
+                                                    if (!isLt10M) {
+                                                        setImageError(
+                                                            "Ảnh phải nhỏ hơn 10MB!"
+                                                        );
+                                                        return false;
+                                                    }
+                                                    setImageError("");
+                                                    setPrescriptionImage(file);
+                                                    setImagePreview(
+                                                        URL.createObjectURL(
+                                                            file
+                                                        )
+                                                    );
                                                     return false;
                                                 }}
-                                                showUploadList={false}
-                                                style={{ padding: 8 }}
+                                                maxCount={1}
                                             >
-                                                <p className="ant-upload-drag-icon">
-                                                    <UploadOutlined />
-                                                </p>
-                                                <p className="ant-upload-text">
-                                                    Kéo và thả ảnh vào đây hoặc
-                                                    nhấp để chọn ảnh
-                                                </p>
-                                                <p className="ant-upload-hint">
-                                                    Hỗ trợ: JPG, PNG, GIF, WebP
-                                                    - Kích thước tối đa 10MB
-                                                </p>
-                                            </Dragger>
-                                            {multiStepData.prescriptionImage && (
-                                                <div className="mt-4">
+                                                <Button
+                                                    icon={<UploadOutlined />}
+                                                >
+                                                    Chọn ảnh
+                                                </Button>
+                                            </Upload>
+                                            {imageError && (
+                                                <div
+                                                    style={{
+                                                        color: "red",
+                                                        marginTop: 8,
+                                                    }}
+                                                >
+                                                    {imageError}
+                                                </div>
+                                            )}
+                                            {imagePreview && (
+                                                <div style={{ marginTop: 12 }}>
                                                     <Image
-                                                        src={URL.createObjectURL(
-                                                            multiStepData.prescriptionImage
-                                                        )}
+                                                        src={imagePreview}
                                                         alt="Preview"
                                                         style={{
                                                             maxWidth: 180,
@@ -2094,15 +2108,15 @@ const MedicineInfo = () => {
                                                     <Button
                                                         size="small"
                                                         danger
-                                                        onClick={() =>
-                                                            setMultiStepData(
-                                                                (d) => ({
-                                                                    ...d,
-                                                                    prescriptionImage:
-                                                                        null,
-                                                                })
-                                                            )
-                                                        }
+                                                        onClick={() => {
+                                                            setPrescriptionImage(
+                                                                null
+                                                            );
+                                                            setImagePreview(
+                                                                null
+                                                            );
+                                                            setImageError("");
+                                                        }}
                                                         style={{ marginTop: 8 }}
                                                     >
                                                         Xóa ảnh
@@ -2283,8 +2297,11 @@ const MedicineInfo = () => {
                             <div className="flex justify-between items-center">
                                 <Text type="secondary">Số lượng:</Text>
                                 <Text strong>
-                                    {selectedMedicine.medication
-                                        ?.stockQuantity ?? "-"}
+                                    {selectedMedicine.stockQuantity !==
+                                        undefined &&
+                                    selectedMedicine.stockQuantity !== null
+                                        ? selectedMedicine.stockQuantity
+                                        : "-"}
                                 </Text>
                             </div>
                             <div className="flex justify-between items-center">
@@ -2300,7 +2317,9 @@ const MedicineInfo = () => {
                                     <Text type="secondary">Cách sử dụng:</Text>
                                     <div className="mt-1 p-2 bg-gray-50 rounded-lg">
                                         <Text>
-                                            {selectedMedicine.usageNote}
+                                            {usageNoteLabel[
+                                                selectedMedicine.usageNote
+                                            ] || selectedMedicine.usageNote}
                                         </Text>
                                     </div>
                                 </div>

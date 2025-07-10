@@ -397,6 +397,7 @@ export const requestMedication = async (req, res) => {
             manufacturer,
             stockQuantity,
             usageNote,
+            customTimes, // nhận customTimes từ request
         } = req.body;
         console.log("[requestMedication] Input:", {
             studentId,
@@ -466,7 +467,13 @@ export const requestMedication = async (req, res) => {
         }
         let image = null;
         if (req.file) {
+            console.log(
+                "[requestMedication] Đã nhận file ảnh:",
+                req.file.filename
+            );
             image = `/api/uploads/medicine-images/${req.file.filename}`;
+        } else {
+            console.log("[requestMedication] Không nhận được file ảnh");
         }
         // Lưu thông tin thuốc trực tiếp vào StudentMedication
         try {
@@ -480,7 +487,7 @@ export const requestMedication = async (req, res) => {
                     unit,
                     manufacturer: manufacturer || null,
                     frequency,
-                    duration: null,
+                    customTimes: customTimes ? JSON.parse(customTimes) : [], // lưu customTimes (mảng giờ uống)
                     instructions: instructions || null,
                     status: "PENDING_APPROVAL",
                     treatmentStatus: "ONGOING",
