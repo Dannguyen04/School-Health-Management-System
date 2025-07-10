@@ -2,6 +2,7 @@ import {
   DeleteOutlined,
   EditOutlined,
   ExclamationCircleOutlined,
+  EyeOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -9,6 +10,8 @@ import {
   Button,
   Card,
   Col,
+  Descriptions,
+  Divider,
   Form,
   Input,
   message,
@@ -19,7 +22,7 @@ import {
   Space,
   Table,
   Tag,
-  Tooltip,
+  Typography,
 } from "antd";
 import axios from "axios";
 import { Formik } from "formik";
@@ -39,6 +42,10 @@ const VaccineManagement = () => {
   const [errorModal, setErrorModal] = useState({
     visible: false,
     message: "",
+  });
+  const [detailModal, setDetailModal] = useState({
+    visible: false,
+    vaccine: null,
   });
 
   // Get auth token
@@ -181,97 +188,10 @@ const VaccineManagement = () => {
       key: "origin",
     },
     {
-      title: "Tác dụng phụ",
-      dataIndex: "sideEffects",
-      key: "sideEffects",
-      render: (sideEffects) =>
-        sideEffects && sideEffects.length > 50 ? (
-          <Tooltip
-            title={
-              <div
-                style={{
-                  maxWidth: 350,
-                  maxHeight: 200,
-                  overflow: "auto",
-                  whiteSpace: "pre-line",
-                }}
-              >
-                {sideEffects}
-              </div>
-            }
-          >
-            {sideEffects.slice(0, 50)}...{" "}
-            <span style={{ color: "#1677ff", cursor: "pointer" }}>
-              (Xem thêm)
-            </span>
-          </Tooltip>
-        ) : (
-          sideEffects || "Không có"
-        ),
-    },
-    {
-      title: "Chống chỉ định",
-      dataIndex: "contraindications",
-      key: "contraindications",
-      render: (contraindications) =>
-        contraindications && contraindications.length > 50 ? (
-          <Tooltip
-            title={
-              <div
-                style={{
-                  maxWidth: 350,
-                  maxHeight: 200,
-                  overflow: "auto",
-                  whiteSpace: "pre-line",
-                }}
-              >
-                {contraindications}
-              </div>
-            }
-          >
-            {contraindications.slice(0, 50)}...{" "}
-            <span style={{ color: "#1677ff", cursor: "pointer" }}>
-              (Xem thêm)
-            </span>
-          </Tooltip>
-        ) : (
-          contraindications || "Không có"
-        ),
-    },
-    {
       title: "Độ tuổi khuyến nghị",
       dataIndex: "recommendedAge",
       key: "recommendedAge",
       render: (recommendedAge) => recommendedAge || "Không có",
-    },
-    {
-      title: "Mô tả",
-      dataIndex: "description",
-      key: "description",
-      render: (description) =>
-        description && description.length > 50 ? (
-          <Tooltip
-            title={
-              <div
-                style={{
-                  maxWidth: 350,
-                  maxHeight: 200,
-                  overflow: "auto",
-                  whiteSpace: "pre-line",
-                }}
-              >
-                {description}
-              </div>
-            }
-          >
-            {description.slice(0, 50)}...{" "}
-            <span style={{ color: "#1677ff", cursor: "pointer" }}>
-              (Xem thêm)
-            </span>
-          </Tooltip>
-        ) : (
-          description || "Không có"
-        ),
     },
     {
       title: "Tham khảo",
@@ -291,6 +211,16 @@ const VaccineManagement = () => {
       key: "actions",
       render: (_, record) => (
         <Space>
+          <Button
+            icon={<EyeOutlined />}
+            onClick={() => setDetailModal({ visible: true, vaccine: record })}
+            type="primary"
+            shape="round"
+            size="small"
+            style={{ fontWeight: 500 }}
+          >
+            Xem chi tiết
+          </Button>
           <Button
             icon={<EditOutlined />}
             onClick={() => handleEdit(record)}
@@ -617,6 +547,87 @@ const VaccineManagement = () => {
             </Form>
           )}
         </Formik>
+      </Modal>
+
+      {/* Modal xem chi tiết vaccine */}
+      <Modal
+        open={detailModal.visible}
+        onCancel={() => setDetailModal({ visible: false, vaccine: null })}
+        footer={null}
+        width={700}
+        title={null}
+      >
+        {detailModal.vaccine && (
+          <div>
+            <div style={{ marginBottom: 12 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 16 }}>
+                Chi tiết vaccine
+              </Typography.Text>
+              <Typography.Title level={3} style={{ margin: 0 }}>
+                {detailModal.vaccine.name}
+              </Typography.Title>
+              <Divider style={{ margin: "12px 0 0 0" }} />
+            </div>
+            <Divider orientation="left" style={{ marginTop: 16 }}>
+              Thông tin cơ bản
+            </Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Yêu cầu">
+                <Tag
+                  color={
+                    detailModal.vaccine.requirement === "REQUIRED"
+                      ? "red"
+                      : "blue"
+                  }
+                >
+                  {detailModal.vaccine.requirement === "REQUIRED"
+                    ? "Bắt buộc"
+                    : "Tùy chọn"}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Nhà sản xuất">
+                {detailModal.vaccine.manufacturer}
+              </Descriptions.Item>
+              <Descriptions.Item label="Nguồn gốc">
+                {detailModal.vaccine.origin}
+              </Descriptions.Item>
+              <Descriptions.Item label="Độ tuổi khuyến nghị">
+                {detailModal.vaccine.recommendedAge || "Không có"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tham khảo" span={2}>
+                {detailModal.vaccine.referenceUrl ? (
+                  <a
+                    href={detailModal.vaccine.referenceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {detailModal.vaccine.referenceUrl}
+                  </a>
+                ) : (
+                  "Không có"
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider orientation="left" style={{ marginTop: 16 }}>
+              Tác dụng phụ
+            </Divider>
+            <Typography.Paragraph style={{ whiteSpace: "pre-line" }}>
+              {detailModal.vaccine.sideEffects || "Không có"}
+            </Typography.Paragraph>
+            <Divider orientation="left" style={{ marginTop: 16 }}>
+              Chống chỉ định
+            </Divider>
+            <Typography.Paragraph style={{ whiteSpace: "pre-line" }}>
+              {detailModal.vaccine.contraindications || "Không có"}
+            </Typography.Paragraph>
+            <Divider orientation="left" style={{ marginTop: 16 }}>
+              Mô tả
+            </Divider>
+            <Typography.Paragraph style={{ whiteSpace: "pre-line" }}>
+              {detailModal.vaccine.description || "Không có"}
+            </Typography.Paragraph>
+          </div>
+        )}
       </Modal>
 
       {errorModal.visible && (

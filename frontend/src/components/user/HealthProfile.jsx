@@ -523,7 +523,9 @@ const HealthProfile = () => {
                             <div className="text-2xl font-bold text-[#36ae9a] mb-1">
                               {bmi}
                             </div>
-                            <Text type="secondary">Chỉ số BMI</Text>
+                            <Text className="mr-1" type="secondary">
+                              Chỉ số BMI
+                            </Text>
                             <Tag color={bmiCategory.color} className="mt-2">
                               {bmiCategory.category}
                             </Tag>
