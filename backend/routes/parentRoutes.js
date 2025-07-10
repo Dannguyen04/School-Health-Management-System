@@ -11,6 +11,7 @@ import {
     getVaccinationDetail,
     getStudentVaccinationCampaigns,
     getStudentHealthCheckups,
+    deliverMedication,
 } from "../controllers/parentController.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 import {
@@ -48,6 +49,13 @@ router.post(
     uploadMedicineImage,
     handleUploadError,
     requestMedication
+);
+
+// Route cho phụ huynh xác nhận đã gửi thuốc vật lý đến trường
+router.put(
+    "/medication/:medicationId/deliver",
+    authenticateToken,
+    deliverMedication // controller mới
 );
 
 // Route to get student medicines
