@@ -31,52 +31,6 @@ const Footer = () => {
                         khỏe học sinh toàn diện.
                     </p>
                 </div>
-                <div>
-                    <h1 className=" font-medium text-xl pb-4 pt-5 md:pt-0">
-                        Dịch vụ
-                    </h1>
-                    <nav className=" flex flex-col gap-2">
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-                            onClick={() => handleNav("services")}
-                        >
-                            Dịch vụ y tế
-                        </span>
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-                            onClick={() => handleNav("doctors")}
-                        ></span>
-                    </nav>
-                </div>
-                <div>
-                    <h1 className=" font-medium text-xl pb-4 pt-5 md:pt-0">
-                        Dành cho phụ huynh
-                    </h1>
-                    <nav className=" flex flex-col gap-2">
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-                            onClick={() => handleParentNav("health-profile")}
-                        >
-                            Hồ sơ sức khỏe con
-                        </span>
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-                            onClick={() =>
-                                handleParentNav("vaccination-history")
-                            }
-                        >
-                            Lịch sử tiêm chủng
-                        </span>
-                        <span
-                            className=" hover:text-[#FFC000] transition-all cursor-pointer"
-                            onClick={() =>
-                                handleParentNav("health-checkup-results")
-                            }
-                        >
-                            Kết quả kiểm tra sức khỏe
-                        </span>
-                    </nav>
-                </div>
                 <div className=" w-full md:w-1/4">
                     <h1 className=" font-medium text-xl pb-4 pt-5 md:pt-0">
                         Liên hệ
