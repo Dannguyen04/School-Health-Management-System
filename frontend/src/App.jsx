@@ -15,6 +15,7 @@ import HealthCheckupCampaigns from "./components/manager/HealthCheckupCampaigns"
 import HealthReports from "./components/manager/HealthReports";
 import StudentList from "./components/manager/StudentList";
 import VaccinationCampaigns from "./components/manager/VaccinationCampaigns";
+import VaccinationReports from "./components/manager/VaccinationReports";
 import VaccineManagement from "./components/manager/VaccineManagement";
 import BlogManagement from "./components/nurse/BlogManagement";
 import ConfirmedMedicines from "./components/nurse/ConfirmedMedicines";
@@ -119,6 +120,7 @@ const App = () => {
             path="vaccination-campaigns"
             element={<VaccinationCampaigns />}
           />
+          <Route path="vaccination-report" element={<VaccinationReports />} />
           <Route path="vaccination" element={<VaccineManagement />} />
           <Route
             path="health-checkup-campaigns"

@@ -1,4 +1,4 @@
-import { CheckOutlined, EyeOutlined, SearchOutlined } from "@ant-design/icons";
+import { CheckOutlined, EditOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
@@ -424,11 +424,11 @@ const Vaccination = () => {
             )}
           {record.vaccinationStatus === "COMPLETED" && (
             <Button
-              icon={<EyeOutlined />}
+              icon={<EditOutlined />}
               onClick={() => handleReportResult(record)}
               size="small"
             >
-              Xem báo cáo
+              Cập nhật báo cáo
             </Button>
           )}
         </Space>

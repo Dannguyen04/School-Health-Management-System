@@ -64,6 +64,11 @@ export const managerNavbarLinks = [
         icon: Package,
       },
       {
+        label: "Báo cáo tiêm chủng",
+        path: "/manager/vaccination-report",
+        icon: FileText,
+      },
+      {
         label: "Quản lý Vaccine",
         path: "/manager/vaccination",
         icon: Syringe,
