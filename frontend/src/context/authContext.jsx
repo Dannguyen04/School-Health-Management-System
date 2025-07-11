@@ -1,82 +1,97 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import api from "../utils/api";
+import { tokenUtils } from "../utils/api";
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [shouldScrollToServices, setShouldScrollToServices] = useState(false);
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [shouldScrollToServices, setShouldScrollToServices] = useState(false);
 
-  useEffect(() => {
+    // Function to verify user token
     const verifyUser = async () => {
-      const token = localStorage.getItem("token");
+        const token = tokenUtils.getToken();
 
-      if (token) {
-        try {
-          // Set the token in API headers first
-          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        if (token) {
+            try {
+                // Set the token in API headers first
+                tokenUtils.setToken(token);
 
-          // Try to get user profile to verify token
-          const response = await api.get("/auth/profile");
+                // Try to get user profile to verify token
+                const response = await api.get("/auth/profile");
 
-          if (response.data.success) {
-            setUser(response.data.user);
-          } else {
-            // If profile fetch fails, clear token
-            localStorage.removeItem("token");
-            delete api.defaults.headers.common["Authorization"];
+                if (response.data.success && response.data.user) {
+                    setUser(response.data.user);
+                } else {
+                    // If profile fetch fails, clear token
+                    tokenUtils.removeToken();
+                    setUser(null);
+                }
+            } catch (error) {
+                // Only clear token on 401 errors, not network errors
+                if (error.response?.status === 401) {
+                    tokenUtils.removeToken();
+                    setUser(null);
+                }
+            }
+        } else {
+            // No token found, ensure headers are cleared
+            tokenUtils.removeToken();
             setUser(null);
-          }
-        } catch (error) {
-          console.error("Token verification failed:", error);
-          // Clear invalid token
-          localStorage.removeItem("token");
-          delete api.defaults.headers.common["Authorization"];
-          setUser(null);
         }
-      } else {
-        // No token found, ensure headers are cleared
-        delete api.defaults.headers.common["Authorization"];
-        setUser(null);
-      }
-      setLoading(false);
+        setLoading(false);
     };
 
-    verifyUser();
-  }, []);
+    useEffect(() => {
+        verifyUser();
+    }, []);
 
-  const login = (userData, token) => {
-    setUser(userData);
-    localStorage.setItem("token", token);
-    // Set token in API headers immediately
-    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-  };
+    const login = (userData, token) => {
+        try {
+            // Validate token and userData
+            if (!token || !userData) {
+                return;
+            }
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem("token");
-    delete api.defaults.headers.common["Authorization"];
-  };
+            // Set user state
+            setUser(userData);
 
-  const setScrollToServices = (value) => {
-    setShouldScrollToServices(value);
-  };
+            // Save token using utility function
+            tokenUtils.setToken(token);
+        } catch (error) {
+            console.error("Error during login:", error);
+        }
+    };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        login,
-        logout,
-        loading,
-        shouldScrollToServices,
-        setScrollToServices,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
+    const logout = () => {
+        try {
+            setUser(null);
+            tokenUtils.removeToken();
+        } catch (error) {
+            console.error("Error during logout:", error);
+        }
+    };
+
+    const setScrollToServices = (value) => {
+        setShouldScrollToServices(value);
+    };
+
+    return (
+        <AuthContext.Provider
+            value={{
+                user,
+                login,
+                logout,
+                loading,
+                shouldScrollToServices,
+                setScrollToServices,
+                verifyUser,
+            }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
 export const useAuth = () => useContext(AuthContext);

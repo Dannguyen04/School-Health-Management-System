@@ -1,231 +1,239 @@
-import React, { useState, useEffect } from "react";
-import { notification, Button, Space } from "antd";
-import { BellOutlined, CloseOutlined } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
-import { navigateByNotificationType } from "../../utils/notificationNavigation";
+import React, { useEffect, useState } from "react";
+import { notification, Badge, Button, Card, Space, Tag } from "antd";
+import {
+    BellOutlined,
+    MedicineBoxOutlined,
+    ClockCircleOutlined,
+} from "@ant-design/icons";
+import axios from "axios";
+import dayjs from "dayjs";
 
-const NotificationToast = ({
-    notification: notificationData,
-    onClose,
-    onMarkAsRead,
-    actionButton,
-    studentId,
-}) => {
-    const [isVisible, setIsVisible] = useState(true);
-    const navigate = useNavigate();
+const NotificationToast = () => {
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setIsVisible(false);
-            setTimeout(() => {
-                onClose();
-            }, 300);
-        }, 5000);
+        fetchNotifications();
+        // Kiểm tra thông báo mỗi phút
+        const interval = setInterval(() => {
+            checkMedicationNotifications();
+        }, 60000);
 
-        return () => clearTimeout(timer);
-    }, [onClose]);
+        return () => clearInterval(interval);
+    }, []);
 
-    const handleClick = () => {
-        if (notificationData.status !== "READ") {
-            onMarkAsRead(notificationData.id);
+    const fetchNotifications = async () => {
+        try {
+            setLoading(true);
+            const token = localStorage.getItem("token");
+            const response = await axios.get("/api/notifications", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (response.data.success) {
+                setNotifications(response.data.data);
+            }
+        } catch (error) {
+            console.error("Error fetching notifications:", error);
+        } finally {
+            setLoading(false);
         }
-        navigateByNotificationType(notificationData, navigate);
-        setIsVisible(false);
-        setTimeout(() => {
-            onClose();
-        }, 300);
     };
 
-    const handleClose = () => {
-        setIsVisible(false);
-        setTimeout(() => {
-            onClose();
-        }, 300);
+    const checkMedicationNotifications = async () => {
+        try {
+            const token = localStorage.getItem("token");
+            const response = await axios.get(
+                "/api/nurse/scheduled-treatments",
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+
+            if (response.data.success && response.data.upcoming) {
+                response.data.upcoming.forEach((notification) => {
+                    // Kiểm tra xem thông báo này đã được hiển thị chưa
+                    const notificationKey = `medication-${notification.treatmentId}`;
+                    const existingNotification =
+                        localStorage.getItem(notificationKey);
+
+                    if (!existingNotification) {
+                        // Hiển thị thông báo
+                        notification.warning({
+                            key: notificationKey,
+                            message: "Đến giờ cấp phát thuốc!",
+                            description: (
+                                <div>
+                                    <div>
+                                        <strong>
+                                            {notification.studentName}
+                                        </strong>
+                                    </div>
+                                    <div>
+                                        {notification.medicationName} -{" "}
+                                        {notification.dosage}
+                                    </div>
+                                    <div>
+                                        Thời gian: {notification.scheduledTime}
+                                    </div>
+                                </div>
+                            ),
+                            duration: 0,
+                            icon: <MedicineBoxOutlined />,
+                            btn: (
+                                <Button
+                                    type="primary"
+                                    size="small"
+                                    onClick={() => {
+                                        // Mở modal cấp phát thuốc
+                                        window.location.href =
+                                            "/nurse/student-treatment";
+                                    }}
+                                >
+                                    Cấp phát ngay
+                                </Button>
+                            ),
+                        });
+
+                        // Đánh dấu đã hiển thị
+                        localStorage.setItem(notificationKey, "true");
+
+                        // Xóa sau 1 giờ
+                        setTimeout(() => {
+                            localStorage.removeItem(notificationKey);
+                        }, 3600000);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("Error checking medication notifications:", error);
+        }
+    };
+
+    const markAsRead = async (notificationId) => {
+        try {
+            const token = localStorage.getItem("token");
+            await axios.patch(
+                `/api/notifications/${notificationId}/read`,
+                {},
+                {
+                    headers: { Authorization: `Bearer ${token}` },
+                }
+            );
+            fetchNotifications();
+        } catch (error) {
+            console.error("Error marking notification as read:", error);
+        }
     };
 
     const getNotificationIcon = (type) => {
         switch (type) {
-            case "medical_event":
-                return "🏥";
-            case "vaccination":
-                return "💉";
-            case "medical_check":
-                return "👨‍⚕️";
             case "medication":
-                return "💊";
-            case "vaccination_campaign_created":
-            case "vaccination_campaign_updated":
-            case "vaccination_campaign_deleted":
-            case "vaccine_updated":
-            case "vaccine_deleted":
-                return "📋";
-            case "medical_check_campaign":
-                return "👨‍⚕️";
-            case "update_phone":
-                return "📱";
+                return <MedicineBoxOutlined />;
+            case "vaccination":
+                return <ClockCircleOutlined />;
             default:
-                return "📢";
+                return <BellOutlined />;
         }
     };
 
-    const getTypeLabel = (type) => {
+    const getNotificationColor = (type) => {
         switch (type) {
-            case "medical_event":
-                return "Sự kiện y tế";
-            case "vaccination":
-                return "Tiêm chủng";
-            case "medical_check":
-                return "Kiểm tra y tế";
             case "medication":
-                return "Thuốc";
-            case "vaccination_campaign_created":
-                return "Chiến dịch tiêm chủng";
-            case "vaccination_campaign_updated":
-                return "Cập nhật chiến dịch";
-            case "vaccination_campaign_deleted":
-                return "Xóa chiến dịch";
-            case "vaccine_created":
-                return "Vaccine mới";
-            case "vaccine_updated":
-                return "Cập nhật vaccine";
-            case "vaccine_deleted":
-                return "Xóa vaccine";
-            case "medical_check_campaign":
-                return "Chiến dịch khám sức khỏe";
-            case "update_phone":
-                return "Cập nhật số điện thoại";
+                return "red";
+            case "vaccination":
+                return "blue";
             default:
-                return "Thông báo chung";
+                return "default";
         }
     };
 
-    const getIconBgColor = (type) => {
-        switch (type) {
-            case "medical_event":
-                return "#ff7875"; // đỏ nhạt
-            case "vaccination":
-                return "#40a9ff"; // xanh dương
-            case "medical_check":
-                return "#36cfc9"; // xanh ngọc
-            case "medication":
-                return "#9254de"; // tím
-            case "vaccination_campaign_created":
-            case "vaccination_campaign_updated":
-            case "vaccination_campaign_deleted":
-            case "vaccine_created":
-            case "vaccine_updated":
-            case "vaccine_deleted":
-                return "#ffd666"; // vàng
-            case "medical_check_campaign":
-                return "#36cfc9"; // xanh ngọc
-            default:
-                return "#bfbfbf"; // xám
-        }
-    };
+    const unreadCount = notifications.filter((n) => !n.isRead).length;
 
     return (
-        isVisible && (
-            <div
-                style={{
-                    position: "static",
-                    transform: isVisible ? "translateX(0)" : "translateX(100%)",
-                    transition: "transform 0.3s ease",
-                    maxWidth: "400px",
-                    minWidth: "300px",
-                }}
-            >
-                <div
-                    style={{
-                        background: "#fff",
-                        border: "1px solid #d9d9d9",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
-                        padding: "16px",
-                        cursor: "pointer",
+        <div className="notification-container">
+            <Badge count={unreadCount} size="small">
+                <Button
+                    icon={<BellOutlined />}
+                    shape="circle"
+                    onClick={() => {
+                        // Hiển thị drawer thông báo
+                        // Có thể thêm logic để mở drawer
                     }}
-                    onClick={handleClick}
-                >
-                    <div
+                />
+            </Badge>
+
+            {/* Thông báo cấp phát thuốc real-time */}
+            {notifications
+                .filter((n) => n.type === "medication" && !n.isRead)
+                .map((notification) => (
+                    <Card
+                        key={notification.id}
+                        size="small"
                         style={{
-                            display: "flex",
-                            alignItems: "flex-start",
-                            gap: "12px",
+                            marginBottom: 8,
+                            border: `1px solid ${getNotificationColor(
+                                notification.type
+                            )}`,
+                            backgroundColor: `${getNotificationColor(
+                                notification.type
+                            )}10`,
                         }}
                     >
-                        <div
-                            style={{
-                                fontSize: "32px",
-                                background: getIconBgColor(
-                                    notificationData.type
-                                ),
-                                color: "#fff",
-                                borderRadius: "50%",
-                                boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
-                                width: 48,
-                                height: 48,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "2px solid #fff",
-                            }}
+                        <Space
+                            direction="vertical"
+                            size="small"
+                            style={{ width: "100%" }}
                         >
-                            {getNotificationIcon(notificationData.type)}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                            <div
-                                style={{
-                                    fontWeight: "600",
-                                    fontSize: "14px",
-                                    color: "#1890ff",
-                                    marginBottom: "4px",
-                                    lineHeight: "1.4",
-                                }}
-                            >
-                                {notificationData.title}
-                            </div>
-                            <div
-                                style={{
-                                    fontSize: "12px",
-                                    color: "#666",
-                                    marginBottom: "8px",
-                                    lineHeight: "1.4",
-                                    whiteSpace: "pre-line",
-                                    wordBreak: "break-word",
-                                }}
-                            >
-                                {notificationData.message}
-                            </div>
-                            <div
-                                style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                }}
-                            >
-                                <span
-                                    style={{ fontSize: "11px", color: "#999" }}
-                                >
-                                    {getTypeLabel(notificationData.type)}
-                                </span>
-                                <Space size="small">
-                                    {actionButton}
-                                    <Button
-                                        type="text"
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-center space-x-2">
+                                    {getNotificationIcon(notification.type)}
+                                    <span className="font-medium">
+                                        {notification.title}
+                                    </span>
+                                    <Tag
+                                        color={getNotificationColor(
+                                            notification.type
+                                        )}
                                         size="small"
-                                        icon={<CloseOutlined />}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleClose();
-                                        }}
-                                        style={{ padding: "0", border: "none" }}
-                                    />
-                                </Space>
+                                    >
+                                        {notification.type === "medication"
+                                            ? "Thuốc"
+                                            : "Tiêm chủng"}
+                                    </Tag>
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                    {dayjs(notification.createdAt).format(
+                                        "HH:mm"
+                                    )}
+                                </span>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        )
+                            <div className="text-sm text-gray-600">
+                                {notification.message}
+                            </div>
+                            <div className="flex justify-end space-x-2">
+                                <Button
+                                    size="small"
+                                    onClick={() => markAsRead(notification.id)}
+                                >
+                                    Đã đọc
+                                </Button>
+                                {notification.type === "medication" && (
+                                    <Button
+                                        type="primary"
+                                        size="small"
+                                        onClick={() => {
+                                            window.location.href =
+                                                "/nurse/student-treatment";
+                                        }}
+                                    >
+                                        Xem chi tiết
+                                    </Button>
+                                )}
+                            </div>
+                        </Space>
+                    </Card>
+                ))}
+        </div>
     );
 };
 

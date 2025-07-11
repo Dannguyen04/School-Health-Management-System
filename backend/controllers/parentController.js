@@ -396,7 +396,23 @@ export const requestMedication = async (req, res) => {
             unit,
             manufacturer,
             stockQuantity,
+            usageNote,
+            customTimes, // nhận customTimes từ request
         } = req.body;
+        console.log("[requestMedication] Input:", {
+            studentId,
+            medicationName,
+            dosage,
+            frequency,
+            instructions,
+            startDate,
+            endDate,
+            description,
+            unit,
+            manufacturer,
+            stockQuantity,
+            usageNote,
+        });
 
         if (!medicationName || !dosage || !frequency || !startDate || !unit) {
             return res.status(400).json({
@@ -441,6 +457,9 @@ export const requestMedication = async (req, res) => {
             },
         });
         if (!studentParent) {
+            console.log(
+                "[requestMedication] Không tìm thấy studentParent hoặc không đúng quyền"
+            );
             return res.status(403).json({
                 success: false,
                 error: "You are not authorized to request medication for this student",
@@ -448,33 +467,79 @@ export const requestMedication = async (req, res) => {
         }
         let image = null;
         if (req.file) {
+            console.log(
+                "[requestMedication] Đã nhận file ảnh:",
+                req.file.filename
+            );
             image = `/api/uploads/medicine-images/${req.file.filename}`;
+        } else {
+            console.log("[requestMedication] Không nhận được file ảnh");
         }
         // Lưu thông tin thuốc trực tiếp vào StudentMedication
-        const studentMedication = await prisma.studentMedication.create({
-            data: {
-                studentId,
-                parentId,
-                name: medicationName,
-                description: description || "",
-                dosage,
-                unit,
-                manufacturer: manufacturer || null,
-                frequency,
-                duration: null,
-                instructions: instructions || null,
-                status: "PENDING_APPROVAL",
-                treatmentStatus: "ONGOING",
-                startDate: parsedStartDate,
-                endDate: parsedEndDate || null,
-                image,
-            },
-        });
-        res.json({
-            success: true,
-            data: studentMedication,
-            message: "Medication request submitted successfully",
-        });
+        try {
+            const studentMedication = await prisma.studentMedication.create({
+                data: {
+                    studentId,
+                    parentId,
+                    name: medicationName,
+                    description: description || "",
+                    dosage,
+                    unit,
+                    manufacturer: manufacturer || null,
+                    frequency,
+                    customTimes: customTimes ? JSON.parse(customTimes) : [], // lưu customTimes (mảng giờ uống)
+                    instructions: instructions || null,
+                    status: "PENDING_APPROVAL",
+                    treatmentStatus: "ONGOING",
+                    startDate: parsedStartDate,
+                    endDate: parsedEndDate || null,
+                    image,
+                    stockQuantity:
+                        stockQuantity !== undefined ? Number(stockQuantity) : 1,
+                    usageNote: usageNote || null,
+                },
+            });
+            console.log(
+                "[requestMedication] Đã tạo studentMedication:",
+                studentMedication
+            );
+            // Gửi notification cho tất cả y tá
+            const nurses = await prisma.schoolNurse.findMany({
+                include: { user: true },
+            });
+            // Lấy tên học sinh
+            const student = await prisma.student.findUnique({
+                where: { id: studentId },
+                include: { user: true },
+            });
+            const studentName = student?.user?.fullName || "học sinh";
+            for (const nurse of nurses) {
+                await prisma.notification.create({
+                    data: {
+                        userId: nurse.userId,
+                        title: "Yêu cầu gửi thuốc mới",
+                        message: `Có yêu cầu gửi thuốc mới cho học sinh ${studentName} từ phụ huynh. Vui lòng kiểm tra và xác nhận!`,
+                        type: "medication",
+                        status: "SENT",
+                        sentAt: new Date(),
+                    },
+                });
+            }
+            res.json({
+                success: true,
+                data: studentMedication,
+                message: "Medication request submitted successfully",
+            });
+        } catch (insertErr) {
+            console.error(
+                "[requestMedication] Lỗi khi insert studentMedication:",
+                insertErr
+            );
+            return res.status(500).json({
+                success: false,
+                error: "Lỗi khi lưu thông tin thuốc vào database!",
+            });
+        }
     } catch (error) {
         console.error(
             "Error requesting medication:",
@@ -828,6 +893,57 @@ export const getVaccinationDetail = async (req, res) => {
         res.status(500).json({
             success: false,
             error: "Lỗi khi lấy chi tiết tiêm chủng",
+        });
+    }
+};
+
+export const deliverMedication = async (req, res) => {
+    try {
+        const { medicationId } = req.params;
+        if (!req.user.parentProfile) {
+            return res.status(403).json({
+                success: false,
+                error: "Bạn không có quyền thực hiện thao tác này!",
+            });
+        }
+        const parentId = req.user.parentProfile.id;
+        // Tìm thuốc và kiểm tra quyền
+        const medication = await prisma.studentMedication.findUnique({
+            where: { id: medicationId },
+        });
+        if (!medication) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy thông tin thuốc!",
+            });
+        }
+        if (medication.parentId !== parentId) {
+            return res.status(403).json({
+                success: false,
+                error: "Bạn không có quyền xác nhận gửi thuốc này!",
+            });
+        }
+        if (medication.status !== "APPROVED") {
+            return res.status(400).json({
+                success: false,
+                error: "Thuốc chưa được y tá duyệt hoặc đã xác nhận gửi!",
+            });
+        }
+        // Cập nhật trạng thái
+        const updated = await prisma.studentMedication.update({
+            where: { id: medicationId },
+            data: { status: "DELIVERED" },
+        });
+        res.json({
+            success: true,
+            data: updated,
+            message: "Đã xác nhận gửi thuốc thành công!",
+        });
+    } catch (error) {
+        console.error("Error in deliverMedication:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi máy chủ khi xác nhận gửi thuốc!",
         });
     }
 };

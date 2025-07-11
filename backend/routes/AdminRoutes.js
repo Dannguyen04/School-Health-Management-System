@@ -18,6 +18,8 @@ import {
     updateParent,
     deleteParent,
     getAllGradesWithStudentCount,
+    getPassword,
+    updatePassword,
 } from "../controllers/AdminController.js";
 import {
     authenticateToken,
@@ -68,6 +70,15 @@ router.get("/parents", authenticateToken, verifyAdmin, getAllParents);
 router.post("/parents", authenticateToken, verifyAdmin, addParent);
 router.put("/parents/:id", authenticateToken, verifyAdmin, updateParent);
 router.delete("/parents/:id", authenticateToken, verifyAdmin, deleteParent);
+
+// Quản lí MK
+router.get("/user/password/:id", authenticateToken, verifyAdmin, getPassword);
+router.put(
+    "/user/password/:id",
+    authenticateToken,
+    verifyAdmin,
+    updatePassword
+);
 
 router.get(
     "/grades-with-count",

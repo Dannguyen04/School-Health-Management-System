@@ -16,6 +16,30 @@ const api = axios.create({
     },
 });
 
+// Utility functions for token management
+export const tokenUtils = {
+    getToken: () => {
+        return localStorage.getItem("token");
+    },
+
+    setToken: (token) => {
+        if (token) {
+            localStorage.setItem("token", token);
+            api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+        }
+    },
+
+    removeToken: () => {
+        localStorage.removeItem("token");
+        delete api.defaults.headers.common["Authorization"];
+    },
+
+    isTokenValid: () => {
+        const token = localStorage.getItem("token");
+        return !!token;
+    },
+};
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
     (config) => {
@@ -43,7 +67,15 @@ api.interceptors.response.use(
             if (!window.location.pathname.includes("/auth")) {
                 window.location.href = "/auth";
             }
+        } else if (
+            error.code === "NETWORK_ERROR" ||
+            error.message === "Network Error"
+        ) {
+            // Don't clear token on network errors
+        } else if (error.response?.status >= 500) {
+            // Don't clear token on server errors
         }
+
         return Promise.reject(error);
     }
 );
