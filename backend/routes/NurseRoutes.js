@@ -1,49 +1,53 @@
 import express from "express";
 import {
-  createBlogPost,
-  deleteBlogPost,
-  getAllBlogPosts,
-  getBlogCategories,
-  getBlogPostById,
-  getPublishedBlogPosts,
-  updateBlogPost,
+    createBlogPost,
+    deleteBlogPost,
+    getAllBlogPosts,
+    getBlogCategories,
+    getBlogPostById,
+    getPublishedBlogPosts,
+    updateBlogPost,
 } from "../controllers/BlogController.js";
 import {
-  approveMedicationRequest,
-  createMedicalEvent,
-  createMedicalInventory,
-  deleteMedicalEvent,
-  deleteMedicalInventory,
-  getAllMedicalEvents,
-  getApprovedMedications,
-  getDashboardStats,
-  getEligibleStudentsForVaccination,
-  getInventoryCategories,
-  getInventoryStats,
-  getMedicalEventById,
-  getMedicalInventory,
-  getMedicationHistory,
-  getMedicationRequestById,
-  getMedicationRequestStats,
-  getPendingMedicationRequests,
-  getRecentMedicalEvents,
-  getStudentsForCampaign,
-  getStudentTreatments,
-  getUpcomingVaccinations,
-  getVaccinationCampaigns,
-  getVaccinationReport,
-  getVaccinationStats,
-  giveMedicineToStudent,
-  performVaccination,
-  reportVaccinationResult,
-  stopStudentTreatment,
-  updateMedicalEvent,
-  updateMedicalEventStatus,
-  updateMedicalInventory,
+    approveMedicationRequest,
+    createMedicalEvent,
+    createMedicalInventory,
+    deleteMedicalEvent,
+    deleteMedicalInventory,
+    getAllMedicalEvents,
+    getApprovedMedications,
+    getDashboardStats,
+    getEligibleStudentsForVaccination,
+    getInventoryCategories,
+    getInventoryStats,
+    getMedicalEventById,
+    getMedicalInventory,
+    getMedicationHistory,
+    getMedicationRequestById,
+    getMedicationRequestStats,
+    getPendingMedicationRequests,
+    getRecentMedicalEvents,
+    getStudentsForCampaign,
+    getStudentTreatments,
+    getUpcomingVaccinations,
+    getVaccinationCampaigns,
+    getVaccinationReport,
+    getVaccinationStats,
+    giveMedicineToStudent,
+    performVaccination,
+    reportVaccinationResult,
+    stopStudentTreatment,
+    updateMedicalEvent,
+    updateMedicalEventStatus,
+    updateMedicalInventory,
+    getScheduledTreatments,
+    scheduleTreatment,
+    completeScheduledTreatment,
+    cancelScheduledTreatment,
 } from "../controllers/NurseController.js";
 import {
-  authenticateToken,
-  verifyNurse,
+    authenticateToken,
+    verifyNurse,
 } from "../middleware/authenticateToken.js";
 
 const router = express.Router();
@@ -76,9 +80,9 @@ router.patch("/medical-events/:eventId/status", updateMedicalEventStatus);
 router.get("/vaccination-campaigns", getVaccinationCampaigns);
 router.get("/campaigns/:campaignId/students", getStudentsForCampaign);
 router.get(
-  "/vaccination-campaigns/:campaignId/eligible-students",
-  verifyNurse,
-  getEligibleStudentsForVaccination
+    "/vaccination-campaigns/:campaignId/eligible-students",
+    verifyNurse,
+    getEligibleStudentsForVaccination
 );
 router.get("/vaccination-campaigns/:campaignId/stats", getVaccinationStats);
 router.post("/vaccinations/perform", verifyNurse, performVaccination);
@@ -90,8 +94,8 @@ router.get("/medication-requests", getPendingMedicationRequests);
 router.get("/medication-requests/stats", getMedicationRequestStats);
 router.get("/medication-requests/:requestId", getMedicationRequestById);
 router.patch(
-  "/medication-requests/:requestId/approve",
-  approveMedicationRequest
+    "/medication-requests/:requestId/approve",
+    approveMedicationRequest
 );
 
 // Thuốc đã được phê duyệt
@@ -102,6 +106,15 @@ router.get("/student-treatments", getStudentTreatments);
 router.post("/give-medicine/:studentMedicationId", giveMedicineToStudent);
 router.get("/medication-history/:studentMedicationId", getMedicationHistory);
 router.patch("/student-treatments/:id/stop", stopStudentTreatment);
+
+// Lịch cấp phát thuốc
+router.get("/scheduled-treatments", getScheduledTreatments);
+router.post("/schedule-treatment/:studentMedicationId", scheduleTreatment);
+router.post(
+    "/scheduled-treatments/:scheduleId/complete",
+    completeScheduledTreatment
+);
+router.delete("/scheduled-treatments/:scheduleId", cancelScheduledTreatment);
 
 // Blog management routes
 router.get("/blogs", getAllBlogPosts);

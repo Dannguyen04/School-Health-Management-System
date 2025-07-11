@@ -1622,13 +1622,57 @@ const MedicineInfo = () => {
                                                                         idx
                                                                     ] =
                                                                         e.target.value;
+
+                                                                    // Validate và sắp xếp thời gian
+                                                                    const validTimes =
+                                                                        newTimes
+                                                                            .filter(
+                                                                                (
+                                                                                    time
+                                                                                ) =>
+                                                                                    time &&
+                                                                                    time.trim() !==
+                                                                                        ""
+                                                                            )
+                                                                            .sort(
+                                                                                (
+                                                                                    a,
+                                                                                    b
+                                                                                ) => {
+                                                                                    const timeA =
+                                                                                        a
+                                                                                            .split(
+                                                                                                ":"
+                                                                                            )
+                                                                                            .map(
+                                                                                                Number
+                                                                                            );
+                                                                                    const timeB =
+                                                                                        b
+                                                                                            .split(
+                                                                                                ":"
+                                                                                            )
+                                                                                            .map(
+                                                                                                Number
+                                                                                            );
+                                                                                    return (
+                                                                                        timeA[0] *
+                                                                                            60 +
+                                                                                        timeA[1] -
+                                                                                        (timeB[0] *
+                                                                                            60 +
+                                                                                            timeB[1])
+                                                                                    );
+                                                                                }
+                                                                            );
+
                                                                     setMultiStepData(
                                                                         (
                                                                             d
                                                                         ) => ({
                                                                             ...d,
                                                                             customTimes:
-                                                                                newTimes,
+                                                                                validTimes,
                                                                         })
                                                                     );
                                                                 }}

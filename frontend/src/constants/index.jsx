@@ -114,6 +114,11 @@ export const nurseNavbarLinks = [
                 icon: Package,
             },
             {
+                label: "Cấp phát thuốc",
+                path: "/nurse/student-treatment",
+                icon: Users,
+            },
+            {
                 label: "Quản lý bài viết",
                 path: "/nurse/blog-management",
                 icon: BookOpen,
@@ -148,11 +153,7 @@ export const nurseNavbarLinks = [
     {
         title: "Sự kiện y tế",
         links: [
-            {
-                label: "Điều Trị Học Sinh",
-                path: "/nurse/student-treatment",
-                icon: Users,
-            },
+            // Xóa mục Điều Trị Học Sinh ở đây
             {
                 label: "Báo Cáo Y Tế",
                 path: "/nurse/medical-event",

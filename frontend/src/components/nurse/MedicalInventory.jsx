@@ -81,7 +81,7 @@ const MedicalInventory = () => {
                         medicationName: item.name,
                         studentName: item.student?.user?.fullName || "-",
                         parentName: item.parent?.user?.fullName || "-",
-                        duration: item.duration || "-",
+                        // BỎ duration
                     }))
                 );
             }
@@ -392,17 +392,19 @@ const MedicalInventory = () => {
             key: "name",
             render: (text, record) => (
                 <div>
-                    <div className="font-medium">{text}</div>
+                    <div className="font-medium text-base">{text}</div>
                     <Typography.Text type="secondary" className="text-xs">
                         {record.description}
                     </Typography.Text>
-                    {record.manufacturer && (
-                        <div className="text-xs text-gray-500">
-                            NSX: {record.manufacturer}
-                        </div>
-                    )}
                 </div>
             ),
+            fixed: "left",
+        },
+        {
+            title: "Danh mục",
+            dataIndex: "category",
+            key: "category",
+            render: (category) => <Tag color="blue">{category}</Tag>,
         },
         {
             title: "Tồn kho",
@@ -411,28 +413,28 @@ const MedicalInventory = () => {
             render: (quantity, record) => {
                 const isLowStock = quantity <= 5;
                 const isOutOfStock = quantity <= 0;
-
                 return (
                     <div>
-                        <div
-                            className={`font-medium ${
+                        <Badge
+                            count={
                                 isOutOfStock
-                                    ? "text-red-600"
+                                    ? "Hết"
                                     : isLowStock
-                                    ? "text-orange-600"
-                                    : "text-green-600"
-                            }`}
+                                    ? "Thấp"
+                                    : "OK"
+                            }
+                            style={{
+                                backgroundColor: isOutOfStock
+                                    ? "#ff4d4f"
+                                    : isLowStock
+                                    ? "#faad14"
+                                    : "#52c41a",
+                            }}
                         >
-                            {quantity} {record.unit}
-                        </div>
-                        {isLowStock && (
-                            <Tag
-                                color={isOutOfStock ? "red" : "orange"}
-                                size="small"
-                            >
-                                {isOutOfStock ? "Hết hàng" : "Tồn kho thấp"}
-                            </Tag>
-                        )}
+                            <span className="font-medium text-base">
+                                {quantity} {record.unit}
+                            </span>
+                        </Badge>
                     </div>
                 );
             },
@@ -448,16 +450,13 @@ const MedicalInventory = () => {
                             Không có
                         </Typography.Text>
                     );
-
                 const expiryDate = new Date(date);
                 const today = new Date();
                 const daysUntilExpiry = Math.ceil(
                     (expiryDate - today) / (1000 * 60 * 60 * 24)
                 );
-
-                let color = "green";
-                let text = "Còn hạn";
-
+                let color = "green",
+                    text = "Còn hạn";
                 if (daysUntilExpiry <= 0) {
                     color = "red";
                     text = "Hết hạn";
@@ -468,22 +467,16 @@ const MedicalInventory = () => {
                     color = "blue";
                     text = `Còn ${daysUntilExpiry} ngày`;
                 }
-
                 return (
-                    <div>
-                        <div>{new Date(date).toLocaleDateString("vi-VN")}</div>
-                        <Tag color={color} size="small">
+                    <Tooltip title={text}>
+                        <Tag color={color}>
+                            {new Date(date).toLocaleDateString("vi-VN")}
+                            <br />
                             {text}
                         </Tag>
-                    </div>
+                    </Tooltip>
                 );
             },
-        },
-        {
-            title: "Danh mục",
-            dataIndex: "category",
-            key: "category",
-            render: (category) => <Tag color="blue">{category}</Tag>,
         },
         {
             title: "Trạng thái",
@@ -501,46 +494,37 @@ const MedicalInventory = () => {
                         (new Date(record.expiryDate) - new Date()) /
                             (1000 * 60 * 60 * 24)
                     ) <= 30;
-
-                const warnings = [];
-                if (isOutOfStock) warnings.push("Hết hàng");
-                else if (isLowStock) warnings.push("Tồn kho thấp");
-                if (hasExpired) warnings.push("Hết hạn");
-                else if (isExpiringSoon) warnings.push("Sắp hết hạn");
-
-                return (
-                    <div className="space-y-1">
-                        <Tag
-                            color={
-                                isOutOfStock || hasExpired
-                                    ? "red"
-                                    : isLowStock || isExpiringSoon
-                                    ? "orange"
-                                    : "green"
-                            }
-                        >
-                            {isOutOfStock || hasExpired
-                                ? "Không khả dụng"
-                                : isLowStock || isExpiringSoon
-                                ? "Cần chú ý"
-                                : "Khả dụng"}
-                        </Tag>
-                        {warnings.length > 0 && (
-                            <Tooltip title={warnings.join(", ")}>
-                                <Badge count={warnings.length} size="small">
-                                    <WarningOutlined
-                                        style={{ color: "#faad14" }}
-                                    />
-                                </Badge>
-                            </Tooltip>
-                        )}
-                    </div>
-                );
+                let color =
+                    isOutOfStock || hasExpired
+                        ? "red"
+                        : isLowStock || isExpiringSoon
+                        ? "orange"
+                        : "green";
+                let text =
+                    isOutOfStock || hasExpired
+                        ? "Không khả dụng"
+                        : isLowStock || isExpiringSoon
+                        ? "Cần chú ý"
+                        : "Khả dụng";
+                return <Tag color={color}>{text}</Tag>;
             },
+        },
+        {
+            title: "Hãng SX",
+            dataIndex: "manufacturer",
+            key: "manufacturer",
+            render: (text) => text || "-",
+        },
+        {
+            title: "Đơn vị",
+            dataIndex: "unit",
+            key: "unit",
+            render: (text) => text || "-",
         },
         {
             title: "Thao tác",
             key: "actions",
+            fixed: "right",
             render: (_, record) => (
                 <Space>
                     <Tooltip title="Xem chi tiết">
@@ -925,18 +909,6 @@ const MedicalInventory = () => {
                             key: "parentName",
                         },
                         {
-                            title: "Thời gian dùng",
-                            dataIndex: "duration",
-                            key: "duration",
-                            render: (text) => text || "-",
-                        },
-                        {
-                            title: "Ghi chú sử dụng",
-                            dataIndex: "usageNote",
-                            key: "usageNote",
-                            render: (text) => text || "-",
-                        },
-                        {
                             title: "Liều lượng",
                             dataIndex: "dosage",
                             key: "dosage",
@@ -1016,64 +988,186 @@ const MedicalInventory = () => {
                 footer={
                     <Button onClick={() => setModalVisible(false)}>Đóng</Button>
                 }
-                title={selected?.medicationName || "Chi tiết thuốc"}
-                width={600}
+                title={
+                    selected?.name ||
+                    selected?.medicationName ||
+                    "Chi tiết vật tư"
+                }
+                width={650}
             >
                 {selected && (
-                    <div>
-                        <p>
-                            <strong>Học sinh:</strong> {selected.studentName}
-                        </p>
-                        <p>
-                            <strong>Phụ huynh:</strong> {selected.parentName}
-                        </p>
-                        <p>
-                            <strong>Tên thuốc:</strong>{" "}
-                            {selected.medicationName}
-                        </p>
-                        <p>
-                            <strong>Thời gian dùng:</strong>{" "}
-                            {selected.duration || "-"}
-                        </p>
-                        <p>
-                            <strong>Ghi chú sử dụng:</strong>{" "}
-                            {selected.usageNote || "-"}
-                        </p>
-                        <p>
-                            <strong>Liều lượng:</strong> {selected.dosage}
-                        </p>
-                        <p>
-                            <strong>Số lượng:</strong> {selected.stockQuantity}
-                        </p>
-                        <p>
-                            <strong>Hướng dẫn:</strong>{" "}
-                            {selected.instructions || "-"}
-                        </p>
-                        {selected.image && (
-                            <div style={{ margin: "16px 0" }}>
-                                <Image
-                                    src={selected.image}
-                                    alt="Ảnh thuốc"
-                                    style={{ maxWidth: 200, borderRadius: 8 }}
-                                    preview={true}
-                                />
+                    <div style={{ lineHeight: 1.8, padding: 8 }}>
+                        <h2
+                            style={{
+                                fontWeight: 700,
+                                fontSize: 22,
+                                marginBottom: 16,
+                            }}
+                        >
+                            {selected.name || selected.medicationName}
+                        </h2>
+                        <div
+                            style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 24,
+                            }}
+                        >
+                            <div style={{ flex: "1 1 260px", minWidth: 220 }}>
+                                <div style={{ marginBottom: 8 }}>
+                                    <Tag color="blue" style={{ fontSize: 14 }}>
+                                        {selected.category}
+                                    </Tag>
+                                    <Tag color="green" style={{ fontSize: 14 }}>
+                                        {selected.unit}
+                                    </Tag>
+                                </div>
+                                <div style={{ marginBottom: 8 }}>
+                                    <span style={{ fontWeight: 500 }}>
+                                        Tồn kho:
+                                    </span>{" "}
+                                    <Badge
+                                        count={selected.stockQuantity}
+                                        style={{
+                                            backgroundColor:
+                                                selected.stockQuantity <= 0
+                                                    ? "#ff4d4f"
+                                                    : selected.stockQuantity <=
+                                                      5
+                                                    ? "#faad14"
+                                                    : "#52c41a",
+                                            marginLeft: 8,
+                                        }}
+                                    />
+                                </div>
+                                <div style={{ marginBottom: 8 }}>
+                                    <span style={{ fontWeight: 500 }}>
+                                        Trạng thái:
+                                    </span>{" "}
+                                    <Tag
+                                        color={
+                                            selected.stockQuantity <= 0 ||
+                                            (selected.expiryDate &&
+                                                new Date(selected.expiryDate) <=
+                                                    new Date())
+                                                ? "red"
+                                                : selected.stockQuantity <= 5
+                                                ? "orange"
+                                                : "green"
+                                        }
+                                    >
+                                        {selected.stockQuantity <= 0 ||
+                                        (selected.expiryDate &&
+                                            new Date(selected.expiryDate) <=
+                                                new Date())
+                                            ? "Không khả dụng"
+                                            : selected.stockQuantity <= 5
+                                            ? "Cần chú ý"
+                                            : "Khả dụng"}
+                                    </Tag>
+                                </div>
+                                {selected.expiryDate && (
+                                    <div style={{ marginBottom: 8 }}>
+                                        <span style={{ fontWeight: 500 }}>
+                                            Hạn sử dụng:
+                                        </span>{" "}
+                                        <Tag
+                                            color={(() => {
+                                                const d = new Date(
+                                                    selected.expiryDate
+                                                );
+                                                const t = new Date();
+                                                const days = Math.ceil(
+                                                    (d - t) /
+                                                        (1000 * 60 * 60 * 24)
+                                                );
+                                                if (days <= 0) return "red";
+                                                if (days <= 30) return "orange";
+                                                if (days <= 90) return "blue";
+                                                return "green";
+                                            })()}
+                                        >
+                                            {new Date(
+                                                selected.expiryDate
+                                            ).toLocaleDateString("vi-VN")}
+                                        </Tag>
+                                    </div>
+                                )}
+                                {selected.manufacturer && (
+                                    <div style={{ marginBottom: 8 }}>
+                                        <span style={{ fontWeight: 500 }}>
+                                            Hãng SX:
+                                        </span>{" "}
+                                        {selected.manufacturer}
+                                    </div>
+                                )}
+                                {selected.dosage && (
+                                    <div style={{ marginBottom: 8 }}>
+                                        <span style={{ fontWeight: 500 }}>
+                                            Liều lượng:
+                                        </span>{" "}
+                                        {selected.dosage}
+                                    </div>
+                                )}
+                                {selected.instructions && (
+                                    <div style={{ marginBottom: 8 }}>
+                                        <span style={{ fontWeight: 500 }}>
+                                            Hướng dẫn:
+                                        </span>{" "}
+                                        {selected.instructions}
+                                    </div>
+                                )}
+                                {selected.updatedAt && (
+                                    <div style={{ marginBottom: 8 }}>
+                                        <span style={{ fontWeight: 500 }}>
+                                            Ngày cập nhật:
+                                        </span>{" "}
+                                        {new Date(
+                                            selected.updatedAt
+                                        ).toLocaleDateString("vi-VN")}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                        <p>
-                            <strong>Ngày duyệt:</strong>{" "}
-                            {selected.updatedAt
-                                ? new Date(
-                                      selected.updatedAt
-                                  ).toLocaleDateString("vi-VN")
-                                : "-"}
-                        </p>
-                        <p>
-                            <strong>Giờ uống cụ thể:</strong>{" "}
-                            {Array.isArray(selected?.customTimes) &&
-                            selected.customTimes.length > 0
-                                ? selected.customTimes.join(", ")
-                                : "-"}
-                        </p>
+                            <div
+                                style={{
+                                    flex: "1 1 220px",
+                                    minWidth: 180,
+                                    textAlign: "center",
+                                }}
+                            >
+                                {selected.image ? (
+                                    <Image
+                                        src={selected.image}
+                                        alt="Ảnh vật tư"
+                                        style={{
+                                            maxWidth: 220,
+                                            borderRadius: 12,
+                                            marginBottom: 8,
+                                        }}
+                                        preview={true}
+                                    />
+                                ) : (
+                                    <div
+                                        style={{
+                                            width: 220,
+                                            height: 120,
+                                            background: "#f5f5f5",
+                                            borderRadius: 12,
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            color: "#aaa",
+                                        }}
+                                    >
+                                        Không có ảnh
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div style={{ marginTop: 16 }}>
+                            <span style={{ fontWeight: 500 }}>Mô tả:</span>{" "}
+                            <span>{selected.description || "-"}</span>
+                        </div>
                     </div>
                 )}
             </Modal>
