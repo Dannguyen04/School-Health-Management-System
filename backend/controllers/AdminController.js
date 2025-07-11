@@ -1,24 +1,7 @@
 import { PrismaClient } from "@prisma/client";
-import bodyParser from "body-parser";
-import cors from "cors";
-import dotenv from "dotenv";
-import express from "express";
 import validator from "validator";
 
-dotenv.config();
-
-const app = express();
 const prisma = new PrismaClient();
-
-app.use(
-    cors({
-        origin: "http://localhost:5173",
-        credentials: true,
-    })
-);
-
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.json());
 
 const VALID_ROLES = ["PARENT", "SCHOOL_NURSE", "MANAGER", "ADMIN"];
 const VALID_GENDERS = ["NAM", "NỮ"];
@@ -1604,6 +1587,7 @@ export const getAllParents = async (req, res) => {
         });
         const data = parents.map((parent) => ({
             id: parent.id,
+            userId: parent.userId, // Thêm userId để frontend lấy đúng user
             fullName: parent.user.fullName,
             email: parent.user.email,
             phone: parent.user.phone,
@@ -1762,6 +1746,96 @@ const getAllGradesWithStudentCount = async (req, res) => {
     }
 };
 
+const getPassword = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id)
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy người dùng",
+            });
+
+        const user = await prisma.users.findUnique({
+            where: { id: id },
+            select: {
+                password: true,
+            },
+        });
+
+        if (!user)
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy người dùng",
+            });
+
+        return res.status(200).json({
+            success: true,
+            password: user.password,
+            message: "Lấy mật khẩu thành công",
+        });
+    } catch (error) {
+        console.log(error.message);
+
+        return res.status(500).json({
+            success: false,
+            error: error.message,
+        });
+    }
+};
+
+const updatePassword = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { password, cfPassword } = req.body;
+
+        if (!id)
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy người dùng",
+            });
+
+        if (password !== cfPassword)
+            return res.status(404).json({
+                success: false,
+                error: "Mật khảu không khớp",
+            });
+
+        const user = await prisma.users.findUnique({
+            where: { id: id },
+        });
+
+        if (!user)
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy người dùng",
+            });
+
+        const updatePass = await prisma.users.update({
+            where: { id: id },
+            data: {
+                password: password,
+            },
+        });
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                user: updatePass,
+                newPassword: password,
+            },
+            message: "Cập nhật mật khẩu thành công",
+        });
+    } catch (error) {
+        console.log(error.message);
+
+        return res.status(500).json({
+            success: false,
+            error: error.message,
+        });
+    }
+};
+
 process.on("SIGTERM", async () => {
     console.log("Shutting down AdminController...");
     await prisma.$disconnect();
@@ -1787,4 +1861,6 @@ export {
     getDashboardStats,
     updateRole,
     updateStudent,
+    getPassword,
+    updatePassword,
 };
