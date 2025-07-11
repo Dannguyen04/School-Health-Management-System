@@ -28,22 +28,24 @@ const app = express();
 
 // Log tất cả request để debug
 app.use((req, res, next) => {
-  console.log(`[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`);
-  next();
+    console.log(
+        `[${new Date().toISOString()}] ${req.method} ${req.originalUrl}`
+    );
+    next();
 });
 
 // Connect to database
 connectToDatabase();
 
 app.use(
-  cors({
-    origin: [
-      "http://localhost:5173",
-      "https://school-health-oqsssvh2x-dannguyen04s-projects.vercel.app",
-      "https://school-health-delta.vercel.app",
-    ],
-    credentials: true,
-  })
+    cors({
+        origin: [
+            "http://localhost:5173",
+            "https://school-health-oqsssvh2x-dannguyen04s-projects.vercel.app",
+            "https://school-health-delta.vercel.app",
+        ],
+        credentials: true,
+    })
 );
 app.use(express.json());
 
@@ -68,16 +70,16 @@ app.use("/api/upload", UploadRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {
-  res.status(404).json({ message: "Not Found" });
+    res.status(404).json({ message: "Not Found" });
 });
 
 // Error handler
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: "Something went wrong" });
+    console.error(err.stack);
+    res.status(500).json({ error: "Something went wrong" });
 });
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`🚀 Server is running on PORT ${PORT}`);
+    console.log(`🚀 Server is running on PORT ${PORT}`);
 });

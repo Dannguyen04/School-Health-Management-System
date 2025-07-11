@@ -1,6 +1,7 @@
 import {
     DeleteOutlined,
     EditOutlined,
+    KeyOutlined,
     PlusOutlined,
     SearchOutlined,
 } from "@ant-design/icons";
@@ -23,7 +24,7 @@ import {
 import axios from "axios";
 import { Formik } from "formik";
 import { useEffect, useState } from "react";
-import * as Yup from "yup";
+import UpdatePasswordModal from "./UpdatePasswordModal";
 
 const ParentManagement = () => {
     const [isModalVisible, setIsModalVisible] = useState(false);
@@ -32,20 +33,30 @@ const ParentManagement = () => {
     const [tableLoading, setTableLoading] = useState(false);
     const [filteredParents, setFilteredParents] = useState([]);
     const [searchForm] = Form.useForm();
+    const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
 
-    // Validation schema for parent form
-    const parentValidationSchema = Yup.object().shape({
-        name: Yup.string()
-            .required("Vui lòng nhập tên phụ huynh")
-            .min(2, "Tên phải có ít nhất 2 ký tự")
-            .max(50, "Tên không được quá 50 ký tự"),
-        email: Yup.string()
-            .required("Vui lòng nhập email")
-            .email("Email không hợp lệ"),
-        phone: Yup.string()
-            .required("Vui lòng nhập số điện thoại")
-            .matches(/^[0-9]{10,11}$/, "Số điện thoại không hợp lệ"),
-    });
+    // Validation schema for parent form (bỏ Yup, dùng validate thủ công)
+    const validateParent = (values) => {
+        const errors = {};
+        if (!values.name) {
+            errors.name = "Vui lòng nhập tên phụ huynh";
+        } else if (values.name.length < 2) {
+            errors.name = "Tên phải có ít nhất 2 ký tự";
+        } else if (values.name.length > 50) {
+            errors.name = "Tên không được quá 50 ký tự";
+        }
+        if (!values.email) {
+            errors.email = "Vui lòng nhập email";
+        } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(values.email)) {
+            errors.email = "Email không hợp lệ";
+        }
+        if (!values.phone) {
+            errors.phone = "Vui lòng nhập số điện thoại";
+        } else if (!/^[0-9]{10,11}$/.test(values.phone)) {
+            errors.phone = "Số điện thoại không hợp lệ";
+        }
+        return errors;
+    };
 
     const fetchParents = async () => {
         setTableLoading(true);
@@ -65,6 +76,7 @@ const ParentManagement = () => {
             });
             const formattedParents = response.data.data.map((parent) => ({
                 id: parent.id,
+                userId: parent.userId || parent.user?.id, // fallback nếu backend trả về user object
                 name: parent.fullName,
                 email: parent.email,
                 phone: parent.phone,
@@ -169,6 +181,14 @@ const ParentManagement = () => {
                             />
                         </Tooltip>
                     </Popconfirm>
+                    <Tooltip title="Đổi mật khẩu">
+                        <Button
+                            icon={<KeyOutlined />}
+                            onClick={() => handlePasswordEdit(record)}
+                            type="default"
+                            size="small"
+                        />
+                    </Tooltip>
                 </Space>
             ),
         },
@@ -182,6 +202,12 @@ const ParentManagement = () => {
     const handleEdit = (parent) => {
         setEditingParent(parent);
         setIsModalVisible(true);
+    };
+
+    const handlePasswordEdit = (parent) => {
+        console.log("[DEBUG] parent object khi đổi mật khẩu:", parent);
+        setEditingParent(parent);
+        setIsPasswordModalVisible(true);
     };
 
     const handleDelete = async (parentId) => {
@@ -249,6 +275,11 @@ const ParentManagement = () => {
         setEditingParent(null);
     };
 
+    const handlePasswordModalCancel = () => {
+        setIsPasswordModalVisible(false);
+        setEditingParent(null);
+    };
+
     return (
         <div>
             <div
@@ -272,7 +303,7 @@ const ParentManagement = () => {
             </div>
             <Card
                 style={{ marginBottom: 16, background: "#fafafa" }}
-                bodyStyle={{ padding: 20 }}
+                styles={{ body: { padding: 20 } }}
             >
                 <Form
                     form={searchForm}
@@ -334,6 +365,9 @@ const ParentManagement = () => {
                     pagination={{ pageSize: 5 }}
                     style={{ marginTop: 16 }}
                 />
+                {filteredParents.length === 0 && (
+                    <div>Không có dữ liệu phụ huynh</div>
+                )}
             </Spin>
             <Modal
                 title={editingParent ? "Sửa phụ huynh" : "Thêm phụ huynh"}
@@ -351,7 +385,7 @@ const ParentManagement = () => {
                             phone: "",
                         }
                     }
-                    validationSchema={parentValidationSchema}
+                    validate={validateParent}
                     onSubmit={handleSubmit}
                     enableReinitialize
                 >
@@ -430,6 +464,12 @@ const ParentManagement = () => {
                     )}
                 </Formik>
             </Modal>
+            <UpdatePasswordModal
+                visible={isPasswordModalVisible}
+                onCancel={handlePasswordModalCancel}
+                user={editingParent}
+                onSuccess={fetchParents}
+            />
         </div>
     );
 };
