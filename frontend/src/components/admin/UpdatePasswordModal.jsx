@@ -21,8 +21,6 @@ const UpdatePasswordModal = ({ visible, onCancel, user, onSuccess }) => {
                 })
                 .then((res) => {
                     setOldPassword(res.data?.password || "");
-
-                    console.log("API response:", res.data);
                 })
                 .catch(() => {
                     setOldPassword("");
