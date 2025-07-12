@@ -1538,7 +1538,9 @@ export const getPendingMedicationRequests = async (req, res) => {
             medicationId: request.medicationId,
             medicationName: request.name,
             medicationDescription: request.description,
+            type: request.type,
             dosage: request.dosage,
+            unit: request.unit,
             frequency: request.frequency,
             duration: request.duration,
             instructions: request.instructions,
@@ -1847,6 +1849,7 @@ export const getMedicationRequestById = async (req, res) => {
             // medicationId: medicationRequest.medicationId, // KHÔNG CÓ
             medicationName: medicationRequest.name,
             medicationDescription: medicationRequest.description,
+            medicationType: medicationRequest.type,
             medicationDosage: medicationRequest.dosage,
             medicationUnit: medicationRequest.unit,
             dosage: medicationRequest.dosage,
@@ -2018,6 +2021,7 @@ export const getStudentTreatments = async (req, res) => {
                     },
                     dosage: item.dosage,
                     frequency: item.frequency,
+                    customTimes: item.customTimes,
                     instructions: item.instructions,
                     startDate: item.startDate,
                     endDate: item.endDate,
@@ -2267,7 +2271,7 @@ export const giveMedicineToStudent = async (req, res) => {
             });
         }
 
-        // Kiểm tra liều dùng trong ngày
+        // Lấy log cấp phát hôm nay
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
@@ -2300,19 +2304,47 @@ export const giveMedicineToStudent = async (req, res) => {
             });
         }
 
-        // Kiểm tra thời gian giữa các lần uống (tối thiểu 4 giờ)
-        const lastAdministration = todayAdministrations[0];
-        if (lastAdministration) {
-            const timeDiff = new Date() - new Date(lastAdministration.givenAt);
-            const hoursDiff = timeDiff / (1000 * 60 * 60);
-            if (hoursDiff < 4) {
+        // Validate giờ cấp phát theo customTimes (cho phép lệch 10 phút)
+        if (
+            studentMedication.customTimes &&
+            studentMedication.customTimes.length > 0
+        ) {
+            const now = administrationTime
+                ? new Date(administrationTime)
+                : new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            const ALLOWED_DIFF = 10;
+
+            // Tìm customTime hợp lệ
+            const matchedTime = studentMedication.customTimes.find((time) => {
+                const [h, m] = time.split(":").map(Number);
+                const scheduledMinutes = h * 60 + m;
+                return Math.abs(nowMinutes - scheduledMinutes) <= ALLOWED_DIFF;
+            });
+
+            if (!matchedTime) {
                 return res.status(400).json({
                     success: false,
-                    error: `Cần đợi ít nhất 4 giờ giữa các lần uống. Lần cuối: ${new Date(
-                        lastAdministration.givenAt
-                    ).toLocaleString()}`,
-                    lastAdministration: lastAdministration.givenAt,
-                    hoursSinceLast: hoursDiff.toFixed(1),
+                    error: `Chỉ được cấp phát vào các khung giờ đã lên lịch: ${studentMedication.customTimes.join(
+                        ", "
+                    )} (cho phép lệch tối đa ${ALLOWED_DIFF} phút)`,
+                });
+            }
+
+            // Kiểm tra đã cấp phát cho customTime này chưa
+            const alreadyGiven = todayAdministrations.some((log) => {
+                const logDate = new Date(log.givenAt);
+                const logMinutes =
+                    logDate.getHours() * 60 + logDate.getMinutes();
+                const [h, m] = matchedTime.split(":").map(Number);
+                const scheduledMinutes = h * 60 + m;
+                return Math.abs(logMinutes - scheduledMinutes) <= ALLOWED_DIFF;
+            });
+
+            if (alreadyGiven) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Đã cấp phát cho khung giờ ${matchedTime} hôm nay rồi!`,
                 });
             }
         }
@@ -2592,43 +2624,97 @@ export const getVaccinationReport = async (req, res) => {
 // Lấy danh sách lịch cấp phát thuốc
 export const getScheduledTreatments = async (req, res) => {
     try {
-        // Lấy ngày hôm nay (00:00:00)
+        // Lấy danh sách các đơn thuốc đã được approve có customTimes
+        const treatments = await prisma.studentMedication.findMany({
+            where: {
+                status: "APPROVED",
+                customTimes: {
+                    isEmpty: false,
+                },
+                treatmentStatus: "ONGOING",
+            },
+            include: {
+                student: {
+                    include: {
+                        user: { select: { fullName: true } },
+                    },
+                },
+                parent: {
+                    include: {
+                        user: { select: { fullName: true } },
+                    },
+                },
+                medicationAdministrationLogs: true, // Lấy tất cả log để lọc
+            },
+        });
+
         const now = new Date();
         const today = new Date(
             now.getFullYear(),
             now.getMonth(),
             now.getDate()
         );
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const ALLOWED_DIFF = 10; // phút
+        const currentTime = now.getHours() * 60 + now.getMinutes();
 
-        // Lấy danh sách các đơn thuốc đã được approve, còn hiệu lực, có customTimes
-        const treatments = await prisma.studentMedication.findMany({
-            where: {
-                status: "APPROVED",
-                customTimes: { isEmpty: false },
-                // Nếu có trường endDate thì kiểm tra endDate >= hôm nay
-                // endDate: { gte: today },
-            },
-            include: {
-                student: { include: { user: { select: { fullName: true } } } },
-                parent: { include: { user: { select: { fullName: true } } } },
-            },
+        // Lọc các khung giờ chưa cấp phát hôm nay
+        const scheduledTreatmentsFiltered = treatments.map((treatment) => {
+            // Lấy log cấp phát hôm nay
+            const todayLogs = (
+                treatment.medicationAdministrationLogs || []
+            ).filter((log) => {
+                const logDate = new Date(log.givenAt);
+                return logDate >= today && logDate < tomorrow;
+            });
+            // Lọc customTimes chưa cấp phát
+            const remainingTimes = (treatment.customTimes || []).filter(
+                (time) => {
+                    const [h, m] = time.split(":").map(Number);
+                    const scheduledMinutes = h * 60 + m;
+                    // Đã cấp phát nếu có log trong khoảng ±10 phút
+                    const hasGiven = todayLogs.some((log) => {
+                        const logDate = new Date(log.givenAt);
+                        const logMinutes =
+                            logDate.getHours() * 60 + logDate.getMinutes();
+                        return (
+                            Math.abs(logMinutes - scheduledMinutes) <=
+                            ALLOWED_DIFF
+                        );
+                    });
+                    return !hasGiven;
+                }
+            );
+            return {
+                ...treatment,
+                customTimes: remainingTimes,
+            };
         });
 
-        // Không filter theo giờ hiện tại, hiển thị tất cả customTimes trong ngày
-        const scheduledTreatments = treatments
+        // Lọc và tính toán thời gian sắp tới
+        const scheduledTreatments = scheduledTreatmentsFiltered
             .filter((treatment) => {
-                return (
-                    treatment.customTimes && treatment.customTimes.length > 0
-                );
+                if (
+                    !treatment.customTimes ||
+                    treatment.customTimes.length === 0
+                )
+                    return false;
+
+                // Kiểm tra xem có lịch nào cần cấp phát hôm nay không
+                return treatment.customTimes.some((time) => {
+                    const [hours, minutes] = time.split(":").map(Number);
+                    const timeInMinutes = hours * 60 + minutes;
+                    return timeInMinutes > currentTime; // Chỉ hiển thị những lịch chưa đến giờ
+                });
             })
             .map((treatment) => {
-                // Tính toán thời gian sắp tới gần nhất (nếu cần)
-                const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                // Tính toán thời gian sắp tới gần nhất
                 const upcomingTimes = treatment.customTimes
                     .map((time) => {
                         const [hours, minutes] = time.split(":").map(Number);
                         const timeInMinutes = hours * 60 + minutes;
-                        const diff = timeInMinutes - nowMinutes;
+                        const diff = timeInMinutes - currentTime;
                         return { time, diff, timeInMinutes };
                     })
                     .filter((item) => item.diff > 0)
@@ -2671,8 +2757,7 @@ export const getScheduledTreatments = async (req, res) => {
                 };
             });
 
-        // Tính toán thông báo sắp tới (trong vòng 30 phút) giữ nguyên
-        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        // Tính toán thông báo sắp tới (trong vòng 30 phút)
         const upcomingNotifications = scheduledTreatments
             .filter((treatment) => {
                 if (
@@ -2680,10 +2765,11 @@ export const getScheduledTreatments = async (req, res) => {
                     treatment.customTimes.length === 0
                 )
                     return false;
+
                 return treatment.customTimes.some((time) => {
                     const [hours, minutes] = time.split(":").map(Number);
                     const timeInMinutes = hours * 60 + minutes;
-                    const diff = timeInMinutes - nowMinutes;
+                    const diff = timeInMinutes - currentTime;
                     return diff > 0 && diff <= 30; // 30 phút tới
                 });
             })
@@ -2691,7 +2777,7 @@ export const getScheduledTreatments = async (req, res) => {
                 const dueTimes = treatment.customTimes.filter((time) => {
                     const [hours, minutes] = time.split(":").map(Number);
                     const timeInMinutes = hours * 60 + minutes;
-                    const diff = timeInMinutes - nowMinutes;
+                    const diff = timeInMinutes - currentTime;
                     return diff > 0 && diff <= 30;
                 });
 
@@ -2929,6 +3015,7 @@ export const cancelScheduledTreatment = async (req, res) => {
             where: { id },
             data: {
                 customTimes: [],
+                treatmentStatus: "STOPPED",
             },
         });
 

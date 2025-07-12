@@ -310,6 +310,7 @@ model StudentMedication {
   // Thông tin thuốc (thay vì tham chiếu đến Medication)
   name         String
   description  String?
+  type         String
   dosage       String
   unit         String // "tablet", "ml", "mg", etc.
   manufacturer String?
