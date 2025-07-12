@@ -2406,6 +2406,33 @@ export const giveMedicineToStudent = async (req, res) => {
             );
         }
 
+        // Sau khi cấp phát thành công, xóa matchedTime khỏi todaySchedules
+        if (
+            studentMedication.customTimes &&
+            studentMedication.customTimes.length > 0
+        ) {
+            const now = administrationTime
+                ? new Date(administrationTime)
+                : new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            const ALLOWED_DIFF = 10;
+            const matchedTime = studentMedication.customTimes.find((time) => {
+                const [h, m] = time.split(":").map(Number);
+                const scheduledMinutes = h * 60 + m;
+                return Math.abs(nowMinutes - scheduledMinutes) <= ALLOWED_DIFF;
+            });
+            if (matchedTime) {
+                // Xóa matchedTime khỏi todaySchedules
+                const updatedTodaySchedules = (
+                    studentMedication.todaySchedules || []
+                ).filter((time) => time !== matchedTime);
+                await prisma.studentMedication.update({
+                    where: { id: studentMedicationId },
+                    data: { todaySchedules: updatedTodaySchedules },
+                });
+            }
+        }
+
         res.json(response);
     } catch (error) {
         console.error("Error giving medicine to student:", error);
@@ -2661,64 +2688,33 @@ export const getScheduledTreatments = async (req, res) => {
 
         // Lọc các khung giờ chưa cấp phát hôm nay
         const scheduledTreatmentsFiltered = treatments.map((treatment) => {
-            // Lấy log cấp phát hôm nay
-            const todayLogs = (
-                treatment.medicationAdministrationLogs || []
-            ).filter((log) => {
-                const logDate = new Date(log.givenAt);
-                return logDate >= today && logDate < tomorrow;
-            });
-            // Lọc customTimes chưa cấp phát
-            const remainingTimes = (treatment.customTimes || []).filter(
-                (time) => {
-                    const [h, m] = time.split(":").map(Number);
-                    const scheduledMinutes = h * 60 + m;
-                    // Đã cấp phát nếu có log trong khoảng ±10 phút
-                    const hasGiven = todayLogs.some((log) => {
-                        const logDate = new Date(log.givenAt);
-                        const logMinutes =
-                            logDate.getHours() * 60 + logDate.getMinutes();
-                        return (
-                            Math.abs(logMinutes - scheduledMinutes) <=
-                            ALLOWED_DIFF
-                        );
-                    });
-                    return !hasGiven;
-                }
-            );
+            const remainingTimes = treatment.todaySchedules || [];
             return {
                 ...treatment,
-                customTimes: remainingTimes,
+                todaySchedules: remainingTimes,
             };
         });
 
         // Lọc và tính toán thời gian sắp tới
         const scheduledTreatments = scheduledTreatmentsFiltered
             .filter((treatment) => {
-                if (
-                    !treatment.customTimes ||
-                    treatment.customTimes.length === 0
-                )
-                    return false;
-
-                // Kiểm tra xem có lịch nào cần cấp phát hôm nay không
-                return treatment.customTimes.some((time) => {
-                    const [hours, minutes] = time.split(":").map(Number);
-                    const timeInMinutes = hours * 60 + minutes;
-                    return timeInMinutes > currentTime; // Chỉ hiển thị những lịch chưa đến giờ
-                });
+                // Chỉ cần còn todaySchedules chưa cấp phát hôm nay là trả về
+                return (
+                    treatment.todaySchedules &&
+                    treatment.todaySchedules.length > 0
+                );
             })
             .map((treatment) => {
-                // Tính toán thời gian sắp tới gần nhất
-                const upcomingTimes = treatment.customTimes
+                const now = new Date();
+                const currentTime = now.getHours() * 60 + now.getMinutes();
+                const upcomingTimes = treatment.todaySchedules
                     .map((time) => {
                         const [hours, minutes] = time.split(":").map(Number);
                         const timeInMinutes = hours * 60 + minutes;
                         const diff = timeInMinutes - currentTime;
                         return { time, diff, timeInMinutes };
                     })
-                    .filter((item) => item.diff > 0)
-                    .sort((a, b) => a.diff - b.diff);
+                    .sort((a, b) => a.timeInMinutes - b.timeInMinutes);
 
                 const timeUntilNext = upcomingTimes[0];
 
@@ -2742,10 +2738,10 @@ export const getScheduledTreatments = async (req, res) => {
                                 ? "low_stock"
                                 : "out_of_stock",
                     },
-                    customTimes: treatment.customTimes,
+                    todaySchedules: treatment.todaySchedules,
                     frequency: treatment.frequency,
                     dosage: treatment.dosage,
-                    canAdminister: true, // Có thể cấp phát nếu có customTimes
+                    canAdminister: true, // Có thể cấp phát nếu có todaySchedules
                     treatmentStatus: "ONGOING",
                     timeUntilNext: timeUntilNext
                         ? {
@@ -2761,12 +2757,12 @@ export const getScheduledTreatments = async (req, res) => {
         const upcomingNotifications = scheduledTreatments
             .filter((treatment) => {
                 if (
-                    !treatment.customTimes ||
-                    treatment.customTimes.length === 0
+                    !treatment.todaySchedules ||
+                    treatment.todaySchedules.length === 0
                 )
                     return false;
 
-                return treatment.customTimes.some((time) => {
+                return treatment.todaySchedules.some((time) => {
                     const [hours, minutes] = time.split(":").map(Number);
                     const timeInMinutes = hours * 60 + minutes;
                     const diff = timeInMinutes - currentTime;
@@ -2774,7 +2770,7 @@ export const getScheduledTreatments = async (req, res) => {
                 });
             })
             .map((treatment) => {
-                const dueTimes = treatment.customTimes.filter((time) => {
+                const dueTimes = treatment.todaySchedules.filter((time) => {
                     const [hours, minutes] = time.split(":").map(Number);
                     const timeInMinutes = hours * 60 + minutes;
                     const diff = timeInMinutes - currentTime;
@@ -2967,7 +2963,7 @@ export const completeScheduledTreatment = async (req, res) => {
         let timeToRemove = null;
         let minDiff = Infinity;
 
-        studentMedication.customTimes.forEach((time) => {
+        (studentMedication.todaySchedules || []).forEach((time) => {
             const [hours, minutes] = time.split(":").map(Number);
             const timeInMinutes = hours * 60 + minutes;
             const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
@@ -2980,14 +2976,14 @@ export const completeScheduledTreatment = async (req, res) => {
             }
         });
 
-        const updatedCustomTimes = studentMedication.customTimes.filter(
-            (time) => time !== timeToRemove
-        );
+        const updatedTodaySchedules = (
+            studentMedication.todaySchedules || []
+        ).filter((time) => time !== timeToRemove);
 
         const updatedMedication = await prisma.studentMedication.update({
             where: { id },
             data: {
-                customTimes: updatedCustomTimes,
+                todaySchedules: updatedTodaySchedules,
             },
         });
 
