@@ -317,6 +317,7 @@ model StudentMedication {
   
   frequency    String // "daily", "twice daily", "as needed", etc.
   customTimes  String[] // Giờ uống cụ thể (mảng string)
+  todaySchedules String[] // Lịch còn lại trong ngày (mảng string)
   instructions String? // Special instructions
   status       MedicationStatus @default(PENDING_APPROVAL)
   treatmentStatus TreatmentStatus @default(ONGOING)

@@ -1,12 +1,15 @@
 import { HeartOutlined } from "@ant-design/icons";
 import {
   Button,
+  Descriptions,
+  Divider,
   message,
   Modal,
   Select,
   Space,
   Spin,
   Table,
+  Tag,
   Typography,
 } from "antd";
 import axios from "axios";
@@ -106,6 +109,11 @@ const HealthCheckupResults = () => {
       key: "date",
     },
     {
+      title: "Chiến dịch",
+      key: "campaign",
+      render: (_, record) => record.raw.campaign?.name || "-",
+    },
+    {
       title: "Chiều cao",
       dataIndex: "height",
       key: "height",
@@ -151,28 +159,6 @@ const HealthCheckupResults = () => {
       ),
     },
   ];
-
-  const handleDownload = () => {
-    message.success("Đang tải xuống kết quả khám sức khỏe...");
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
-
-  // Thêm hàm định dạng ngày giờ đẹp
-  const formatDateTime = (dateStr) => {
-    if (!dateStr) return "N/A";
-    const d = new Date(dateStr);
-    return `${d.getHours().toString().padStart(2, "0")}:${d
-      .getMinutes()
-      .toString()
-      .padStart(2, "0")} ${d.getDate().toString().padStart(2, "0")}/${(
-      d.getMonth() + 1
-    )
-      .toString()
-      .padStart(2, "0")}/${d.getFullYear()}`;
-  };
 
   if (loading) {
     return (
@@ -245,144 +231,158 @@ const HealthCheckupResults = () => {
       </div>
       {/* Modal xem chi tiết */}
       <Modal
-        title={
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 20 }}>
-              Chi tiết báo cáo khám sức khỏe
-            </div>
-            <div
-              style={{
-                color: "#888",
-                fontSize: 14,
-                marginBottom: 8,
-              }}
-            >
-              Ngày khám:{" "}
-              {selectedCheckup?.scheduledDate
-                ? new Date(selectedCheckup.scheduledDate).toLocaleDateString()
-                : "N/A"}
-            </div>
-          </div>
-        }
+        title="Chi tiết báo cáo khám sức khỏe"
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={null}
-        width={520}
+        width={800}
       >
         {selectedCheckup && (
-          <div style={{ background: "#fff", borderRadius: 8 }}>
-            {/* Thông tin cơ bản */}
-            <div className="font-semibold mb-2">Thông tin cơ bản</div>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div>
-                Chiều cao:{" "}
-                <b>
-                  {selectedCheckup.height
-                    ? `${selectedCheckup.height} cm`
-                    : "N/A"}
-                </b>
-              </div>
-              <div>
-                Cân nặng:{" "}
-                <b>
-                  {selectedCheckup.weight
-                    ? `${selectedCheckup.weight} kg`
-                    : "N/A"}
-                </b>
-              </div>
-              <div>
-                Huyết áp:{" "}
-                <b>
-                  {selectedCheckup.systolicBP && selectedCheckup.diastolicBP
-                    ? `${selectedCheckup.systolicBP}/${selectedCheckup.diastolicBP} mmHg`
-                    : "N/A"}
-                </b>
-              </div>
-              <div>
-                Phân loại thể lực:{" "}
-                <b>{selectedCheckup.physicalClassification || "N/A"}</b>
-              </div>
-            </div>
-            {/* Thị lực */}
-            <div className="font-semibold mb-2">Thị lực</div>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div>
-                Phải (không kính):{" "}
-                <b>{selectedCheckup.visionRightNoGlasses || "N/A"}</b>
-              </div>
-              <div>
-                Trái (không kính):{" "}
-                <b>{selectedCheckup.visionLeftNoGlasses || "N/A"}</b>
-              </div>
-              <div>
-                Phải (có kính):{" "}
-                <b>{selectedCheckup.visionRightWithGlasses || "N/A"}</b>
-              </div>
-              <div>
-                Trái (có kính):{" "}
-                <b>{selectedCheckup.visionLeftWithGlasses || "N/A"}</b>
-              </div>
-            </div>
-            {/* Thính lực */}
-            <div className="font-semibold mb-2">Thính lực</div>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div>
-                Trái (bình thường):{" "}
-                <b>{selectedCheckup.hearingLeftNormal || "N/A"}</b>
-              </div>
-              <div>
-                Phải (bình thường):{" "}
-                <b>{selectedCheckup.hearingRightNormal || "N/A"}</b>
-              </div>
-              <div>
-                Trái (thì thầm):{" "}
-                <b>{selectedCheckup.hearingLeftWhisper || "N/A"}</b>
-              </div>
-              <div>
-                Phải (thì thầm):{" "}
-                <b>{selectedCheckup.hearingRightWhisper || "N/A"}</b>
-              </div>
-            </div>
-            {/* Răng miệng */}
-            <div className="font-semibold mb-2">Răng miệng</div>
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <div>
-                Hàm trên: <b>{selectedCheckup.dentalUpperJaw || "N/A"}</b>
-              </div>
-              <div>
-                Hàm dưới: <b>{selectedCheckup.dentalLowerJaw || "N/A"}</b>
-              </div>
-            </div>
-            {/* Đánh giá tổng thể */}
-            <div className="font-semibold mb-2">Đánh giá tổng thể</div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
-              <div>
-                Sức khỏe tổng thể:{" "}
-                <b>
-                  {selectedCheckup.overallHealth === "NORMAL"
-                    ? "Bình thường"
-                    : selectedCheckup.overallHealth === "NEEDS_ATTENTION"
-                    ? "Cần chú ý"
-                    : selectedCheckup.overallHealth === "REQUIRES_TREATMENT"
-                    ? "Cần điều trị"
-                    : selectedCheckup.overallHealth || "N/A"}
-                </b>
-              </div>
-              <div>
-                Khuyến nghị: <b>{selectedCheckup.recommendations || "N/A"}</b>
-              </div>
-              <div>
-                Lịch tư vấn:{" "}
-                <b>
-                  {selectedCheckup.consultationStart &&
-                  selectedCheckup.consultationEnd
-                    ? `Từ ${formatDateTime(
-                        selectedCheckup.consultationStart
-                      )} đến ${formatDateTime(selectedCheckup.consultationEnd)}`
-                    : "Chưa có lịch tư vấn"}
-                </b>
-              </div>
-            </div>
+          <div>
+            <Typography.Title level={4} style={{ marginBottom: 0 }}>
+              {selectedCheckup.studentName || ""}
+            </Typography.Title>
+            <Typography.Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 4 }}
+            >
+              {selectedCheckup.campaign?.name && (
+                <>
+                  Chiến dịch: <b>{selectedCheckup.campaign.name}</b>
+                  <br />
+                </>
+              )}
+              Ngày khám:{" "}
+              {selectedCheckup.scheduledDate
+                ? new Date(selectedCheckup.scheduledDate).toLocaleDateString(
+                    "vi-VN"
+                  )
+                : "N/A"}
+            </Typography.Text>
+            <Divider orientation="left">Thông tin cơ bản</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Chiều cao">
+                {selectedCheckup.height
+                  ? `${selectedCheckup.height} cm`
+                  : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Cân nặng">
+                {selectedCheckup.weight
+                  ? `${selectedCheckup.weight} kg`
+                  : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Mạch">
+                {selectedCheckup.pulse || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Huyết áp tâm thu">
+                {selectedCheckup.systolicBP || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Huyết áp tâm trương">
+                {selectedCheckup.diastolicBP || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phân loại thể lực">
+                {(() => {
+                  const map = {
+                    EXCELLENT: "Xuất sắc",
+                    GOOD: "Tốt",
+                    AVERAGE: "Trung bình",
+                    WEAK: "Yếu",
+                  };
+                  return (
+                    map[selectedCheckup.physicalClassification] ||
+                    selectedCheckup.physicalClassification ||
+                    "N/A"
+                  );
+                })()}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider orientation="left">Thị lực</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Phải (không kính)">
+                {selectedCheckup.visionRightNoGlasses || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trái (không kính)">
+                {selectedCheckup.visionLeftNoGlasses || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phải (có kính)">
+                {selectedCheckup.visionRightWithGlasses || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trái (có kính)">
+                {selectedCheckup.visionLeftWithGlasses || "N/A"}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider orientation="left">Thính lực</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Trái (bình thường)">
+                {selectedCheckup.hearingLeftNormal || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trái (thì thầm)">
+                {selectedCheckup.hearingLeftWhisper || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phải (bình thường)">
+                {selectedCheckup.hearingRightNormal || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phải (thì thầm)">
+                {selectedCheckup.hearingRightWhisper || "N/A"}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider orientation="left">Răng miệng</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Răng hàm trên">
+                {selectedCheckup.dentalUpperJaw || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Răng hàm dưới">
+                {selectedCheckup.dentalLowerJaw || "N/A"}
+              </Descriptions.Item>
+            </Descriptions>
+            <Divider orientation="left">Đánh giá tổng thể</Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Sức khỏe tổng thể">
+                <Tag
+                  color={
+                    selectedCheckup.overallHealth === "NORMAL"
+                      ? "green"
+                      : selectedCheckup.overallHealth === "NEEDS_ATTENTION"
+                      ? "orange"
+                      : "red"
+                  }
+                >
+                  {(() => {
+                    const map = {
+                      NORMAL: "Bình thường",
+                      NEEDS_ATTENTION: "Cần chú ý",
+                      REQUIRES_TREATMENT: "Cần điều trị",
+                    };
+                    return (
+                      map[selectedCheckup.overallHealth] ||
+                      selectedCheckup.overallHealth ||
+                      "N/A"
+                    );
+                  })()}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Cần theo dõi">
+                {selectedCheckup.requiresFollowUp ? "Có" : "Không"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày theo dõi">
+                {selectedCheckup.followUpDate
+                  ? new Date(selectedCheckup.followUpDate).toLocaleDateString(
+                      "vi-VN"
+                    )
+                  : ""}
+              </Descriptions.Item>
+              <Descriptions.Item label="Khuyến nghị">
+                <Typography.Text strong>
+                  {selectedCheckup.recommendations || "N/A"}
+                </Typography.Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Ghi chú lâm sàng" span={2}>
+                {selectedCheckup.clinicalNotes || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ghi chú thêm" span={2}>
+                {selectedCheckup.notes || "N/A"}
+              </Descriptions.Item>
+            </Descriptions>
           </div>
         )}
       </Modal>
