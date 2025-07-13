@@ -98,9 +98,9 @@ const NotificationItem = ({
             id={`notification-${notification.id}`}
             style={{
                 display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                padding: "14px 18px 12px 18px",
+                alignItems: "flex-start",
+                gap: 14,
+                padding: "10px 16px 8px 16px", // giảm padding
                 backgroundColor:
                     notification.status === "READ" ? "#fafafa" : "#fff",
                 border:
@@ -110,7 +110,7 @@ const NotificationItem = ({
                         ? "1px solid #1890ff"
                         : "1px solid #d9d9d9",
                 borderRadius: "12px",
-                marginBottom: "12px",
+                marginBottom: "10px",
                 cursor: "pointer",
                 transition: "all 0.3s ease",
                 transform: isHovered ? "translateY(-2px)" : "translateY(0)",
@@ -123,115 +123,123 @@ const NotificationItem = ({
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
-                <div
-                    style={{
-                        fontSize: "28px",
-                        minWidth: 40,
-                        minHeight: 40,
-                        opacity: notification.status === "READ" ? 0.7 : 1,
-                        background: getIconBgColor(notification.type),
-                        color: "#fff",
-                        borderRadius: "50%",
-                        boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
-                        width: 40,
-                        height: 40,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        border: "2px solid #fff",
-                    }}
-                >
-                    {getNotificationIcon(notification.type)}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                    <Tooltip title={notification.title} placement="topLeft">
-                        <div
-                            style={{
-                                fontWeight: 600,
-                                fontSize: "14px",
-                                color:
-                                    notification.status !== "READ"
-                                        ? "#1890ff"
-                                        : "#222",
-                                lineHeight: "1.5",
-                                marginBottom: 2,
-                                wordBreak: "break-word",
-                                whiteSpace: "pre-line",
-                                display: "-webkit-box",
-                                WebkitLineClamp: 1,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                            }}
-                        >
-                            {notification.title}
-                        </div>
-                    </Tooltip>
-                    <Tooltip title={notification.message} placement="topLeft">
-                        <div
-                            style={{
-                                fontSize: "12px",
-                                color: "#666",
-                                lineHeight: "1.6",
-                                marginBottom: 0,
-                                whiteSpace: "pre-line",
-                                wordBreak: "break-word",
-                                display: "-webkit-box",
-                                WebkitLineClamp: 2,
-                                WebkitBoxOrient: "vertical",
-                                overflow: "hidden",
-                            }}
-                        >
-                            {notification.message}
-                        </div>
-                    </Tooltip>
-                </div>
-            </div>
+            {/* Icon bên trái */}
             <div
                 style={{
+                    fontSize: "28px",
+                    minWidth: 40,
+                    minHeight: 40,
+                    opacity: notification.status === "READ" ? 0.7 : 1,
+                    background: getIconBgColor(notification.type),
+                    color: "#fff",
+                    borderRadius: "50%",
+                    boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                    width: 40,
+                    height: 40,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    marginTop: 2,
+                    justifyContent: "center",
+                    border: "2px solid #fff",
                 }}
             >
-                <Space size={8}>
-                    <Tooltip
-                        title={moment(notification.createdAt).format(
-                            "DD/MM/YYYY HH:mm"
-                        )}
+                {getNotificationIcon(notification.type)}
+            </div>
+            {/* Nội dung bên phải */}
+            <div
+                style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                }}
+            >
+                <Tooltip title={notification.title} placement="topLeft">
+                    <div
+                        style={{
+                            fontWeight: 600,
+                            fontSize: "14px",
+                            color:
+                                notification.status !== "READ"
+                                    ? "#1890ff"
+                                    : "#222",
+                            lineHeight: "1.5",
+                            marginBottom: 2,
+                            wordBreak: "break-word",
+                            whiteSpace: "pre-line",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                        }}
                     >
-                        <span
-                            style={{
-                                fontSize: 10,
-                                color: "#999",
-                                display: "flex",
-                                alignItems: "center",
-                            }}
-                        >
-                            <ClockCircleOutlined
-                                style={{ marginRight: 2, fontSize: 12 }}
-                            />
-                            {getTimeAgo(notification.createdAt)}
-                        </span>
-                    </Tooltip>
-                    <span style={{ fontSize: 10, color: "#b0b0b0" }}>
-                        {getTypeLabel(notification.type)}
-                        {notification.severity &&
-                            ` - ${getSeverityLabel(notification.severity)}`}
-                    </span>
-                </Space>
-                <Tooltip title="Xóa thông báo">
-                    <Button
-                        type="text"
-                        size="small"
-                        icon={<DeleteOutlined style={{ fontSize: 13 }} />}
-                        onClick={handleDelete}
-                        danger
-                        style={{ border: "none", padding: "2px 6px" }}
-                        loading={deleting}
-                    />
+                        {notification.title}
+                    </div>
                 </Tooltip>
+                <Tooltip title={notification.message} placement="topLeft">
+                    <div
+                        style={{
+                            fontSize: "12px",
+                            color: "#666",
+                            lineHeight: "1.6",
+                            marginBottom: 0,
+                            whiteSpace: "pre-line",
+                            wordBreak: "break-word",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 1, // chỉ 1 dòng
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                        }}
+                    >
+                        {notification.message}
+                    </div>
+                </Tooltip>
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        marginTop: 6,
+                    }}
+                >
+                    <Space size={8}>
+                        <Tooltip
+                            title={moment(notification.createdAt).format(
+                                "DD/MM/YYYY HH:mm"
+                            )}
+                        >
+                            <span
+                                style={{
+                                    fontSize: 10,
+                                    color: "#999",
+                                    display: "flex",
+                                    alignItems: "center",
+                                }}
+                            >
+                                <ClockCircleOutlined
+                                    style={{ marginRight: 2, fontSize: 12 }}
+                                />
+                                {getTimeAgo(notification.createdAt)}
+                            </span>
+                        </Tooltip>
+                        <span style={{ fontSize: 10, color: "#b0b0b0" }}>
+                            {getTypeLabel(notification.type)}
+                            {notification.severity &&
+                                ` - ${getSeverityLabel(notification.severity)}`}
+                        </span>
+                    </Space>
+                    <Tooltip title="Xóa thông báo">
+                        <Button
+                            type="text"
+                            size="small"
+                            icon={<DeleteOutlined style={{ fontSize: 13 }} />}
+                            onClick={handleDelete}
+                            danger
+                            style={{ border: "none", padding: "2px 6px" }}
+                            loading={deleting}
+                        />
+                    </Tooltip>
+                </div>
             </div>
         </div>
     );
