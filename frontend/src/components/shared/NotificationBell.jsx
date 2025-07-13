@@ -113,12 +113,13 @@ const NotificationBell = () => {
         }
         // Đóng dropdown notification trước khi điều hướng
         setDropdownVisible(false);
-        // Sử dụng hàm điều hướng chung
+        // Sử dụng hàm điều hướng chung, truyền thêm user
         navigateByNotificationType(
             notification,
             navigate,
             setSelectedNotification,
-            setDetailModalVisible
+            setDetailModalVisible,
+            user // truyền user hiện tại để xác định vai trò
         );
     };
 

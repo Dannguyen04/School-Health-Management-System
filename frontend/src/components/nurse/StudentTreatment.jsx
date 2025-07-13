@@ -5,6 +5,7 @@ import {
   EyeOutlined,
   HistoryOutlined,
   MedicineBoxOutlined,
+  SmileOutlined,
   UserOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
@@ -68,6 +69,8 @@ const StudentTreatment = () => {
   const [notificationInterval, setNotificationInterval] = useState(null);
   // Thêm state để lưu các thông báo đã gửi
   const [sentNotifications, setSentNotifications] = useState(new Set());
+  const [scheduleFilter, setScheduleFilter] = useState("all");
+  const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
 
   useEffect(() => {
     fetchTreatments();
@@ -125,24 +128,7 @@ const StudentTreatment = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
-        // Lọc chỉ những lịch có customTimes và cần cấp phát hôm nay
-        const todayTreatments = response.data.data.filter((treatment) => {
-          if (!treatment.customTimes || treatment.customTimes.length === 0) {
-            return false;
-          }
-
-          const now = new Date();
-          const currentTime = now.getHours() * 60 + now.getMinutes();
-
-          // Kiểm tra xem có lịch nào cần cấp phát hôm nay không
-          return treatment.customTimes.some((time) => {
-            const [hours, minutes] = time.split(":").map(Number);
-            const timeInMinutes = hours * 60 + minutes;
-            return timeInMinutes > currentTime; // Chỉ hiển thị những lịch chưa đến giờ
-          });
-        });
-
-        setScheduledTreatments(todayTreatments);
+        setScheduledTreatments(response.data.data);
         setUpcomingNotifications(response.data.upcoming || []);
         setSentNotifications(new Set()); // Reset khi fetch mới
       }
@@ -494,6 +480,82 @@ const StudentTreatment = () => {
     },
   ];
 
+  // Cột bảng cho modal lịch cấp phát hôm nay
+  const scheduleColumns = [
+    {
+      title: "Học sinh",
+      dataIndex: "studentName",
+      key: "studentName",
+      render: (text, record) => (
+        <div>
+          <b>{text}</b>
+          <div className="text-xs text-gray-500">
+            {record.studentCode} - {record.grade} {record.class}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Thuốc",
+      dataIndex: "medication",
+      key: "medication",
+      render: (med) => (
+        <div>
+          <b>{med.name}</b>
+          <div className="text-xs text-gray-500">
+            {med.dosage} {med.unit}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Giờ cấp phát",
+      dataIndex: "customTimes",
+      key: "customTimes",
+      render: (times) =>
+        times && times.length > 0 ? (
+          times.map((t, i) => (
+            <Tag color="purple" key={i}>
+              <ClockCircleOutlined /> {t}
+            </Tag>
+          ))
+        ) : (
+          <Tag color="default">Đã cấp phát hết</Tag>
+        ),
+    },
+    {
+      title: "Trạng thái",
+      key: "status",
+      render: (_, record) => {
+        if (!record.customTimes || record.customTimes.length === 0)
+          return <Tag color="green">Đã cấp phát hết</Tag>;
+        const now = new Date();
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+        const isOverdue = record.customTimes.every((time) => {
+          const [h, m] = time.split(":").map(Number);
+          return h * 60 + m < currentTime;
+        });
+        if (isOverdue) return <Tag color="red">Đã qua giờ</Tag>;
+        return <Tag color="blue">Chưa cấp phát</Tag>;
+      },
+    },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (_, record) => (
+        <Button
+          type="primary"
+          size="small"
+          icon={<CheckOutlined />}
+          disabled={!record.canAdminister}
+          onClick={() => handleGiveMedication(record)}
+        >
+          Cấp phát
+        </Button>
+      ),
+    },
+  ];
+
   const items = [
     {
       key: "treatments",
@@ -780,6 +842,46 @@ const StudentTreatment = () => {
     }
   };
 
+  // Hàm lọc lịch cấp phát theo trạng thái
+  const filterScheduledTreatments = (treatments) => {
+    if (scheduleFilter === "all") return treatments;
+    if (scheduleFilter === "not_given") {
+      // Chưa cấp phát: còn customTimes, tất cả times đều lớn hơn hoặc bằng giờ hiện tại
+      const now = new Date();
+      const currentTime = now.getHours() * 60 + now.getMinutes();
+      return treatments.filter(
+        (t) =>
+          t.customTimes &&
+          t.customTimes.length > 0 &&
+          t.customTimes.some((time) => {
+            const [h, m] = time.split(":").map(Number);
+            return h * 60 + m >= currentTime;
+          })
+      );
+    }
+    if (scheduleFilter === "overdue") {
+      // Đã qua giờ: còn customTimes, tất cả times đều nhỏ hơn giờ hiện tại
+      const now = new Date();
+      const currentTime = now.getHours() * 60 + now.getMinutes();
+      return treatments.filter(
+        (t) =>
+          t.customTimes &&
+          t.customTimes.length > 0 &&
+          t.customTimes.every((time) => {
+            const [h, m] = time.split(":").map(Number);
+            return h * 60 + m < currentTime;
+          })
+      );
+    }
+    if (scheduleFilter === "done") {
+      // Đã cấp phát hết hôm nay: customTimes rỗng
+      return treatments.filter(
+        (t) => Array.isArray(t.customTimes) && t.customTimes.length === 0
+      );
+    }
+    return treatments;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -794,18 +896,59 @@ const StudentTreatment = () => {
         <div className="flex space-x-2">
           <Button
             icon={<BellOutlined />}
-            onClick={() => setNotificationDrawerVisible(true)}
+            onClick={() => setScheduleModalVisible(true)}
             type="primary"
           >
             Lịch cấp phát hôm nay
-            {scheduledTreatments.length > 0 && (
-              <Badge count={scheduledTreatments.length} />
-            )}
           </Button>
         </div>
       </div>
 
       {items[0].children}
+
+      {/* Modal lịch cấp phát hôm nay */}
+      <Modal
+        title={
+          <span>
+            <BellOutlined /> Lịch cấp phát thuốc hôm nay
+          </span>
+        }
+        open={scheduleModalVisible}
+        onCancel={() => setScheduleModalVisible(false)}
+        footer={null}
+        width={800}
+      >
+        <div className="flex items-center mb-4">
+          <span className="mr-2">Lọc:</span>
+          <Select
+            value={scheduleFilter}
+            onChange={setScheduleFilter}
+            style={{ minWidth: 180 }}
+            options={[
+              { value: "all", label: "Tất cả" },
+              { value: "not_given", label: "Chưa cấp phát" },
+              { value: "overdue", label: "Đã qua giờ" },
+              { value: "done", label: "Đã cấp phát hết" },
+            ]}
+          />
+        </div>
+        <Table
+          dataSource={filterScheduledTreatments(scheduledTreatments)}
+          columns={scheduleColumns}
+          rowKey="id"
+          pagination={{ pageSize: 8 }}
+          locale={{
+            emptyText: (
+              <div className="text-center py-8">
+                <SmileOutlined style={{ fontSize: 32, color: "#aaa" }} />
+                <div className="mt-2 text-gray-500">
+                  Không có lịch cấp phát nào hôm nay
+                </div>
+              </div>
+            ),
+          }}
+        />
+      </Modal>
 
       {/* Modal cấp phát thuốc */}
       <Modal
@@ -1082,7 +1225,10 @@ const StudentTreatment = () => {
                     title={
                       <span>
                         <CheckOutlined
-                          style={{ color: "green", marginRight: 8 }}
+                          style={{
+                            color: "green",
+                            marginRight: 8,
+                          }}
                         />
                         {dayjs(log.givenAt).format("HH:mm DD/MM/YYYY")}
                       </span>

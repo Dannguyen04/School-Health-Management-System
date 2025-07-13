@@ -495,7 +495,8 @@ export const requestMedication = async (req, res) => {
           unit,
           manufacturer: manufacturer || null,
           frequency,
-          customTimes: customTimes ? JSON.parse(customTimes) : [], // lưu customTimes (mảng giờ uống)
+          customTimes: customTimes ? JSON.parse(customTimes) : [], // lịch mẫu cố định mỗi ngày
+          todaySchedules: customTimes ? JSON.parse(customTimes) : [], // lịch còn lại trong ngày, khởi tạo bằng customTimes
           instructions: instructions || null,
           status: "PENDING_APPROVAL",
           treatmentStatus: "ONGOING",

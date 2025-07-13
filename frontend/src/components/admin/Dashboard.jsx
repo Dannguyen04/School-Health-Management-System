@@ -20,7 +20,7 @@ const AdminDashboard = () => {
         totalStudents: 0,
         usersByRole: {
             ADMIN: 0,
-            SCHOOL_NURSE: 0,
+            SCHOOL_NURSE: 0,                                            
             PARENT: 0,
             MANAGER: 0,
         },

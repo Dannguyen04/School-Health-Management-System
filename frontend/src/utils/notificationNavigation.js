@@ -4,7 +4,8 @@ export function navigateByNotificationType(
     notification,
     navigate,
     setSelectedNotification,
-    setDetailModalVisible
+    setDetailModalVisible,
+    currentUser
 ) {
     // Special case for missing health profile (toast only)
     if (
@@ -36,7 +37,13 @@ export function navigateByNotificationType(
             });
             break;
         case "medication":
-            navigate("/parent/medicine-info");
+        case "medication_request":
+            // For nurses: navigate to confirmed medicines for approval
+            if (currentUser?.role === "SCHOOL_NURSE") {
+                navigate("/nurse/confirmed-medicines");
+            } else {
+                navigate("/parent/medicine-info");
+            }
             break;
         case "vaccination_campaign_created":
         case "vaccination_campaign_updated":
