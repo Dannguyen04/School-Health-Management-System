@@ -3,82 +3,107 @@ import {
   ClockCircleOutlined,
   HeartOutlined,
 } from "@ant-design/icons";
-import { Select, Spin, Table, Tag, Tooltip, Typography, message } from "antd";
+import {
+  Descriptions,
+  Divider,
+  message,
+  Modal,
+  Select,
+  Spin,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
 
 const { Title } = Typography;
-
-const columns = [
-  {
-    title: "Ngày tiêm",
-    dataIndex: "date",
-    key: "date",
-    width: 120,
-  },
-  {
-    title: "Tên vaccine",
-    dataIndex: "vaccineName",
-    key: "vaccineName",
-    width: 200,
-    ellipsis: true,
-    render: (text) => <Tooltip title={text}>{text}</Tooltip>,
-  },
-  {
-    title: "Loại vaccine",
-    dataIndex: "vaccineType",
-    key: "vaccineType",
-    width: 150,
-  },
-  {
-    title: "Liều lượng",
-    dataIndex: "dosage",
-    key: "dosage",
-    width: 120,
-  },
-  {
-    title: "Đợt tiêm",
-    dataIndex: "doseNumber",
-    key: "doseNumber",
-    width: 100,
-    render: (text) => `Mũi ${text}`,
-  },
-  {
-    title: "Trạng thái",
-    dataIndex: "status",
-    key: "status",
-    width: 150,
-    render: (status) => {
-      let color = status === "COMPLETED" ? "success" : "processing";
-      let icon =
-        status === "COMPLETED" ? (
-          <CheckCircleOutlined />
-        ) : (
-          <ClockCircleOutlined />
-        );
-      let text = status === "COMPLETED" ? "Đã hoàn thành" : "Đang chờ";
-
-      return (
-        <Tag icon={icon} color={color}>
-          {text}
-        </Tag>
-      );
-    },
-  },
-  {
-    title: "Ghi chú",
-    dataIndex: "notes",
-    key: "notes",
-    ellipsis: true,
-    render: (text) => <Tooltip title={text}>{text || "—"}</Tooltip>,
-  },
-];
 
 const VaccinationHistory = () => {
   const [loading, setLoading] = useState(false);
   const [children, setChildren] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [vaccinations, setVaccinations] = useState([]);
+  const [detailModal, setDetailModal] = useState({
+    visible: false,
+    record: null,
+  });
+
+  const columns = [
+    {
+      title: "Ngày tiêm",
+      dataIndex: "date",
+      key: "date",
+      width: 120,
+    },
+    {
+      title: "Tên vaccine",
+      dataIndex: "vaccineName",
+      key: "vaccineName",
+      width: 200,
+      ellipsis: true,
+      render: (text) => <Tooltip title={text}>{text}</Tooltip>,
+    },
+    {
+      title: "Loại vaccine",
+      dataIndex: "vaccineType",
+      key: "vaccineType",
+      width: 150,
+    },
+    {
+      title: "Liều lượng",
+      dataIndex: "dosage",
+      key: "dosage",
+      width: 120,
+    },
+    {
+      title: "Đợt tiêm",
+      dataIndex: "doseNumber",
+      key: "doseNumber",
+      width: 100,
+      render: (text) => `Mũi ${text}`,
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 150,
+      render: (status) => {
+        let color = status === "COMPLETED" ? "success" : "processing";
+        let icon =
+          status === "COMPLETED" ? (
+            <CheckCircleOutlined />
+          ) : (
+            <ClockCircleOutlined />
+          );
+        let text = status === "COMPLETED" ? "Đã hoàn thành" : "Đang chờ";
+
+        return (
+          <Tag icon={icon} color={color}>
+            {text}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "notes",
+      key: "notes",
+      ellipsis: true,
+      render: (text) => <Tooltip title={text}>{text || "—"}</Tooltip>,
+    },
+    {
+      title: "Chi tiết",
+      key: "actions",
+      width: 100,
+      render: (_, record) => (
+        <a onClick={() => setDetailModal({ visible: true, record })}>
+          Xem chi tiết
+        </a>
+      ),
+    },
+  ];
 
   useEffect(() => {
     fetchChildren();
@@ -218,6 +243,71 @@ const VaccinationHistory = () => {
           style={{ padding: 12 }}
           loading={loading}
         />
+        {/* Modal xem chi tiết vaccine */}
+        <Modal
+          title="Chi tiết lịch sử tiêm chủng"
+          open={detailModal.visible}
+          onCancel={() => setDetailModal({ visible: false, record: null })}
+          footer={null}
+          width={700}
+        >
+          {detailModal.record && (
+            <>
+              <Divider orientation="left">Thông tin tiêm chủng</Divider>
+              <Descriptions column={2} size="small" bordered>
+                <Descriptions.Item label="Tên vaccine">
+                  {detailModal.record.vaccineName || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Loại vaccine">
+                  {detailModal.record.vaccineType || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Liều lượng">
+                  {detailModal.record.dosage || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Mũi tiêm">
+                  Mũi {detailModal.record.doseNumber}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày tiêm">
+                  {detailModal.record.date || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Trạng thái">
+                  {detailModal.record.status === "COMPLETED" ? (
+                    <Tag color="success">Đã hoàn thành</Tag>
+                  ) : (
+                    <Tag color="processing">Đang chờ</Tag>
+                  )}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ghi chú" span={2}>
+                  {detailModal.record.notes || "-"}
+                </Descriptions.Item>
+              </Descriptions>
+              <Divider orientation="left">Thông tin vaccine</Divider>
+              <Descriptions column={2} size="small" bordered>
+                <Descriptions.Item label="Nhà sản xuất">
+                  {detailModal.record.vaccine?.manufacturer || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Xuất xứ">
+                  {detailModal.record.vaccine?.origin || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Độ tuổi khuyến nghị">
+                  {detailModal.record.vaccine?.recommendedAge || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Yêu cầu">
+                  {detailModal.record.vaccine?.requirement || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Mô tả" span={2}>
+                  {detailModal.record.vaccine?.description || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Tác dụng phụ" span={2}>
+                  {detailModal.record.vaccine?.sideEffects || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Chống chỉ định" span={2}>
+                  {detailModal.record.vaccine?.contraindications || "-"}
+                </Descriptions.Item>
+              </Descriptions>
+            </>
+          )}
+        </Modal>
       </div>
     </div>
   );

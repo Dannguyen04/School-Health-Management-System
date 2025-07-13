@@ -459,6 +459,34 @@ export const requestMedication = async (req, res) => {
         error: "You must be a parent to access this resource",
       });
     }
+    // Validate customTimes (giờ hành chính 07:00 - 17:00)
+    if (customTimes) {
+      let timesArr;
+      try {
+        timesArr = Array.isArray(customTimes)
+          ? customTimes
+          : JSON.parse(customTimes);
+      } catch {
+        return res.status(400).json({
+          success: false,
+          error: 'customTimes phải là mảng giờ hợp lệ (VD: ["08:00", "12:30"])',
+        });
+      }
+      const isValid = timesArr.every((t) => {
+        // t: "HH:mm"
+        const [h, m] = t.split(":").map(Number);
+        if (isNaN(h) || isNaN(m)) return false;
+        // Giờ hành chính: 7h00 đến 17h00 (17:00 vẫn hợp lệ)
+        return h >= 7 && (h < 17 || (h === 17 && m === 0));
+      });
+      if (!isValid) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "customTimes chỉ được phép trong giờ hành chính (07:00 - 17:00)",
+        });
+      }
+    }
     const parentId = req.user.parentProfile.id;
     const studentParent = await prisma.studentParent.findFirst({
       where: {
@@ -762,6 +790,13 @@ export const getStudentHealthCheckups = async (req, res) => {
     const checkups = await prisma.medicalCheck.findMany({
       where: { studentId },
       orderBy: { scheduledDate: "desc" },
+      include: {
+        campaign: {
+          select: {
+            name: true,
+          },
+        },
+      },
     });
     res.json({ success: true, data: checkups });
   } catch (error) {

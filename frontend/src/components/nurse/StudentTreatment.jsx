@@ -341,11 +341,6 @@ const StudentTreatment = () => {
                     </Tag>
                   </div>
                 )}
-                <div className="mt-1">
-                  <Text type="secondary" className="text-xs">
-                    Còn {record.customTimes.length} lần cấp phát hôm nay
-                  </Text>
-                </div>
               </div>
             )}
           </div>
@@ -510,7 +505,7 @@ const StudentTreatment = () => {
     },
     {
       title: "Giờ cấp phát",
-      dataIndex: "customTimes",
+      dataIndex: "todaySchedules",
       key: "customTimes",
       render: (times) =>
         times && times.length > 0 ? (
@@ -527,11 +522,11 @@ const StudentTreatment = () => {
       title: "Trạng thái",
       key: "status",
       render: (_, record) => {
-        if (!record.customTimes || record.customTimes.length === 0)
+        if (!record.todaySchedules || record.todaySchedules.length === 0)
           return <Tag color="green">Đã cấp phát hết</Tag>;
         const now = new Date();
         const currentTime = now.getHours() * 60 + now.getMinutes();
-        const isOverdue = record.customTimes.every((time) => {
+        const isOverdue = record.todaySchedules.every((time) => {
           const [h, m] = time.split(":").map(Number);
           return h * 60 + m < currentTime;
         });
@@ -548,7 +543,18 @@ const StudentTreatment = () => {
           size="small"
           icon={<CheckOutlined />}
           disabled={!record.canAdminister}
-          onClick={() => handleGiveMedication(record)}
+          onClick={() => {
+            const fullTreatment = treatments.find((t) => t.id === record.id);
+            setSelectedTreatment(fullTreatment || record);
+            const dosageNumber = parseFloat((fullTreatment || record).dosage);
+            form.setFieldsValue({
+              quantityUsed: dosageNumber,
+              dosageGiven: dosageNumber,
+              notes: "",
+            });
+            setIsModalVisible(true);
+            setScheduleModalVisible(false);
+          }}
         >
           Cấp phát
         </Button>
@@ -565,7 +571,7 @@ const StudentTreatment = () => {
           {/* Thống kê */}
           {summary && Object.keys(summary).length > 0 && (
             <Row gutter={16}>
-              <Col xs={24} sm={6}>
+              <Col xs={24} sm={8}>
                 <Card>
                   <Statistic
                     title="Tổng số điều trị"
@@ -574,7 +580,7 @@ const StudentTreatment = () => {
                   />
                 </Card>
               </Col>
-              <Col xs={24} sm={6}>
+              <Col xs={24} sm={8}>
                 <Card>
                   <Statistic
                     title="Có thể cấp phát"
@@ -584,17 +590,7 @@ const StudentTreatment = () => {
                   />
                 </Card>
               </Col>
-              <Col xs={24} sm={6}>
-                <Card>
-                  <Statistic
-                    title="Cần chú ý"
-                    value={summary.needsAttention || 0}
-                    valueStyle={{ color: "#faad14" }}
-                    prefix={<WarningOutlined />}
-                  />
-                </Card>
-              </Col>
-              <Col xs={24} sm={6}>
+              <Col xs={24} sm={8}>
                 <Card>
                   <Statistic
                     title="Đã cấp phát hôm nay"
@@ -846,37 +842,37 @@ const StudentTreatment = () => {
   const filterScheduledTreatments = (treatments) => {
     if (scheduleFilter === "all") return treatments;
     if (scheduleFilter === "not_given") {
-      // Chưa cấp phát: còn customTimes, tất cả times đều lớn hơn hoặc bằng giờ hiện tại
+      // Chưa cấp phát: còn todaySchedules, ít nhất 1 times >= giờ hiện tại
       const now = new Date();
       const currentTime = now.getHours() * 60 + now.getMinutes();
       return treatments.filter(
         (t) =>
-          t.customTimes &&
-          t.customTimes.length > 0 &&
-          t.customTimes.some((time) => {
+          t.todaySchedules &&
+          t.todaySchedules.length > 0 &&
+          t.todaySchedules.some((time) => {
             const [h, m] = time.split(":").map(Number);
             return h * 60 + m >= currentTime;
           })
       );
     }
     if (scheduleFilter === "overdue") {
-      // Đã qua giờ: còn customTimes, tất cả times đều nhỏ hơn giờ hiện tại
+      // Đã qua giờ: còn todaySchedules, tất cả times < giờ hiện tại
       const now = new Date();
       const currentTime = now.getHours() * 60 + now.getMinutes();
       return treatments.filter(
         (t) =>
-          t.customTimes &&
-          t.customTimes.length > 0 &&
-          t.customTimes.every((time) => {
+          t.todaySchedules &&
+          t.todaySchedules.length > 0 &&
+          t.todaySchedules.every((time) => {
             const [h, m] = time.split(":").map(Number);
             return h * 60 + m < currentTime;
           })
       );
     }
     if (scheduleFilter === "done") {
-      // Đã cấp phát hết hôm nay: customTimes rỗng
+      // Đã cấp phát hết hôm nay: todaySchedules rỗng
       return treatments.filter(
-        (t) => Array.isArray(t.customTimes) && t.customTimes.length === 0
+        (t) => Array.isArray(t.todaySchedules) && t.todaySchedules.length === 0
       );
     }
     return treatments;
@@ -1103,7 +1099,7 @@ const StudentTreatment = () => {
                 {detailRecord.studentCode}
               </Descriptions.Item>
               <Descriptions.Item label="Lớp">
-                {detailRecord.grade} {detailRecord.class}
+                {detailRecord.class}
               </Descriptions.Item>
               <Descriptions.Item label="Phụ huynh" span={2}>
                 {detailRecord.parentName}

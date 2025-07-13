@@ -83,7 +83,20 @@ const step2Schema = Yup.object().shape({
     then: (schema) =>
       schema
         .of(Yup.string().required("Vui lòng nhập giờ uống"))
-        .min(1, "Vui lòng nhập ít nhất 1 giờ uống"),
+        .min(1, "Vui lòng nhập ít nhất 1 giờ uống")
+        .test(
+          "is-working-hour",
+          "Giờ uống thuốc chỉ được phép trong giờ hành chính (07:00 - 17:00)",
+          (times) => {
+            if (!times) return true;
+            return times.every((t) => {
+              if (!t) return false;
+              const [h, m] = t.split(":").map(Number);
+              if (isNaN(h) || isNaN(m)) return false;
+              return h >= 7 && (h < 17 || (h === 17 && m === 0));
+            });
+          }
+        ),
     otherwise: (schema) => schema,
   }),
   startDate: Yup.mixed()

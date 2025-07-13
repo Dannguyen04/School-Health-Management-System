@@ -1530,29 +1530,6 @@ export const getPendingMedicationRequests = async (req, res) => {
       createdAt: request.createdAt,
       updatedAt: request.updatedAt,
     }));
-    const formattedRequests = pendingRequests.map((request) => ({
-      id: request.id,
-      studentId: request.studentId,
-      studentName: request.student.user.fullName,
-      studentEmail: request.student.user.email,
-      parentId: request.parentId,
-      parentName: request.parent.user.fullName,
-      parentEmail: request.parent.user.email,
-      medicationId: request.medicationId,
-      medicationName: request.name,
-      medicationDescription: request.description,
-      type: request.type,
-      dosage: request.dosage,
-      unit: request.unit,
-      frequency: request.frequency,
-      duration: request.duration,
-      instructions: request.instructions,
-      status: request.status,
-      startDate: request.startDate,
-      endDate: request.endDate,
-      createdAt: request.createdAt,
-      updatedAt: request.updatedAt,
-    }));
 
     res.json({
       success: true,
@@ -2074,6 +2051,7 @@ export const getStudentTreatments = async (req, res) => {
         expired: formatted.filter(
           (t) => t.medication.expiryStatus === "expired"
         ).length,
+        administeredToday: formatted.filter((t) => t.todayDosage > 0).length,
       },
     });
   } catch (error) {

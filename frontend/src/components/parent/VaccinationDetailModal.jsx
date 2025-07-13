@@ -1,9 +1,8 @@
 import {
   ExclamationCircleTwoTone,
   MedicineBoxOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
-import { Col, Divider, Modal, Row, Tag } from "antd";
+import { Descriptions, Divider, Modal, Tag, Typography } from "antd";
 import dayjs from "dayjs";
 
 const getDoseLabel = (dose) => {
@@ -49,6 +48,17 @@ const getStatusTag = (status) => {
   }
 };
 
+const getRequirementLabel = (requirement) => {
+  switch (requirement) {
+    case "REQUIRED":
+      return "Bắt buộc";
+    case "OPTIONAL":
+      return "Không bắt buộc";
+    default:
+      return requirement || "-";
+  }
+};
+
 const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
   // Kiểm tra trường hợp chưa tiêm
   const isNotVaccinated = vaccination?.notVaccinated;
@@ -59,6 +69,16 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
   const consent = isNotVaccinated ? vaccination?.consent : null;
   // Lấy thông tin phụ huynh đầu tiên (nếu có)
   const parentInfo = student?.parents?.[0]?.parent?.user;
+  const studentName =
+    consent?.studentName ||
+    campaign?.consents?.[0]?.studentName ||
+    student?.user?.fullName ||
+    student?.fullName ||
+    vaccination?.studentName ||
+    vaccination?.fullName ||
+    vaccination?.student?.user?.fullName ||
+    vaccination?.student?.fullName ||
+    "-";
   return (
     <Modal
       title={
@@ -86,145 +106,142 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
         </div>
       ) : (
         <>
-          {/* Thông tin chính */}
-          <Row gutter={[16, 16]} align="middle">
-            <Col span={12}>
-              <div className="mb-2 text-base text-gray-500">Học sinh</div>
-              <div className="font-semibold flex items-center gap-2">
-                <UserOutlined />
-                {student?.user?.fullName || "Không có"}
-              </div>
-            </Col>
-            <Col span={12}>
-              <div className="mb-2 text-base text-gray-500">Chiến dịch</div>
-              <div className="font-semibold">
-                {campaign?.name || "Không có"}
-              </div>
-            </Col>
-            <Col span={12}>
-              <div className="mb-2 text-base text-gray-500">Loại vắc xin</div>
-              <div className="font-semibold">
-                {vaccination?.vaccineName ||
-                  campaign?.vaccinations?.[0]?.name ||
-                  "-"}
-              </div>
-            </Col>
-            <Col span={12}>
-              <div className="mb-2 text-base text-gray-500">Ngày tiêm</div>
-              <div className="font-semibold">
-                {isNotVaccinated ? (
-                  <span className="text-gray-400">Chưa tiêm</span>
-                ) : vaccination?.administeredDate ? (
-                  dayjs(vaccination.administeredDate).format("DD/MM/YYYY")
-                ) : (
-                  <span className="text-gray-400">Chưa tiêm</span>
-                )}
-              </div>
-            </Col>
-            {/* Nếu chưa tiêm, hiển thị ngày dự kiến tiêm và mô tả chiến dịch */}
+          <Typography.Title level={5} style={{ marginBottom: 0 }}>
+            {studentName}
+          </Typography.Title>
+          <Typography.Text
+            type="secondary"
+            style={{ display: "block", marginBottom: 4 }}
+          >
+            Chiến dịch: <b>{campaign?.name || "-"}</b>
+          </Typography.Text>
+          <Divider orientation="left">Thông tin vaccine</Divider>
+          <Descriptions column={2} size="small" bordered>
+            <Descriptions.Item label="Nhà sản xuất">
+              {vaccination?.vaccine?.manufacturer ||
+                campaign?.vaccine?.manufacturer ||
+                campaign?.vaccineManufacturer ||
+                "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Xuất xứ">
+              {vaccination?.vaccine?.origin || campaign?.vaccine?.origin || "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Độ tuổi khuyến nghị">
+              {vaccination?.vaccine?.recommendedAge ||
+                campaign?.vaccine?.recommendedAge ||
+                "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Yêu cầu">
+              {getRequirementLabel(
+                vaccination?.vaccine?.requirement ||
+                  campaign?.vaccine?.requirement ||
+                  campaign?.vaccineRequirement ||
+                  "-"
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Mô tả" span={2}>
+              {vaccination?.vaccine?.description ||
+                campaign?.vaccine?.description ||
+                "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Tác dụng phụ" span={2}>
+              {vaccination?.vaccine?.sideEffects ||
+                campaign?.vaccine?.sideEffects ||
+                vaccination?.sideEffects ||
+                "Không có"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Chống chỉ định" span={2}>
+              {vaccination?.vaccine?.contraindications ||
+                campaign?.vaccine?.contraindications ||
+                "-"}
+            </Descriptions.Item>
+            {campaign?.vaccine?.referenceUrl && (
+              <Descriptions.Item label="Tham khảo" span={2}>
+                <a
+                  href={campaign.vaccine.referenceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ color: "#36ae9a" }}
+                >
+                  {campaign.vaccine.referenceUrl}
+                </a>
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+          <Divider orientation="left">Thông tin tiêm chủng</Divider>
+          <Descriptions column={2} size="small" bordered>
+            <Descriptions.Item label="Loại vắc xin">
+              {vaccination?.vaccineName ||
+                campaign?.vaccinations?.[0]?.name ||
+                "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày tiêm">
+              {vaccination?.administeredDate ? (
+                dayjs(vaccination.administeredDate).format("DD/MM/YYYY")
+              ) : (
+                <span className="text-gray-400">Chưa tiêm</span>
+              )}
+            </Descriptions.Item>
             {isNotVaccinated && (
               <>
-                <Col span={12}>
-                  <div className="mb-2 text-base text-gray-500">
-                    Ngày dự kiến tiêm
-                  </div>
-                  <div className="font-semibold">
-                    {campaign?.scheduledDate
-                      ? dayjs(campaign.scheduledDate).format("DD/MM/YYYY")
-                      : "-"}
-                  </div>
-                </Col>
-                <Col span={12}>
-                  <div className="mb-2 text-base text-gray-500">
-                    Mô tả chiến dịch
-                  </div>
-                  <div>{campaign?.description || "-"}</div>
-                </Col>
+                <Descriptions.Item label="Ngày dự kiến tiêm">
+                  {campaign?.scheduledDate
+                    ? dayjs(campaign.scheduledDate).format("DD/MM/YYYY")
+                    : "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Mô tả chiến dịch">
+                  {campaign?.description || "-"}
+                </Descriptions.Item>
               </>
             )}
-          </Row>
-          <Divider />
-          {/* Thông tin bổ sung */}
-          <Row gutter={[16, 16]}>
-            <Col span={12}>
-              <div className="mb-2 text-base text-gray-500">Loại liều</div>
-              <div>{getDoseLabel(vaccination?.dose)}</div>
-            </Col>
-            <Col span={12}>
-              <div className="mb-2 text-base text-gray-500">Y tá thực hiện</div>
-              <div>{vaccination?.nurse?.user?.fullName || "-"}</div>
-            </Col>
-            <Col span={12}>
-              <div className="mb-2 text-base text-gray-500">Trạng thái</div>
-              <div>{getStatusTag(vaccination?.status)}</div>
-            </Col>
-            {/* Nếu chưa tiêm, hiển thị trạng thái đồng ý tiêm và thông tin phụ huynh */}
-            {isNotVaccinated && (
-              <>
-                <Col span={12}>
-                  <div className="mb-2 text-base text-gray-500">
-                    Trạng thái đồng ý tiêm
-                  </div>
-                  <div>
-                    {consent
-                      ? consent.consent
-                        ? "Đồng ý"
-                        : "Không đồng ý"
-                      : "Chưa xác nhận"}
-                  </div>
-                </Col>
-                <Col span={12}>
-                  <div className="mb-2 text-base text-gray-500">Phụ huynh</div>
-                  <div>{parentInfo?.fullName || "-"}</div>
-                  <div>{parentInfo?.phone || "-"}</div>
-                  <div>{parentInfo?.email || "-"}</div>
-                </Col>
+            <Descriptions.Item label="Loại liều">
+              {getDoseLabel(vaccination?.dose)}
+            </Descriptions.Item>
+            <Descriptions.Item label="Y tá thực hiện">
+              {vaccination?.nurse?.user?.fullName || "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              {getStatusTag(vaccination?.status)}
+            </Descriptions.Item>
+          </Descriptions>
+          {isNotVaccinated && (
+            <>
+              <Divider orientation="left">Thông tin phụ huynh</Divider>
+              <Descriptions column={2} size="small" bordered>
+                <Descriptions.Item label="Trạng thái đồng ý tiêm">
+                  {consent
+                    ? consent.consent
+                      ? "Đồng ý"
+                      : "Không đồng ý"
+                    : "Chưa xác nhận"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Phụ huynh">
+                  {campaign?.consents?.parentName || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="SĐT">
+                  {parentInfo?.phone || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email">
+                  {parentInfo?.email || "-"}
+                </Descriptions.Item>
                 {consent?.notes && (
-                  <Col span={24}>
-                    <div className="mb-2 text-base text-gray-500">
-                      Ghi chú phụ huynh
-                    </div>
-                    <div>{consent.notes}</div>
-                  </Col>
+                  <Descriptions.Item label="Ghi chú phụ huynh" span={2}>
+                    {consent.notes}
+                  </Descriptions.Item>
                 )}
-              </>
-            )}
-          </Row>
-          <Divider />
-          {/* Tác dụng phụ & phản ứng */}
-          <Row gutter={[16, 16]}>
-            <Col span={12}>
-              <div className="mb-2 text-base text-gray-500">Tác dụng phụ</div>
-              <div
-                style={{
-                  background: "#f6fcfa",
-                  borderRadius: 6,
-                  padding: 8,
-                  minHeight: 32,
-                }}
-              >
-                {vaccination?.sideEffects || "Không có"}
-              </div>
-            </Col>
-            <Col span={12}>
-              <div className="mb-2 text-base text-gray-500">
-                Phản ứng sau tiêm
-              </div>
-              <div
-                style={{
-                  background: "#f6fcfa",
-                  borderRadius: 6,
-                  padding: 8,
-                  minHeight: 32,
-                }}
-              >
-                {getReactionLabel(vaccination?.reaction)}
-              </div>
-            </Col>
-          </Row>
-          <Divider />
-          {/* Ghi chú */}
-          <div className="mb-2 text-base text-gray-500">Ghi chú</div>
+              </Descriptions>
+            </>
+          )}
+          <Divider orientation="left">Tác dụng phụ & phản ứng</Divider>
+          <Descriptions column={2} size="small" bordered>
+            <Descriptions.Item label="Tác dụng phụ">
+              {vaccination?.sideEffects || "Không có"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Phản ứng sau tiêm">
+              {getReactionLabel(vaccination?.reaction)}
+            </Descriptions.Item>
+          </Descriptions>
+          <Divider orientation="left">Ghi chú</Divider>
           <div
             style={{
               background: "#f6fcfa",
