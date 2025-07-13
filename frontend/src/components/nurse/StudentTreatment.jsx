@@ -1259,128 +1259,170 @@ const StudentTreatment = () => {
 
             {/* Modal chi tiết */}
             <Modal
-                title="Chi tiết điều trị"
+                title={
+                    <span>
+                        <EyeOutlined /> Chi tiết điều trị
+                    </span>
+                }
                 open={detailModalVisible}
                 onCancel={() => setDetailModalVisible(false)}
                 footer={null}
                 width={800}
+                bodyStyle={{ padding: 0 }}
             >
                 {detailRecord && (
-                    <div>
-                        <Descriptions title="Thông tin học sinh" bordered>
-                            <Descriptions.Item label="Tên học sinh" span={2}>
-                                {detailRecord.studentName}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Mã học sinh">
-                                {detailRecord.studentCode}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Lớp">
-                                {detailRecord.class}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Phụ huynh" span={2}>
-                                {detailRecord.parentName}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Số điện thoại">
-                                {detailRecord.parentPhone}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Tần suất">
-                                {getFrequencyText(detailRecord.frequency)}
-                            </Descriptions.Item>
-                            <Descriptions.Item
-                                label="Giờ cấp phát cụ thể"
-                                span={2}
-                            >
-                                {formatCustomTimes(detailRecord.customTimes)}
-                            </Descriptions.Item>
-                        </Descriptions>
-
-                        <Divider />
-
-                        <Descriptions title="Thông tin thuốc" bordered>
-                            <Descriptions.Item label="Tên thuốc" span={2}>
-                                {detailRecord.medication.name}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Mô tả">
-                                {detailRecord.medication.description ||
-                                    "Không có"}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Liều lượng">
-                                {detailRecord.dosage}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Tần suất">
-                                {getFrequencyText(detailRecord.frequency)}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Giờ uống cụ thể">
-                                {formatCustomTimes(detailRecord.customTimes)}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Tồn kho">
-                                <Tag
-                                    color={getStatusColor(
-                                        detailRecord.medication.stockStatus
+                    <div className="p-6 space-y-6">
+                        {/* Thông tin học sinh */}
+                        <div>
+                            <div className="font-semibold text-lg mb-2 text-blue-700 flex items-center gap-2">
+                                <UserOutlined /> Thông tin học sinh
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-base">
+                                <div>
+                                    <b>Tên học sinh:</b>{" "}
+                                    {detailRecord.studentName}
+                                </div>
+                                <div>
+                                    <b>Mã học sinh:</b>{" "}
+                                    {detailRecord.studentCode}
+                                </div>
+                                <div>
+                                    <b>Lớp:</b> {detailRecord.class}
+                                </div>
+                                <div>
+                                    <b>Phụ huynh:</b> {detailRecord.parentName}
+                                </div>
+                                <div>
+                                    <b>SĐT:</b> {detailRecord.parentPhone}
+                                </div>
+                                <div>
+                                    <b>Tần suất:</b>{" "}
+                                    {getFrequencyText(detailRecord.frequency)}
+                                </div>
+                                <div>
+                                    <b>Giờ cấp phát cụ thể:</b>{" "}
+                                    {formatCustomTimes(
+                                        detailRecord.customTimes
                                     )}
-                                >
-                                    {detailRecord.medication.stockQuantity}{" "}
-                                    {detailRecord.medication.unit}
-                                </Tag>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Hướng dẫn" span={3}>
-                                {detailRecord.instructions || "Không có"}
-                            </Descriptions.Item>
-                        </Descriptions>
-
-                        <Divider />
-
-                        <Descriptions title="Thông tin điều trị" bordered>
-                            <Descriptions.Item label="Ngày bắt đầu">
-                                {dayjs(detailRecord.startDate).format(
-                                    "DD/MM/YYYY"
-                                )}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Ngày kết thúc">
-                                {detailRecord.endDate
-                                    ? dayjs(detailRecord.endDate).format(
-                                          "DD/MM/YYYY"
-                                      )
-                                    : "Không có"}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Trạng thái">
-                                <Tag
-                                    color={
-                                        detailRecord.treatmentStatus ===
+                                </div>
+                            </div>
+                        </div>
+                        <Divider className="my-2" />
+                        {/* Thông tin thuốc */}
+                        <div>
+                            <div className="font-semibold text-lg mb-2 text-green-700 flex items-center gap-2">
+                                <MedicineBoxOutlined /> Thông tin thuốc
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-base">
+                                <div>
+                                    <b>Tên thuốc:</b>{" "}
+                                    {detailRecord.medication.name}
+                                </div>
+                                <div>
+                                    <b>Liều lượng:</b> {detailRecord.dosage}
+                                </div>
+                                <div>
+                                    <b>Tần suất:</b>{" "}
+                                    {getFrequencyText(detailRecord.frequency)}
+                                </div>
+                                <div>
+                                    <b>Giờ uống cụ thể:</b>{" "}
+                                    {formatCustomTimes(
+                                        detailRecord.customTimes
+                                    )}
+                                </div>
+                                <div>
+                                    <b>Tồn kho:</b>{" "}
+                                    <Tag
+                                        color={
+                                            detailRecord.medication
+                                                .stockQuantity > 10
+                                                ? "green"
+                                                : detailRecord.medication
+                                                      .stockQuantity > 0
+                                                ? "orange"
+                                                : "red"
+                                        }
+                                    >
+                                        {detailRecord.medication.stockQuantity}{" "}
+                                        {detailRecord.medication.unit}
+                                    </Tag>
+                                </div>
+                                <div>
+                                    <b>Mô tả:</b>{" "}
+                                    {detailRecord.medication.description ||
+                                        "Không có"}
+                                </div>
+                                <div className="md:col-span-3">
+                                    <b>Hướng dẫn:</b>{" "}
+                                    {detailRecord.instructions || "Không có"}
+                                </div>
+                            </div>
+                        </div>
+                        <Divider className="my-2" />
+                        {/* Thông tin điều trị */}
+                        <div>
+                            <div className="font-semibold text-lg mb-2 text-purple-700 flex items-center gap-2">
+                                <ClockCircleOutlined /> Thông tin điều trị
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-base">
+                                <div>
+                                    <b>Ngày bắt đầu:</b>{" "}
+                                    {dayjs(detailRecord.startDate).format(
+                                        "DD/MM/YYYY"
+                                    )}
+                                </div>
+                                <div>
+                                    <b>Ngày kết thúc:</b>{" "}
+                                    {detailRecord.endDate
+                                        ? dayjs(detailRecord.endDate).format(
+                                              "DD/MM/YYYY"
+                                          )
+                                        : "Không có"}
+                                </div>
+                                <div>
+                                    <b>Trạng thái:</b>{" "}
+                                    <Tag
+                                        color={
+                                            detailRecord.treatmentStatus ===
+                                            "ONGOING"
+                                                ? "green"
+                                                : "red"
+                                        }
+                                    >
+                                        {detailRecord.treatmentStatus ===
                                         "ONGOING"
-                                            ? "green"
-                                            : "red"
-                                    }
-                                >
-                                    {detailRecord.treatmentStatus === "ONGOING"
-                                        ? "Đang điều trị"
-                                        : "Đã dừng"}
-                                </Tag>
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Liều dùng hôm nay">
-                                {detailRecord.todayDosage} /{" "}
-                                {detailRecord.dailyLimit}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Lần cấp phát cuối">
-                                {detailRecord.lastAdministration
-                                    ? dayjs(
-                                          detailRecord.lastAdministration
-                                      ).format("HH:mm DD/MM/YYYY")
-                                    : "Chưa có"}
-                            </Descriptions.Item>
-                        </Descriptions>
-
+                                            ? "Đang điều trị"
+                                            : "Đã dừng"}
+                                    </Tag>
+                                </div>
+                                <div>
+                                    <b>Liều dùng hôm nay:</b>{" "}
+                                    {detailRecord.todayDosage} /{" "}
+                                    {detailRecord.dailyLimit}
+                                </div>
+                                <div>
+                                    <b>Lần cấp phát cuối:</b>{" "}
+                                    {detailRecord.lastAdministration
+                                        ? dayjs(
+                                              detailRecord.lastAdministration
+                                          ).format("HH:mm DD/MM/YYYY")
+                                        : "Chưa có"}
+                                </div>
+                            </div>
+                        </div>
+                        {/* Cảnh báo nếu có */}
                         {detailRecord.warnings &&
                             detailRecord.warnings.length > 0 && (
-                                <>
-                                    <Divider />
+                                <div>
+                                    <Divider className="my-2" />
                                     <Alert
                                         message="Cảnh báo"
                                         description={
-                                            <ul>
+                                            <ul className="list-disc pl-5">
                                                 {detailRecord.warnings.map(
-                                                    (warning, index) => (
-                                                        <li key={index}>
+                                                    (warning, idx) => (
+                                                        <li key={idx}>
                                                             {warning}
                                                         </li>
                                                     )
@@ -1390,7 +1432,7 @@ const StudentTreatment = () => {
                                         type="warning"
                                         showIcon
                                     />
-                                </>
+                                </div>
                             )}
                     </div>
                 )}
