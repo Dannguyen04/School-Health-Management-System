@@ -55,6 +55,8 @@ export const nurseAPI = {
 
     // Recent medical events
     getRecentMedicalEvents: () => api.get("/nurse/dashboard/recent-events"),
+    // All medical events for chart
+    getAllMedicalEvents: () => api.get("/nurse/medical-events"),
 
     // Upcoming vaccinations
     getUpcomingVaccinations: () =>
@@ -198,6 +200,7 @@ export const managerAPI = {
         api.get("/manager/students/filter", { params }),
     getAllParents: () => api.get("/manager/students/parents"),
     createParent: (data) => api.post("/manager/students/parents", data),
+    getDashboardStats: () => api.get("/manager/students/dashboard-stats"),
 };
 
 export default api;

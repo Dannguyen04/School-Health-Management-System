@@ -9,6 +9,7 @@ import {
 import { Alert, Button, Card, Col, Row, Spin, Statistic, Table } from "antd";
 import { useEffect, useState } from "react";
 import { nurseAPI } from "../../utils/api";
+import NurseDashboardChart from "./NurseDashboardChart";
 
 const Dashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -22,6 +23,7 @@ const Dashboard = () => {
     lowStockItems: 0,
   });
   const [medicalInventory, setMedicalInventory] = useState([]);
+  const [recentEvents, setRecentEvents] = useState([]);
   const [error, setError] = useState(null);
 
   const fetchDashboardData = async (isRefresh = false) => {
@@ -41,6 +43,16 @@ const Dashboard = () => {
         setDashboardStats(statsResponse.data.data);
       } else {
         throw new Error(statsResponse.data.error || "Lỗi khi tải thống kê");
+      }
+
+      // Fetch recent medical events
+      try {
+        const eventsResponse = await nurseAPI.getAllMedicalEvents();
+        if (eventsResponse.data.success) {
+          setRecentEvents(eventsResponse.data.data || []);
+        }
+      } catch (err) {
+        console.warn("Không thể tải danh sách sự cố y tế:", err);
       }
 
       // Fetch medical inventory
@@ -141,6 +153,17 @@ const Dashboard = () => {
     );
   }
 
+  // Đặt sau khi đã có recentEvents (nếu có), trước return:
+  const recentEventsByMonth = Array.from({ length: 12 }, (_, i) => {
+    const month = (i + 1).toString();
+    const count = (recentEvents || []).filter(ev => {
+      if (!ev.occurredAt) return false;
+      const date = new Date(ev.occurredAt);
+      return date.getMonth() + 1 === i + 1;
+    }).length;
+    return { thang: month, suco: count };
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -199,6 +222,11 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Biểu đồ sự cố y tế - Di chuyển lên trên */}
+      <div className="flex justify-center w-full mb-8">
+        <NurseDashboardChart data={recentEventsByMonth} />
+      </div>
 
       {/* Alerts Section */}
       {lowStockItems.length > 0 && (

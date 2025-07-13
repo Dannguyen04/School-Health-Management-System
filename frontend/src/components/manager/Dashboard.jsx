@@ -7,9 +7,9 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { Card, Col, message, Row, Statistic, Table, Typography } from "antd";
-import axios from "axios";
 import { useEffect, useState } from "react";
-// import { useNavigate } from "react-router-dom";
+import ManagerDashboardPieChart from "./ManagerDashboardPieChart";
+import { managerAPI } from "../../utils/api";
 
 const { Title, Text } = Typography;
 
@@ -34,18 +34,13 @@ const Dashboard = () => {
   const fetchDashboardStats = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await axios.get(
-        "/api/manager/students/dashboard-stats",
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await managerAPI.getDashboardStats();
       if (response.data.success) {
         setStats(response.data.data.stats);
         setGradeStats(response.data.data.gradeStats);
       }
-    } catch {
+    } catch (error) {
+      console.error("Error fetching dashboard stats:", error);
       message.error("Lỗi khi tải dữ liệu dashboard");
     } finally {
       setLoading(false);
@@ -219,6 +214,14 @@ const Dashboard = () => {
         </Col>
       </Row>
 
+      {/* Biểu đồ tỷ lệ tiêm chủng - Di chuyển lên trên */}
+      <div className="flex justify-center w-full mb-8">
+        <ManagerDashboardPieChart
+          vaccinated={stats.vaccinatedStudents}
+          total={stats.totalStudents}
+        />
+      </div>
+
       <Card
         title="Thống kê theo lớp"
         style={{
@@ -239,23 +242,6 @@ const Dashboard = () => {
           locale={{ emptyText: "Không có dữ liệu" }}
         />
       </Card>
-
-      {/* <Row gutter={16} style={{ marginTop: 32 }}>
-        <Col xs={24} lg={12}>
-          <Card title="Tiêm chủng tháng" style={{ borderRadius: 12 }}>
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              Biểu đồ tiêm chủng tháng (đang phát triển)
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Khám sức khỏe tháng" style={{ borderRadius: 12 }}>
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              Biểu đồ khám sức khỏe tháng (đang phát triển)
-            </div>
-          </Card>
-        </Col>
-      </Row> */}
     </div>
   );
 };
