@@ -9,12 +9,14 @@ const CustomTooltip = ({ active, payload }) => {
       <div style={{
         background: '#fff',
         border: '1px solid #e5e7eb',
-        borderRadius: 8,
-        padding: '8px 16px',
+        borderRadius: 12,
+        padding: '12px 16px',
         fontWeight: 600,
-        color: '#36ae9a'
+        color: '#36ae9a',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+        fontSize: '14px'
       }}>
-        {name}: <span style={{ fontWeight: 700 }}>{value}</span>
+        {name}: <span style={{ fontWeight: 700, color: '#059669' }}>{value}</span>
       </div>
     );
   }
@@ -30,11 +32,11 @@ const ManagerDashboardPieChart = ({ vaccinated = 0, total = 0 }) => {
 
   if (vaccinated === 0 && unvaccinated === 0) {
     return (
-      <div className="w-full max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-6 mb-8 flex flex-col items-center justify-center">
-        <h3 className="font-bold text-lg text-center mb-4 text-[#36ae9a] tracking-wide uppercase drop-shadow">
+      <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8 mb-8 flex flex-col items-center justify-center">
+        <h3 className="font-bold text-xl text-center mb-6 text-[#36ae9a] tracking-wide uppercase">
           Tỷ lệ tiêm chủng học sinh
         </h3>
-        <div className="text-gray-400 text-lg font-semibold py-12">
+        <div className="text-gray-400 text-lg font-semibold py-16">
           Không có dữ liệu để hiển thị
         </div>
       </div>
@@ -42,31 +44,41 @@ const ManagerDashboardPieChart = ({ vaccinated = 0, total = 0 }) => {
   }
 
   return (
-    <div className="w-full max-w-xl mx-auto bg-white rounded-2xl shadow-lg p-6 mb-8">
-      <h3 className="font-bold text-lg text-center mb-4 text-[#36ae9a] tracking-wide uppercase drop-shadow">
+    <div className="w-full max-w-2xl mx-auto bg-white rounded-2xl shadow-lg p-8 mb-8">
+      <h3 className="font-bold text-xl text-center mb-6 text-[#36ae9a] tracking-wide uppercase">
         Tỷ lệ tiêm chủng học sinh
       </h3>
-      <ResponsiveContainer width="100%" height={350}>
+      <ResponsiveContainer width="100%" height={400}>
         <PieChart>
           <Pie
             data={data}
             cx="50%"
             cy="50%"
             innerRadius={80}
-            outerRadius={120}
+            outerRadius={140}
             fill="#8884d8"
             dataKey="value"
             nameKey="name"
             label={({ name, percent }) =>
               `${name}: ${(percent * 100).toFixed(0)}%`
             }
+            labelLine={{ stroke: '#6b7280', strokeWidth: 1 }}
           >
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              <Cell 
+                key={`cell-${index}`} 
+                fill={COLORS[index % COLORS.length]}
+                stroke="#ffffff"
+                strokeWidth={3}
+              />
             ))}
           </Pie>
           <Tooltip content={<CustomTooltip />} />
-          <Legend verticalAlign="top" iconType="circle" />
+          <Legend 
+            verticalAlign="top" 
+            iconType="circle"
+            wrapperStyle={{ paddingBottom: '20px' }}
+          />
         </PieChart>
       </ResponsiveContainer>
     </div>
