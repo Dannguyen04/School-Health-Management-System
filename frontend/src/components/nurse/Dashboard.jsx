@@ -14,6 +14,8 @@ import { useEffect, useState } from "react";
 import { nurseAPI } from "../../utils/api";
 import "./Dashboard.css";
 
+import NurseDashboardChart from "./NurseDashboardChart";
+
 const { Title, Text } = Typography;
 
 const Dashboard = () => {
@@ -114,61 +116,17 @@ const Dashboard = () => {
     lowStockItems: 0, // No longer applicable
   };
 
-  // Xoá biến columns vì không dùng nữa
-  // const columns = [
-  //   {
-  //     title: "Tên vật tư",
-  //     dataIndex: "name",
-  //     key: "name",
-  //     render: (text, record) => (
-  //       <Space>
-  //         <Avatar size="small" icon={<MedicineBoxOutlined />} />
-  //         <Text strong>{text}</Text>
-  //       </Space>
-  //     ),
-  //   },
-  //   {
-  //     title: "Tồn kho hiện tại",
-  //     dataIndex: "quantity",
-  //     key: "quantity",
-  //     render: (text, record) => (
-  //       <Space direction="vertical" size={0}>
-  //         <Text strong>
-  //           {text} {record.unit}
-  //         </Text>
-  //         <Progress
-  //           percent={Math.min((text / record.minStock) * 100, 100)}
-  //           size="small"
-  //           status={text <= record.minStock ? "exception" : "normal"}
-  //           showInfo={false}
-  //           className="progress-bar-modern"
-  //         />
-  //       </Space>
-  //     ),
-  //   },
-  //   {
-  //     title: "Tồn kho tối thiểu",
-  //     dataIndex: "minStock",
-  //     key: "minStock",
-  //     render: (text, record) => `${text} ${record.unit}`,
-  //   },
-  //   {
-  //     title: "Trạng thái",
-  //     key: "status",
-  //     render: (_, record) => {
-  //       const isLowStock = record.quantity <= record.minStock;
-  //       return (
-  //         <Tag
-  //           color={isLowStock ? "red" : "green"}
-  //           icon={isLowStock ? <WarningOutlined /> : <CheckCircleOutlined />}
-  //           className="tag-modern"
-  //         >
-  //           {isLowStock ? "Tồn kho thấp" : "Bình thường"}
-  //         </Tag>
-  //       );
-  //     },
-  //   },
-  // ];
+  // Sau khi có recentEvents:
+  const recentEventsByMonth = Array.from({ length: 12 }, (_, i) => {
+    const month = (i + 1).toString();
+    const count = recentEvents.filter(ev => {
+      if (!ev.occurredAt) return false;
+      const date = new Date(ev.occurredAt);
+      return date.getMonth() + 1 === i + 1;
+    }).length;
+    return { thang: month, suco: count };
+  });
+
 
   const statusMap = {
     PENDING_APPROVAL: "Chờ duyệt",
@@ -260,6 +218,11 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Biểu đồ sự cố y tế */}
+      <div className="flex justify-center w-full mb-8">
+        <NurseDashboardChart data={recentEventsByMonth} />
+      </div>
 
       {/* Bảng dữ liệu sự cố y tế */}
       <Card className="content-card mb-6">

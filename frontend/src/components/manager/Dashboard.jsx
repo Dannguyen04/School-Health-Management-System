@@ -9,6 +9,7 @@ import {
 import { Card, Col, message, Row, Statistic, Table, Typography } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
+import ManagerDashboardPieChart from "./ManagerDashboardPieChart";
 // import { useNavigate } from "react-router-dom";
 
 const { Title, Text } = Typography;
@@ -218,6 +219,12 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Biểu đồ tỷ lệ tiêm chủng */}
+      <ManagerDashboardPieChart
+        vaccinated={stats.vaccinatedStudents}
+        total={stats.totalStudents}
+      />
 
       <Card
         title="Thống kê theo lớp"
