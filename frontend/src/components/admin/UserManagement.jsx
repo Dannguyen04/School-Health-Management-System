@@ -158,8 +158,6 @@ const UserManagement = () => {
                             ? "red"
                             : role === "SCHOOL_NURSE"
                             ? "blue"
-                            : role === "PARENT"
-                            ? "green"
                             : role === "MANAGER"
                             ? "purple"
                             : "default"
@@ -169,8 +167,6 @@ const UserManagement = () => {
                         ? "Quản trị viên"
                         : role === "SCHOOL_NURSE"
                         ? "Y tá trường học"
-                        : role === "PARENT"
-                        ? "Phụ huynh"
                         : role === "MANAGER"
                         ? "Quản lý"
                         : role}
