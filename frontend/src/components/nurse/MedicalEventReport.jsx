@@ -373,12 +373,6 @@ const MedicalEventReport = () => {
       width: 100,
     },
     {
-      title: "Nhóm máu",
-      dataIndex: "bloodType",
-      key: "bloodType",
-      width: 100,
-    },
-    {
       title: "Thao tác",
       key: "actions",
       width: 100,
@@ -769,22 +763,16 @@ const MedicalEventReport = () => {
                   Thông tin học sinh được chọn:
                 </h4>
                 <Row gutter={16}>
-                  <Col span={8}>
+                  <Col span={12}>
                     <div className="text-sm">
                       <span className="font-medium">Tên:</span>{" "}
                       {selectedStudentInfo.fullName}
                     </div>
                   </Col>
-                  <Col span={8}>
+                  <Col span={12}>
                     <div className="text-sm">
                       <span className="font-medium">Lớp:</span>{" "}
-                      {selectedStudentInfo.grade}
-                    </div>
-                  </Col>
-                  <Col span={8}>
-                    <div className="text-sm">
-                      <span className="font-medium">Nhóm máu:</span>{" "}
-                      {selectedStudentInfo.bloodType}
+                      {selectedStudentInfo.class}
                     </div>
                   </Col>
                 </Row>
@@ -973,7 +961,7 @@ const MedicalEventReport = () => {
           <div className="space-y-4">
             <Descriptions bordered column={2}>
               <Descriptions.Item label="Học sinh" span={2}>
-                {selectedEvent.studentName} - {selectedEvent.grade}
+                {selectedEvent.studentName} - {selectedEvent.class}
               </Descriptions.Item>
               <Descriptions.Item label="Tiêu đề" span={2}>
                 {selectedEvent.title}

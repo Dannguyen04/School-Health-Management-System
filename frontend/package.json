@@ -11,6 +11,7 @@
     },
     "dependencies": {
         "-": "^0.0.1",
+        "@ant-design/charts": "^2.6.0",
         "@ant-design/plots": "^2.4.0",
         "@antv/g2plot": "^2.3.32",
         "@date-io/date-fns": "^3.2.1",

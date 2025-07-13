@@ -1,246 +1,348 @@
 import {
+  AlertOutlined,
   CalendarOutlined,
-  CheckCircleOutlined,
-  FileTextOutlined,
+  ExclamationCircleOutlined,
   MedicineBoxOutlined,
-  UserOutlined,
-  WarningOutlined,
+  ReloadOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
-import { Card, Col, message, Row, Statistic, Table, Typography } from "antd";
+import { Alert, Button, Card, Col, Row, Spin, Statistic, Table } from "antd";
 import { useEffect, useState } from "react";
-import ManagerDashboardPieChart from "./ManagerDashboardPieChart";
-import { managerAPI } from "../../utils/api";
-
-const { Title, Text } = Typography;
+import { nurseAPI } from "../../utils/api";
+import NurseDashboardChart from "./NurseDashboardChart";
 
 const Dashboard = () => {
-  const [stats, setStats] = useState({
-    totalStudents: 0,
-    totalCampaigns: 0,
-    vaccinationCampaigns: 0,
-    medicalCheckCampaigns: 0,
-    totalConsents: 0,
-    agreedConsents: 0,
-    declinedConsents: 0,
-    healthCheckups: 0,
-    vaccinatedStudents: 0,
-    incidents: 0,
-    needsAttention: 0,
-  });
-  const [gradeStats, setGradeStats] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [dashboardStats, setDashboardStats] = useState({
+    totalStudents: 0,
+    totalMedicalEvents: 0,
+    upcomingVaccinations: 0,
+    pendingTasks: 0,
+    pendingMedications: 0,
+    lowStockItems: 0,
+  });
+  const [medicalInventory, setMedicalInventory] = useState([]);
+  const [recentEvents, setRecentEvents] = useState([]);
+  const [error, setError] = useState(null);
 
-  // Fetch dashboard stats
-  const fetchDashboardStats = async () => {
-    setLoading(true);
+  const fetchDashboardData = async (isRefresh = false) => {
     try {
-      const response = await managerAPI.getDashboardStats();
-      if (response.data.success) {
-        setStats(response.data.data.stats);
-        setGradeStats(response.data.data.gradeStats);
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
       }
-    } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
-      message.error("Lỗi khi tải dữ liệu dashboard");
+      setError(null);
+
+      // Fetch dashboard statistics
+      const statsResponse = await nurseAPI.getDashboardStats();
+      console.log("Dashboard stats response:", statsResponse);
+
+      if (statsResponse.data.success) {
+        setDashboardStats(statsResponse.data.data);
+      } else {
+        throw new Error(statsResponse.data.error || "Lỗi khi tải thống kê");
+      }
+
+      // Fetch recent medical events
+      try {
+        const eventsResponse = await nurseAPI.getAllMedicalEvents();
+        if (eventsResponse.data.success) {
+          setRecentEvents(eventsResponse.data.data || []);
+        }
+      } catch (err) {
+        console.warn("Không thể tải danh sách sự cố y tế:", err);
+      }
+
+      // Fetch medical inventory
+      const inventoryResponse = await nurseAPI.getMedicalInventory();
+      if (inventoryResponse.data.success) {
+        setMedicalInventory(inventoryResponse.data.data);
+      } else {
+        console.warn(
+          "Không thể tải dữ liệu tồn kho:",
+          inventoryResponse.data.error
+        );
+      }
+    } catch (err) {
+      console.error("Error fetching dashboard data:", err);
+      setError(
+        err.response?.data?.error ||
+          err.message ||
+          "Không thể tải dữ liệu dashboard"
+      );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchDashboardStats();
+    fetchDashboardData();
   }, []);
 
-  // Table columns
-  const gradeColumns = [
-    { title: "Lớp", dataIndex: "grade", key: "grade" },
+  const handleRefresh = () => {
+    fetchDashboardData(true);
+  };
+
+  // Filter low stock items
+  const lowStockItems = medicalInventory.filter(
+    (item) => item.quantity <= item.minStock
+  );
+
+  const columns = [
     {
-      title: "Tổng số học sinh",
-      dataIndex: "totalStudents",
-      key: "totalStudents",
-      render: (v) => v?.toLocaleString("vi-VN") || 0,
+      title: "Tên vật tư",
+      dataIndex: "name",
+      key: "name",
     },
     {
-      title: "Đã tiêm chủng",
-      dataIndex: "vaccinated",
-      key: "vaccinated",
-      render: (v) => v?.toLocaleString("vi-VN") || 0,
+      title: "Tồn kho hiện tại",
+      dataIndex: "quantity",
+      key: "quantity",
+      render: (text, record) => `${text} ${record.unit}`,
     },
     {
-      title: "Khám sức khỏe",
-      dataIndex: "healthCheckups",
-      key: "healthCheckups",
-      render: (v) => v?.toLocaleString("vi-VN") || 0,
+      title: "Tồn kho tối thiểu",
+      dataIndex: "minStock",
+      key: "minStock",
+      render: (text, record) => `${text} ${record.unit}`,
     },
     {
-      title: "Thuốc",
-      dataIndex: "medications",
-      key: "medications",
-      render: (v) => v?.toLocaleString("vi-VN") || 0,
+      title: "Trạng thái",
+      key: "status",
+      render: (_, record) => {
+        const isLowStock = record.quantity <= record.minStock;
+        return (
+          <span style={{ color: isLowStock ? "#ff4d4f" : "#52c41a" }}>
+            {isLowStock ? "Tồn kho thấp" : "Bình thường"}
+          </span>
+        );
+      },
     },
   ];
 
-  const getAgreementRate = () => {
-    if (stats.totalConsents === 0) return 0;
-    return Math.round((stats.agreedConsents / stats.totalConsents) * 100);
-  };
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        message="Lỗi"
+        description={error}
+        type="error"
+        showIcon
+        className="mb-4"
+        action={
+          <Button
+            type="link"
+            onClick={handleRefresh}
+            icon={<ReloadOutlined />}
+            className="text-red-600 hover:text-red-800"
+          >
+            Thử lại
+          </Button>
+        }
+      />
+    );
+  }
+
+  // Đặt sau khi đã có recentEvents (nếu có), trước return:
+  const recentEventsByMonth = Array.from({ length: 12 }, (_, i) => {
+    const month = (i + 1).toString();
+    const count = (recentEvents || []).filter(ev => {
+      if (!ev.occurredAt) return false;
+      const date = new Date(ev.occurredAt);
+      return date.getMonth() + 1 === i + 1;
+    }).length;
+    return { thang: month, suco: count };
+  });
 
   return (
-    <div className="space-y-8">
-      <Title level={2}>Bảng điều khiển</Title>
-
-      {/* Quick Summary */}
-      <Row gutter={[24, 24]} justify="center">
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card
-            bordered
-            style={{ boxShadow: "0 2px 8px #e6f7ff", borderRadius: 12 }}
-          >
-            <Statistic
-              title={<span style={{ color: "#888" }}>Tổng số học sinh</span>}
-              value={stats.totalStudents}
-              valueStyle={{ color: "#1677ff", fontWeight: 700, fontSize: 28 }}
-              prefix={<UserOutlined style={{ fontSize: 28 }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card
-            bordered
-            style={{ boxShadow: "0 2px 8px #fffbe6", borderRadius: 12 }}
-          >
-            <Statistic
-              title={
-                <span style={{ color: "#888" }}>Chiến dịch tiêm chủng</span>
-              }
-              value={stats.vaccinationCampaigns}
-              valueStyle={{ color: "#faad14", fontWeight: 700, fontSize: 28 }}
-              prefix={<MedicineBoxOutlined style={{ fontSize: 28 }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card
-            bordered
-            style={{ boxShadow: "0 2px 8px #f6ffed", borderRadius: 12 }}
-          >
-            <Statistic
-              title={
-                <span style={{ color: "#888" }}>Chiến dịch khám sức khỏe</span>
-              }
-              value={stats.medicalCheckCampaigns}
-              valueStyle={{ color: "#3f8600", fontWeight: 700, fontSize: 28 }}
-              prefix={<CalendarOutlined style={{ fontSize: 28 }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card
-            bordered
-            style={{ boxShadow: "0 2px 8px #fff1f0", borderRadius: 12 }}
-          >
-            <Statistic
-              title={<span style={{ color: "#888" }}>Số sự cố</span>}
-              value={stats.incidents}
-              valueStyle={{ color: "#cf1322", fontWeight: 700, fontSize: 28 }}
-              prefix={<WarningOutlined style={{ fontSize: 28 }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[24, 24]} justify="center">
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card
-            bordered
-            style={{ boxShadow: "0 2px 8px #e6f7ff", borderRadius: 12 }}
-          >
-            <Statistic
-              title={
-                <span style={{ color: "#888" }}>Phiếu đồng ý đã nhận</span>
-              }
-              value={stats.totalConsents}
-              valueStyle={{ color: "#1677ff", fontWeight: 700, fontSize: 28 }}
-              prefix={<FileTextOutlined style={{ fontSize: 28 }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card
-            bordered
-            style={{ boxShadow: "0 2px 8px #f6ffed", borderRadius: 12 }}
-          >
-            <Statistic
-              title={<span style={{ color: "#888" }}>Khám sức khỏe</span>}
-              value={stats.healthCheckups}
-              valueStyle={{ color: "#3f8600", fontWeight: 700, fontSize: 28 }}
-              prefix={<CheckCircleOutlined style={{ fontSize: 28 }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card
-            bordered
-            style={{ boxShadow: "0 2px 8px #fffbe6", borderRadius: 12 }}
-          >
-            <Statistic
-              title={<span style={{ color: "#888" }}>Đã tiêm chủng</span>}
-              value={stats.vaccinatedStudents}
-              valueStyle={{ color: "#faad14", fontWeight: 700, fontSize: 28 }}
-              prefix={<MedicineBoxOutlined style={{ fontSize: 28 }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={8} lg={6}>
-          <Card
-            bordered
-            style={{ boxShadow: "0 2px 8px #fff1f0", borderRadius: 12 }}
-          >
-            <Statistic
-              title={<span style={{ color: "#888" }}>Cần chú ý</span>}
-              value={stats.needsAttention}
-              valueStyle={{ color: "#cf1322", fontWeight: 700, fontSize: 28 }}
-              prefix={<WarningOutlined style={{ fontSize: 28 }} />}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      {/* Biểu đồ tỷ lệ tiêm chủng - Di chuyển lên trên */}
-      <div className="flex justify-center w-full mb-8">
-        <ManagerDashboardPieChart
-          vaccinated={stats.vaccinatedStudents}
-          total={stats.totalStudents}
-        />
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold text-gray-800">Bảng điều khiển</h1>
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={handleRefresh}
+          loading={refreshing}
+          type="primary"
+          ghost
+        >
+          Làm mới
+        </Button>
       </div>
 
+      {/* Statistics Cards */}
+      <Row gutter={[16, 16]}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <Statistic
+              title="Tổng số học sinh"
+              value={dashboardStats.totalStudents}
+              prefix={<TeamOutlined className="text-blue-500" />}
+              valueStyle={{ color: "#1890ff" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <Statistic
+              title="Sự cố y tế tháng này"
+              value={dashboardStats.totalMedicalEvents}
+              prefix={<AlertOutlined className="text-orange-500" />}
+              valueStyle={{ color: "#fa8c16" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <Statistic
+              title="Tiêm chủng sắp tới"
+              value={dashboardStats.upcomingVaccinations}
+              prefix={<CalendarOutlined className="text-green-500" />}
+              valueStyle={{ color: "#52c41a" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className="shadow-sm hover:shadow-md transition-shadow">
+            <Statistic
+              title="Công việc đang chờ"
+              value={dashboardStats.pendingTasks}
+              prefix={<ExclamationCircleOutlined className="text-red-500" />}
+              valueStyle={{ color: "#ff4d4f" }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      {/* Biểu đồ sự cố y tế - Di chuyển lên trên */}
+      <div className="flex justify-center w-full mb-8">
+        <NurseDashboardChart data={recentEventsByMonth} />
+      </div>
+
+      {/* Alerts Section */}
+      {lowStockItems.length > 0 && (
+        <Alert
+          message="Cảnh báo tồn kho thấp"
+          description={`${lowStockItems.length} vật tư đang ở mức tồn kho thấp cần được bổ sung`}
+          type="warning"
+          showIcon
+          icon={<AlertOutlined />}
+          className="mb-4"
+        />
+      )}
+
+      {(() => {
+        const expiredItems = medicalInventory.filter(
+          (item) => item.expiryDate && new Date(item.expiryDate) < new Date()
+        );
+        return expiredItems.length > 0 ? (
+          <Alert
+            message="Cảnh báo vật tư hết hạn"
+            description={`${expiredItems.length} vật tư đã hết hạn sử dụng cần được xử lý ngay`}
+            type="error"
+            showIcon
+            icon={<ExclamationCircleOutlined />}
+            className="mb-4"
+          />
+        ) : null;
+      })()}
+
+      {(() => {
+        const expiringSoonItems = medicalInventory.filter((item) => {
+          if (!item.expiryDate) return false;
+          const daysUntilExpiry = Math.ceil(
+            (new Date(item.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)
+          );
+          return daysUntilExpiry > 0 && daysUntilExpiry <= 30;
+        });
+        return expiringSoonItems.length > 0 ? (
+          <Alert
+            message="Cảnh báo vật tư sắp hết hạn"
+            description={`${expiringSoonItems.length} vật tư sẽ hết hạn trong vòng 30 ngày tới cần được chú ý`}
+            type="info"
+            showIcon
+            icon={<ExclamationCircleOutlined />}
+            className="mb-4"
+          />
+        ) : null;
+      })()}
+
+      {/* Low Stock Items Table */}
+      {lowStockItems.length > 0 ? (
+        <Card
+          title={`Vật tư tồn kho thấp (${lowStockItems.length})`}
+          className="mt-4 shadow-sm"
+          styles={{
+            header: {
+              backgroundColor: "#fff7e6",
+              borderBottom: "1px solid #ffd591",
+            },
+          }}
+        >
+          <Table
+            dataSource={lowStockItems}
+            columns={columns}
+            rowKey="id"
+            pagination={false}
+            size="small"
+          />
+        </Card>
+      ) : (
+        <Card
+          title="Vật tư tồn kho"
+          className="mt-4 shadow-sm"
+          styles={{
+            header: {
+              backgroundColor: "#f6ffed",
+              borderBottom: "1px solid #b7eb8f",
+            },
+          }}
+        >
+          <div className="text-center py-8 text-gray-500">
+            <MedicineBoxOutlined className="text-4xl mb-2" />
+            <p>Không có vật tư nào ở mức tồn kho thấp</p>
+          </div>
+        </Card>
+      )}
+
+      {/* Pending Medications */}
       <Card
-        title="Thống kê theo lớp"
-        style={{
-          marginTop: 32,
-          borderRadius: 12,
-          boxShadow: "0 2px 8px #f0f0f0",
+        title="Thuốc đang chờ xử lý"
+        className="mt-4 shadow-sm"
+        styles={{
+          header: {
+            backgroundColor: "#f6ffed",
+            borderBottom: "1px solid #b7eb8f",
+          },
         }}
       >
-        <Table
-          dataSource={gradeStats}
-          columns={gradeColumns}
-          rowKey="grade"
-          pagination={false}
-          loading={loading}
-          bordered
-          size="middle"
-          style={{ background: "#fff", borderRadius: 12 }}
-          locale={{ emptyText: "Không có dữ liệu" }}
-        />
+        <Row gutter={16}>
+          <Col span={12}>
+            <Statistic
+              title="Học sinh cần uống thuốc"
+              value={dashboardStats.pendingMedications}
+              prefix={<MedicineBoxOutlined className="text-purple-500" />}
+              valueStyle={{ color: "#722ed1" }}
+            />
+          </Col>
+          <Col span={12}>
+            <Statistic
+              title="Vật tư tồn kho thấp"
+              value={dashboardStats.lowStockItems}
+              prefix={<AlertOutlined className="text-red-500" />}
+              valueStyle={{ color: "#ff4d4f" }}
+            />
+          </Col>
+        </Row>
       </Card>
     </div>
   );

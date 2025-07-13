@@ -428,7 +428,7 @@ const VaccinationCampaigns = () => {
           <Popconfirm
             title="Bạn muốn cập nhật trạng thái chiến dịch này thành?"
             okText="Hoàn thành"
-            cancelText="Hủy"
+            cancelText="Hủy chiến dịch"
             onConfirm={() => updateCampaignStatus(record.id, "FINISHED")}
             onCancel={() => updateCampaignStatus(record.id, "CANCELLED")}
           >

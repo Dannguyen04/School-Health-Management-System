@@ -7,7 +7,6 @@ import {
   HeartOutlined,
   MedicineBoxOutlined,
   PlusOutlined,
-  UserOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -393,7 +392,10 @@ const HealthProfile = () => {
               {children && children.length > 0 ? (
                 <Select
                   style={{ width: 320, minWidth: 220 }}
-                  dropdownStyle={{ borderRadius: 18, boxShadow: '0 8px 32px rgba(54, 174, 154, 0.15)' }}
+                  dropdownStyle={{
+                    borderRadius: 18,
+                    boxShadow: "0 8px 32px rgba(54, 174, 154, 0.15)",
+                  }}
                   dropdownClassName="custom-student-dropdown"
                   value={selectedStudent}
                   onChange={handleStudentChange}
@@ -405,11 +407,10 @@ const HealthProfile = () => {
                       key={child.studentId}
                       value={child.studentId}
                       className="!py-3 !px-5 !text-lg hover:bg-[#e8f5f2]"
-                      style={{ display: 'flex', alignItems: 'center', gap: 14 }}
+                      style={{ display: "flex", alignItems: "center", gap: 14 }}
                     >
-                      <span className="font-semibold text-gray-800 truncate max-w-[140px]">{child.fullName}</span>
-                      <span className={`ml-3 px-3 py-1 rounded-full text-sm font-bold border transition-all duration-200 ${child.class ? 'bg-[#d5f2ec] text-[#36ae9a] border-[#36ae9a]' : 'bg-gray-100 text-gray-400 border-gray-300'}`}>
-                        {child.class || 'Chưa có lớp'}
+                      <span className="font-semibold text-gray-800 truncate max-w-[140px]">
+                        {child.fullName} - {child.class}
                       </span>
                     </Select.Option>
                   ))}
@@ -523,7 +524,9 @@ const HealthProfile = () => {
                             <div className="text-2xl font-bold text-[#36ae9a] mb-1">
                               {bmi}
                             </div>
-                            <Text type="secondary">Chỉ số BMI</Text>
+                            <Text className="mr-1" type="secondary">
+                              Chỉ số BMI
+                            </Text>
                             <Tag color={bmiCategory.color} className="mt-2">
                               {bmiCategory.category}
                             </Tag>

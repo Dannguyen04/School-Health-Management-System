@@ -64,6 +64,11 @@ export const managerNavbarLinks = [
         icon: Package,
       },
       {
+        label: "Báo cáo tiêm chủng",
+        path: "/manager/vaccination-report",
+        icon: FileText,
+      },
+      {
         label: "Quản lý Vaccine",
         path: "/manager/vaccination",
         icon: Syringe,
@@ -98,7 +103,7 @@ export const nurseNavbarLinks = [
     title: "Quản lý",
     links: [
       {
-        label: "Kho Thuốc",
+        label: "Thuốc đã duyệt",
         path: "/nurse/medical-inventory",
         icon: Package,
       },
@@ -107,6 +112,11 @@ export const nurseNavbarLinks = [
         label: "Xác Nhận Thuốc",
         path: "/nurse/confirmed-medicines",
         icon: Package,
+      },
+      {
+        label: "Cấp phát thuốc",
+        path: "/nurse/student-treatment",
+        icon: Users,
       },
       {
         label: "Quản lý bài viết",
@@ -143,11 +153,7 @@ export const nurseNavbarLinks = [
   {
     title: "Sự kiện y tế",
     links: [
-      {
-        label: "Điều Trị Học Sinh",
-        path: "/nurse/student-treatment",
-        icon: Users,
-      },
+      // Xóa mục Điều Trị Học Sinh ở đây
       {
         label: "Báo Cáo Y Tế",
         path: "/nurse/medical-event",

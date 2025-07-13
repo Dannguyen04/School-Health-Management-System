@@ -1538,7 +1538,9 @@ export const getPendingMedicationRequests = async (req, res) => {
             medicationId: request.medicationId,
             medicationName: request.name,
             medicationDescription: request.description,
+            type: request.type,
             dosage: request.dosage,
+            unit: request.unit,
             frequency: request.frequency,
             duration: request.duration,
             instructions: request.instructions,
@@ -1585,8 +1587,10 @@ export const approveMedicationRequest = async (req, res) => {
                         user: {
                             select: {
                                 fullName: true,
+                                email: true,
                             },
                         },
+                        healthProfile: true,
                     },
                 },
                 parent: {
@@ -1594,12 +1598,13 @@ export const approveMedicationRequest = async (req, res) => {
                         user: {
                             select: {
                                 fullName: true,
-                                id: true,
+                                email: true,
+                                phone: true,
                             },
                         },
                     },
                 },
-                medication: true,
+                // XÓA medication: true
             },
         });
 
@@ -1623,34 +1628,6 @@ export const approveMedicationRequest = async (req, res) => {
         if (action === "APPROVE") {
             newStatus = "APPROVED";
             message = "Yêu cầu thuốc đã được phê duyệt";
-
-            // Nếu approve, thêm thuốc vào inventory nếu chưa có
-            const existingMedication = await prisma.medication.findUnique({
-                where: { id: medicationRequest.medicationId },
-            });
-
-            if (existingMedication) {
-                // Cập nhật số lượng tồn kho (tăng lên 1 đơn vị)
-                await prisma.medication.update({
-                    where: { id: medicationRequest.medicationId },
-                    data: {
-                        stockQuantity: {
-                            increment: 1,
-                        },
-                    },
-                });
-
-                // Tạo bản ghi stock movement
-                await prisma.stockMovement.create({
-                    data: {
-                        medicationId: medicationRequest.medicationId,
-                        type: "in",
-                        quantity: 1,
-                        reason: `Phê duyệt yêu cầu thuốc từ phụ huynh - ${medicationRequest.parent.user.fullName}`,
-                        reference: `Request ID: ${requestId}`,
-                    },
-                });
-            }
         } else if (action === "REJECT") {
             newStatus = "REJECTED";
             message = "Yêu cầu thuốc đã bị từ chối";
@@ -1687,7 +1664,7 @@ export const approveMedicationRequest = async (req, res) => {
                         },
                     },
                 },
-                medication: true,
+                // XÓA medication: true
             },
         });
 
@@ -1696,9 +1673,9 @@ export const approveMedicationRequest = async (req, res) => {
             await prisma.notification.create({
                 data: {
                     userId: medicationRequest.parent.user.id,
-                    title: `Yêu cầu thuốc - ${medicationRequest.medication.name}`,
+                    title: `Yêu cầu thuốc - ${medicationRequest.name}`,
                     message: `Yêu cầu thuốc ${
-                        medicationRequest.medication.name
+                        medicationRequest.name
                     } cho học sinh ${
                         medicationRequest.student.user.fullName
                     } đã được ${
@@ -1720,7 +1697,7 @@ export const approveMedicationRequest = async (req, res) => {
                 status: updatedRequest.status,
                 studentName: updatedRequest.student.user.fullName,
                 parentName: updatedRequest.parent.user.fullName,
-                medicationName: updatedRequest.medication.name,
+                medicationName: updatedRequest.name,
                 action: action,
                 notes: notes,
             },
@@ -1848,7 +1825,7 @@ export const getMedicationRequestById = async (req, res) => {
                         },
                     },
                 },
-                medication: true,
+                // XÓA medication: true
             },
         });
 
@@ -1869,11 +1846,12 @@ export const getMedicationRequestById = async (req, res) => {
             parentName: medicationRequest.parent.user.fullName,
             parentEmail: medicationRequest.parent.user.email,
             parentPhone: medicationRequest.parent.user.phone,
-            medicationId: medicationRequest.medicationId,
-            medicationName: medicationRequest.medication.name,
-            medicationDescription: medicationRequest.medication.description,
-            medicationDosage: medicationRequest.medication.dosage,
-            medicationUnit: medicationRequest.medication.unit,
+            // medicationId: medicationRequest.medicationId, // KHÔNG CÓ
+            medicationName: medicationRequest.name,
+            medicationDescription: medicationRequest.description,
+            medicationType: medicationRequest.type,
+            medicationDosage: medicationRequest.dosage,
+            medicationUnit: medicationRequest.unit,
             dosage: medicationRequest.dosage,
             frequency: medicationRequest.frequency,
             duration: medicationRequest.duration,
@@ -1920,7 +1898,12 @@ export const getApprovedMedications = async (req, res) => {
             },
             orderBy: { updatedAt: "desc" },
         });
-        res.json({ success: true, data: meds });
+        // Map lại để luôn có duration (nếu null thì trả về rỗng)
+        const mapped = meds.map((med) => ({
+            ...med,
+            duration: med.duration || "",
+        }));
+        res.json({ success: true, data: mapped });
     } catch (error) {
         console.error("Error getting approved medications:", error);
         res.status(500).json({
@@ -2038,6 +2021,7 @@ export const getStudentTreatments = async (req, res) => {
                     },
                     dosage: item.dosage,
                     frequency: item.frequency,
+                    customTimes: item.customTimes,
                     instructions: item.instructions,
                     startDate: item.startDate,
                     endDate: item.endDate,
@@ -2053,7 +2037,7 @@ export const getStudentTreatments = async (req, res) => {
                 // Thêm cảnh báo
                 if (treatment.medication.stockStatus === "low_stock") {
                     treatment.warnings.push(
-                        `Tồn kho thấp: ${treatment.medication.stockQuantity} ${treatment.medication.unit}`
+                        `Thuốc phụ huynh gửi sắp hết: ${treatment.medication.stockQuantity} ${treatment.medication.unit}`
                     );
                 }
                 if (treatment.medication.expiryStatus === "expiring_soon") {
@@ -2067,7 +2051,7 @@ export const getStudentTreatments = async (req, res) => {
                     );
                 }
                 if (treatment.medication.expiryStatus === "expired") {
-                    treatment.warnings.push("Thuốc đã hết hạn");
+                    treatment.warnings.push("Thuốc phụ huynh gửi đã hết hạn");
                 }
                 if (treatment.todayDosage >= treatment.dailyLimit) {
                     treatment.warnings.push("Đã đủ liều dùng hôm nay");
@@ -2095,6 +2079,8 @@ export const getStudentTreatments = async (req, res) => {
                 expired: formatted.filter(
                     (t) => t.medication.expiryStatus === "expired"
                 ).length,
+                administeredToday: formatted.filter((t) => t.todayDosage > 0)
+                    .length,
             },
         });
     } catch (error) {
@@ -2141,13 +2127,6 @@ export const getMedicationHistory = async (req, res) => {
                         user: {
                             select: { fullName: true, email: true },
                         },
-                    },
-                },
-                medication: {
-                    select: {
-                        name: true,
-                        unit: true,
-                        description: true,
                     },
                 },
                 student: {
@@ -2252,11 +2231,10 @@ export const giveMedicineToStudent = async (req, res) => {
             });
         }
 
-        // Lấy thông tin chi tiết đơn thuốc
+        // Lấy thông tin chi tiết đơn thuốc từ phụ huynh
         const studentMedication = await prisma.studentMedication.findUnique({
             where: { id: studentMedicationId },
             include: {
-                medication: true,
                 student: {
                     include: {
                         user: { select: { fullName: true, email: true } },
@@ -2284,38 +2262,18 @@ export const giveMedicineToStudent = async (req, res) => {
             });
         }
 
-        const medication = studentMedication.medication;
-        if (!medication) {
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy thông tin thuốc trong kho",
-            });
-        }
-
-        // Kiểm tra số lượng tồn kho
+        // Kiểm tra số lượng thuốc phụ huynh gửi
         const qty = parseInt(quantityUsed);
-        if (medication.stockQuantity < qty) {
+        if (studentMedication.stockQuantity < qty) {
             return res.status(400).json({
                 success: false,
-                error: `Số lượng thuốc trong kho không đủ. Hiện có: ${medication.stockQuantity} ${medication.unit}, cần: ${qty} ${medication.unit}`,
-                currentStock: medication.stockQuantity,
+                error: `Số lượng thuốc phụ huynh gửi không đủ. Hiện có: ${studentMedication.stockQuantity} ${studentMedication.unit}, cần: ${qty} ${studentMedication.unit}`,
+                currentStock: studentMedication.stockQuantity,
                 requestedQuantity: qty,
             });
         }
 
-        // Kiểm tra hạn sử dụng
-        if (
-            medication.expiryDate &&
-            new Date(medication.expiryDate) <= new Date()
-        ) {
-            return res.status(400).json({
-                success: false,
-                error: "Thuốc đã hết hạn sử dụng",
-                expiryDate: medication.expiryDate,
-            });
-        }
-
-        // Kiểm tra liều dùng trong ngày
+        // Lấy log cấp phát hôm nay
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
@@ -2348,38 +2306,65 @@ export const giveMedicineToStudent = async (req, res) => {
             });
         }
 
-        // Kiểm tra thời gian giữa các lần uống (tối thiểu 4 giờ)
-        const lastAdministration = todayAdministrations[0];
-        if (lastAdministration) {
-            const timeDiff = new Date() - new Date(lastAdministration.givenAt);
-            const hoursDiff = timeDiff / (1000 * 60 * 60);
-            if (hoursDiff < 4) {
+        // Validate giờ cấp phát theo customTimes (cho phép lệch 10 phút)
+        if (
+            studentMedication.customTimes &&
+            studentMedication.customTimes.length > 0
+        ) {
+            const now = administrationTime
+                ? new Date(administrationTime)
+                : new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            const ALLOWED_DIFF = 10;
+
+            // Tìm customTime hợp lệ
+            const matchedTime = studentMedication.customTimes.find((time) => {
+                const [h, m] = time.split(":").map(Number);
+                const scheduledMinutes = h * 60 + m;
+                return Math.abs(nowMinutes - scheduledMinutes) <= ALLOWED_DIFF;
+            });
+
+            if (!matchedTime) {
                 return res.status(400).json({
                     success: false,
-                    error: `Cần đợi ít nhất 4 giờ giữa các lần uống. Lần cuối: ${new Date(
-                        lastAdministration.givenAt
-                    ).toLocaleString()}`,
-                    lastAdministration: lastAdministration.givenAt,
-                    hoursSinceLast: hoursDiff.toFixed(1),
+                    error: `Chỉ được cấp phát vào các khung giờ đã lên lịch: ${studentMedication.customTimes.join(
+                        ", "
+                    )} (cho phép lệch tối đa ${ALLOWED_DIFF} phút)`,
+                });
+            }
+
+            // Kiểm tra đã cấp phát cho customTime này chưa
+            const alreadyGiven = todayAdministrations.some((log) => {
+                const logDate = new Date(log.givenAt);
+                const logMinutes =
+                    logDate.getHours() * 60 + logDate.getMinutes();
+                const [h, m] = matchedTime.split(":").map(Number);
+                const scheduledMinutes = h * 60 + m;
+                return Math.abs(logMinutes - scheduledMinutes) <= ALLOWED_DIFF;
+            });
+
+            if (alreadyGiven) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Đã cấp phát cho khung giờ ${matchedTime} hôm nay rồi!`,
                 });
             }
         }
 
         // Thực hiện giao dịch để đảm bảo tính nhất quán
         const result = await prisma.$transaction(async (tx) => {
-            // Cập nhật số lượng tồn kho
-            const updatedMedication = await tx.medication.update({
-                where: { id: medication.id },
+            // Cập nhật số lượng thuốc phụ huynh gửi
+            const updatedStudentMedication = await tx.studentMedication.update({
+                where: { id: studentMedicationId },
                 data: { stockQuantity: { decrement: qty } },
             });
 
-            // Ghi log cấp phát thuốc
+            // Trong transaction ghi log cấp phát thuốc:
             const administrationLog =
                 await tx.medicationAdministrationLog.create({
                     data: {
                         studentMedicationId,
                         studentId: studentMedication.studentId,
-                        medicationId: medication.id,
                         nurseId,
                         dosageGiven: dosageGiven.toString(),
                         notes: notes || "",
@@ -2396,7 +2381,7 @@ export const giveMedicineToStudent = async (req, res) => {
                     },
                 });
 
-            return { updatedMedication, administrationLog };
+            return { updatedStudentMedication, administrationLog };
         });
 
         // Chuẩn bị thông tin phản hồi
@@ -2405,10 +2390,10 @@ export const giveMedicineToStudent = async (req, res) => {
             message: "Đã ghi nhận cấp phát thuốc thành công",
             data: {
                 studentName: studentMedication.student.user.fullName,
-                medicationName: medication.name,
+                medicationName: studentMedication.name,
                 dosageGiven: dosageGiven,
                 quantityUsed: qty,
-                remainingStock: result.updatedMedication.stockQuantity,
+                remainingStock: result.updatedStudentMedication.stockQuantity,
                 administrationTime: result.administrationLog.givenAt,
                 nurseName: result.administrationLog.nurse.user.fullName,
                 notes: notes,
@@ -2416,23 +2401,37 @@ export const giveMedicineToStudent = async (req, res) => {
             warnings: [],
         };
 
-        // Thêm cảnh báo nếu tồn kho thấp
-        if (result.updatedMedication.stockQuantity <= 5) {
+        // Thêm cảnh báo nếu thuốc phụ huynh gửi sắp hết
+        if (result.updatedStudentMedication.stockQuantity <= 5) {
             response.warnings.push(
-                `Cảnh báo: Thuốc ${medication.name} chỉ còn ${result.updatedMedication.stockQuantity} ${medication.unit} trong kho`
+                `Cảnh báo: Thuốc ${studentMedication.name} chỉ còn ${result.updatedStudentMedication.stockQuantity} ${studentMedication.unit} từ phụ huynh`
             );
         }
 
-        // Thêm cảnh báo nếu sắp hết hạn (trong vòng 30 ngày)
-        if (medication.expiryDate) {
-            const daysUntilExpiry = Math.ceil(
-                (new Date(medication.expiryDate) - new Date()) /
-                    (1000 * 60 * 60 * 24)
-            );
-            if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
-                response.warnings.push(
-                    `Cảnh báo: Thuốc ${medication.name} sẽ hết hạn trong ${daysUntilExpiry} ngày`
-                );
+        // Sau khi cấp phát thành công, xóa matchedTime khỏi todaySchedules
+        if (
+            studentMedication.customTimes &&
+            studentMedication.customTimes.length > 0
+        ) {
+            const now = administrationTime
+                ? new Date(administrationTime)
+                : new Date();
+            const nowMinutes = now.getHours() * 60 + now.getMinutes();
+            const ALLOWED_DIFF = 10;
+            const matchedTime = studentMedication.customTimes.find((time) => {
+                const [h, m] = time.split(":").map(Number);
+                const scheduledMinutes = h * 60 + m;
+                return Math.abs(nowMinutes - scheduledMinutes) <= ALLOWED_DIFF;
+            });
+            if (matchedTime) {
+                // Xóa matchedTime khỏi todaySchedules
+                const updatedTodaySchedules = (
+                    studentMedication.todaySchedules || []
+                ).filter((time) => time !== matchedTime);
+                await prisma.studentMedication.update({
+                    where: { id: studentMedicationId },
+                    data: { todaySchedules: updatedTodaySchedules },
+                });
             }
         }
 
@@ -2639,6 +2638,7 @@ export const getVaccinationReport = async (req, res) => {
             followUpDate: rec.followUpDate,
             additionalNotes: rec.notes,
             status: rec.status,
+            batchNumber: rec.batchNumber,
         }));
         res.json({ success: true, data: reports });
     } catch (error) {
@@ -2646,6 +2646,380 @@ export const getVaccinationReport = async (req, res) => {
         res.status(500).json({
             success: false,
             error: "Lỗi khi lấy báo cáo tiêm chủng",
+        });
+    }
+};
+
+// Lấy danh sách lịch cấp phát thuốc
+export const getScheduledTreatments = async (req, res) => {
+    try {
+        // Lấy danh sách các đơn thuốc đã được approve có customTimes
+        const treatments = await prisma.studentMedication.findMany({
+            where: {
+                status: "APPROVED",
+                customTimes: {
+                    isEmpty: false,
+                },
+                treatmentStatus: "ONGOING",
+            },
+            include: {
+                student: {
+                    include: {
+                        user: { select: { fullName: true } },
+                    },
+                },
+                parent: {
+                    include: {
+                        user: { select: { fullName: true } },
+                    },
+                },
+                medicationAdministrationLogs: true, // Lấy tất cả log để lọc
+            },
+        });
+
+        const now = new Date();
+        const today = new Date(
+            now.getFullYear(),
+            now.getMonth(),
+            now.getDate()
+        );
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
+        const ALLOWED_DIFF = 10; // phút
+        const currentTime = now.getHours() * 60 + now.getMinutes();
+
+        // Lọc các khung giờ chưa cấp phát hôm nay
+        const scheduledTreatmentsFiltered = treatments.map((treatment) => {
+            const remainingTimes = treatment.todaySchedules || [];
+            return {
+                ...treatment,
+                todaySchedules: remainingTimes,
+            };
+        });
+
+        // KHÔNG filter theo todaySchedules.length > 0 nữa, trả về toàn bộ
+        const scheduledTreatments = scheduledTreatmentsFiltered.map(
+            (treatment) => {
+                const now = new Date();
+                const currentTime = now.getHours() * 60 + now.getMinutes();
+                const upcomingTimes = (treatment.todaySchedules || [])
+                    .map((time) => {
+                        const [hours, minutes] = time.split(":").map(Number);
+                        const timeInMinutes = hours * 60 + minutes;
+                        const diff = timeInMinutes - currentTime;
+                        return { time, diff, timeInMinutes };
+                    })
+                    .sort((a, b) => a.timeInMinutes - b.timeInMinutes);
+
+                const timeUntilNext = upcomingTimes[0];
+
+                return {
+                    id: treatment.id,
+                    studentId: treatment.student.id,
+                    studentName: treatment.student.user.fullName,
+                    studentCode: treatment.student.studentCode,
+                    grade: treatment.student.grade,
+                    class: treatment.student.class,
+                    parentName: treatment.parent?.user?.fullName || "N/A",
+                    medication: {
+                        name: treatment.name,
+                        dosage: treatment.dosage,
+                        unit: treatment.unit,
+                        stockQuantity: treatment.medication?.stockQuantity || 0,
+                        stockStatus:
+                            treatment.medication?.stockQuantity > 10
+                                ? "available"
+                                : treatment.medication?.stockQuantity > 0
+                                ? "low_stock"
+                                : "out_of_stock",
+                    },
+                    todaySchedules: treatment.todaySchedules,
+                    frequency: treatment.frequency,
+                    dosage: treatment.dosage,
+                    canAdminister: true, // Có thể cấp phát nếu có todaySchedules
+                    treatmentStatus: "ONGOING",
+                    timeUntilNext: timeUntilNext
+                        ? {
+                              time: timeUntilNext.time,
+                              hours: Math.floor(timeUntilNext.diff / 60),
+                              minutes: timeUntilNext.diff % 60,
+                          }
+                        : null,
+                };
+            }
+        );
+
+        // Tính toán thông báo sắp tới (trong vòng 30 phút)
+        const upcomingNotifications = scheduledTreatments
+            .filter((treatment) => {
+                if (
+                    !treatment.todaySchedules ||
+                    treatment.todaySchedules.length === 0
+                )
+                    return false;
+
+                return treatment.todaySchedules.some((time) => {
+                    const [hours, minutes] = time.split(":").map(Number);
+                    const timeInMinutes = hours * 60 + minutes;
+                    const diff = timeInMinutes - currentTime;
+                    return diff > 0 && diff <= 30; // 30 phút tới
+                });
+            })
+            .map((treatment) => {
+                const dueTimes = treatment.todaySchedules.filter((time) => {
+                    const [hours, minutes] = time.split(":").map(Number);
+                    const timeInMinutes = hours * 60 + minutes;
+                    const diff = timeInMinutes - currentTime;
+                    return diff > 0 && diff <= 30;
+                });
+
+                // Sắp xếp thời gian theo thứ tự
+                dueTimes.sort((a, b) => {
+                    const timeA = a.split(":").map(Number);
+                    const timeB = b.split(":").map(Number);
+                    return (
+                        timeA[0] * 60 + timeA[1] - (timeB[0] * 60 + timeB[1])
+                    );
+                });
+
+                return {
+                    studentName: treatment.studentName,
+                    medicationName: treatment.medication.name,
+                    dosage: treatment.dosage,
+                    scheduledTime: dueTimes.join(", "),
+                    treatmentId: treatment.id,
+                    times: dueTimes, // Thêm thông tin chi tiết về thời gian
+                };
+            });
+
+        res.json({
+            success: true,
+            data: scheduledTreatments,
+            upcoming: upcomingNotifications,
+        });
+    } catch (error) {
+        console.error("Error fetching scheduled treatments:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi khi lấy danh sách lịch cấp phát thuốc",
+        });
+    }
+};
+
+// Lên lịch cấp phát thuốc
+export const scheduleTreatment = async (req, res) => {
+    try {
+        const { studentMedicationId } = req.params;
+        const {
+            scheduledTime,
+            frequency,
+            customTimes,
+            isRecurring,
+            recurringDays,
+            notes,
+        } = req.body;
+
+        // Kiểm tra studentMedication có tồn tại và đã được approve
+        const studentMedication = await prisma.studentMedication.findUnique({
+            where: { id: studentMedicationId },
+            include: {
+                student: {
+                    include: {
+                        user: { select: { fullName: true } },
+                    },
+                },
+            },
+        });
+
+        if (!studentMedication) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy đơn thuốc của học sinh",
+            });
+        }
+
+        if (studentMedication.status !== "APPROVED") {
+            return res.status(400).json({
+                success: false,
+                error: "Đơn thuốc chưa được phê duyệt",
+            });
+        }
+
+        // Validate và sắp xếp customTimes
+        let validatedCustomTimes = [];
+        if (customTimes && Array.isArray(customTimes)) {
+            // Lọc bỏ các giá trị rỗng và validate format
+            validatedCustomTimes = customTimes
+                .filter((time) => time && time.trim() !== "")
+                .map((time) => {
+                    // Đảm bảo format HH:MM
+                    const [hours, minutes] = time.split(":").map(Number);
+                    if (
+                        hours >= 0 &&
+                        hours <= 23 &&
+                        minutes >= 0 &&
+                        minutes <= 59
+                    ) {
+                        return `${hours.toString().padStart(2, "0")}:${minutes
+                            .toString()
+                            .padStart(2, "0")}`;
+                    }
+                    return null;
+                })
+                .filter((time) => time !== null)
+                .sort((a, b) => {
+                    const timeA = a.split(":").map(Number);
+                    const timeB = b.split(":").map(Number);
+                    return (
+                        timeA[0] * 60 + timeA[1] - (timeB[0] * 60 + timeB[1])
+                    );
+                });
+        }
+
+        // Cập nhật customTimes cho studentMedication
+        const updatedMedication = await prisma.studentMedication.update({
+            where: { id: studentMedicationId },
+            data: {
+                customTimes: validatedCustomTimes,
+                frequency: frequency || studentMedication.frequency,
+            },
+            include: {
+                student: {
+                    include: {
+                        user: { select: { fullName: true } },
+                    },
+                },
+            },
+        });
+
+        // Tạo notification cho y tá
+        const nurses = await prisma.schoolNurse.findMany({
+            include: { user: true },
+        });
+
+        const timeString =
+            customTimes && customTimes.length > 0
+                ? customTimes.join(", ")
+                : new Date(scheduledTime).toLocaleTimeString("vi-VN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                  });
+
+        for (const nurse of nurses) {
+            await prisma.notification.create({
+                data: {
+                    userId: nurse.userId,
+                    title: "Lịch cấp phát thuốc mới",
+                    message: `Học sinh ${studentMedication.student.user.fullName} cần được cấp phát thuốc ${studentMedication.name} vào ${timeString}`,
+                    type: "medication",
+                    status: "SENT",
+                },
+            });
+        }
+
+        res.json({
+            success: true,
+            data: updatedMedication,
+            message: "Đã lên lịch cấp phát thuốc thành công",
+        });
+    } catch (error) {
+        console.error("Error scheduling treatment:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi khi lên lịch cấp phát thuốc",
+        });
+    }
+};
+
+// Hoàn thành lịch cấp phát
+export const completeScheduledTreatment = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Cập nhật customTimes để xóa thời gian đã hoàn thành
+        const studentMedication = await prisma.studentMedication.findUnique({
+            where: { id },
+        });
+
+        if (!studentMedication) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy đơn thuốc",
+            });
+        }
+
+        // Xóa thời gian đã hoàn thành khỏi customTimes
+        const now = new Date();
+        const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now
+            .getMinutes()
+            .toString()
+            .padStart(2, "0")}`;
+
+        // Tìm thời gian gần nhất với thời gian hiện tại để xóa
+        let timeToRemove = null;
+        let minDiff = Infinity;
+
+        (studentMedication.todaySchedules || []).forEach((time) => {
+            const [hours, minutes] = time.split(":").map(Number);
+            const timeInMinutes = hours * 60 + minutes;
+            const currentTimeInMinutes = now.getHours() * 60 + now.getMinutes();
+            const diff = Math.abs(timeInMinutes - currentTimeInMinutes);
+
+            if (diff < minDiff && diff <= 30) {
+                // Chỉ xóa nếu cách thời gian hiện tại không quá 30 phút
+                minDiff = diff;
+                timeToRemove = time;
+            }
+        });
+
+        const updatedTodaySchedules = (
+            studentMedication.todaySchedules || []
+        ).filter((time) => time !== timeToRemove);
+
+        const updatedMedication = await prisma.studentMedication.update({
+            where: { id },
+            data: {
+                todaySchedules: updatedTodaySchedules,
+            },
+        });
+
+        res.json({
+            success: true,
+            data: updatedMedication,
+            message: "Đã hoàn thành lịch cấp phát thuốc",
+        });
+    } catch (error) {
+        console.error("Error completing scheduled treatment:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi khi hoàn thành lịch cấp phát thuốc",
+        });
+    }
+};
+
+// Hủy lịch cấp phát
+export const cancelScheduledTreatment = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Xóa customTimes để hủy lịch
+        await prisma.studentMedication.update({
+            where: { id },
+            data: {
+                customTimes: [],
+                treatmentStatus: "STOPPED",
+            },
+        });
+
+        res.json({
+            success: true,
+            message: "Đã hủy lịch cấp phát thuốc",
+        });
+    } catch (error) {
+        console.error("Error canceling scheduled treatment:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi khi hủy lịch cấp phát thuốc",
         });
     }
 };

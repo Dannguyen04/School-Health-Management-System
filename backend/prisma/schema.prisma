@@ -310,12 +310,14 @@ model StudentMedication {
   // Thông tin thuốc (thay vì tham chiếu đến Medication)
   name         String
   description  String?
+  type         String
   dosage       String
   unit         String // "tablet", "ml", "mg", etc.
   manufacturer String?
   
   frequency    String // "daily", "twice daily", "as needed", etc.
-  duration     String? // How long to take
+  customTimes  String[] // Giờ uống cụ thể (mảng string)
+  todaySchedules String[] // Lịch còn lại trong ngày (mảng string)
   instructions String? // Special instructions
   status       MedicationStatus @default(PENDING_APPROVAL)
   treatmentStatus TreatmentStatus @default(ONGOING)
@@ -326,6 +328,8 @@ model StudentMedication {
   updatedAt DateTime  @updatedAt
 
   image      String?
+  stockQuantity Int // Số lượng thuốc phụ huynh gửi
+  usageNote   String? // Ghi chú sử dụng từ phụ huynh
 
   student    Student    @relation(fields: [studentId], references: [id])
   parent     Parent     @relation(fields: [parentId], references: [id])

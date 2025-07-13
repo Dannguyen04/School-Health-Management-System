@@ -10,6 +10,7 @@ import {
   updateStudent,
 } from "../controllers/AdminController.js";
 import { getDashboardStats } from "../controllers/ManagerDashboardController.js";
+import { getVaccinationReport } from "../controllers/NurseController.js";
 import {
   authenticateToken,
   verifyManager,
@@ -47,5 +48,7 @@ router.get(
   verifyManager,
   getDashboardStats
 );
+
+router.get("/vaccination-report/:campaignId", getVaccinationReport);
 
 export default router;

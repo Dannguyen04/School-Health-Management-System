@@ -5,10 +5,10 @@ import { useNavigate } from "react-router-dom";
 
 import PropTypes from "prop-types";
 import { useAuth } from "../context/authContext";
-import NotificationBell from "../components/shared/NotificationBell";
 import NotificationToastList from "../components/shared/NotificationToastList";
 import { useNotifications } from "../hooks/useNotifications";
 import { useEffect, useState } from "react";
+import NotificationBell from "../components/shared/NotificationBell";
 
 export const Header = ({ collapsed, setCollapsed }) => {
     const { user, logout } = useAuth();
