@@ -98,9 +98,9 @@ const NotificationItem = ({
             id={`notification-${notification.id}`}
             style={{
                 display: "flex",
-                alignItems: "flex-start",
-                gap: "12px",
-                padding: "16px",
+                flexDirection: "column",
+                gap: "8px",
+                padding: "14px 18px 12px 18px",
                 backgroundColor:
                     notification.status === "READ" ? "#fafafa" : "#fff",
                 border:
@@ -115,119 +115,123 @@ const NotificationItem = ({
                 transition: "all 0.3s ease",
                 transform: isHovered ? "translateY(-2px)" : "translateY(0)",
                 boxShadow: isHovered
-                    ? "0 4px 12px rgba(24, 144, 255, 0.15)"
-                    : "0 2px 8px rgba(0, 0, 0, 0.06)",
+                    ? "0 4px 12px rgba(24, 144, 255, 0.10)"
+                    : "0 2px 8px rgba(0, 0, 0, 0.04)",
+                minWidth: 0,
             }}
             onClick={handleClick}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                <div
+                    style={{
+                        fontSize: "28px",
+                        minWidth: 40,
+                        minHeight: 40,
+                        opacity: notification.status === "READ" ? 0.7 : 1,
+                        background: getIconBgColor(notification.type),
+                        color: "#fff",
+                        borderRadius: "50%",
+                        boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
+                        width: 40,
+                        height: 40,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        border: "2px solid #fff",
+                    }}
+                >
+                    {getNotificationIcon(notification.type)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <Tooltip title={notification.title} placement="topLeft">
+                        <div
+                            style={{
+                                fontWeight: 600,
+                                fontSize: "14px",
+                                color:
+                                    notification.status !== "READ"
+                                        ? "#1890ff"
+                                        : "#222",
+                                lineHeight: "1.5",
+                                marginBottom: 2,
+                                wordBreak: "break-word",
+                                whiteSpace: "pre-line",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 1,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {notification.title}
+                        </div>
+                    </Tooltip>
+                    <Tooltip title={notification.message} placement="topLeft">
+                        <div
+                            style={{
+                                fontSize: "12px",
+                                color: "#666",
+                                lineHeight: "1.6",
+                                marginBottom: 0,
+                                whiteSpace: "pre-line",
+                                wordBreak: "break-word",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: "vertical",
+                                overflow: "hidden",
+                            }}
+                        >
+                            {notification.message}
+                        </div>
+                    </Tooltip>
+                </div>
+            </div>
             <div
                 style={{
-                    fontSize: "28px",
-                    marginTop: "2px",
-                    opacity: notification.status === "READ" ? 0.7 : 1,
-                    transition: "opacity 0.3s ease",
-                    background: getIconBgColor(notification.type),
-                    color: "#fff",
-                    borderRadius: "50%",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
-                    width: 40,
-                    height: 40,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    border: "2px solid #fff",
+                    justifyContent: "space-between",
+                    marginTop: 2,
                 }}
             >
-                {getNotificationIcon(notification.type)}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                    style={{
-                        fontWeight:
-                            notification.status !== "READ" ? "600" : "400",
-                        marginBottom: "4px",
-                        color:
-                            notification.status !== "READ" ? "#1890ff" : "#000",
-                        fontSize: "13px",
-                        lineHeight: "1.4",
-                        transition: "color 0.3s ease",
-                    }}
-                >
-                    {notification.title}
-                </div>
-                <div
-                    style={{
-                        fontSize: "12px",
-                        color: "#666",
-                        marginBottom: "6px",
-                        lineHeight: "1.5",
-                        whiteSpace: "pre-line",
-                        wordBreak: "break-word",
-                    }}
-                >
-                    {notification.message}
-                </div>
-                <div
-                    style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        flexWrap: "wrap",
-                        gap: "4px",
-                    }}
-                >
-                    <Space size={2}>
-                        <Tooltip
-                            title={moment(notification.createdAt).format(
-                                "DD/MM/YYYY HH:mm"
-                            )}
+                <Space size={8}>
+                    <Tooltip
+                        title={moment(notification.createdAt).format(
+                            "DD/MM/YYYY HH:mm"
+                        )}
+                    >
+                        <span
+                            style={{
+                                fontSize: 10,
+                                color: "#999",
+                                display: "flex",
+                                alignItems: "center",
+                            }}
                         >
-                            <span
-                                style={{
-                                    fontSize: "10px",
-                                    color: "#999",
-                                    display: "flex",
-                                    alignItems: "center",
-                                }}
-                            >
-                                <ClockCircleOutlined
-                                    style={{
-                                        marginRight: "2px",
-                                        fontSize: "12px",
-                                    }}
-                                />
-                                {getTimeAgo(notification.createdAt)}
-                            </span>
-                        </Tooltip>
-                        <span style={{ fontSize: "9px" }}>
-                            {getTypeLabel(notification.type)}
-                            {notification.severity &&
-                                ` - ${getSeverityLabel(notification.severity)}`}
-                        </span>
-                    </Space>
-                    <Space size={2}>
-                        <Tooltip title="Xóa thông báo">
-                            <Button
-                                type="text"
-                                size="small"
-                                icon={
-                                    <DeleteOutlined
-                                        style={{ fontSize: "13px" }}
-                                    />
-                                }
-                                onClick={handleDelete}
-                                danger
-                                style={{
-                                    border: "none",
-                                    padding: "2px 6px",
-                                }}
-                                loading={deleting}
+                            <ClockCircleOutlined
+                                style={{ marginRight: 2, fontSize: 12 }}
                             />
-                        </Tooltip>
-                    </Space>
-                </div>
+                            {getTimeAgo(notification.createdAt)}
+                        </span>
+                    </Tooltip>
+                    <span style={{ fontSize: 10, color: "#b0b0b0" }}>
+                        {getTypeLabel(notification.type)}
+                        {notification.severity &&
+                            ` - ${getSeverityLabel(notification.severity)}`}
+                    </span>
+                </Space>
+                <Tooltip title="Xóa thông báo">
+                    <Button
+                        type="text"
+                        size="small"
+                        icon={<DeleteOutlined style={{ fontSize: 13 }} />}
+                        onClick={handleDelete}
+                        danger
+                        style={{ border: "none", padding: "2px 6px" }}
+                        loading={deleting}
+                    />
+                </Tooltip>
             </div>
         </div>
     );
