@@ -86,7 +86,7 @@ router.get(
 );
 router.get("/vaccination-campaigns/:campaignId/stats", getVaccinationStats);
 router.post("/vaccinations/perform", verifyNurse, performVaccination);
-router.put("/vaccinations/report", reportVaccinationResult);
+router.put("/vaccinations/report/:id", reportVaccinationResult);
 router.get("/vaccination-report/:campaignId", getVaccinationReport);
 
 // Medication request routes

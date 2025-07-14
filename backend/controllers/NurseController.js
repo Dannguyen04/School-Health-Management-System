@@ -1153,10 +1153,17 @@ export const performVaccination = async (req, res) => {
       notes,
       sideEffects,
       reaction,
-      dose,
       doseAmount,
       batchNumber,
+      doseType, // thêm lại destructure
     } = req.body;
+
+    if (!doseType) {
+      return res.status(400).json({
+        success: false,
+        error: "Thiếu loại liều (doseType)",
+      });
+    }
 
     // Kiểm tra xem user có phải là nurse không
     if (!req.user.nurseProfile) {
@@ -1228,29 +1235,38 @@ export const performVaccination = async (req, res) => {
       });
     }
 
+    // Tự động sinh doseOrder
+    const previousDoses = await prisma.vaccinationRecord.count({
+      where: {
+        studentId: studentId,
+        vaccineId: campaign.vaccineId,
+      },
+    });
+    // Lấy maxDoseCount từ vaccine
+    const vaccine = await prisma.vaccine.findUnique({
+      where: { id: campaign.vaccineId },
+    });
+    if (
+      vaccine &&
+      vaccine.maxDoseCount &&
+      previousDoses >= vaccine.maxDoseCount
+    ) {
+      return res.status(400).json({
+        success: false,
+        error: `Học sinh này đã tiêm đủ số liều tối đa (${vaccine.maxDoseCount}) cho vaccine này. Không thể tiêm thêm!`,
+      });
+    }
+    const doseOrder = previousDoses + 1;
+
+    // Kiểm tra trùng liều dựa trên doseType và doseOrder nếu cần
     const existedVaccination = await prisma.vaccinationRecord.findFirst({
       where: {
         studentId: studentId,
         vaccineId: campaign.vaccineId,
-        dose: dose,
+        doseOrder: doseOrder,
+        doseType: doseType,
       },
     });
-    if (existedVaccination) {
-      const doseInfor =
-        existedVaccination.dose === "FIRST"
-          ? "đầu tiên"
-          : existedVaccination.dose === "SECOND"
-          ? "thứ hai"
-          : "nhắc lại";
-      return res.status(400).json({
-        success: false,
-        error:
-          "Học sinh này đã được tiêm chủng với loại vaccine và liều này trước đây trong chiến dịch " +
-          existedVaccination.campaignName +
-          " liều " +
-          doseInfor,
-      });
-    }
 
     const vacciationDate = new Date(administeredDate);
     if (
@@ -1277,7 +1293,8 @@ export const performVaccination = async (req, res) => {
         batchNumber: batchNumber || null,
         notes: notes || null,
         reaction: reaction || null,
-        dose: dose || "FIRST",
+        doseOrder: doseOrder,
+        doseType: doseType,
         doseAmount: doseAmount || 0.5,
         campaign: { connect: { id: campaignId } },
         student: { connect: { id: studentId } },
@@ -1307,6 +1324,8 @@ export const performVaccination = async (req, res) => {
         },
       },
     });
+
+    console.log(vaccination);
 
     // Gửi thông báo cho phụ huynh
     try {
@@ -1341,12 +1360,12 @@ export const performVaccination = async (req, res) => {
       success: true,
       data: {
         id: vaccination.id,
-        name: vaccination.name,
         studentName: vaccination.student.user.fullName,
         nurseName: vaccination.nurse.user.fullName,
         administeredDate: vaccination.administeredDate,
         batchNumber: vaccination.batchNumber,
-        dose: vaccination.dose,
+        doseOrder: vaccination.doseOrder,
+        doseType: vaccination.doseType,
         status: vaccination.status,
       },
       message: "Tiêm chủng thành công",
@@ -1365,14 +1384,13 @@ export const performVaccination = async (req, res) => {
 export const reportVaccinationResult = async (req, res) => {
   try {
     const {
-      campaignId,
-      studentId,
       sideEffects,
       reaction,
       followUpRequired,
       followUpDate,
       additionalNotes,
     } = req.body;
+    const vaccinationRecordId = req.params.id;
 
     // Kiểm tra xem user có phải là nurse không
     if (!req.user.nurseProfile) {
@@ -1382,12 +1400,9 @@ export const reportVaccinationResult = async (req, res) => {
       });
     }
 
-    // Kiểm tra xem đã tiêm chủng chưa
-    const vaccination = await prisma.vaccinationRecord.findFirst({
-      where: {
-        campaign: { id: campaignId },
-        studentId,
-      },
+    // Tìm bản ghi tiêm chủng theo _id
+    const vaccination = await prisma.vaccinationRecord.findUnique({
+      where: { id: vaccinationRecordId },
     });
 
     if (!vaccination) {
@@ -1399,7 +1414,7 @@ export const reportVaccinationResult = async (req, res) => {
 
     // Cập nhật báo cáo kết quả
     const updatedVaccination = await prisma.vaccinationRecord.update({
-      where: { id: vaccination.id },
+      where: { id: vaccinationRecordId },
       data: {
         sideEffects:
           sideEffects !== undefined ? sideEffects : vaccination.sideEffects,
@@ -1421,10 +1436,10 @@ export const reportVaccinationResult = async (req, res) => {
       await prisma.notification.create({
         data: {
           userId: req.user.id,
-          title: `Theo dõi sau tiêm chủng: ${vaccination.name}`,
-          message: `Cần theo dõi học sinh sau tiêm chủng ${
-            vaccination.name
-          }. Ngày theo dõi: ${
+          title: `Theo dõi sau tiêm chủng: ${vaccination.studentName}`,
+          message: `Cần theo dõi học sinh ${
+            vaccination.studentName
+          } sau tiêm chủng. Ngày theo dõi: ${
             followUpDate
               ? new Date(followUpDate).toLocaleDateString("vi-VN")
               : "Chưa xác định"
@@ -1432,7 +1447,7 @@ export const reportVaccinationResult = async (req, res) => {
           type: "vaccination_followup",
           status: "SENT",
           sentAt: new Date(),
-          vaccinationCampaignId: campaignId,
+          vaccinationCampaignId: vaccination.campaignId,
         },
       });
     }
@@ -2592,7 +2607,8 @@ export const getVaccinationReport = async (req, res) => {
       studentName: rec.student?.user?.fullName,
       grade: rec.student?.grade,
       administeredDate: rec.administeredDate,
-      dose: rec.dose,
+      doseType: rec.doseType,
+      doseOrder: rec.doseOrder,
       sideEffects: rec.sideEffects,
       reaction: rec.reaction,
       followUpRequired: rec.followUpRequired,
