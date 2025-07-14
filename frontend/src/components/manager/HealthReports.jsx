@@ -339,7 +339,7 @@ const HealthReports = () => {
         valueStyle: { color: "#1890ff" },
       },
       {
-        title: "Cần chú ý",
+        title: "Cần theo dõi",
         value: attentionData?.needsAttention || 0,
         suffix: "học sinh",
         valueStyle: { color: "#faad14" },
@@ -547,7 +547,7 @@ const HealthReports = () => {
               <Col xs={24} sm={12} lg={6}>
                 <Card>
                   <Statistic
-                    title="Cần chú ý"
+                    title="Cần theo dõi"
                     value={campaignAttention?.needsAttention || 0}
                     suffix="học sinh"
                     valueStyle={{ color: "#faad14" }}

@@ -212,3 +212,19 @@ export const publicAPI = {
     getBlogCategories: () => api.get("/blogs/categories"),
     getBlogById: (id) => api.get(`/blogs/${id}`),
 };
+
+// Token utilities
+export const tokenUtils = {
+  getToken: () => localStorage.getItem("token"),
+  setToken: (token) => {
+    if (token) {
+      localStorage.setItem("token", token);
+      // Optionally set default header for axios
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    }
+  },
+  removeToken: () => {
+    localStorage.removeItem("token");
+    delete api.defaults.headers.common["Authorization"];
+  },
+};
