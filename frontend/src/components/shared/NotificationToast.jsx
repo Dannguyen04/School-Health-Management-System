@@ -128,11 +128,11 @@ const NotificationToast = () => {
     const getNotificationIcon = (type) => {
         switch (type) {
             case "medication":
-                return <MedicineBoxOutlined />;
+                return null; // <MedicineBoxOutlined />;
             case "vaccination":
-                return <ClockCircleOutlined />;
+                return null; // <ClockCircleOutlined />;
             default:
-                return <BellOutlined />;
+                return null; // <BellOutlined />;
         }
     };
 
@@ -152,14 +152,7 @@ const NotificationToast = () => {
     return (
         <div className="notification-container">
             <Badge count={unreadCount} size="small">
-                <Button
-                    icon={<BellOutlined />}
-                    shape="circle"
-                    onClick={() => {
-                        // Hiển thị drawer thông báo
-                        // Có thể thêm logic để mở drawer
-                    }}
-                />
+                {/* Đã loại bỏ Button bell ở đây */}
             </Badge>
 
             {/* Thông báo cấp phát thuốc real-time */}
