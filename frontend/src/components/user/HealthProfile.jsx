@@ -13,7 +13,7 @@ import {
   Button,
   Card,
   Col,
-  DatePicker,
+  Descriptions,
   Divider,
   Form,
   Input,
@@ -28,7 +28,6 @@ import {
   Typography,
 } from "antd";
 import axios from "axios";
-import dayjs from "dayjs";
 import { FieldArray, Formik } from "formik";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -61,7 +60,6 @@ const validationSchema = Yup.object().shape({
         Yup.object().shape({
           group: Yup.string().required("Chọn nhóm bệnh"),
           name: Yup.string().required("Nhập tên bệnh"),
-          onsetDate: Yup.string().required("Chọn thời gian mắc"),
           level: Yup.string().required("Chọn mức độ"),
           status: Yup.string().required("Chọn tình trạng hiện tại"),
           doctor: Yup.string(),
@@ -94,6 +92,7 @@ const HealthProfile = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [draftData, setDraftData] = useState(null);
   const [lastSaved, setLastSaved] = useState(null);
+  const [editFromConfirmStep, setEditFromConfirmStep] = useState(false);
 
   useEffect(() => {
     fetchChildren();
@@ -131,9 +130,11 @@ const HealthProfile = () => {
 
   useEffect(() => {
     if (selectedStudent) {
+      setShowSuccess(false); // Reset thông báo khi đổi học sinh
       fetchHealthProfile();
     } else {
       setHealthProfile(null);
+      setShowSuccess(false); // Reset luôn ở đây cho chắc
     }
   }, [selectedStudent]);
 
@@ -148,8 +149,10 @@ const HealthProfile = () => {
         }
       );
       setHealthProfile(response.data.data?.healthProfile);
+      if (!response.data.data?.healthProfile) setShowSuccess(false);
     } catch (error) {
       setHealthProfile(null);
+      setShowSuccess(false);
       message.error(
         error.response?.data?.error || "Không thể tải hồ sơ sức khỏe"
       );
@@ -165,23 +168,10 @@ const HealthProfile = () => {
   const handleSubmit = async (values, { setSubmitting }) => {
     try {
       // Transform dayjs objects to strings for backend
-      const transformChronicDiseases = (diseases) => {
-        return diseases.map((disease) => ({
-          ...disease,
-          onsetDate: disease.onsetDate
-            ? typeof disease.onsetDate === "object"
-              ? disease.onsetDate.format("YYYY-MM-DD")
-              : disease.onsetDate
-            : dayjs().format("YYYY-MM-DD"),
-        }));
-      };
-
       const transformedValues = {
         ...values,
         allergies: values.hasAllergy ? values.allergies : [],
-        chronicDiseases: values.hasDisease
-          ? transformChronicDiseases(values.chronicDiseases)
-          : [],
+        chronicDiseases: values.hasDisease ? values.chronicDiseases : [],
         medications: values.medications.filter((med) => med.trim() !== ""),
         vision: values.vision === "" ? null : values.vision,
         hearing: values.hearing === "" ? null : values.hearing,
@@ -218,18 +208,6 @@ const HealthProfile = () => {
 
   const getInitialValues = () => {
     // Transform date strings to dayjs objects for DatePicker
-    const transformChronicDiseases = (diseases) => {
-      if (!Array.isArray(diseases)) return [];
-      return diseases.map((disease) => ({
-        ...disease,
-        onsetDate: disease.onsetDate
-          ? typeof disease.onsetDate === "string"
-            ? dayjs(disease.onsetDate)
-            : disease.onsetDate
-          : dayjs(),
-      }));
-    };
-
     return {
       hasAllergy:
         Array.isArray(healthProfile?.allergies) &&
@@ -238,7 +216,7 @@ const HealthProfile = () => {
       hasDisease:
         Array.isArray(healthProfile?.chronicDiseases) &&
         healthProfile.chronicDiseases.length > 0,
-      chronicDiseases: transformChronicDiseases(healthProfile?.chronicDiseases),
+      chronicDiseases: healthProfile?.chronicDiseases || [],
       medications: healthProfile?.medications || [],
       vision: healthProfile?.vision || "",
       hearing: healthProfile?.hearing || "",
@@ -348,6 +326,32 @@ const HealthProfile = () => {
     setHasChanges(true);
   };
 
+  // Thêm các hàm map giá trị sang tiếng Việt
+  const allergyTypeVi = {
+    food: "Thực phẩm",
+    medicine: "Thuốc",
+    environment: "Môi trường",
+    other: "Khác",
+  };
+  const levelVi = {
+    mild: "Nhẹ",
+    moderate: "Trung bình",
+    severe: "Nặng",
+  };
+  const diseaseGroupVi = {
+    "tim-mach": "Tim mạch",
+    "ho-hap": "Hô hấp",
+    "tieu-duong": "Tiểu đường",
+    "than-kinh": "Thần kinh",
+    other: "Khác",
+  };
+  const diseaseStatusVi = {
+    stable: "Ổn định",
+    treating: "Đang điều trị",
+    relapse: "Tái phát",
+    other: "Khác",
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex justify-center items-center bg-[#f6fcfa]">
@@ -421,7 +425,11 @@ const HealthProfile = () => {
               <Button
                 type="primary"
                 icon={<EditOutlined />}
-                onClick={() => setIsEditModalVisible(true)}
+                onClick={() => {
+                  setCurrentStep(0); // Bắt đầu từ step đầu tiên
+                  setEditFromConfirmStep(false); // Không phải edit từ xác nhận
+                  setIsEditModalVisible(true);
+                }}
                 disabled={!selectedStudent}
                 size="large"
                 className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
@@ -469,7 +477,11 @@ const HealthProfile = () => {
               <Button
                 type="primary"
                 size="large"
-                onClick={() => setIsEditModalVisible(true)}
+                onClick={() => {
+                  setCurrentStep(0); // Bắt đầu từ step đầu tiên
+                  setEditFromConfirmStep(false); // Không phải edit từ xác nhận
+                  setIsEditModalVisible(true);
+                }}
                 className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
               >
                 Tạo hồ sơ sức khỏe
@@ -731,13 +743,6 @@ const HealthProfile = () => {
                                       {disease.name}
                                     </div>
                                     <div className="text-sm text-gray-600 space-y-1">
-                                      <div>
-                                        Mắc từ:{" "}
-                                        {dayjs(disease.onsetDate).format(
-                                          "DD/MM/YYYY"
-                                        )}
-                                      </div>
-
                                       {disease.doctor && (
                                         <div>Bác sĩ: {disease.doctor}</div>
                                       )}
@@ -1051,7 +1056,12 @@ const HealthProfile = () => {
                             !errors.height &&
                             !errors.weight
                           ) {
-                            setCurrentStep(1);
+                            if (editFromConfirmStep) {
+                              setCurrentStep(3); // Quay lại xác nhận
+                              setEditFromConfirmStep(false);
+                            } else {
+                              setCurrentStep(1);
+                            }
                           } else {
                             message.error(
                               "Vui lòng nhập đầy đủ thông tin cơ bản!"
@@ -1458,24 +1468,6 @@ const HealthProfile = () => {
                                           placeholder="Ví dụ: Tim bẩm sinh, Hen phế quản..."
                                         />
                                       </Form.Item>
-                                      <Form.Item
-                                        label={<b>Thời gian mắc</b>}
-                                        required
-                                      >
-                                        <DatePicker
-                                          style={{ width: "100%" }}
-                                          format="YYYY-MM-DD"
-                                          placeholder="Chọn ngày"
-                                          value={disease.onsetDate}
-                                          onChange={(date) => {
-                                            setFieldValue(
-                                              `chronicDiseases[${index}].onsetDate`,
-                                              date
-                                            );
-                                            handleFormChange();
-                                          }}
-                                        />
-                                      </Form.Item>
                                       <Form.Item label={<b>Mức độ</b>} required>
                                         <Select
                                           name={`chronicDiseases[${index}].level`}
@@ -1573,7 +1565,6 @@ const HealthProfile = () => {
                                       push({
                                         group: "",
                                         name: "",
-                                        onsetDate: dayjs(),
                                         level: "",
                                         status: "",
                                         doctor: "",
@@ -1629,7 +1620,12 @@ const HealthProfile = () => {
                             if (errors.chronicDiseases) hasError = true;
                           }
                           if (!hasError) {
-                            setCurrentStep(2);
+                            if (editFromConfirmStep) {
+                              setCurrentStep(3);
+                              setEditFromConfirmStep(false);
+                            } else {
+                              setCurrentStep(2);
+                            }
                           } else {
                             message.error(
                               "Vui lòng nhập đầy đủ thông tin dị ứng, bệnh nền và thuốc!"
@@ -1645,101 +1641,130 @@ const HealthProfile = () => {
 
                 {/* Step 2: Chỉ số sức khỏe */}
                 {currentStep === 2 && (
-                  <div>
-                    <Title level={4} style={{ marginBottom: 16 }}>
-                      Chỉ số sức khỏe
-                    </Title>
+                  <>
                     <div
                       style={{
-                        background: "#f6fcfa",
-                        padding: 24,
-                        borderRadius: 8,
-                        marginBottom: 24,
+                        display: "flex",
+                        gap: 24,
+                        justifyContent: "center",
+                        marginBottom: 32,
+                        flexWrap: "wrap",
                       }}
                     >
-                      <Title level={5}>Tóm tắt thông tin</Title>
-                      <Row gutter={16}>
-                        <Col span={4}>
-                          <div style={{ textAlign: "center" }}>
-                            <div
-                              style={{
-                                fontSize: 24,
-                                fontWeight: "bold",
-                                color: "#36ae9a",
-                              }}
-                            >
-                              {values.height || "--"} cm
-                            </div>
-                            <div style={{ color: "#666" }}>Chiều cao</div>
-                          </div>
-                        </Col>
-                        <Col span={4}>
-                          <div style={{ textAlign: "center" }}>
-                            <div
-                              style={{
-                                fontSize: 24,
-                                fontWeight: "bold",
-                                color: "#36ae9a",
-                              }}
-                            >
-                              {values.weight || "--"} kg
-                            </div>
-                            <div style={{ color: "#666" }}>Cân nặng</div>
-                          </div>
-                        </Col>
-                        <Col span={4}>
-                          <div style={{ textAlign: "center" }}>
-                            <div
-                              style={{
-                                fontSize: 24,
-                                fontWeight: "bold",
-                                color: "#36ae9a",
-                              }}
-                            >
-                              {Array.isArray(values.allergies) &&
-                              values.hasAllergy
-                                ? values.allergies.length
-                                : 0}
-                            </div>
-                            <div style={{ color: "#666" }}>Dị ứng</div>
-                          </div>
-                        </Col>
-                        <Col span={4}>
-                          <div style={{ textAlign: "center" }}>
-                            <div
-                              style={{
-                                fontSize: 24,
-                                fontWeight: "bold",
-                                color: "#36ae9a",
-                              }}
-                            >
-                              {Array.isArray(values.chronicDiseases) &&
-                              values.hasDisease
-                                ? values.chronicDiseases.length
-                                : 0}
-                            </div>
-                            <div style={{ color: "#666" }}>Bệnh nền</div>
-                          </div>
-                        </Col>
-                        <Col span={4}>
-                          <div style={{ textAlign: "center" }}>
-                            <div
-                              style={{
-                                fontSize: 24,
-                                fontWeight: "bold",
-                                color: "#36ae9a",
-                              }}
-                            >
-                              {Array.isArray(values.medications)
-                                ? values.medications.filter(
-                                    (med) => med.trim() !== ""
-                                  ).length
-                                : 0}
-                            </div>
-                            <div style={{ color: "#666" }}>Thuốc</div>
-                          </div>
-                        </Col>
-                      </Row>
+                      <Card
+                        style={{
+                          minWidth: 140,
+                          textAlign: "center",
+                          background: "#e6f7ff",
+                          borderRadius: 16,
+                          boxShadow: "0 2px 8px #f0f1f2",
+                        }}
+                        bodyStyle={{ padding: 20 }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 28,
+                            fontWeight: 700,
+                            color: "#1890ff",
+                          }}
+                        >
+                          {values.height || "--"} cm
+                        </div>
+                        <div style={{ color: "#888" }}>Chiều cao</div>
+                      </Card>
+                      <Card
+                        style={{
+                          minWidth: 140,
+                          textAlign: "center",
+                          background: "#fffbe6",
+                          borderRadius: 16,
+                          boxShadow: "0 2px 8px #f0f1f2",
+                        }}
+                        bodyStyle={{ padding: 20 }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 28,
+                            fontWeight: 700,
+                            color: "#faad14",
+                          }}
+                        >
+                          {values.weight || "--"} kg
+                        </div>
+                        <div style={{ color: "#888" }}>Cân nặng</div>
+                      </Card>
+                      <Card
+                        style={{
+                          minWidth: 140,
+                          textAlign: "center",
+                          background: "#f6ffed",
+                          borderRadius: 16,
+                          boxShadow: "0 2px 8px #f0f1f2",
+                        }}
+                        bodyStyle={{ padding: 20 }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 28,
+                            fontWeight: 700,
+                            color: "#52c41a",
+                          }}
+                        >
+                          {Array.isArray(values.allergies) && values.hasAllergy
+                            ? values.allergies.length
+                            : 0}
+                        </div>
+                        <div style={{ color: "#888" }}>Dị ứng</div>
+                      </Card>
+                      <Card
+                        style={{
+                          minWidth: 140,
+                          textAlign: "center",
+                          background: "#fff0f6",
+                          borderRadius: 16,
+                          boxShadow: "0 2px 8px #f0f1f2",
+                        }}
+                        bodyStyle={{ padding: 20 }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 28,
+                            fontWeight: 700,
+                            color: "#eb2f96",
+                          }}
+                        >
+                          {Array.isArray(values.chronicDiseases) &&
+                          values.hasDisease
+                            ? values.chronicDiseases.length
+                            : 0}
+                        </div>
+                        <div style={{ color: "#888" }}>Bệnh nền</div>
+                      </Card>
+                      <Card
+                        style={{
+                          minWidth: 140,
+                          textAlign: "center",
+                          background: "#f9f0ff",
+                          borderRadius: 16,
+                          boxShadow: "0 2px 8px #f0f1f2",
+                        }}
+                        bodyStyle={{ padding: 20 }}
+                      >
+                        <div
+                          style={{
+                            fontSize: 28,
+                            fontWeight: 700,
+                            color: "#722ed1",
+                          }}
+                        >
+                          {Array.isArray(values.medications)
+                            ? values.medications.filter(
+                                (med) => med.trim() !== ""
+                              ).length
+                            : 0}
+                        </div>
+                        <div style={{ color: "#888" }}>Thuốc</div>
+                      </Card>
                     </div>
                     <div
                       style={{
@@ -1754,63 +1779,259 @@ const HealthProfile = () => {
                       <Button
                         type="primary"
                         onClick={async () => {
-                          setCurrentStep(3);
+                          if (editFromConfirmStep) {
+                            setCurrentStep(3);
+                            setEditFromConfirmStep(false);
+                          } else {
+                            setCurrentStep(3);
+                          }
                         }}
                       >
                         Tiếp theo →
                       </Button>
                     </div>
-                  </div>
+                  </>
                 )}
 
                 {/* Step 3: Xác nhận */}
                 {currentStep === 3 && (
-                  <div>
-                    <Title level={4} style={{ marginBottom: 16 }}>
-                      Xác nhận thông tin
-                    </Title>
-                    <div
+                  <>
+                    {/* Chỉ số cơ bản */}
+                    <Card
                       style={{
-                        background: "#f9f9f9",
-                        padding: 24,
-                        borderRadius: 8,
+                        background: "#fff",
+                        borderRadius: 16,
+                        boxShadow: "0 2px 8px #f0f1f2",
                         marginBottom: 24,
                       }}
                     >
-                      <Title level={5}>Thông tin đã nhập:</Title>
-                      <div style={{ marginBottom: 16 }}>
-                        <strong>Chỉ số cơ bản:</strong>
-                        <div>Thị lực: {values.vision || "Chưa nhập"}</div>
-                        <div>Thính lực: {values.hearing || "Chưa nhập"}</div>
-                        <div>Chiều cao: {values.height || "Chưa nhập"} cm</div>
-                        <div>Cân nặng: {values.weight || "Chưa nhập"} kg</div>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <h3 style={{ fontWeight: 700, marginBottom: 16 }}>
+                          Chỉ số cơ bản
+                        </h3>
+                        <Button
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => {
+                            setCurrentStep(0);
+                            setEditFromConfirmStep(true);
+                          }}
+                        >
+                          Chỉnh sửa
+                        </Button>
                       </div>
-                      <div style={{ marginBottom: 16 }}>
-                        <strong>Dị ứng:</strong>{" "}
-                        {Array.isArray(values.allergies) && values.hasAllergy
-                          ? `${values.allergies.length} loại`
-                          : "Không có"}
+                      <Descriptions column={2} size="small" bordered>
+                        <Descriptions.Item label="Thị lực">
+                          {values.vision}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Thính lực">
+                          {values.hearing}
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Chiều cao">
+                          {values.height} cm
+                        </Descriptions.Item>
+                        <Descriptions.Item label="Cân nặng">
+                          {values.weight} kg
+                        </Descriptions.Item>
+                      </Descriptions>
+                    </Card>
+                    {/* Dị ứng */}
+                    <Card
+                      style={{
+                        background: "#fffbe6",
+                        borderRadius: 16,
+                        marginBottom: 24,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <h3 style={{ fontWeight: 700, marginBottom: 8 }}>
+                          Dị ứng
+                        </h3>
+                        <Button
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => {
+                            setCurrentStep(1);
+                            setEditFromConfirmStep(true);
+                          }}
+                        >
+                          Chỉnh sửa
+                        </Button>
                       </div>
-                      <div style={{ marginBottom: 16 }}>
-                        <strong>Bệnh nền:</strong>{" "}
-                        {Array.isArray(values.chronicDiseases) &&
-                        values.hasDisease
-                          ? `${values.chronicDiseases.length} bệnh`
-                          : "Không có"}
+                      {values.hasAllergy && values.allergies.length > 0 ? (
+                        values.allergies.map((a, idx) => (
+                          <Descriptions
+                            key={idx}
+                            size="small"
+                            column={2}
+                            bordered
+                            style={{ marginBottom: 16, background: "#fff" }}
+                          >
+                            <Descriptions.Item label="Tên">
+                              {a.name}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Loại">
+                              <Tag color="red">
+                                {allergyTypeVi[a.type] || a.type}
+                              </Tag>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Mức độ">
+                              <Tag
+                                color={
+                                  a.level === "mild"
+                                    ? "green"
+                                    : a.level === "moderate"
+                                    ? "orange"
+                                    : "red"
+                                }
+                              >
+                                {levelVi[a.level] || a.level}
+                              </Tag>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Triệu chứng">
+                              {a.symptoms}
+                            </Descriptions.Item>
+                          </Descriptions>
+                        ))
+                      ) : (
+                        <span>Không có</span>
+                      )}
+                    </Card>
+                    {/* Bệnh nền */}
+                    <Card
+                      style={{
+                        background: "#f6ffed",
+                        borderRadius: 16,
+                        marginBottom: 24,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <h3 style={{ fontWeight: 700, marginBottom: 8 }}>
+                          Bệnh nền
+                        </h3>
+                        <Button
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => {
+                            setCurrentStep(1);
+                            setEditFromConfirmStep(true);
+                          }}
+                        >
+                          Chỉnh sửa
+                        </Button>
                       </div>
-                      <div>
-                        <strong>Thuốc đang dùng:</strong>{" "}
-                        {Array.isArray(values.medications) &&
-                        values.medications.filter((med) => med.trim() !== "")
-                          .length > 0
-                          ? `${
-                              values.medications.filter(
-                                (med) => med.trim() !== ""
-                              ).length
-                            } loại`
-                          : "Không có"}
+                      {values.hasDisease &&
+                      values.chronicDiseases.length > 0 ? (
+                        values.chronicDiseases.map((d, idx) => (
+                          <Descriptions
+                            key={idx}
+                            size="small"
+                            column={2}
+                            bordered
+                            style={{ marginBottom: 16, background: "#fff" }}
+                          >
+                            <Descriptions.Item label="Tên">
+                              {d.name}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Nhóm">
+                              <Tag color="blue">
+                                {diseaseGroupVi[d.group] || d.group}
+                              </Tag>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Mức độ">
+                              <Tag
+                                color={
+                                  d.level === "mild"
+                                    ? "green"
+                                    : d.level === "moderate"
+                                    ? "orange"
+                                    : "red"
+                                }
+                              >
+                                {levelVi[d.level] || d.level}
+                              </Tag>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Tình trạng">
+                              <Tag
+                                color={
+                                  d.status === "stable"
+                                    ? "green"
+                                    : d.status === "treating"
+                                    ? "blue"
+                                    : "orange"
+                                }
+                              >
+                                {diseaseStatusVi[d.status] || d.status}
+                              </Tag>
+                            </Descriptions.Item>
+                            {d.notes && (
+                              <Descriptions.Item label="Ghi chú">
+                                {d.notes}
+                              </Descriptions.Item>
+                            )}
+                          </Descriptions>
+                        ))
+                      ) : (
+                        <span>Không có</span>
+                      )}
+                    </Card>
+                    {/* Thuốc đang dùng */}
+                    <Card style={{ background: "#f9f0ff", borderRadius: 16 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <h3 style={{ fontWeight: 700, marginBottom: 8 }}>
+                          Thuốc đang dùng
+                        </h3>
+                        <Button
+                          size="small"
+                          icon={<EditOutlined />}
+                          onClick={() => {
+                            setCurrentStep(1);
+                            setEditFromConfirmStep(true);
+                          }}
+                        >
+                          Chỉnh sửa
+                        </Button>
                       </div>
-                    </div>
+                      {values.medications && values.medications.length > 0 ? (
+                        <div
+                          style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
+                        >
+                          {values.medications
+                            .filter((m) => m.trim() !== "")
+                            .map((m, idx) => (
+                              <Tag color="purple" key={idx}>
+                                {m}
+                              </Tag>
+                            ))}
+                        </div>
+                      ) : (
+                        <span>Không có</span>
+                      )}
+                    </Card>
                     <div
                       style={{
                         display: "flex",
@@ -1829,7 +2050,7 @@ const HealthProfile = () => {
                         Lưu hồ sơ
                       </Button>
                     </div>
-                  </div>
+                  </>
                 )}
               </Form>
             );
