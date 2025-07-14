@@ -50,6 +50,7 @@ const VaccinationHistory = () => {
         }
         const res = await parentAPI.getVaccinationHistory(selectedChild);
         if (res.data.success) setVaccinations(res.data.data);
+        console.log(res.data.data);
       } catch {
         // ignore error
       } finally {
@@ -76,23 +77,11 @@ const VaccinationHistory = () => {
       ellipsis: true,
     },
     {
-      title: "Loại liều",
-      dataIndex: "dose",
-      key: "dose",
-      align: "center",
-      width: 120,
-      render: (dose) => {
-        switch (dose) {
-          case "FIRST":
-            return "Liều đầu tiên";
-          case "SECOND":
-            return "Liều thứ hai";
-          case "BOOSTER":
-            return "Liều nhắc lại";
-          default:
-            return dose;
-        }
-      },
+      title: "Tên vaccine",
+      dataIndex: ["vaccine", "name"],
+      key: "vaccineName",
+      width: 180,
+      render: (_, record) => record.vaccine?.name || "-",
     },
     {
       title: "Y tá thực hiện",
@@ -110,9 +99,25 @@ const VaccinationHistory = () => {
         <Button
           type="primary"
           size="small"
-          onClick={() => {
-            setSelected(record);
-            setModalVisible(true);
+          onClick={async () => {
+            if (record.campaign?.id && selectedChild) {
+              try {
+                setLoading(true);
+                const res = await parentAPI.getVaccinationDetail(
+                  record.campaign.id,
+                  selectedChild
+                );
+                if (res.data.success) {
+                  setSelected(res.data.data);
+                  setModalVisible(true);
+                }
+              } catch {
+                setSelected(null);
+                setModalVisible(false);
+              } finally {
+                setLoading(false);
+              }
+            }
           }}
         >
           Xem chi tiết
