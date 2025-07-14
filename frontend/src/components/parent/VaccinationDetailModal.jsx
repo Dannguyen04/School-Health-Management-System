@@ -7,12 +7,14 @@ import dayjs from "dayjs";
 
 const getDoseLabel = (dose) => {
   switch (dose) {
-    case "FIRST":
-      return "Liều đầu tiên";
-    case "SECOND":
-      return "Liều thứ hai";
+    case "PRIMARY":
+      return "Liều cơ bản";
     case "BOOSTER":
       return "Liều nhắc lại";
+    case "CATCHUP":
+      return "Tiêm bù";
+    case "ADDITIONAL":
+      return "Liều bổ sung";
     default:
       return dose || "-";
   }
@@ -195,7 +197,7 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
               </>
             )}
             <Descriptions.Item label="Loại liều">
-              {getDoseLabel(vaccination?.dose)}
+              {getDoseLabel(vaccination?.doseType)}
             </Descriptions.Item>
             <Descriptions.Item label="Y tá thực hiện">
               {vaccination?.nurse?.user?.fullName || "-"}

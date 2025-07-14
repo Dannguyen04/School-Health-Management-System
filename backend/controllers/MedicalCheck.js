@@ -329,6 +329,31 @@ const createMedicalCheck = async (req, res) => {
         nurse: { include: { user: true } },
       },
     });
+    const avgVision = (
+      (visionRightWithGlasses + visionLeftWithGlasses) /
+      2
+    ).toFixed(1);
+    const avgHearing = ((hearingLeftNormal + hearingRightNormal) / 2).toFixed(
+      1
+    );
+
+    try {
+      await prisma.healthProfile.update({
+        where: { studentId },
+        data: {
+          height,
+          weight,
+          vision: avgVision,
+          hearing: avgHearing,
+          lastUpdatedBy: nurseId,
+        },
+      });
+    } catch (err) {
+      return res.status(400).json({
+        success: false,
+        error: "Hồ sơ sức khỏe của học sinh chưa được phụ huynh tạo!",
+      });
+    }
     res.status(201).json({
       success: true,
       message: `Đã tạo báo cáo kiểm tra cho học sinh ${student.name}`,
