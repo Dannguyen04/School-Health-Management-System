@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import { nurseAPI } from "../../utils/api";
 import "./Dashboard.css";
+import NurseDashboardChart from "./NurseDashboardChart";
 
 const { Title, Text } = Typography;
 
@@ -113,6 +114,17 @@ const Dashboard = () => {
       parentMedicines.length || dashboardStats.pendingMedications,
     lowStockItems: 0, // No longer applicable
   };
+
+  // Tổng hợp số sự cố theo tháng cho chart
+  const eventsByMonth = Array.from({ length: 12 }, (_, i) => {
+    const month = (i + 1).toString();
+    const count = (recentEvents || []).filter(ev => {
+      if (!ev.occurredAt) return false;
+      const date = new Date(ev.occurredAt);
+      return date.getMonth() + 1 === i + 1;
+    }).length;
+    return { thang: month, suco: count };
+  });
 
   // Xoá biến columns vì không dùng nữa
   // const columns = [
@@ -260,6 +272,11 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
+
+      {/* Biểu đồ sự cố y tế */}
+      <div className="flex justify-center w-full mb-8">
+        <NurseDashboardChart data={eventsByMonth} />
+      </div>
 
       {/* Bảng dữ liệu sự cố y tế */}
       <Card className="content-card mb-6">
