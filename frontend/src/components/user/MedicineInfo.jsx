@@ -9,7 +9,6 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import {
-  Alert,
   Avatar,
   Button,
   Card,
@@ -139,7 +138,10 @@ const step3Schema = Yup.object().shape({
 });
 const step4Schema = Yup.object().shape({
   agreeConfirm: Yup.boolean().oneOf([true], "Bạn phải xác nhận thông tin"),
-  agreeTerms: Yup.boolean().oneOf([true], "Bạn phải đồng ý điều khoản sử dụng"),
+  agreeTerms: Yup.boolean().oneOf(
+    [true],
+    "Bạn phải chấp nhận tự chịu trách nhiệm với các phản ứng không mong muốn"
+  ),
 });
 
 const statusColor = {
@@ -182,16 +184,12 @@ const usageNoteLabel = {
 };
 
 const MedicineInfo = () => {
-  const [showSuccess, setShowSuccess] = useState(false);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [children, setChildren] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [studentMedicines, setStudentMedicines] = useState([]);
   const [loadingMedicines, setLoadingMedicines] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [activeTab, setActiveTab] = useState("all");
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedMedicine, setSelectedMedicine] = useState(null);
   const [prescriptionImage, setPrescriptionImage] = useState(null);
@@ -219,24 +217,108 @@ const MedicineInfo = () => {
     agreeTerms: false,
     stockQuantity: 1,
   });
-  const [successModal, setSuccessModal] = useState(false);
-  // State lưu danh sách thuốc tạm thời
   const [pendingMedicines, setPendingMedicines] = useState([]);
-  const [targetMedicineCount, setTargetMedicineCount] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
   const [fieldErrors, setFieldErrors] = useState({});
+  // Khôi phục các biến/hàm cần thiết đã bị xóa nhầm
+  const [filteredMedicines, setFilteredMedicines] = useState([]);
+  // Đảm bảo frequencyToTimes được định nghĩa
+  const frequencyToTimes = {
+    once: 1,
+    twice: 2,
+    three: 3,
+    "6h": 4,
+  };
 
-  useEffect(() => {
-    fetchChildren();
-  }, []);
+  // Xóa setSearchText nếu không dùng đến
+  const [searchText] = useState("");
 
+  // Hàm lọc danh sách thuốc (khôi phục logic getFilteredMedicines)
   useEffect(() => {
-    if (selectedStudent) {
-      fetchStudentMedicines(selectedStudent);
+    let filtered = Array.isArray(studentMedicines) ? studentMedicines : [];
+    if (searchText) {
+      filtered = filtered.filter(
+        (medicine) =>
+          medicine.medicationName
+            ?.toLowerCase()
+            .includes(searchText.toLowerCase()) ||
+          medicine.dosage?.toLowerCase().includes(searchText.toLowerCase()) ||
+          medicine.instructions
+            ?.toLowerCase()
+            .includes(searchText.toLowerCase())
+      );
     }
-  }, [selectedStudent]);
+    setFilteredMedicines(filtered);
+  }, [studentMedicines, searchText]);
 
+  // Khôi phục các hàm bị xóa nhầm
+  const handleMedicineClick = (medicine) => {
+    setSelectedMedicine(medicine);
+    setDetailModalOpen(true);
+  };
+  const handleEditPendingMedicine = (idx) => {
+    const med = pendingMedicines[idx];
+    setMultiStepData(med);
+    setEditIndex(idx);
+    setShowForm(true);
+    setCurrentStep(1);
+  };
+  const handleRemovePendingMedicine = (idx) => {
+    setPendingMedicines((list) => list.filter((_, i) => i !== idx));
+  };
+  const handleSaveMedicine = () => {
+    if (!multiStepData.studentId || multiStepData.studentId === "null") {
+      message.error("Vui lòng chọn học sinh!");
+      return;
+    }
+    if (
+      !multiStepData.medicationName ||
+      !multiStepData.medicationType ||
+      !multiStepData.dosage ||
+      !multiStepData.frequency ||
+      !multiStepData.unit ||
+      !multiStepData.startDate
+    ) {
+      message.error("Vui lòng nhập đầy đủ thông tin bắt buộc!");
+      return;
+    }
+    if (!multiStepData.stockQuantity || multiStepData.stockQuantity < 1) {
+      message.error("Vui lòng nhập số lượng thuốc hợp lệ!");
+      return;
+    }
+    const medicineData = { ...multiStepData, prescriptionImage };
+    if (editIndex !== null) {
+      setPendingMedicines((list) =>
+        list.map((item, idx) => (idx === editIndex ? medicineData : item))
+      );
+    } else {
+      setPendingMedicines((list) => [...list, medicineData]);
+    }
+    setShowForm(false);
+    setEditIndex(null);
+    setCurrentStep(1);
+    setPrescriptionImage(null);
+    setImagePreview(null);
+    setImageError("");
+    message.success("Đã lưu thuốc vào danh sách!");
+  };
+
+  // 5. Gom reset state
+  const resetFormState = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setIsEditModalVisible(false);
+    setShowForm(false);
+    setEditIndex(null);
+    setPendingMedicines([]);
+    setCurrentStep(0);
+    setFieldErrors({});
+    setPrescriptionImage(null);
+    setImagePreview(null);
+    setImageError("");
+  };
+
+  // Định nghĩa fetchChildren và fetchStudentMedicines là các hàm thường, không dùng useCallback
   const fetchChildren = async () => {
     try {
       setLoading(true);
@@ -245,7 +327,6 @@ const MedicineInfo = () => {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (response.data.success) {
-        console.log(response.data.data);
         setChildren(response.data.data);
         if (response.data.data.length > 0) {
           setSelectedStudent(response.data.data[0].studentId);
@@ -317,406 +398,6 @@ const MedicineInfo = () => {
     setMultiStepData((d) => ({ ...d, studentId }));
   };
 
-  const handleSubmit = async (values, { setSubmitting, resetForm }) => {
-    try {
-      setLoading(true);
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("medicationName", values.medicationName);
-      formData.append("medicationType", values.medicationType);
-      formData.append("type", values.medicationType);
-      formData.append("dosage", values.dosage);
-      formData.append("frequency", values.frequency);
-      formData.append("instructions", values.instructions);
-      formData.append(
-        "startDate",
-        values.startDate ? values.startDate.toISOString() : ""
-      );
-      formData.append(
-        "endDate",
-        values.endDate ? values.endDate.toISOString() : ""
-      );
-      formData.append("description", values.description || "");
-      formData.append("unit", values.unit || "");
-      formData.append("stockQuantity", values.stockQuantity);
-      formData.append("usageNote", values.usageNote || "");
-      formData.append(
-        "customTimes",
-        JSON.stringify(values.customTimes || multiStepData.customTimes || [])
-      );
-      if (multiStepData.prescriptionImage) {
-        formData.append("medicineImage", multiStepData.prescriptionImage);
-      }
-      const response = await axios.post(
-        `/api/parents/request-medication/${values.studentId}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-
-      if (response.data.success) {
-        message.success("Gửi thông tin thuốc thành công");
-        resetForm();
-        setIsEditModalVisible(false);
-        setShowSuccess(true);
-        fetchStudentMedicines(selectedStudent);
-        setPrescriptionImage(null);
-        setImagePreview(null);
-      } else {
-        message.error(response.data.error || "Có lỗi xảy ra khi gửi thông tin");
-      }
-    } catch (error) {
-      console.error("Error submitting medication:", error);
-      message.error(
-        error.response?.data?.error || "Có lỗi xảy ra khi gửi thông tin"
-      );
-    } finally {
-      setSubmitting(false);
-      setLoading(false);
-    }
-  };
-
-  // Thêm hàm gửi request thuốc
-  const handleSendRequest = async () => {
-    if (!multiStepData.studentId || multiStepData.studentId === "null") {
-      message.error("Vui lòng chọn học sinh trước khi gửi thuốc!");
-      return;
-    }
-    setLoading(true);
-    try {
-      const token = localStorage.getItem("token");
-      const formData = new FormData();
-      formData.append("medicationName", multiStepData.medicationName);
-      formData.append("medicationType", multiStepData.medicationType);
-      formData.append("type", multiStepData.medicationType);
-      formData.append("dosage", multiStepData.dosage);
-      formData.append("frequency", multiStepData.frequency);
-      formData.append("instructions", multiStepData.instructions);
-      formData.append(
-        "startDate",
-        multiStepData.startDate ? multiStepData.startDate.toISOString() : ""
-      );
-      formData.append(
-        "endDate",
-        multiStepData.endDate ? multiStepData.endDate.toISOString() : ""
-      );
-      formData.append("description", multiStepData.description || "");
-      formData.append("unit", multiStepData.unit || "");
-      formData.append("stockQuantity", multiStepData.stockQuantity);
-      formData.append("usageNote", multiStepData.usageNote || "");
-      formData.append(
-        "customTimes",
-        JSON.stringify(multiStepData.customTimes || [])
-      );
-      if (multiStepData.prescriptionImage) {
-        formData.append("medicineImage", multiStepData.prescriptionImage);
-      }
-      await axios.post(
-        `/api/parents/request-medication/${multiStepData.studentId}`,
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
-      setCurrentStep(5); // Hiện modal thành công
-      // Cập nhật danh sách thuốc ngay sau khi gửi thành công
-      fetchStudentMedicines(selectedStudent);
-    } catch (error) {
-      message.error(
-        error.response?.data?.error || "Gửi thuốc thất bại! Vui lòng thử lại."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Helper functions for enhanced features
-  // Map enum sang tiếng Việt
-  const frequencyLabel = {
-    "as-needed": "Khi cần",
-    daily: "Hàng ngày",
-    twice: "2 lần/ngày",
-    three: "3 lần/ngày",
-    four: "4 lần/ngày",
-    once: "1 lần/ngày",
-  };
-
-  // Helper: map frequency to number of times
-  const frequencyToTimes = {
-    once: 1,
-    twice: 2,
-    three: 3,
-    "6h": 4,
-  };
-
-  // Calculate statistics
-  const getStatistics = () => {
-    const total = studentMedicines.length;
-    const approved = studentMedicines.filter(
-      (m) => m.status === "APPROVED"
-    ).length;
-    const pending = studentMedicines.filter(
-      (m) => m.status === "PENDING_APPROVAL"
-    ).length;
-    const rejected = studentMedicines.filter(
-      (m) => m.status === "REJECTED"
-    ).length;
-
-    // Check for expiring medicines (within 7 days)
-    const today = dayjs();
-    const expiring = studentMedicines.filter((m) => {
-      if (!m.endDate) return false;
-      const endDate = dayjs(m.endDate);
-      return endDate.diff(today, "day") <= 7 && endDate.diff(today, "day") >= 0;
-    }).length;
-
-    return { total, approved, pending, rejected, expiring };
-  };
-
-  // Filter medicines based on search and status
-  const getFilteredMedicines = () => {
-    let filtered = studentMedicines;
-
-    // Filter by search text
-    if (searchText) {
-      filtered = filtered.filter(
-        (medicine) =>
-          medicine.medicationName
-            ?.toLowerCase()
-            .includes(searchText.toLowerCase()) ||
-          medicine.dosage?.toLowerCase().includes(searchText.toLowerCase()) ||
-          medicine.instructions
-            ?.toLowerCase()
-            .includes(searchText.toLowerCase())
-      );
-    }
-
-    // Filter by status
-    if (filterStatus !== "all") {
-      filtered = filtered.filter(
-        (medicine) => medicine.status === filterStatus
-      );
-    }
-
-    // Filter by tab
-    if (activeTab === "active") {
-      filtered = filtered.filter((medicine) => medicine.status === "APPROVED");
-    } else if (activeTab === "pending") {
-      filtered = filtered.filter(
-        (medicine) => medicine.status === "PENDING_APPROVAL"
-      );
-    } else if (activeTab === "expiring") {
-      const today = dayjs();
-      filtered = filtered.filter((medicine) => {
-        if (!medicine.endDate) return false;
-        const endDate = dayjs(medicine.endDate);
-        return (
-          endDate.diff(today, "day") <= 7 && endDate.diff(today, "day") >= 0
-        );
-      });
-    }
-
-    return filtered;
-  };
-
-  const filteredMedicines = getFilteredMedicines();
-  const stats = getStatistics();
-
-  // Hiện modal chi tiết khi phụ huynh bấm vào thuốc
-  const handleMedicineClick = (medicine) => {
-    setSelectedMedicine(medicine);
-    setDetailModalOpen(true);
-  };
-
-  // Xử lý chọn ảnh
-  const beforeUpload = (file) => {
-    const isImage = file.type.startsWith("image/");
-    const isLt10M = file.size / 1024 / 1024 < 10;
-    if (!isImage) {
-      setImageError("Chỉ hỗ trợ file ảnh (JPG, PNG, GIF, WebP)");
-      return Upload.LIST_IGNORE;
-    }
-    if (!isLt10M) {
-      setImageError("Ảnh phải nhỏ hơn 10MB!");
-      return Upload.LIST_IGNORE;
-    }
-    setImageError("");
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-    setPrescriptionImage(file);
-    setMultiStepData((d) => ({ ...d, prescriptionImage: file }));
-    return false; // Ngăn upload tự động
-  };
-  const handleRemoveImage = () => {
-    setPrescriptionImage(null);
-    setImagePreview(null);
-    setImageError("");
-  };
-
-  const handleAddAnotherMedicine = () => {
-    // Đóng modal hiện tại và mở lại modal mới
-    setIsEditModalVisible(false);
-    setShowForm(false);
-    setEditIndex(null);
-    setPendingMedicines([]);
-    setMultiStepData((d) => ({
-      ...d,
-      medicationName: "",
-      medicationType: "",
-      dosage: "",
-      unit: "",
-      frequency: "",
-      customTimes: [],
-      startDate: null,
-      endDate: null,
-      description: "",
-      instructions: "",
-      usageNote: "",
-      importantNotes: [],
-      prescriptionImage: null,
-      agreeConfirm: false,
-      agreeTerms: false,
-      stockQuantity: 1,
-      // studentId giữ nguyên
-    }));
-    setCurrentStep(0);
-    setFieldErrors({});
-    setPrescriptionImage(null);
-    setImagePreview(null);
-    setImageError("");
-
-    // Mở lại modal sau một chút để reset hoàn toàn
-    setTimeout(() => {
-      setIsEditModalVisible(true);
-      setShowForm(true);
-    }, 100);
-  };
-
-  // Thêm thuốc vào danh sách tạm
-  const handleAddMedicineToList = () => {
-    // Validate các trường bắt buộc
-    if (!multiStepData.studentId || multiStepData.studentId === "null") {
-      message.error("Vui lòng chọn học sinh!");
-      return;
-    }
-    if (
-      !multiStepData.medicationName ||
-      !multiStepData.medicationType ||
-      !multiStepData.dosage ||
-      !multiStepData.frequency ||
-      !multiStepData.unit ||
-      !multiStepData.startDate
-    ) {
-      message.error("Vui lòng nhập đầy đủ thông tin bắt buộc!");
-      return;
-    }
-    setPendingMedicines((list) => [...list, { ...multiStepData }]);
-    // Reset form (trừ studentId)
-    setMultiStepData((d) => ({
-      ...d,
-      medicationName: "",
-      medicationType: "",
-      dosage: "",
-      unit: "",
-      frequency: "",
-      customTimes: [],
-      startDate: null,
-      endDate: null,
-      description: "",
-      instructions: "",
-      usageNote: "",
-      importantNotes: [],
-      prescriptionImage: null,
-      agreeConfirm: false,
-      agreeTerms: false,
-      stockQuantity: 1,
-    }));
-    message.success("Đã thêm thuốc vào danh sách!");
-  };
-  // Sửa thuốc trong danh sách tạm
-  const handleEditPendingMedicine = (idx) => {
-    const med = pendingMedicines[idx];
-    setMultiStepData(med);
-    setEditIndex(idx);
-    setShowForm(true);
-    setCurrentStep(1);
-  };
-  // Thêm thuốc mới
-  const handleAddNewMedicine = () => {
-    setMultiStepData((d) => ({
-      ...d,
-      medicationName: "",
-      medicationType: "",
-      dosage: "",
-      unit: "",
-      frequency: "",
-      customTimes: [],
-      startDate: null,
-      endDate: null,
-      description: "",
-      instructions: "",
-      usageNote: "",
-      importantNotes: [],
-      prescriptionImage: null,
-      agreeConfirm: false,
-      agreeTerms: false,
-      stockQuantity: 1,
-    }));
-    setEditIndex(null);
-    setShowForm(true);
-    setCurrentStep(1);
-  };
-  // Lưu thuốc mới hoặc cập nhật thuốc đã sửa
-  const handleSaveMedicine = () => {
-    if (!multiStepData.studentId || multiStepData.studentId === "null") {
-      message.error("Vui lòng chọn học sinh!");
-      return;
-    }
-    if (
-      !multiStepData.medicationName ||
-      !multiStepData.medicationType ||
-      !multiStepData.dosage ||
-      !multiStepData.frequency ||
-      !multiStepData.unit ||
-      !multiStepData.startDate
-    ) {
-      message.error("Vui lòng nhập đầy đủ thông tin bắt buộc!");
-      return;
-    }
-    if (!multiStepData.stockQuantity || multiStepData.stockQuantity < 1) {
-      message.error("Vui lòng nhập số lượng thuốc hợp lệ!");
-      return;
-    }
-    const medicineData = { ...multiStepData, prescriptionImage };
-    if (editIndex !== null) {
-      setPendingMedicines((list) =>
-        list.map((item, idx) => (idx === editIndex ? medicineData : item))
-      );
-    } else {
-      setPendingMedicines((list) => [...list, medicineData]);
-    }
-    setShowForm(false);
-    setEditIndex(null);
-    setCurrentStep(1);
-    setPrescriptionImage(null);
-    setImagePreview(null);
-    setImageError("");
-    message.success("Đã lưu thuốc vào danh sách!");
-  };
-  // Xóa thuốc khỏi danh sách tạm
-  const handleRemovePendingMedicine = (idx) => {
-    setPendingMedicines((list) => list.filter((_, i) => i !== idx));
-  };
   // Gửi tất cả thuốc trong danh sách tạm
   const handleSendAllMedicines = async () => {
     if (pendingMedicines.length === 0) return;
@@ -794,7 +475,6 @@ const MedicineInfo = () => {
     }
     if (failCount > 0) message.error(`Có ${failCount} thuốc gửi thất bại!`);
   };
-
   // Hàm validate cho từng bước
   const handleNextStep = async () => {
     try {
@@ -829,7 +509,9 @@ const MedicineInfo = () => {
         setFieldErrors(errors);
         console.log(errors);
       } else {
-        setFieldErrors({ unknown: err.message || "Lỗi không xác định" });
+        setFieldErrors({
+          unknown: err.message || "Lỗi không xác định",
+        });
       }
     }
   };
@@ -864,6 +546,59 @@ const MedicineInfo = () => {
       }
     }
   };
+
+  // Đảm bảo các hàm sau được định nghĩa đúng vị trí nếu chưa có
+  // handleAddNewMedicine
+  const handleAddNewMedicine = () => {
+    setMultiStepData((d) => ({
+      ...d,
+      medicationName: "",
+      medicationType: "",
+      dosage: "",
+      unit: "",
+      frequency: "",
+      customTimes: [],
+      startDate: null,
+      endDate: null,
+      description: "",
+      instructions: "",
+      usageNote: "",
+      importantNotes: [],
+      prescriptionImage: null,
+      agreeConfirm: false,
+      agreeTerms: false,
+      stockQuantity: 1,
+    }));
+    setEditIndex(null);
+    setShowForm(true);
+    setCurrentStep(1);
+  };
+  // handleSendAllMedicines đã có ở trên
+  // handleRemoveImage
+  const handleRemoveImage = () => {
+    if (imagePreview) URL.revokeObjectURL(imagePreview);
+    setPrescriptionImage(null);
+    setImagePreview(null);
+    setImageError("");
+  };
+  // handleAddAnotherMedicine
+  const handleAddAnotherMedicine = () => {
+    resetFormState();
+    setTimeout(() => {
+      setIsEditModalVisible(true);
+      setShowForm(true);
+    }, 100);
+  };
+
+  useEffect(() => {
+    fetchChildren();
+  }, []);
+
+  useEffect(() => {
+    if (selectedStudent) {
+      fetchStudentMedicines(selectedStudent);
+    }
+  }, [selectedStudent]);
 
   if (loading) {
     return (
@@ -944,15 +679,6 @@ const MedicineInfo = () => {
           </div>
         </Card>
 
-        {showSuccess && (
-          <Alert
-            message="Thông tin thuốc đã được gửi thành công!"
-            type="success"
-            showIcon
-            className="mb-6"
-          />
-        )}
-
         {selectedStudent && (
           <>
             {/* Separator */}
@@ -1016,7 +742,9 @@ const MedicineInfo = () => {
                         setShowForm(true);
                         setCurrentStep(0); // Mở step 0 (welcome)
                         setEditIndex(null);
-                        setMultiStepData({ ...multiStepData });
+                        setMultiStepData({
+                          ...multiStepData,
+                        });
                         setFieldErrors({});
                       }}
                       className="bg-[#36ae9a] hover:bg-[#2a8a7a] border-[#36ae9a]"
@@ -1027,12 +755,12 @@ const MedicineInfo = () => {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
                     {filteredMedicines.map((medicine) => {
-                      const isExpiring =
-                        medicine.endDate &&
-                        dayjs(medicine.endDate).diff(dayjs(), "day") <= 7;
-                      const isExpired =
-                        medicine.endDate &&
-                        dayjs(medicine.endDate).diff(dayjs(), "day") < 0;
+                      // const isExpiring =
+                      //   medicine.endDate &&
+                      //   dayjs(medicine.endDate).diff(dayjs(), "day") <= 7;
+                      // const isExpired =
+                      //   medicine.endDate &&
+                      //   dayjs(medicine.endDate).diff(dayjs(), "day") < 0;
 
                       return (
                         <Card
@@ -1135,19 +863,7 @@ const MedicineInfo = () => {
         <Modal
           title={null}
           open={isEditModalVisible}
-          onCancel={() => {
-            setIsEditModalVisible(false);
-            setShowForm(false);
-            setEditIndex(null);
-            setPendingMedicines([]);
-            setCurrentStep(0);
-            setFieldErrors({});
-            setPrescriptionImage(null);
-            setImagePreview(null);
-            setImageError("");
-            // Cập nhật danh sách thuốc khi đóng modal
-            fetchStudentMedicines(selectedStudent);
-          }}
+          onCancel={resetFormState}
           footer={null}
           width={500}
           centered
@@ -1170,10 +886,18 @@ const MedicineInfo = () => {
               {pendingMedicines.length === 0 ? (
                 <div style={{ textAlign: "center", padding: 32 }}>
                   <MedicineBoxOutlined
-                    style={{ fontSize: 64, color: "#e0e0e0", marginBottom: 16 }}
+                    style={{
+                      fontSize: 64,
+                      color: "#e0e0e0",
+                      marginBottom: 16,
+                    }}
                   />
                   <div
-                    style={{ color: "#888", fontSize: 18, marginBottom: 16 }}
+                    style={{
+                      color: "#888",
+                      fontSize: 18,
+                      marginBottom: 16,
+                    }}
                   >
                     Chưa có thuốc nào, hãy thêm thuốc mới
                   </div>
@@ -1201,7 +925,12 @@ const MedicineInfo = () => {
                           justifyContent: "space-between",
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                          }}
+                        >
                           <MedicineBoxOutlined
                             style={{
                               color: "#36ae9a",
@@ -1219,13 +948,23 @@ const MedicineInfo = () => {
                             >
                               {med.medicationName}
                             </div>
-                            <div style={{ color: "#888", fontSize: 15 }}>
+                            <div
+                              style={{
+                                color: "#888",
+                                fontSize: 15,
+                              }}
+                            >
                               {med.dosage} {med.unit} -{" "}
                               {frequencyLabel[med.frequency] || med.frequency}
                             </div>
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: 12 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 12,
+                          }}
+                        >
                           <Tooltip title="Sửa">
                             <Button
                               icon={<EditOutlined />}
@@ -1490,7 +1229,10 @@ const MedicineInfo = () => {
                       </Select>
                       {multiStepData.medicationType === "khac" && (
                         <Form.Item
-                          style={{ marginTop: 8, marginBottom: 0 }}
+                          style={{
+                            marginTop: 8,
+                            marginBottom: 0,
+                          }}
                           validateStatus={
                             fieldErrors.medicationTypeDetail ? "error" : ""
                           }
@@ -1630,7 +1372,10 @@ const MedicineInfo = () => {
                           </Select>
                           {multiStepData.unit === "khac" && (
                             <Form.Item
-                              style={{ marginTop: 0, marginBottom: 0 }}
+                              style={{
+                                marginTop: 0,
+                                marginBottom: 0,
+                              }}
                               validateStatus={
                                 fieldErrors.unitDetail ? "error" : ""
                               }
@@ -1645,7 +1390,9 @@ const MedicineInfo = () => {
                                   }))
                                 }
                                 placeholder="Nhập đơn vị cụ thể"
-                                style={{ width: 100 }}
+                                style={{
+                                  width: 100,
+                                }}
                               />
                             </Form.Item>
                           )}
@@ -2096,11 +1843,13 @@ const MedicineInfo = () => {
                             return false;
                           }
                           setImageError("");
+                          if (imagePreview) URL.revokeObjectURL(imagePreview);
                           setPrescriptionImage(file);
                           setImagePreview(URL.createObjectURL(file));
                           return false;
                         }}
                         maxCount={1}
+                        disabled={!!prescriptionImage}
                       >
                         <Button icon={<UploadOutlined />}>Chọn ảnh</Button>
                       </Upload>
@@ -2128,11 +1877,7 @@ const MedicineInfo = () => {
                           <Button
                             size="small"
                             danger
-                            onClick={() => {
-                              setPrescriptionImage(null);
-                              setImagePreview(null);
-                              setImageError("");
-                            }}
+                            onClick={handleRemoveImage}
                             style={{ marginTop: 8 }}
                           >
                             Xóa ảnh
@@ -2163,7 +1908,8 @@ const MedicineInfo = () => {
                           }))
                         }
                       >
-                        Tôi đồng ý với điều khoản sử dụng
+                        Tôi tự chịu trách nhiệm với các phản ứng không mong muốn
+                        có thể xảy ra
                       </Checkbox>
                     </Form.Item>
                     <Button
@@ -2200,22 +1946,7 @@ const MedicineInfo = () => {
                   >
                     Thêm thuốc khác
                   </Button>
-                  <Button
-                    block
-                    onClick={() => {
-                      setIsEditModalVisible(false);
-                      setShowForm(false);
-                      setEditIndex(null);
-                      setPendingMedicines([]);
-                      setCurrentStep(0);
-                      setFieldErrors({});
-                      setPrescriptionImage(null);
-                      setImagePreview(null);
-                      setImageError("");
-                      // Cập nhật danh sách thuốc khi về trang chủ
-                      fetchStudentMedicines(selectedStudent);
-                    }}
-                  >
+                  <Button block onClick={resetFormState}>
                     Về trang chủ
                   </Button>
                 </div>
@@ -2236,7 +1967,7 @@ const MedicineInfo = () => {
               Đóng
             </Button>,
           ]}
-          title={selectedMedicine?.medication?.name || "Chi tiết thuốc"}
+          title={selectedMedicine?.medicationName || "Chi tiết thuốc"}
           width={500}
         >
           {selectedMedicine && (

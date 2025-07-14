@@ -8,6 +8,7 @@ import { useAuth } from "../context/authContext";
 import NotificationToastList from "../components/shared/NotificationToastList";
 import { useNotifications } from "../hooks/useNotifications";
 import { useEffect, useState } from "react";
+import NotificationBell from "../components/shared/NotificationBell";
 
 export const Header = ({ collapsed, setCollapsed }) => {
     const { user, logout } = useAuth();
@@ -99,7 +100,7 @@ export const Header = ({ collapsed, setCollapsed }) => {
                 </div>
                 <div className="flex items-center gap-x-3">
                     {/* Hiển thị NotificationBell cho tất cả user roles */}
-
+                    <NotificationBell />
                     <Dropdown
                         menu={{ items: menuItems }}
                         placement="bottomRight"

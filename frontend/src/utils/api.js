@@ -16,30 +16,6 @@ const api = axios.create({
   },
 });
 
-// Utility functions for token management
-export const tokenUtils = {
-  getToken: () => {
-    return localStorage.getItem("token");
-  },
-
-  setToken: (token) => {
-    if (token) {
-      localStorage.setItem("token", token);
-      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
-    }
-  },
-
-  removeToken: () => {
-    localStorage.removeItem("token");
-    delete api.defaults.headers.common["Authorization"];
-  },
-
-  isTokenValid: () => {
-    const token = localStorage.getItem("token");
-    return !!token;
-  },
-};
-
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {
@@ -67,15 +43,7 @@ api.interceptors.response.use(
       if (!window.location.pathname.includes("/auth")) {
         window.location.href = "/auth";
       }
-    } else if (
-      error.code === "NETWORK_ERROR" ||
-      error.message === "Network Error"
-    ) {
-      // Don't clear token on network errors
-    } else if (error.response?.status >= 500) {
-      // Don't clear token on server errors
     }
-
     return Promise.reject(error);
   }
 );
@@ -87,6 +55,8 @@ export const nurseAPI = {
 
   // Recent medical events
   getRecentMedicalEvents: () => api.get("/nurse/dashboard/recent-events"),
+  // All medical events for chart
+  getAllMedicalEvents: () => api.get("/nurse/medical-events"),
 
   // Upcoming vaccinations
   getUpcomingVaccinations: () =>
@@ -228,6 +198,7 @@ export const managerAPI = {
     api.get("/manager/students/filter", { params }),
   getAllParents: () => api.get("/manager/students/parents"),
   createParent: (data) => api.post("/manager/students/parents", data),
+  getDashboardStats: () => api.get("/manager/students/dashboard-stats"),
 };
 
 export default api;
@@ -238,4 +209,20 @@ export const publicAPI = {
   getPublishedBlogs: (params) => api.get(`/blogs/published?${params}`),
   getBlogCategories: () => api.get("/blogs/categories"),
   getBlogById: (id) => api.get(`/blogs/${id}`),
+};
+
+// Token utilities
+export const tokenUtils = {
+  getToken: () => localStorage.getItem("token"),
+  setToken: (token) => {
+    if (token) {
+      localStorage.setItem("token", token);
+      // Optionally set default header for axios
+      api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    }
+  },
+  removeToken: () => {
+    localStorage.removeItem("token");
+    delete api.defaults.headers.common["Authorization"];
+  },
 };

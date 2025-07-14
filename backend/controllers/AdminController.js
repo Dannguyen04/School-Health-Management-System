@@ -580,7 +580,7 @@ const getAllUsers = async (req, res) => {
         const users = await prisma.users.findMany({
             where: {
                 role: {
-                    not: "STUDENT",
+                    notIn: ["STUDENT", "PARENT"],
                 },
             },
             include: {

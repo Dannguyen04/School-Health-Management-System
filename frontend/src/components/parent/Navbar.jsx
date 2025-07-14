@@ -145,6 +145,7 @@ const Navbar = () => {
                         {/* Desktop Navigation */}
                         <nav className="hidden lg:flex flex-row items-center gap-8">
                             {/* Notification Bell */}
+                            <NotificationBell />
                             <div className="flex items-center gap-4">
                                 {/* User Avatar */}
                                 <Dropdown

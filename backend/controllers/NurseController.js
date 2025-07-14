@@ -2654,60 +2654,55 @@ export const getScheduledTreatments = async (req, res) => {
       };
     });
 
-    // Lọc và tính toán thời gian sắp tới
-    const scheduledTreatments = scheduledTreatmentsFiltered
-      .filter((treatment) => {
-        // Chỉ cần còn todaySchedules chưa cấp phát hôm nay là trả về
-        return treatment.todaySchedules && treatment.todaySchedules.length > 0;
-      })
-      .map((treatment) => {
-        const now = new Date();
-        const currentTime = now.getHours() * 60 + now.getMinutes();
-        const upcomingTimes = treatment.todaySchedules
-          .map((time) => {
-            const [hours, minutes] = time.split(":").map(Number);
-            const timeInMinutes = hours * 60 + minutes;
-            const diff = timeInMinutes - currentTime;
-            return { time, diff, timeInMinutes };
-          })
-          .sort((a, b) => a.timeInMinutes - b.timeInMinutes);
+    // KHÔNG filter theo todaySchedules.length > 0 nữa, trả về toàn bộ
+    const scheduledTreatments = scheduledTreatmentsFiltered.map((treatment) => {
+      const now = new Date();
+      const currentTime = now.getHours() * 60 + now.getMinutes();
+      const upcomingTimes = (treatment.todaySchedules || [])
+        .map((time) => {
+          const [hours, minutes] = time.split(":").map(Number);
+          const timeInMinutes = hours * 60 + minutes;
+          const diff = timeInMinutes - currentTime;
+          return { time, diff, timeInMinutes };
+        })
+        .sort((a, b) => a.timeInMinutes - b.timeInMinutes);
 
-        const timeUntilNext = upcomingTimes[0];
+      const timeUntilNext = upcomingTimes[0];
 
-        return {
-          id: treatment.id,
-          studentId: treatment.student.id,
-          studentName: treatment.student.user.fullName,
-          studentCode: treatment.student.studentCode,
-          grade: treatment.student.grade,
-          class: treatment.student.class,
-          parentName: treatment.parent?.user?.fullName || "N/A",
-          medication: {
-            name: treatment.name,
-            dosage: treatment.dosage,
-            unit: treatment.unit,
-            stockQuantity: treatment.medication?.stockQuantity || 0,
-            stockStatus:
-              treatment.medication?.stockQuantity > 10
-                ? "available"
-                : treatment.medication?.stockQuantity > 0
-                ? "low_stock"
-                : "out_of_stock",
-          },
-          todaySchedules: treatment.todaySchedules,
-          frequency: treatment.frequency,
+      return {
+        id: treatment.id,
+        studentId: treatment.student.id,
+        studentName: treatment.student.user.fullName,
+        studentCode: treatment.student.studentCode,
+        grade: treatment.student.grade,
+        class: treatment.student.class,
+        parentName: treatment.parent?.user?.fullName || "N/A",
+        medication: {
+          name: treatment.name,
           dosage: treatment.dosage,
-          canAdminister: true, // Có thể cấp phát nếu có todaySchedules
-          treatmentStatus: "ONGOING",
-          timeUntilNext: timeUntilNext
-            ? {
-                time: timeUntilNext.time,
-                hours: Math.floor(timeUntilNext.diff / 60),
-                minutes: timeUntilNext.diff % 60,
-              }
-            : null,
-        };
-      });
+          unit: treatment.unit,
+          stockQuantity: treatment.medication?.stockQuantity || 0,
+          stockStatus:
+            treatment.medication?.stockQuantity > 10
+              ? "available"
+              : treatment.medication?.stockQuantity > 0
+              ? "low_stock"
+              : "out_of_stock",
+        },
+        todaySchedules: treatment.todaySchedules,
+        frequency: treatment.frequency,
+        dosage: treatment.dosage,
+        canAdminister: true, // Có thể cấp phát nếu có todaySchedules
+        treatmentStatus: "ONGOING",
+        timeUntilNext: timeUntilNext
+          ? {
+              time: timeUntilNext.time,
+              hours: Math.floor(timeUntilNext.diff / 60),
+              minutes: timeUntilNext.diff % 60,
+            }
+          : null,
+      };
+    });
 
     // Tính toán thông báo sắp tới (trong vòng 30 phút)
     const upcomingNotifications = scheduledTreatments
