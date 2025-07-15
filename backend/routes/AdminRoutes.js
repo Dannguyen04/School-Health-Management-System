@@ -25,6 +25,11 @@ import {
     authenticateToken,
     verifyAdmin,
 } from "../middleware/authenticateToken.js";
+import {
+    uploadExcel,
+    handleUploadError,
+} from "../middleware/uploadMiddleware.js";
+import { importParentsStudents } from "../controllers/ImportController.js";
 
 const router = express.Router();
 
@@ -78,6 +83,13 @@ router.put(
     authenticateToken,
     verifyAdmin,
     updatePassword
+);
+
+router.post(
+    "/import-parents-students",
+    uploadExcel,
+    handleUploadError,
+    importParentsStudents
 );
 
 router.get(
