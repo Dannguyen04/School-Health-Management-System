@@ -94,18 +94,22 @@ export const InputStyled = styled.input`
 
 export const Button = styled.button`
     border-radius: 20px;
-    border: 1px solid #ff4b2b;
-    background-color: #ff4b2b;
+    border: 1px solid #36ae9a;
+    background-color: #36ae9a;
     color: #ffffff;
     font-size: 15px;
     font-weight: bold;
     padding: 12px 45px;
     letter-spacing: 1px;
     text-transform: uppercase;
-    transition: transform 80ms ease-in;
+    transition: background 0.2s, transform 80ms ease-in;
     margin-top: 10px;
     width: 100%;
     max-width: 100%;
+    &:hover {
+        background-color: #2a8a7a;
+        border-color: #2a8a7a;
+    }
     @media (max-width: 768px) {
         font-size: 1rem;
         padding: 12px 0;
