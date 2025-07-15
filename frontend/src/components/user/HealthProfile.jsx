@@ -156,7 +156,7 @@ const HealthProfile = () => {
             setShowSuccess(false);
             message.error(
                 error.response?.data?.error === "Health profile not found"
-                    ? "Chưa cập nhật hồ sơ sức khỏe cho học sinh này"
+                    ? "Chưa cập nhật hồ sơ sức khỏe cho học sinh"
                     : error.response?.data?.error ||
                           "Không thể tải hồ sơ sức khỏe"
             );

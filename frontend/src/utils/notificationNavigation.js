@@ -7,12 +7,12 @@ export function navigateByNotificationType(
     setDetailModalVisible,
     currentUser
 ) {
-    // Special case for missing health profile (toast only)
+    // Special case for missing health profile (toast hoặc notification DB)
     if (
-        notification.id === "missing-health-profile" &&
-        notification.studentId
+        notification.id === "missing-health-profile" ||
+        notification.type === "missing_health_profile"
     ) {
-        navigate(`/parent/health-profile?studentId=${notification.studentId}`);
+        navigate(`/parent/health-profile`);
         return;
     }
     switch (notification.type) {

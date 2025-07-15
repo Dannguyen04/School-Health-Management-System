@@ -61,32 +61,8 @@ export const getMyChildren = async (req, res) => {
             },
         });
 
-        // Gửi notification nếu con chưa có healthProfile
-        for (const rel of childrenRelations) {
-            if (!rel.student.healthProfile) {
-                // Kiểm tra đã có notification chưa đọc cùng loại chưa
-                const existing = await prisma.notification.findFirst({
-                    where: {
-                        userId: req.user.id,
-                        type: "missing_health_profile",
-                        status: { in: ["SENT", "DELIVERED"] },
-                        // Có thể thêm điều kiện message chứa tên học sinh nếu muốn phân biệt từng con
-                    },
-                });
-                if (!existing) {
-                    await prisma.notification.create({
-                        data: {
-                            userId: req.user.id,
-                            title: `Bổ sung hồ sơ sức khỏe cho học sinh ${rel.student.user.fullName}`,
-                            message: `Quý phụ huynh vui lòng khai báo hồ sơ sức khỏe cho học sinh ${rel.student.user.fullName} để nhà trường có thể chăm sóc sức khỏe tốt nhất cho các em.`,
-                            type: "missing_health_profile",
-                            status: "SENT",
-                            sentAt: new Date(),
-                        },
-                    });
-                }
-            }
-        }
+        // Gửi notification nếu có ít nhất một con chưa có healthProfile (chỉ gửi 1 lần)
+        // (ĐÃ CHUYỂN LOGIC NÀY SANG LOGIN.JS, KHÔNG LÀM Ở ĐÂY NỮA)
 
         const children = childrenRelations.map((rel) => ({
             studentId: rel.student.id,

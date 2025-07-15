@@ -52,6 +52,9 @@ const handleLogin = async (req, res) => {
             where: {
                 email: email,
             },
+            include: {
+                parentProfile: true,
+            },
         });
 
         if (!user || user.password !== password) {
@@ -71,6 +74,50 @@ const handleLogin = async (req, res) => {
             process.env.JWT_SECRET,
             { expiresIn: "24h" }
         );
+
+        // Sau khi login thành công, nếu là PARENT thì kiểm tra và gửi notification thiếu health profile
+        if (user.role === "PARENT" && user.parentProfile) {
+            const parentId = user.parentProfile.id;
+            // Lấy danh sách con và thông tin healthProfile
+            const childrenRelations = await prisma.studentParent.findMany({
+                where: {
+                    parentId: parentId,
+                },
+                include: {
+                    student: {
+                        include: {
+                            healthProfile: true,
+                        },
+                    },
+                },
+            });
+            // Gửi notification nếu có ít nhất một con chưa có healthProfile (chỉ gửi 1 lần)
+            const hasMissingHealthProfile = childrenRelations.some(
+                (rel) => !rel.student.healthProfile
+            );
+            if (hasMissingHealthProfile) {
+                // Kiểm tra đã có notification chưa đọc cùng loại chưa
+                const existing = await prisma.notification.findFirst({
+                    where: {
+                        userId: user.id,
+                        type: "missing_health_profile",
+                        status: { in: ["SENT", "DELIVERED"] },
+                    },
+                });
+                if (!existing) {
+                    await prisma.notification.create({
+                        data: {
+                            userId: user.id,
+                            title: `Bổ sung hồ sơ sức khỏe cho học sinh`,
+                            message: `Quý phụ huynh vui lòng khai báo hồ sơ sức khỏe cho các con để nhà trường có thể chăm sóc sức khỏe tốt nhất cho các em.`,
+                            type: "missing_health_profile",
+                            status: "SENT",
+                            sentAt: new Date(),
+                        },
+                    });
+                }
+            }
+        }
 
         return res
             .header("auth-token", token)
