@@ -483,6 +483,7 @@ const VaccineManagement = () => {
                 validateStatus={
                   touched.name && errors.name ? "error" : undefined
                 }
+                required
               >
                 <Input
                   name="name"
@@ -503,6 +504,7 @@ const VaccineManagement = () => {
                     ? "error"
                     : undefined
                 }
+                required
               >
                 <Select
                   value={values.requirement}
@@ -526,6 +528,7 @@ const VaccineManagement = () => {
                     ? "error"
                     : undefined
                 }
+                required
               >
                 <Input
                   name="manufacturer"
@@ -542,6 +545,7 @@ const VaccineManagement = () => {
                 validateStatus={
                   touched.origin && errors.origin ? "error" : undefined
                 }
+                required
               >
                 <Input
                   name="origin"
@@ -636,6 +640,7 @@ const VaccineManagement = () => {
                     ? "error"
                     : undefined
                 }
+                required
               >
                 <Input
                   name="maxDoseCount"
