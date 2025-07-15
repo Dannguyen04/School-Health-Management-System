@@ -71,9 +71,10 @@ enum VaccineRequirement {
 }
 
 enum DoseType {
-  FIRST // Liều đầu tiên
-  SECOND // Liều thứ hai
-  BOOSTER // Liều nhắc lại (liều tăng cường)
+  PRIMARY
+  BOOSTER
+  CATCHUP
+  ADDITIONAL
 }
 
 enum CampaignStatus {
@@ -395,6 +396,7 @@ model Vaccine {
   sideEffects      String?  // tác dụng phụ
   contraindications String? //cấm chỉ định
   recommendedAge   String?
+  maxDoseCount     Int
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
@@ -458,9 +460,10 @@ model VaccinationRecord {
   
   // Vaccination details
   administeredDate DateTime
-  dose             DoseType
   doseAmount       Float?  // liều lượng tiêm (tiêu chuẩn là 0.5 ml)
   batchNumber      String?
+  doseOrder        Int
+  doseType         DoseType
   
   // Results and follow-up
   sideEffects      String?
@@ -490,7 +493,6 @@ model VaccinationRecord {
   @@index([vaccineName]) // For quick vaccine searches
   @@index([studentName]) // For quick student searches
   @@index([studentGrade]) // For grade-based queries
-  @@unique([studentId, vaccineId, dose])
 }
 
 // Medical Check Management

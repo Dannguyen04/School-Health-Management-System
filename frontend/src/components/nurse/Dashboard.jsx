@@ -118,7 +118,7 @@ const Dashboard = () => {
   // Tổng hợp số sự cố theo tháng cho chart
   const eventsByMonth = Array.from({ length: 12 }, (_, i) => {
     const month = (i + 1).toString();
-    const count = (recentEvents || []).filter(ev => {
+    const count = (recentEvents || []).filter((ev) => {
       if (!ev.occurredAt) return false;
       const date = new Date(ev.occurredAt);
       return date.getMonth() + 1 === i + 1;

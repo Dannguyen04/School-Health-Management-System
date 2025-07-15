@@ -189,9 +189,18 @@ const VaccineManagement = () => {
     },
     {
       title: "Độ tuổi khuyến nghị",
-      dataIndex: "recommendedAge",
       key: "recommendedAge",
-      render: (recommendedAge) => recommendedAge || "Không có",
+      render: (record) => {
+        if (record.minAge != null && record.maxAge != null) {
+          return `${record.minAge} - ${record.maxAge} tuổi`;
+        } else if (record.minAge != null) {
+          return `Từ ${record.minAge} tuổi`;
+        } else if (record.maxAge != null) {
+          return `Đến ${record.maxAge} tuổi`;
+        } else {
+          return "Không có";
+        }
+      },
     },
     {
       title: "Tham khảo",
@@ -205,6 +214,13 @@ const VaccineManagement = () => {
         ) : (
           "Không có"
         ),
+    },
+    {
+      title: "Số liều tối đa",
+      dataIndex: "maxDoseCount",
+      key: "maxDoseCount",
+      align: "center",
+      render: (val) => val || "-",
     },
     {
       title: "Thao tác",
@@ -357,7 +373,17 @@ const VaccineManagement = () => {
                   description: selectedVaccine.description || "",
                   sideEffects: selectedVaccine.sideEffects || "",
                   contraindications: selectedVaccine.contraindications || "",
-                  recommendedAge: selectedVaccine.recommendedAge || "",
+                  minAge:
+                    selectedVaccine.minAge !== undefined &&
+                    selectedVaccine.minAge !== null
+                      ? selectedVaccine.minAge
+                      : "",
+                  maxAge:
+                    selectedVaccine.maxAge !== undefined &&
+                    selectedVaccine.maxAge !== null
+                      ? selectedVaccine.maxAge
+                      : "",
+                  maxDoseCount: selectedVaccine.maxDoseCount || 1,
                 }
               : {
                   name: "",
@@ -368,7 +394,9 @@ const VaccineManagement = () => {
                   description: "",
                   sideEffects: "",
                   contraindications: "",
-                  recommendedAge: "",
+                  minAge: "",
+                  maxAge: "",
+                  maxDoseCount: 1,
                 }
           }
           enableReinitialize
@@ -377,6 +405,38 @@ const VaccineManagement = () => {
             requirement: Yup.string().required("Vui lòng chọn yêu cầu"),
             manufacturer: Yup.string().required("Vui lòng nhập nhà sản xuất"),
             origin: Yup.string().required("Vui lòng nhập nguồn gốc"),
+            minAge: Yup.number()
+              .typeError("Vui lòng nhập tuổi tối thiểu")
+              .integer("Tuổi tối thiểu phải là số nguyên")
+              .min(0, "Tuổi tối thiểu không được âm")
+              .nullable(true)
+              .transform((value, originalValue) =>
+                originalValue === "" ? null : value
+              ),
+            maxAge: Yup.number()
+              .typeError("Vui lòng nhập tuổi tối đa")
+              .integer("Tuổi tối đa phải là số nguyên")
+              .min(0, "Tuổi tối đa không được âm")
+              .nullable(true)
+              .transform((value, originalValue) =>
+                originalValue === "" ? null : value
+              )
+              .test(
+                "max-greater-than-min",
+                "Tuổi tối đa phải lớn hơn hoặc bằng tuổi tối thiểu",
+                function (value) {
+                  const { minAge } = this.parent;
+                  if (value != null && minAge != null) {
+                    return value >= minAge;
+                  }
+                  return true;
+                }
+              ),
+            maxDoseCount: Yup.number()
+              .typeError("Vui lòng nhập số liều tối đa")
+              .integer("Số liều tối đa phải là số nguyên")
+              .min(1, "Số liều tối đa phải lớn hơn 0")
+              .required("Vui lòng nhập số liều tối đa"),
           })}
           onSubmit={async (values, { setSubmitting }) => {
             const data = {
@@ -388,7 +448,9 @@ const VaccineManagement = () => {
               description: values.description || undefined,
               sideEffects: values.sideEffects || undefined,
               contraindications: values.contraindications || undefined,
-              recommendedAge: values.recommendedAge || undefined,
+              minAge: values.minAge !== "" ? Number(values.minAge) : undefined,
+              maxAge: values.maxAge !== "" ? Number(values.maxAge) : undefined,
+              maxDoseCount: values.maxDoseCount,
             };
             let success = false;
             if (selectedVaccine) {
@@ -421,6 +483,7 @@ const VaccineManagement = () => {
                 validateStatus={
                   touched.name && errors.name ? "error" : undefined
                 }
+                required
               >
                 <Input
                   name="name"
@@ -441,6 +504,7 @@ const VaccineManagement = () => {
                     ? "error"
                     : undefined
                 }
+                required
               >
                 <Select
                   value={values.requirement}
@@ -464,6 +528,7 @@ const VaccineManagement = () => {
                     ? "error"
                     : undefined
                 }
+                required
               >
                 <Input
                   name="manufacturer"
@@ -480,6 +545,7 @@ const VaccineManagement = () => {
                 validateStatus={
                   touched.origin && errors.origin ? "error" : undefined
                 }
+                required
               >
                 <Input
                   name="origin"
@@ -528,12 +594,62 @@ const VaccineManagement = () => {
                 />
               </Form.Item>
               <Form.Item label="Độ tuổi khuyến nghị">
+                <div style={{ display: "flex", alignItems: "center", gap: 23 }}>
+                  <Input
+                    style={{ width: "45%" }}
+                    name="minAge"
+                    type="number"
+                    min={0}
+                    value={values.minAge}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Tuổi tối thiểu"
+                  />
+                  <span style={{ fontSize: 18, userSelect: "none" }}>-</span>
+                  <Input
+                    style={{ width: "45%" }}
+                    name="maxAge"
+                    type="number"
+                    min={0}
+                    value={values.maxAge}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Tuổi tối đa"
+                  />
+                </div>
+                {touched.minAge && errors.minAge && (
+                  <div style={{ color: "red", fontSize: 12 }}>
+                    {errors.minAge}
+                  </div>
+                )}
+                {touched.maxAge && errors.maxAge && (
+                  <div style={{ color: "red", fontSize: 12 }}>
+                    {errors.maxAge}
+                  </div>
+                )}
+              </Form.Item>
+              <Form.Item
+                label="Số liều tối đa"
+                help={
+                  touched.maxDoseCount && errors.maxDoseCount
+                    ? errors.maxDoseCount
+                    : undefined
+                }
+                validateStatus={
+                  touched.maxDoseCount && errors.maxDoseCount
+                    ? "error"
+                    : undefined
+                }
+                required
+              >
                 <Input
-                  name="recommendedAge"
-                  value={values.recommendedAge}
+                  name="maxDoseCount"
+                  type="number"
+                  min={1}
+                  value={values.maxDoseCount}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  placeholder="Nhập độ tuổi khuyến nghị (nếu có)"
+                  placeholder="Nhập số liều tối đa cho vaccine"
                 />
               </Form.Item>
               <Form.Item>
@@ -592,7 +708,14 @@ const VaccineManagement = () => {
                 {detailModal.vaccine.origin}
               </Descriptions.Item>
               <Descriptions.Item label="Độ tuổi khuyến nghị">
-                {detailModal.vaccine.recommendedAge || "Không có"}
+                {detailModal.vaccine.minAge != null &&
+                detailModal.vaccine.maxAge != null
+                  ? `${detailModal.vaccine.minAge} - ${detailModal.vaccine.maxAge} tuổi`
+                  : detailModal.vaccine.minAge != null
+                  ? `Từ ${detailModal.vaccine.minAge} tuổi`
+                  : detailModal.vaccine.maxAge != null
+                  ? `Đến ${detailModal.vaccine.maxAge} tuổi`
+                  : "Không có"}
               </Descriptions.Item>
               <Descriptions.Item label="Tham khảo" span={2}>
                 {detailModal.vaccine.referenceUrl ? (
@@ -606,6 +729,9 @@ const VaccineManagement = () => {
                 ) : (
                   "Không có"
                 )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số liều tối đa">
+                {detailModal.vaccine.maxDoseCount || "-"}
               </Descriptions.Item>
             </Descriptions>
             <Divider orientation="left" style={{ marginTop: 16 }}>
