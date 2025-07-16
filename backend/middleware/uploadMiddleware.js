@@ -21,6 +21,11 @@ if (!fs.existsSync(medicineImagesDir)) {
     fs.mkdirSync(medicineImagesDir, { recursive: true });
 }
 
+const excelFilesDir = path.join(uploadsDir, "excel-files");
+if (!fs.existsSync(excelFilesDir)) {
+    fs.mkdirSync(excelFilesDir, { recursive: true });
+}
+
 // Configure storage
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
@@ -42,6 +47,17 @@ const medicineImageStorage = multer.diskStorage({
         const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
         const ext = path.extname(file.originalname);
         cb(null, `medicine-${uniqueSuffix}${ext}`);
+    },
+});
+
+const excelStorage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, excelFilesDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        const ext = path.extname(file.originalname);
+        cb(null, `excel-${uniqueSuffix}${ext}`);
     },
 });
 
@@ -68,6 +84,21 @@ const fileFilter = (req, file, cb) => {
     }
 };
 
+const excelFileFilter = (req, file, cb) => {
+    const allowedTypes = [
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel",
+    ];
+    if (allowedTypes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(
+            new Error("Invalid file type. Only Excel files are allowed."),
+            false
+        );
+    }
+};
+
 // Configure multer
 const upload = multer({
     storage: storage,
@@ -88,6 +119,14 @@ export const uploadMedicineImage = multer({
         fileSize: 10 * 1024 * 1024, // 10MB limit
     },
 }).single("medicineImage");
+
+export const uploadExcel = multer({
+    storage: excelStorage,
+    fileFilter: excelFileFilter,
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+}).single("file");
 
 // Error handling middleware for multer
 export const handleUploadError = (err, req, res, next) => {

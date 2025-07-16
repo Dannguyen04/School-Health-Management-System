@@ -1,15 +1,25 @@
-import { ReloadOutlined } from "@ant-design/icons";
+import {
+  CalendarOutlined,
+  CheckCircleOutlined,
+  ExclamationCircleOutlined,
+  MedicineBoxOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import {
   Alert,
   Button,
   Card,
   Col,
+  List,
+  Progress,
   Row,
   Spin,
   Statistic,
   Table,
+  Tag,
   Typography,
 } from "antd";
+import axios from "axios";
 import { useEffect, useState } from "react";
 import { nurseAPI } from "../../utils/api";
 import "./Dashboard.css";
@@ -33,6 +43,23 @@ const Dashboard = () => {
   const [recentEvents, setRecentEvents] = useState([]);
   const [students, setStudents] = useState([]);
   const [error, setError] = useState(null);
+
+  // State cho tiêm chủng và khám sức khỏe
+  const [vaccinationCampaigns, setVaccinationCampaigns] = useState([]);
+  const [healthCheckupCampaigns, setHealthCheckupCampaigns] = useState([]);
+  const [vaccinationStats, setVaccinationStats] = useState({
+    totalCampaigns: 0,
+    totalStudents: 0,
+    completed: 0,
+  });
+  const [checkupStats, setCheckupStats] = useState({
+    totalCampaigns: 0,
+    totalStudents: 0,
+    completed: 0,
+  });
+
+  // Thêm state cho tiến độ khám sức khỏe
+  const [healthCheckupProgress, setHealthCheckupProgress] = useState({});
 
   const fetchDashboardData = async (isRefresh = false) => {
     try {
@@ -99,6 +126,99 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
+  // Fetch vaccination campaigns
+  useEffect(() => {
+    axios
+      .get("/api/nurse/vaccination-campaigns", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      .then((res) => {
+        if (res.data.success) {
+          setVaccinationCampaigns(res.data.data || []);
+          setVaccinationStats({
+            totalCampaigns: res.data.data.length,
+            totalStudents: res.data.data.reduce(
+              (sum, c) => sum + (c.totalStudents || 0),
+              0
+            ),
+            completed: res.data.data.reduce(
+              (sum, c) => sum + (c.completed || 0),
+              0
+            ),
+          });
+        }
+      });
+  }, []);
+  // Fetch health checkup campaigns
+  useEffect(() => {
+    axios
+      .get("/api/medical-campaigns", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+      .then(async (res) => {
+        const campaigns = res.data.data || [];
+        setHealthCheckupCampaigns(campaigns);
+        // Tạm thời fetch số học sinh mục tiêu và đã khám cho từng campaign
+        const progressObj = {};
+        for (const campaign of campaigns) {
+          // Lấy danh sách học sinh mục tiêu
+          let total = 0;
+          try {
+            const studentsRes = await axios.get(
+              "/api/admin/students-for-nurse",
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+            );
+            const filtered = (studentsRes.data.data || []).filter((s) =>
+              (campaign.targetGrades || [])
+                .map(String)
+                .includes(String(s.grade))
+            );
+            total = filtered.length;
+          } catch {
+            total = 0;
+          }
+          // Lấy số báo cáo đã hoàn thành
+          let completed = 0;
+          try {
+            const reportsRes = await axios.get(
+              `/api/medical-checks/campaign/${campaign.id}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${localStorage.getItem("token")}`,
+                },
+              }
+            );
+            completed = (reportsRes.data.data || []).filter(
+              (r) => r.status === "COMPLETED"
+            ).length;
+          } catch {
+            completed = 0;
+          }
+          progressObj[campaign.id] = { total, completed };
+        }
+        setHealthCheckupProgress(progressObj);
+        setCheckupStats({
+          totalCampaigns: campaigns.length,
+          totalStudents: Object.values(progressObj).reduce(
+            (sum, p) => sum + (p.total || 0),
+            0
+          ),
+          completed: Object.values(progressObj).reduce(
+            (sum, p) => sum + (p.completed || 0),
+            0
+          ),
+        });
+      });
+  }, []);
+
   const handleRefresh = () => {
     fetchDashboardData(true);
   };
@@ -125,6 +245,27 @@ const Dashboard = () => {
     }).length;
     return { thang: month, suco: count };
   });
+
+  // Tạo dữ liệu timeline từ các sự kiện y tế, tiêm chủng, khám sức khỏe
+  const timelineEvents = [
+    ...recentEvents.map((ev) => ({
+      date: ev.occurredAt,
+      type: "medical",
+      title: `Sự cố y tế: ${ev.title}`,
+      description: ev.description,
+    })),
+    ...parentMedicines.map((med) => ({
+      date: med.createdAt,
+      type: "medicine",
+      title: `Đơn thuốc: ${med.medicationName} cho ${med.studentName}`,
+      description: `Liều lượng: ${med.dosage} ${med.unit || ""}`,
+    })),
+    // Có thể bổ sung thêm sự kiện khám sức khỏe nếu có
+  ].sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  function formatDate(date) {
+    return date ? new Date(date).toLocaleDateString("vi-VN") : "";
+  }
 
   // Xoá biến columns vì không dùng nữa
   // const columns = [
@@ -204,6 +345,15 @@ const Dashboard = () => {
     REFERRED: "Chuyển viện",
   };
 
+  // Tìm sự cố y tế chưa xử lý
+  const unresolvedEvents = recentEvents.filter(
+    (ev) => ev.status !== "RESOLVED"
+  );
+  // Tìm đơn thuốc chờ duyệt
+  const pendingMedicines = parentMedicines.filter(
+    (med) => med.status === "PENDING_APPROVAL"
+  );
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -236,133 +386,390 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header p-6 mb-6 fade-in">
-        <Title level={2} className="mb-1 text-gray-800">
-          Bảng điều khiển y tế
-        </Title>
-      </div>
-
       {/* Thống kê tổng quan */}
-      <Row gutter={[16, 16]} className="mb-6">
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="stat-card blue">
+      <Row gutter={[12, 12]} className="mb-4">
+        <Col xs={24} sm={12} md={6}>
+          <Card className="stat-card blue" bordered={false}>
             <Statistic
-              title={<Text strong>Tổng số học sinh</Text>}
-              value={realStats.totalStudents}
-              valueStyle={{ color: "#1890ff", fontSize: "24px" }}
+              title={
+                <span>
+                  <ExclamationCircleOutlined className="text-red-500" /> Sự cố y
+                  tế tháng này
+                </span>
+              }
+              value={dashboardStats.totalMedicalEvents}
+              valueStyle={{
+                color: "#ff4d4f",
+                fontSize: "24px",
+                fontWeight: 700,
+              }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="stat-card orange">
+        <Col xs={24} sm={12} md={6}>
+          <Card className="stat-card green" bordered={false}>
             <Statistic
-              title={<Text strong>Sự cố y tế tháng này</Text>}
-              value={realStats.totalMedicalEvents}
-              valueStyle={{ color: "#fa8c16", fontSize: "24px" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <Card className="stat-card green">
-            <Statistic
-              title={<Text strong>Đơn thuốc phụ huynh gửi</Text>}
+              title={
+                <span>
+                  <MedicineBoxOutlined className="text-green-500" /> Đơn thuốc
+                  phụ huynh gửi
+                </span>
+              }
               value={parentMedicines.length}
-              valueStyle={{ color: "#52c41a", fontSize: "24px" }}
+              valueStyle={{
+                color: "#52c41a",
+                fontSize: "24px",
+                fontWeight: 700,
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card className="stat-card orange" bordered={false}>
+            <Statistic
+              title={
+                <span>
+                  <CalendarOutlined className="text-blue-500" /> Chiến dịch tiêm
+                  chủng
+                </span>
+              }
+              value={vaccinationStats.totalCampaigns}
+              valueStyle={{
+                color: "#1677ff",
+                fontSize: "24px",
+                fontWeight: 700,
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card className="stat-card purple" bordered={false}>
+            <Statistic
+              title={
+                <span>
+                  <CheckCircleOutlined className="text-purple-500" /> Chiến dịch
+                  khám sức khỏe
+                </span>
+              }
+              value={checkupStats.totalCampaigns}
+              valueStyle={{
+                color: "#722ed1",
+                fontSize: "24px",
+                fontWeight: 700,
+              }}
             />
           </Card>
         </Col>
       </Row>
 
-      {/* Biểu đồ sự cố y tế */}
-      <div className="flex justify-center w-full mb-8">
-        <NurseDashboardChart data={eventsByMonth} />
-      </div>
-
-      {/* Bảng dữ liệu sự cố y tế */}
-      <Card className="content-card mb-6">
-        <Title level={4}>Danh sách sự cố y tế</Title>
-        <Table
-          dataSource={recentEvents}
-          rowKey={(record, idx) => record.id || idx}
-          columns={[
-            {
-              title: "Ngày",
-              dataIndex: "occurredAt",
-              key: "occurredAt",
-              render: (v) => (v ? new Date(v).toLocaleDateString("vi-VN") : ""),
-            },
-            {
-              title: "Mã học sinh",
-              dataIndex: "studentCode",
-              key: "studentCode",
-            },
-            {
-              title: "Học sinh",
-              dataIndex: "studentName",
-              key: "studentName",
-            },
-            {
-              title: "Sự kiện",
-              dataIndex: "title",
-              key: "title",
-            },
-            {
-              title: "Mức độ",
-              dataIndex: "severity",
-              key: "severity",
-              render: (v) => severityMap[v] || v,
-            },
-            {
-              title: "Trạng thái",
-              dataIndex: "status",
-              key: "status",
-              render: (v) => eventStatusMap[v] || v,
-            },
-          ]}
-          pagination={{ pageSize: 5 }}
-          locale={{ emptyText: "Không có sự cố y tế nào" }}
-        />
-      </Card>
-
-      {/* Bảng dữ liệu thuốc phụ huynh gửi đến */}
-      <Card className="content-card">
-        <Title level={4}>Danh sách thuốc phụ huynh gửi đến</Title>
-        <Table
-          dataSource={parentMedicines}
-          rowKey={(record) => record.id}
-          columns={[
-            {
-              title: "Học sinh",
-              dataIndex: "studentName",
-              key: "studentName",
-            },
-            {
-              title: "Tên thuốc",
-              dataIndex: "medicationName",
-              key: "medicationName",
-            },
-            {
-              title: "Liều lượng",
-              key: "dosage",
-              render: (_, record) => `${record.dosage} ${record.unit || ""}`,
-            },
-            {
-              title: "Ngày gửi",
-              dataIndex: "createdAt",
-              key: "createdAt",
-              render: (v) => (v ? new Date(v).toLocaleDateString("vi-VN") : ""),
-            },
-            {
-              title: "Trạng thái",
-              dataIndex: "status",
-              key: "status",
-              render: (v) => statusMap[v] || v,
-            },
-          ]}
-          pagination={{ pageSize: 5 }}
-          locale={{ emptyText: "Không có đơn thuốc nào" }}
-        />
-      </Card>
+      {/* Biểu đồ sự cố y tế ở trên */}
+      <Row gutter={[24, 24]} className="mb-8">
+        <Col xs={24}>
+          <Card className="shadow-lg rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-xl font-bold flex items-center gap-2">
+                <ExclamationCircleOutlined className="text-red-500" /> Biểu đồ
+                sự cố y tế
+              </span>
+            </div>
+            <NurseDashboardChart data={eventsByMonth} />
+          </Card>
+        </Col>
+      </Row>
+      {/* Hai Card tiêm chủng và khám sức khỏe ở dưới */}
+      <Row gutter={[12, 12]} className="mb-4">
+        <Col xs={24} md={12}>
+          <Card
+            className="shadow-lg rounded-2xl p-6"
+            title={
+              <span>
+                <ExclamationCircleOutlined className="text-red-500" /> Sự cố y
+                tế gần đây
+              </span>
+            }
+          >
+            <Table
+              dataSource={recentEvents.slice(0, 3)}
+              rowKey={(record) => record.id}
+              columns={[
+                {
+                  title: "Học sinh",
+                  dataIndex: "studentName",
+                  key: "studentName",
+                  render: (text) => <span>{text}</span>,
+                },
+                {
+                  title: "Tiêu đề",
+                  dataIndex: "title",
+                  key: "title",
+                  render: (text) => (
+                    <span className="font-semibold">{text}</span>
+                  ),
+                },
+                {
+                  title: "Ngày xảy ra",
+                  dataIndex: "occurredAt",
+                  key: "occurredAt",
+                  render: (v) =>
+                    v ? new Date(v).toLocaleDateString("vi-VN") : "",
+                },
+                {
+                  title: "Trạng thái",
+                  dataIndex: "status",
+                  key: "status",
+                  render: (v) => eventStatusMap[v] || v,
+                },
+              ]}
+              pagination={false}
+              locale={{ emptyText: "Không có sự cố y tế nào" }}
+              size="small"
+            />
+            {recentEvents.length > 3 && (
+              <div className="flex justify-end mt-2">
+                <Button
+                  type="link"
+                  onClick={() =>
+                    (window.location.href = "/nurse/medical-event")
+                  }
+                >
+                  Xem tất cả
+                </Button>
+              </div>
+            )}
+          </Card>
+        </Col>
+        <Col xs={24} md={12}>
+          <Card
+            className="shadow-lg rounded-2xl p-6"
+            title={
+              <span>
+                <MedicineBoxOutlined className="text-green-500" /> Đơn thuốc phụ
+                huynh gửi đến
+              </span>
+            }
+          >
+            <Table
+              dataSource={parentMedicines.slice(0, 3)}
+              rowKey={(record) => record.id}
+              columns={[
+                {
+                  title: "Học sinh",
+                  dataIndex: "studentName",
+                  key: "studentName",
+                },
+                {
+                  title: "Tên thuốc",
+                  dataIndex: "medicationName",
+                  key: "medicationName",
+                },
+                {
+                  title: "Ngày gửi",
+                  dataIndex: "createdAt",
+                  key: "createdAt",
+                  render: (v) =>
+                    v ? new Date(v).toLocaleDateString("vi-VN") : "",
+                },
+                {
+                  title: "Trạng thái",
+                  dataIndex: "status",
+                  key: "status",
+                  render: (v) => statusMap[v] || v,
+                },
+              ]}
+              pagination={false}
+              locale={{ emptyText: "Không có đơn thuốc nào" }}
+              size="small"
+            />
+            {parentMedicines.length > 3 && (
+              <div className="flex justify-end mt-2">
+                <Button
+                  type="link"
+                  onClick={() =>
+                    (window.location.href = "/nurse/confirmed-medicines")
+                  }
+                >
+                  Xem tất cả
+                </Button>
+              </div>
+            )}
+          </Card>
+        </Col>
+      </Row>
+      {/* Sau 2 bảng nhỏ, thêm lại 2 card tiến độ chiến dịch, mỗi card 1/2 chiều rộng, chỉ 3 dòng mới nhất, có 'Xem tất cả' */}
+      <Row gutter={[12, 12]} className="mb-4">
+        <Col xs={24} md={12}>
+          <Card
+            className="shadow-lg rounded-2xl p-4"
+            title={
+              <span>
+                <MedicineBoxOutlined className="text-green-500" /> Tiến độ tiêm
+                chủng
+              </span>
+            }
+          >
+            <List
+              dataSource={vaccinationCampaigns.slice(0, 3)}
+              renderItem={(item) => (
+                <List.Item className="hover:bg-gray-50 transition-colors duration-200 rounded-lg px-2 py-1">
+                  <div style={{ width: "100%" }}>
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-base">
+                        {item.name}
+                      </span>
+                      <Tag
+                        color={
+                          item.status === "ACTIVE"
+                            ? "green"
+                            : item.status === "FINISHED"
+                            ? "blue"
+                            : "red"
+                        }
+                      >
+                        {item.status === "ACTIVE"
+                          ? "Đang diễn ra"
+                          : item.status === "FINISHED"
+                          ? "Đã kết thúc"
+                          : "Đã huỷ"}
+                      </Tag>
+                    </div>
+                    <div className="flex items-center justify-between mt-1">
+                      <span className="text-xs text-gray-500">
+                        <CalendarOutlined /> {formatDate(item.scheduledDate)} -{" "}
+                        {formatDate(item.deadline)}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {item.vaccinatedStudents || 0} /{" "}
+                        {item.consentedStudents || 0} học sinh đã tiêm
+                      </span>
+                    </div>
+                    <Progress
+                      percent={
+                        item.consentedStudents
+                          ? Math.round(
+                              (item.vaccinatedStudents /
+                                item.consentedStudents) *
+                                100
+                            )
+                          : 0
+                      }
+                      size="small"
+                      status="active"
+                      showInfo={false}
+                      style={{
+                        marginTop: 4,
+                        width: "100%",
+                      }}
+                    />
+                  </div>
+                </List.Item>
+              )}
+              locale={{
+                emptyText: "Không có chiến dịch tiêm chủng",
+              }}
+            />
+            {vaccinationCampaigns.length > 3 && (
+              <div className="flex justify-end mt-2">
+                <Button
+                  type="link"
+                  onClick={() =>
+                    (window.location.href = "/nurse/vaccination-campaigns")
+                  }
+                >
+                  Xem tất cả
+                </Button>
+              </div>
+            )}
+          </Card>
+        </Col>
+        <Col xs={24} md={12}>
+          <Card
+            className="shadow-lg rounded-2xl p-4"
+            title={
+              <span>
+                <CheckCircleOutlined className="text-blue-500" /> Tiến độ khám
+                sức khỏe
+              </span>
+            }
+          >
+            <List
+              dataSource={healthCheckupCampaigns.slice(0, 3)}
+              renderItem={(item) => {
+                const progress = healthCheckupProgress[item.id] || {
+                  total: 0,
+                  completed: 0,
+                };
+                return (
+                  <List.Item className="hover:bg-gray-50 transition-colors duration-200 rounded-lg px-2 py-1">
+                    <div style={{ width: "100%" }}>
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-base">
+                          {item.name}
+                        </span>
+                        <Tag
+                          color={
+                            item.status === "ACTIVE"
+                              ? "green"
+                              : item.status === "FINISHED"
+                              ? "blue"
+                              : "red"
+                          }
+                        >
+                          {item.status === "ACTIVE"
+                            ? "Đang diễn ra"
+                            : item.status === "FINISHED"
+                            ? "Đã kết thúc"
+                            : "Đã huỷ"}
+                        </Tag>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-xs text-gray-500">
+                          <CalendarOutlined /> {formatDate(item.scheduledDate)}{" "}
+                          - {formatDate(item.deadline)}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {progress.completed} / {progress.total} học sinh đã
+                          khám
+                        </span>
+                      </div>
+                      <Progress
+                        percent={
+                          progress.total
+                            ? Math.round(
+                                (progress.completed / progress.total) * 100
+                              )
+                            : 0
+                        }
+                        size="small"
+                        status="active"
+                        showInfo={false}
+                        style={{
+                          marginTop: 4,
+                          width: "100%",
+                        }}
+                      />
+                    </div>
+                  </List.Item>
+                );
+              }}
+              locale={{
+                emptyText: "Không có chiến dịch khám sức khỏe",
+              }}
+            />
+            {healthCheckupCampaigns.length > 3 && (
+              <div className="flex justify-end mt-2">
+                <Button
+                  type="link"
+                  onClick={() =>
+                    (window.location.href = "/nurse/health-checkups")
+                  }
+                >
+                  Xem tất cả
+                </Button>
+              </div>
+            )}
+          </Card>
+        </Col>
+      </Row>
     </div>
   );
 };

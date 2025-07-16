@@ -154,7 +154,9 @@ const HealthProfile = () => {
       setHealthProfile(null);
       setShowSuccess(false);
       message.error(
-        error.response?.data?.error || "Không thể tải hồ sơ sức khỏe"
+        error.response?.data?.error === "Health profile not found"
+          ? "Chưa cập nhật hồ sơ sức khỏe cho học sinh"
+          : error.response?.data?.error || "Không thể tải hồ sơ sức khỏe"
       );
     } finally {
       setLoading(false);
@@ -411,7 +413,11 @@ const HealthProfile = () => {
                       key={child.studentId}
                       value={child.studentId}
                       className="!py-3 !px-5 !text-lg hover:bg-[#e8f5f2]"
-                      style={{ display: "flex", alignItems: "center", gap: 14 }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 14,
+                      }}
                     >
                       <span className="font-semibold text-gray-800 truncate max-w-[140px]">
                         {child.fullName} - {child.class}
@@ -899,7 +905,13 @@ const HealthProfile = () => {
               )}
             </div>
             {lastSaved && (
-              <div style={{ fontSize: 12, color: "#888", marginTop: 8 }}>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "#888",
+                  marginTop: 8,
+                }}
+              >
                 Lần lưu cuối: {lastSaved.toLocaleTimeString()}
               </div>
             )}
@@ -1045,7 +1057,12 @@ const HealthProfile = () => {
                         </Form.Item>
                       </Col>
                     </Row>
-                    <div style={{ textAlign: "right", marginTop: 24 }}>
+                    <div
+                      style={{
+                        textAlign: "right",
+                        marginTop: 24,
+                      }}
+                    >
                       <Button
                         type="primary"
                         onClick={async () => {
@@ -1156,7 +1173,12 @@ const HealthProfile = () => {
                                 </Form.Item>
                               </Card>
                             ))}
-                            <div style={{ textAlign: "center", marginTop: 16 }}>
+                            <div
+                              style={{
+                                textAlign: "center",
+                                marginTop: 16,
+                              }}
+                            >
                               <Button
                                 type="dashed"
                                 onClick={() => {
@@ -1323,7 +1345,10 @@ const HealthProfile = () => {
                                   </Card>
                                 ))}
                                 <div
-                                  style={{ textAlign: "center", marginTop: 24 }}
+                                  style={{
+                                    textAlign: "center",
+                                    marginTop: 24,
+                                  }}
                                 >
                                   <Button
                                     type="dashed"
@@ -1557,7 +1582,10 @@ const HealthProfile = () => {
                                   )
                                 )}
                                 <div
-                                  style={{ textAlign: "center", marginTop: 24 }}
+                                  style={{
+                                    textAlign: "center",
+                                    marginTop: 24,
+                                  }}
                                 >
                                   <Button
                                     type="dashed"
@@ -1812,7 +1840,12 @@ const HealthProfile = () => {
                           alignItems: "center",
                         }}
                       >
-                        <h3 style={{ fontWeight: 700, marginBottom: 16 }}>
+                        <h3
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: 16,
+                          }}
+                        >
                           Chỉ số cơ bản
                         </h3>
                         <Button
@@ -1856,7 +1889,12 @@ const HealthProfile = () => {
                           alignItems: "center",
                         }}
                       >
-                        <h3 style={{ fontWeight: 700, marginBottom: 8 }}>
+                        <h3
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: 8,
+                          }}
+                        >
                           Dị ứng
                         </h3>
                         <Button
@@ -1877,7 +1915,10 @@ const HealthProfile = () => {
                             size="small"
                             column={2}
                             bordered
-                            style={{ marginBottom: 16, background: "#fff" }}
+                            style={{
+                              marginBottom: 16,
+                              background: "#fff",
+                            }}
                           >
                             <Descriptions.Item label="Tên">
                               {a.name}
@@ -1924,7 +1965,12 @@ const HealthProfile = () => {
                           alignItems: "center",
                         }}
                       >
-                        <h3 style={{ fontWeight: 700, marginBottom: 8 }}>
+                        <h3
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: 8,
+                          }}
+                        >
                           Bệnh nền
                         </h3>
                         <Button
@@ -1946,7 +1992,10 @@ const HealthProfile = () => {
                             size="small"
                             column={2}
                             bordered
-                            style={{ marginBottom: 16, background: "#fff" }}
+                            style={{
+                              marginBottom: 16,
+                              background: "#fff",
+                            }}
                           >
                             <Descriptions.Item label="Tên">
                               {d.name}
@@ -1994,7 +2043,12 @@ const HealthProfile = () => {
                       )}
                     </Card>
                     {/* Thuốc đang dùng */}
-                    <Card style={{ background: "#f9f0ff", borderRadius: 16 }}>
+                    <Card
+                      style={{
+                        background: "#f9f0ff",
+                        borderRadius: 16,
+                      }}
+                    >
                       <div
                         style={{
                           display: "flex",
@@ -2002,7 +2056,12 @@ const HealthProfile = () => {
                           alignItems: "center",
                         }}
                       >
-                        <h3 style={{ fontWeight: 700, marginBottom: 8 }}>
+                        <h3
+                          style={{
+                            fontWeight: 700,
+                            marginBottom: 8,
+                          }}
+                        >
                           Thuốc đang dùng
                         </h3>
                         <Button
@@ -2018,7 +2077,11 @@ const HealthProfile = () => {
                       </div>
                       {values.medications && values.medications.length > 0 ? (
                         <div
-                          style={{ display: "flex", flexWrap: "wrap", gap: 8 }}
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: 8,
+                          }}
                         >
                           {values.medications
                             .filter((m) => m.trim() !== "")
