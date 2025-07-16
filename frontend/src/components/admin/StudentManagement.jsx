@@ -20,12 +20,12 @@ import {
     Space,
     Spin,
     Table,
-    Tag,
     Tooltip,
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
+import ImportParentsStudents from "./ImportParentsStudents";
 
 const { Option } = Select;
 
@@ -273,16 +273,6 @@ const StudentManagement = () => {
             key: "grade",
         },
         {
-            title: "Trạng thái",
-            dataIndex: "status",
-            key: "status",
-            render: (status) => (
-                <Tag color={status === "active" ? "green" : "red"}>
-                    {status === "active" ? "Hoạt động" : "Không hoạt động"}
-                </Tag>
-            ),
-        },
-        {
             title: "Thao tác",
             key: "actions",
             render: (_, record) => (
@@ -497,6 +487,11 @@ const StudentManagement = () => {
                 >
                     Thêm học sinh
                 </Button>
+            </div>
+
+            {/* Thêm chức năng import học sinh/phụ huynh */}
+            <div style={{ marginBottom: 24 }}>
+                <ImportParentsStudents />
             </div>
 
             <Card>
