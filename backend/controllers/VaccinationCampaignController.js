@@ -484,6 +484,13 @@ const sendConsentNotification = async (req, res) => {
             });
         }
 
+        // Lấy thông tin vaccine để lấy minAge, maxAge
+        const vaccine = await prisma.vaccine.findUnique({
+            where: { id: campaign.vaccineId },
+        });
+        const minAge = vaccine?.minAge;
+        const maxAge = vaccine?.maxAge;
+
         // Nếu không truyền grades thì mặc định lấy tất cả targetGrades
         const selectedGrades =
             Array.isArray(grades) && grades.length > 0
@@ -498,10 +505,30 @@ const sendConsentNotification = async (req, res) => {
             },
         });
 
+        // Lọc học sinh theo độ tuổi hợp lệ
+        const now = new Date();
+        const eligibleStudents = students.filter((student) => {
+            if (!student.dateOfBirth) return false;
+            const birthDate = new Date(student.dateOfBirth);
+            let age = now.getFullYear() - birthDate.getFullYear();
+            // Điều chỉnh nếu chưa đến sinh nhật trong năm nay
+            const m = now.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            if (minAge && age < minAge) return false;
+            if (maxAge && age > maxAge) return false;
+            return true;
+        });
+        // Danh sách học sinh không đủ tuổi
+        const ineligibleStudents = students.filter(
+            (student) => !eligibleStudents.includes(student)
+        );
+
         // Lấy tất cả userId của phụ huynh (loại trùng)
         const parentUserIds = Array.from(
             new Set(
-                students.flatMap((student) =>
+                eligibleStudents.flatMap((student) =>
                     student.parents.map((sp) => sp.parent.user.id)
                 )
             )
@@ -510,7 +537,7 @@ const sendConsentNotification = async (req, res) => {
         if (parentUserIds.length === 0) {
             return res.status(400).json({
                 success: false,
-                error: "Không tìm thấy phụ huynh nào cho các học sinh trong các khối đã chọn",
+                error: "Không tìm thấy phụ huynh nào cho các học sinh đủ điều kiện trong các khối đã chọn",
             });
         }
 
@@ -560,6 +587,18 @@ const sendConsentNotification = async (req, res) => {
                 },
                 sentGrades: selectedGrades,
                 notificationsCount: notifications.length,
+                eligibleStudents: eligibleStudents.map((s) => ({
+                    id: s.id,
+                    fullName: s.user?.fullName,
+                    grade: s.grade,
+                    dateOfBirth: s.dateOfBirth,
+                })),
+                ineligibleStudents: ineligibleStudents.map((s) => ({
+                    id: s.id,
+                    fullName: s.user?.fullName,
+                    grade: s.grade,
+                    dateOfBirth: s.dateOfBirth,
+                })),
             },
             message: `Đã gửi ${
                 notifications.length

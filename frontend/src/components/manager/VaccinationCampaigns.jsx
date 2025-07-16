@@ -30,6 +30,11 @@ import dayjs from "dayjs";
 import { Formik } from "formik";
 import { useEffect, useState } from "react";
 import * as Yup from "yup";
+import {
+    CheckCircleTwoTone,
+    ExclamationCircleTwoTone,
+} from "@ant-design/icons";
+import { Alert } from "antd";
 
 const { TextArea } = Input;
 
@@ -53,6 +58,7 @@ const VaccinationCampaigns = () => {
     const [selectedGrades, setSelectedGrades] = useState([]);
     const [allGrades, setAllGrades] = useState([]);
     const [consentLoading, setConsentLoading] = useState(false);
+    const [consentResult, setConsentResult] = useState(null); // null hoặc object kết quả
 
     // Get auth token
     const getAuthToken = () => {
@@ -244,6 +250,7 @@ const VaccinationCampaigns = () => {
     };
 
     const sendConsent = async (campaignId, grades) => {
+        setConsentLoading(true);
         try {
             const response = await axios.post(
                 `/api/manager/vaccination-campaigns/${campaignId}/send-consent`,
@@ -251,18 +258,34 @@ const VaccinationCampaigns = () => {
                 { headers: getHeaders() }
             );
             if (response.data.success) {
+                // Tính toán các khối có học sinh không đủ tuổi
+                const ineligibleStudents =
+                    response.data.data.ineligibleStudents || [];
+                const ineligibleGrades = Array.from(
+                    new Set(ineligibleStudents.map((s) => s.grade))
+                );
+                setConsentResult({
+                    notificationsCount:
+                        response.data.data.notificationsCount || 0,
+                    ineligibleGrades,
+                    message: response.data.message,
+                });
                 message.success(
                     response.data.message || "Đã gửi phiếu đồng ý thành công"
                 );
             } else {
+                setConsentResult(null);
                 message.error(
                     response.data.error || "Không thể gửi phiếu đồng ý"
                 );
             }
         } catch (error) {
+            setConsentResult(null);
             message.error(
                 error.response?.data?.error || "Không thể gửi phiếu đồng ý"
             );
+        } finally {
+            setConsentLoading(false);
         }
     };
 
@@ -1222,6 +1245,100 @@ const VaccinationCampaigns = () => {
                     pagination={false}
                     size="small"
                 />
+            </Modal>
+
+            {/* Modal kết quả gửi phiếu đồng ý */}
+            <Modal
+                title={
+                    <span>
+                        <CheckCircleTwoTone
+                            twoToneColor="#52c41a"
+                            style={{ marginRight: 8 }}
+                        />
+                        Kết quả gửi phiếu đồng ý tiêm chủng
+                    </span>
+                }
+                open={!!consentResult}
+                onCancel={() => setConsentResult(null)}
+                footer={[
+                    <Button key="close" onClick={() => setConsentResult(null)}>
+                        Đóng
+                    </Button>,
+                ]}
+                width={500}
+                centered
+            >
+                {consentResult && (
+                    <div style={{ padding: 8 }}>
+                        <Alert
+                            type="success"
+                            showIcon
+                            message={
+                                <b>
+                                    Tổng số lượng phụ huynh đã gửi thông báo:{" "}
+                                    {consentResult.notificationsCount}
+                                </b>
+                            }
+                            style={{ marginBottom: 20 }}
+                        />
+                        {consentResult.ineligibleGrades.length > 0 ? (
+                            <div style={{ textAlign: "center" }}>
+                                <ExclamationCircleTwoTone
+                                    twoToneColor="#faad14"
+                                    style={{ fontSize: 28, marginBottom: 8 }}
+                                />
+                                <div
+                                    style={{
+                                        fontWeight: 500,
+                                        marginBottom: 8,
+                                        marginTop: 8,
+                                    }}
+                                >
+                                    Các khối có học sinh{" "}
+                                    <span style={{ color: "#faad14" }}>
+                                        KHÔNG đủ tuổi tiêm chủng
+                                    </span>
+                                    :
+                                </div>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        flexWrap: "wrap",
+                                        justifyContent: "center",
+                                        gap: 8,
+                                    }}
+                                >
+                                    {consentResult.ineligibleGrades.map(
+                                        (grade) => (
+                                            <Tag
+                                                color="orange"
+                                                key={grade}
+                                                style={{
+                                                    fontSize: 16,
+                                                    padding: "4px 16px",
+                                                }}
+                                            >
+                                                Khối {grade}
+                                            </Tag>
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        ) : (
+                            <Alert
+                                type="success"
+                                showIcon
+                                message={
+                                    <b>
+                                        Tất cả học sinh các khối đã chọn đều đủ
+                                        tuổi tiêm chủng.
+                                    </b>
+                                }
+                                style={{ marginTop: 16 }}
+                            />
+                        )}
+                    </div>
+                )}
             </Modal>
         </div>
     );
