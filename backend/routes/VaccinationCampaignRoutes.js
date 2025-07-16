@@ -16,6 +16,7 @@ import {
   verifyManager,
 } from "../middleware/authenticateToken.js";
 import VaccinationRoutes from "./VaccinationRoutes.js";
+import { getStudentsForCampaign } from "../controllers/NurseController.js";
 
 const router = express.Router();
 
@@ -56,6 +57,13 @@ router.get(
   authenticateToken,
   verifyManager,
   getCampaignConsents
+);
+
+router.get(
+  "/:id/students",
+  authenticateToken,
+  verifyManager,
+  getStudentsForCampaign
 );
 
 router.get("/vaccination-report/:campaignId", getVaccinationReport);
