@@ -67,10 +67,12 @@ const StudentTreatment = () => {
   const [scheduledTreatments, setScheduledTreatments] = useState([]);
   const [upcomingNotifications, setUpcomingNotifications] = useState([]);
   const [notificationInterval, setNotificationInterval] = useState(null);
+  // Thêm state để lưu các thông báo đã gửi
   const [sentNotifications, setSentNotifications] = useState(new Set());
   const [scheduleFilter, setScheduleFilter] = useState("all");
   const [scheduleModalVisible, setScheduleModalVisible] = useState(false);
 
+  // 1. State cho filter nâng cao
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterStudent, setFilterStudent] = useState("");
   const [filterClass, setFilterClass] = useState("");
@@ -92,10 +94,11 @@ const StudentTreatment = () => {
   const startNotificationCheck = () => {
     const interval = setInterval(() => {
       checkUpcomingMedications();
-    }, 60000);
+    }, 60000); // Kiểm tra mỗi phút
     setNotificationInterval(interval);
   };
 
+  // Sửa checkUpcomingMedications để chặn thông báo trùng lặp
   const checkUpcomingMedications = () => {
     const now = new Date();
     scheduledTreatments.forEach((treatment) => {
@@ -104,6 +107,7 @@ const StudentTreatment = () => {
         const scheduledTime = new Date();
         scheduledTime.setHours(hours, minutes, 0, 0);
         const timeDiff = scheduledTime.getTime() - now.getTime();
+        // Nếu trong khoảng 5 phút tới
         if (timeDiff > 0 && timeDiff <= 300000) {
           const key = `${treatment.id}_${time}_${now.toDateString()}`;
           if (!sentNotifications.has(key)) {
@@ -133,7 +137,7 @@ const StudentTreatment = () => {
       if (response.data.success) {
         setScheduledTreatments(response.data.data);
         setUpcomingNotifications(response.data.upcoming || []);
-        setSentNotifications(new Set());
+        setSentNotifications(new Set()); // Reset khi fetch mới
       }
     } catch (error) {
       console.error("Error fetching scheduled treatments:", error);
@@ -478,6 +482,7 @@ const StudentTreatment = () => {
     },
   ];
 
+  // Cột bảng cho modal lịch cấp phát hôm nay
   const scheduleColumns = [
     {
       title: "Học sinh",
@@ -564,6 +569,7 @@ const StudentTreatment = () => {
     },
   ];
 
+  // 2. Hàm lọc nâng cao
   const getFilteredScheduledTreatments = () => {
     return scheduledTreatments.filter((item) => {
       let statusMatch = true;
@@ -613,6 +619,7 @@ const StudentTreatment = () => {
       label: "Danh sách điều trị",
       children: (
         <div className="space-y-6">
+          {/* Thống kê */}
           {summary && Object.keys(summary).length > 0 && (
             <Row gutter={16}>
               <Col xs={24} sm={8}>
@@ -764,6 +771,7 @@ const StudentTreatment = () => {
     },
   ];
 
+  // Đảm bảo có hàm handleSubmit cho form ghi nhận cấp phát thuốc:
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
@@ -774,6 +782,7 @@ const StudentTreatment = () => {
       const dailyLimit = selectedTreatment.dailyLimit;
       const dosageToGive = values.dosageGiven;
 
+      // Trường hợp 2: Đã đủ số lần nhưng tổng liều/ngày chưa đủ
       if (timesGiven === maxTimes && totalGiven + dosageToGive <= dailyLimit) {
         setSubmitting(false);
         Modal.confirm({
@@ -787,6 +796,7 @@ const StudentTreatment = () => {
         return;
       }
 
+      // Trường hợp 3: Đã đủ số lần và đủ tổng liều/ngày
       if (timesGiven >= maxTimes && totalGiven >= dailyLimit) {
         setSubmitting(false);
         message.error(
@@ -795,6 +805,7 @@ const StudentTreatment = () => {
         return;
       }
 
+      // Trường hợp 1: Bình thường
       submitGiveMedicine(values);
     } catch (error) {
       setIsModalVisible(false);
@@ -817,13 +828,14 @@ const StudentTreatment = () => {
     }
   };
 
+  // Hàm thực hiện API cấp phát thuốc như hiện tại
   const submitGiveMedicine = async (values) => {
     try {
       const token = localStorage.getItem("token");
       const response = await axios.post(
         `/api/nurse/give-medicine/${selectedTreatment.id}`,
         {
-          quantityUsed: values.dosageGiven,
+          quantityUsed: values.dosageGiven, // Gửi cùng giá trị
           dosageGiven: values.dosageGiven,
           notes: values.notes,
           administrationTime: new Date().toISOString(),
@@ -836,6 +848,7 @@ const StudentTreatment = () => {
       if (response.data.success) {
         message.success("Đã ghi nhận cấp phát thuốc phụ huynh gửi thành công");
 
+        // Hiển thị cảnh báo nếu có
         if (response.data.warnings && response.data.warnings.length > 0) {
           Modal.warning({
             title: "Cảnh báo",
@@ -876,6 +889,11 @@ const StudentTreatment = () => {
     }
   };
 
+  // Hàm lọc lịch cấp phát theo trạng thái
+  // const filterScheduledTreatments = (treatments) => {
+  //   ... (toàn bộ hàm này bị xóa)
+  // };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -900,6 +918,7 @@ const StudentTreatment = () => {
 
       {items[0].children}
 
+      {/* Modal lịch cấp phát hôm nay */}
       <Modal
         title={
           <span>
@@ -911,6 +930,7 @@ const StudentTreatment = () => {
         footer={null}
         width={800}
       >
+        {/* Bộ lọc nâng cao */}
         <div className="flex flex-wrap gap-2 mb-4 items-end">
           <div>
             <span className="mr-1">Trạng thái:</span>
@@ -992,6 +1012,7 @@ const StudentTreatment = () => {
         />
       </Modal>
 
+      {/* Modal cấp phát thuốc */}
       <Modal
         title="Cấp phát thuốc cho học sinh"
         open={isModalVisible}
@@ -1074,6 +1095,7 @@ const StudentTreatment = () => {
                       } (${selectedTreatment.todayDosage || 0} đã dùng)`
                     );
                   }
+                  // Nếu có customTimes và timesGivenToday (số lần đã cấp phát hôm nay)
                   if (
                     selectedTreatment &&
                     selectedTreatment.customTimes &&
@@ -1125,6 +1147,7 @@ const StudentTreatment = () => {
         </Form>
       </Modal>
 
+      {/* Modal chi tiết */}
       <Modal
         title={
           <span>
@@ -1139,6 +1162,7 @@ const StudentTreatment = () => {
       >
         {detailRecord && (
           <div className="p-6 space-y-6">
+            {/* Thông tin học sinh */}
             <div>
               <div className="font-semibold text-lg mb-2 text-blue-700 flex items-center gap-2">
                 <UserOutlined /> Thông tin học sinh
@@ -1169,6 +1193,7 @@ const StudentTreatment = () => {
               </div>
             </div>
             <Divider className="my-2" />
+            {/* Thông tin thuốc */}
             <div>
               <div className="font-semibold text-lg mb-2 text-green-700 flex items-center gap-2">
                 <MedicineBoxOutlined /> Thông tin thuốc
@@ -1212,6 +1237,7 @@ const StudentTreatment = () => {
               </div>
             </div>
             <Divider className="my-2" />
+            {/* Thông tin điều trị */}
             <div>
               <div className="font-semibold text-lg mb-2 text-purple-700 flex items-center gap-2">
                 <ClockCircleOutlined /> Thông tin điều trị
@@ -1255,6 +1281,7 @@ const StudentTreatment = () => {
                 </div>
               </div>
             </div>
+            {/* Cảnh báo nếu có */}
             {detailRecord.warnings && detailRecord.warnings.length > 0 && (
               <div>
                 <Divider className="my-2" />
@@ -1276,6 +1303,7 @@ const StudentTreatment = () => {
         )}
       </Modal>
 
+      {/* Modal lịch sử */}
       <Modal
         title={`Lịch sử cấp phát - ${historyTitle}`}
         open={historyModalVisible}
@@ -1330,6 +1358,7 @@ const StudentTreatment = () => {
         </Spin>
       </Modal>
 
+      {/* Drawer lịch cấp phát hôm nay */}
       <Drawer
         title="Lịch cấp phát thuốc hôm nay"
         placement="right"
@@ -1387,6 +1416,7 @@ const StudentTreatment = () => {
                           (t) => t.id === treatment.id
                         );
                         setSelectedTreatment(fullTreatment || treatment);
+                        // Đồng bộ setFieldsValue như ngoài giao diện
                         const dosageNumber = parseFloat(
                           (fullTreatment || treatment).dosage
                         );
@@ -1413,6 +1443,7 @@ const StudentTreatment = () => {
         </div>
       </Drawer>
 
+      {/* Modal lỗi */}
       <Modal
         title="Lỗi"
         open={errorModal.visible}

@@ -37,11 +37,14 @@ const Dashboard = () => {
     pendingMedications: 0,
     lowStockItems: 0,
   });
+  // Bỏ mọi phần liên quan đến medicalInventory, lowStockItems, vật tư/kho
+  // Thêm state mock cho thuốc phụ huynh gửi đến
   const [parentMedicines, setParentMedicines] = useState([]);
   const [recentEvents, setRecentEvents] = useState([]);
   const [students, setStudents] = useState([]);
   const [error, setError] = useState(null);
 
+  // State cho tiêm chủng và khám sức khỏe
   const [vaccinationCampaigns, setVaccinationCampaigns] = useState([]);
   const [healthCheckupCampaigns, setHealthCheckupCampaigns] = useState([]);
   const [vaccinationStats, setVaccinationStats] = useState({
@@ -55,18 +58,22 @@ const Dashboard = () => {
     completed: 0,
   });
 
+  // Thêm state cho tiến độ khám sức khỏe
   const [healthCheckupProgress, setHealthCheckupProgress] = useState({});
 
+  // Thêm state cho thuốc đã duyệt
   const [approvedMedicines, setApprovedMedicines] = useState([]);
 
   const fetchDashboardData = async (isRefresh = false) => {
     try {
       if (isRefresh) {
+        // setRefreshing(true); // Xoá
       } else {
         setLoading(true);
       }
       setError(null);
 
+      // Fetch dashboard statistics
       const statsResponse = await nurseAPI.getDashboardStats();
       console.log("Dashboard stats response:", statsResponse);
 
@@ -76,6 +83,7 @@ const Dashboard = () => {
         throw new Error(statsResponse.data.error || "Lỗi khi tải thống kê");
       }
 
+      // Fetch recent medical events
       try {
         const eventsResponse = await nurseAPI.getRecentMedicalEvents();
         if (eventsResponse.data.success) {
@@ -85,6 +93,7 @@ const Dashboard = () => {
         console.warn("Không thể tải sự kiện y tế gần đây:", err);
       }
 
+      // Lấy danh sách thuốc phụ huynh gửi đến từ API
       try {
         const medicinesResponse = await nurseAPI.getPendingMedicines();
         if (medicinesResponse.data.success) {
@@ -94,6 +103,7 @@ const Dashboard = () => {
         console.warn("Không thể tải danh sách thuốc phụ huynh gửi đến:", err);
       }
 
+      // Fetch students for nurse
       try {
         const studentsResponse = await nurseAPI.getStudentsForNurse();
         if (studentsResponse.data.success) {
@@ -111,6 +121,7 @@ const Dashboard = () => {
       );
     } finally {
       setLoading(false);
+      // setRefreshing(false); // Xoá
     }
   };
 
@@ -135,6 +146,7 @@ const Dashboard = () => {
     fetchApprovedMedicines();
   }, []);
 
+  // Fetch vaccination campaigns
   useEffect(() => {
     axios
       .get("/api/nurse/vaccination-campaigns", {
@@ -159,6 +171,7 @@ const Dashboard = () => {
         }
       });
   }, []);
+  // Fetch health checkup campaigns
   useEffect(() => {
     axios
       .get("/api/medical-campaigns", {
@@ -169,8 +182,10 @@ const Dashboard = () => {
       .then(async (res) => {
         const campaigns = res.data.data || [];
         setHealthCheckupCampaigns(campaigns);
+        // Tạm thời fetch số học sinh mục tiêu và đã khám cho từng campaign
         const progressObj = {};
         for (const campaign of campaigns) {
+          // Lấy danh sách học sinh mục tiêu
           let total = 0;
           try {
             const studentsRes = await axios.get(
@@ -190,6 +205,7 @@ const Dashboard = () => {
           } catch {
             total = 0;
           }
+          // Lấy số báo cáo đã hoàn thành
           let completed = 0;
           try {
             const reportsRes = await axios.get(
@@ -227,6 +243,7 @@ const Dashboard = () => {
     fetchDashboardData(true);
   };
 
+  // Calculate real statistics
   const realStats = {
     totalStudents: students.length || dashboardStats.totalStudents,
     totalMedicalEvents:
@@ -235,9 +252,10 @@ const Dashboard = () => {
     pendingTasks: dashboardStats.pendingTasks,
     pendingMedications:
       parentMedicines.length || dashboardStats.pendingMedications,
-    lowStockItems: 0,
+    lowStockItems: 0, // No longer applicable
   };
 
+  // Tổng hợp số sự cố theo tháng cho chart
   const eventsByMonth = Array.from({ length: 12 }, (_, i) => {
     const month = (i + 1).toString();
     const count = (recentEvents || []).filter((ev) => {
@@ -248,6 +266,7 @@ const Dashboard = () => {
     return { thang: month, suco: count };
   });
 
+  // Tổng hợp số thuốc đã duyệt theo tháng cho chart
   const approvedMedicinesByMonth = Array.from({ length: 12 }, (_, i) => {
     const month = (i + 1).toString();
     const count = (approvedMedicines || []).filter((med) => {
@@ -258,6 +277,7 @@ const Dashboard = () => {
     return { thang: month, approved: count };
   });
 
+  // Tạo dữ liệu timeline từ các sự kiện y tế, tiêm chủng, khám sức khỏe
   const timelineEvents = [
     ...recentEvents.map((ev) => ({
       date: ev.occurredAt,
@@ -271,11 +291,68 @@ const Dashboard = () => {
       title: `Đơn thuốc: ${med.medicationName} cho ${med.studentName}`,
       description: `Liều lượng: ${med.dosage} ${med.unit || ""}`,
     })),
+    // Có thể bổ sung thêm sự kiện khám sức khỏe nếu có
   ].sort((a, b) => new Date(a.date) - new Date(b.date));
 
   function formatDate(date) {
     return date ? new Date(date).toLocaleDateString("vi-VN") : "";
   }
+
+  // Xoá biến columns vì không dùng nữa
+  // const columns = [
+  //   {
+  //     title: "Tên vật tư",
+  //     dataIndex: "name",
+  //     key: "name",
+  //     render: (text, record) => (
+  //       <Space>
+  //         <Avatar size="small" icon={<MedicineBoxOutlined />} />
+  //         <Text strong>{text}</Text>
+  //       </Space>
+  //     ),
+  //   },
+  //   {
+  //     title: "Tồn kho hiện tại",
+  //     dataIndex: "quantity",
+  //     key: "quantity",
+  //     render: (text, record) => (
+  //       <Space direction="vertical" size={0}>
+  //         <Text strong>
+  //           {text} {record.unit}
+  //         </Text>
+  //         <Progress
+  //           percent={Math.min((text / record.minStock) * 100, 100)}
+  //           size="small"
+  //           status={text <= record.minStock ? "exception" : "normal"}
+  //           showInfo={false}
+  //           className="progress-bar-modern"
+  //         />
+  //       </Space>
+  //     ),
+  //   },
+  //   {
+  //     title: "Tồn kho tối thiểu",
+  //     dataIndex: "minStock",
+  //     key: "minStock",
+  //     render: (text, record) => `${text} ${record.unit}`,
+  //   },
+  //   {
+  //     title: "Trạng thái",
+  //     key: "status",
+  //     render: (_, record) => {
+  //       const isLowStock = record.quantity <= record.minStock;
+  //       return (
+  //         <Tag
+  //           color={isLowStock ? "red" : "green"}
+  //           icon={isLowStock ? <WarningOutlined /> : <CheckCircleOutlined />}
+  //           className="tag-modern"
+  //         >
+  //           {isLowStock ? "Tồn kho thấp" : "Bình thường"}
+  //         </Tag>
+  //       );
+  //     },
+  //   },
+  // ];
 
   const statusMap = {
     PENDING_APPROVAL: "Chờ duyệt",
@@ -299,9 +376,11 @@ const Dashboard = () => {
     REFERRED: "Chuyển viện",
   };
 
+  // Tìm sự cố y tế chưa xử lý
   const unresolvedEvents = recentEvents.filter(
     (ev) => ev.status !== "RESOLVED"
   );
+  // Tìm đơn thuốc chờ duyệt
   const pendingMedicines = parentMedicines.filter(
     (med) => med.status === "PENDING_APPROVAL"
   );
@@ -338,6 +417,7 @@ const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
+      {/* Thống kê tổng quan */}
       <Row gutter={[12, 12]} className="mb-4">
         <Col xs={24} sm={12} md={6}>
           <Card className="stat-card blue" bordered={false}>
@@ -413,6 +493,7 @@ const Dashboard = () => {
         </Col>
       </Row>
 
+      {/* Biểu đồ sự cố y tế và thuốc đã duyệt */}
       <Row gutter={[24, 24]} className="mb-8">
         <Col xs={24} md={12}>
           <Card className="shadow-lg rounded-2xl p-6">
@@ -435,6 +516,7 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
+      {/* Hai Card tiêm chủng và khám sức khỏe ở dưới */}
       <Row gutter={[12, 12]} className="mb-4">
         <Col xs={24} md={12}>
           <Card
@@ -553,6 +635,7 @@ const Dashboard = () => {
           </Card>
         </Col>
       </Row>
+      {/* Sau 2 bảng nhỏ, thêm lại 2 card tiến độ chiến dịch, mỗi card 1/2 chiều rộng, chỉ 3 dòng mới nhất, có 'Xem tất cả' */}
       <Row gutter={[12, 12]} className="mb-4">
         <Col xs={24} md={12}>
           <Card
