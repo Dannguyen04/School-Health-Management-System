@@ -11,7 +11,6 @@ import { Bar } from "@ant-design/plots";
 import { Alert, Button, Card, Col, Row, Spin, Statistic } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
-import ImportParentsStudents from "./ImportParentsStudents";
 
 const AdminDashboard = () => {
     const [loading, setLoading] = useState(true);
@@ -205,7 +204,6 @@ const AdminDashboard = () => {
                     Làm mới
                 </Button>
             </div>
-            <ImportParentsStudents />
 
             {/* Main Statistics Cards */}
             <Row gutter={[16, 16]}>

@@ -25,6 +25,7 @@ import {
 import axios from "axios";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
+import ImportParentsStudents from "./ImportParentsStudents";
 
 const { Option } = Select;
 
@@ -458,6 +459,11 @@ const StudentManagement = () => {
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           Thêm học sinh
         </Button>
+      </div>
+
+      {/* Thêm chức năng import học sinh/phụ huynh */}
+      <div style={{ marginBottom: 24 }}>
+        <ImportParentsStudents />
       </div>
 
       <Card>
