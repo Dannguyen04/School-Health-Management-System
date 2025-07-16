@@ -106,21 +106,7 @@ const NurseDashboardChart = ({ data = [], color = '#36ae9a', icon = EventIcon, c
             radius={[8, 8, 0, 0]}
             stroke="#059669"
             strokeWidth={2}
-            label={({ value, x, y, width, height }) =>
-              value !== 0 ? (
-                <text
-                  x={x + width / 2}
-                  y={y - 8}
-                  fill={color}
-                  fontWeight={700}
-                  fontSize={18}
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                >
-                  {value}
-                </text>
-              ) : null
-            }
+            label={{ position: 'top', fill: color, fontWeight: 700, fontSize: 18 }}
           />
         </BarChart>
       </ResponsiveContainer>
@@ -189,21 +175,7 @@ export const ApprovedMedicinesChart = ({ data = [] }) => {
             radius={[8, 8, 0, 0]}
             stroke="#fa8c16"
             strokeWidth={2}
-            label={({ value, x, y, width, height }) =>
-              value !== 0 ? (
-                <text
-                  x={x + width / 2}
-                  y={y - 8}
-                  fill="#fa8c16"
-                  fontWeight={700}
-                  fontSize={18}
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                >
-                  {value}
-                </text>
-              ) : null
-            }
+            label={{ position: 'top', fill: '#fa8c16', fontWeight: 700, fontSize: 18 }}
           />
         </BarChart>
       </ResponsiveContainer>
