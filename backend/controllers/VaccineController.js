@@ -36,7 +36,8 @@ const createVaccination = async (req, res) => {
             description,
             sideEffects,
             contraindications,
-            recommendedAge,
+            minAge,
+            maxAge,
             maxDoseCount, // mới
         } = req.body;
 
@@ -73,7 +74,8 @@ const createVaccination = async (req, res) => {
                 description,
                 sideEffects,
                 contraindications,
-                recommendedAge,
+                minAge: Number(minAge),
+                maxAge: Number(maxAge),
                 maxDoseCount: Number(maxDoseCount),
             },
         });
@@ -212,7 +214,8 @@ const updateVaccination = async (req, res) => {
         description,
         sideEffects,
         contraindications,
-        recommendedAge,
+        minAge,
+        maxAge,
         maxDoseCount, // mới
     } = req.body;
     try {
@@ -256,7 +259,8 @@ const updateVaccination = async (req, res) => {
                 description,
                 sideEffects,
                 contraindications,
-                recommendedAge,
+                minAge: minAge ? Number(minAge) : existedVaccination.minAge,
+                maxAge: maxAge ? Number(maxAge) : existedVaccination.maxAge,
                 maxDoseCount:
                     maxDoseCount !== undefined
                         ? Number(maxDoseCount)

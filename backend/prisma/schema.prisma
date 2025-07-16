@@ -395,7 +395,8 @@ model Vaccine {
   description      String?  // mô tả vaccine
   sideEffects      String?  // tác dụng phụ
   contraindications String? //cấm chỉ định
-  recommendedAge   String?
+  minAge           Int?
+  maxAge           Int?
   maxDoseCount     Int
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
