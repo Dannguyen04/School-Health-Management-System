@@ -60,7 +60,7 @@ const Dashboard = () => {
 
   // Table columns
   const gradeColumns = [
-    { title: "Lớp", dataIndex: "grade", key: "grade" },
+    { title: "Khối", dataIndex: "grade", key: "grade" },
     {
       title: "Tổng số học sinh",
       dataIndex: "totalStudents",
@@ -238,7 +238,7 @@ const Dashboard = () => {
       </Row>
 
       <Card
-        title="Thống kê theo lớp"
+        title="Thống kê theo khối"
         style={{
           marginTop: 32,
           borderRadius: 12,
@@ -258,22 +258,7 @@ const Dashboard = () => {
         />
       </Card>
 
-      {/* <Row gutter={16} style={{ marginTop: 32 }}>
-        <Col xs={24} lg={12}>
-          <Card title="Tiêm chủng tháng" style={{ borderRadius: 12 }}>
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              Biểu đồ tiêm chủng tháng (đang phát triển)
-            </div>
-          </Card>
-        </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Khám sức khỏe tháng" style={{ borderRadius: 12 }}>
-            <div className="h-64 flex items-center justify-center text-gray-500">
-              Biểu đồ khám sức khỏe tháng (đang phát triển)
-            </div>
-          </Card>
-        </Col>
-      </Row> */}
+      
     </div>
   );
 };

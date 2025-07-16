@@ -401,3 +401,20 @@ export const notifyParentsAboutCampaign = async (req, res) => {
         });
     }
 };
+
+export const getStudentsForMedicalCampaign = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const campaign = await prisma.medicalCheckCampaign.findUnique({ where: { id } });
+    if (!campaign) {
+      return res.status(404).json({ success: false, error: "Không tìm thấy chiến dịch" });
+    }
+    const students = await prisma.student.findMany({
+      where: { grade: { in: campaign.targetGrades } },
+      select: { id: true, user: { select: { fullName: true } } },
+    });
+    res.json({ success: true, data: students });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
