@@ -7,6 +7,7 @@ import {
     updateMedicalCampaign,
     updateProgress,
     notifyParentsAboutCampaign, // thêm hàm mới
+    getStudentsForMedicalCampaign,
 } from "../controllers/MedicalCampaign.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 
@@ -20,6 +21,9 @@ router.get("/", authenticateToken, getAllMedicalCampaigns);
 
 // Lấy campaign theo id
 router.get("/:id", authenticateToken, getMedicalCampaignById);
+
+// Lấy danh sách học sinh thuộc campaign
+router.get("/:id/students", authenticateToken, getStudentsForMedicalCampaign);
 
 // Cập nhật campaign
 router.put("/:id", authenticateToken, updateMedicalCampaign);
