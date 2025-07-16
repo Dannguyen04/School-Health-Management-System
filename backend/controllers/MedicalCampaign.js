@@ -380,7 +380,7 @@ export const notifyParentsAboutCampaign = async (req, res) => {
                     title: `Thông báo chiến dịch khám sức khỏe: ${campaign.name}`,
                     message: `Nhà trường tổ chức chiến dịch khám sức khỏe "${
                         campaign.name
-                    }" từ ngày ${campaign.scheduledDate.toLocaleDateString()} đến ${campaign.deadline.toLocaleDateString()}. Quý phụ huynh vui lòng phối hợp để học sinh tham gia đầy đủ.`,
+                    }" từ ngày ${campaign.scheduledDate.toLocaleDateString()} đến ${campaign.deadline.toLocaleDateString()} cho học sinh các khối. Nội dung khám bao gồm: khám thể lực, khám thị lực, khám thính lực và các chỉ số sức khỏe cơ bản khác. Quý phụ huynh vui lòng phối hợp để học sinh tham gia đầy đủ để đảm bảo theo dõi sức khỏe toàn diện cho các em.`,
                     type: "medical_campaign",
                     status: "SENT",
                     sentAt: new Date(),
