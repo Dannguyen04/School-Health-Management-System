@@ -25,6 +25,7 @@ import {
 import axios from "axios";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
+import ImportParentsStudents from "./ImportParentsStudents";
 
 const { Option } = Select;
 
@@ -781,6 +782,17 @@ const StudentManagement = () => {
                       message: "Vui lòng nhập tên phụ huynh!",
                     },
                   ]}
+
+            {/* Thêm chức năng import học sinh/phụ huynh */}
+            <div style={{ marginBottom: 24 }}>
+                <ImportParentsStudents />
+            </div>
+
+            <Card>
+                <Form
+                    form={searchForm}
+                    onFinish={handleSearch}
+                    layout="vertical"
                 >
                   <Input placeholder="Nhập tên phụ huynh" />
                 </Form.Item>
