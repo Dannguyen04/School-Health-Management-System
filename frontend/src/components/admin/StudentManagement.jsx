@@ -787,6 +787,17 @@ const StudentManagement = () => {
                       message: "Vui lòng nhập tên phụ huynh!",
                     },
                   ]}
+
+            {/* Thêm chức năng import học sinh/phụ huynh */}
+            <div style={{ marginBottom: 24 }}>
+                <ImportParentsStudents />
+            </div>
+
+            <Card>
+                <Form
+                    form={searchForm}
+                    onFinish={handleSearch}
+                    layout="vertical"
                 >
                   <Input placeholder="Nhập tên phụ huynh" />
                 </Form.Item>
