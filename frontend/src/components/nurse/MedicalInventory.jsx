@@ -35,8 +35,8 @@ const treatmentStatusMap = {
 const frequencyMap = {
   once: "1 lần/ngày",
   twice: "2 lần/ngày",
-  "three-times": "3 lần/ngày",
-  "as-needed": "Khi cần",
+  three: "3 lần/ngày",
+  "as-needed": "Khi cần thiết",
 };
 const usageNoteMap = {
   "after-meal": "Sau ăn",
