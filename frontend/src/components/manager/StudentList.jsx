@@ -20,7 +20,6 @@ import {
   Space,
   Spin,
   Table,
-  Tag,
   Tooltip,
 } from "antd";
 import axios from "axios";
@@ -260,16 +259,6 @@ const StudentList = () => {
       title: "Khối",
       dataIndex: "grade",
       key: "grade",
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => (
-        <Tag color={status === "active" ? "green" : "red"}>
-          {status === "active" ? "Hoạt động" : "Không hoạt động"}
-        </Tag>
-      ),
     },
     {
       title: "Thao tác",

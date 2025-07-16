@@ -480,7 +480,7 @@ const Dashboard = () => {
       <Row gutter={[12, 12]} className="mb-4">
         <Col xs={24} md={12}>
           <Card
-            className="shadow-lg rounded-2xl p-6"
+            className="shadow-lg rounded-2xl p-6 min-h-[350px]"
             title={
               <span>
                 <ExclamationCircleOutlined className="text-red-500" /> Sự cố y
@@ -540,7 +540,7 @@ const Dashboard = () => {
         </Col>
         <Col xs={24} md={12}>
           <Card
-            className="shadow-lg rounded-2xl p-6"
+            className="shadow-lg rounded-2xl p-6 min-h-[350px]"
             title={
               <span>
                 <MedicineBoxOutlined className="text-green-500" /> Đơn thuốc phụ
@@ -599,7 +599,7 @@ const Dashboard = () => {
       <Row gutter={[12, 12]} className="mb-4">
         <Col xs={24} md={12}>
           <Card
-            className="shadow-lg rounded-2xl p-4"
+            className="shadow-lg rounded-2xl p-4 min-h-[450px]"
             title={
               <span>
                 <MedicineBoxOutlined className="text-green-500" /> Tiến độ tiêm
@@ -683,7 +683,7 @@ const Dashboard = () => {
         </Col>
         <Col xs={24} md={12}>
           <Card
-            className="shadow-lg rounded-2xl p-4"
+            className="shadow-lg rounded-2xl p-4 min-h-[450px]"
             title={
               <span>
                 <CheckCircleOutlined className="text-blue-500" /> Tiến độ khám
