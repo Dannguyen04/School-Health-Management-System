@@ -10,7 +10,6 @@ const validateGender = (gender) =>
     );
 const validatePhone = (phone) => /^\d{8,15}$/.test(phone || "");
 
-// Hàm tìm key gần đúng theo tên cột (bỏ qua khoảng trắng, không phân biệt hoa thường)
 function getColKey(row, colName) {
     return Object.keys(row).find(
         (k) =>
@@ -18,7 +17,6 @@ function getColKey(row, colName) {
             colName.replace(/\s/g, "").toLowerCase()
     );
 }
-// Hàm làm sạch chuỗi: loại bỏ dấu phẩy, dấu cách, dấu /, ký tự xuống dòng ở đầu/cuối
 function cleanString(str) {
     return String(str || "")
         .replace(/[\s,\/\n\r]+$/g, "") // Xóa ở cuối
@@ -26,7 +24,6 @@ function cleanString(str) {
         .trim();
 }
 
-// Hàm chuẩn hóa chuỗi ngày về yyyy-MM-dd
 function normalizeDateString(dateStr) {
     if (!dateStr) return "";
     // Nếu là số serial Excel
