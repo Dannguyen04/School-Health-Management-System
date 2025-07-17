@@ -222,21 +222,20 @@ const Dashboard = () => {
       </Row>
 
       {/* Biểu đồ Pie tỷ lệ tiêm chủng và tỷ lệ khám sức khỏe */}
-      <Row gutter={[24, 24]} justify="center" className="mb-8">
-        <Col xs={24} md={12}>
+    <Row gutter={[24, 24]} justify="center" className="mb-8">
+        <Col xs={24} md={12} style={{ display: "flex" }}>
           <ManagerDashboardPieChart
-            vaccinated={stats.vaccinatedStudents || 0}
-            total={stats.totalStudents || 0}
-          />
+          vaccinated={stats.vaccinatedStudents || 0}
+          total={stats.totalStudents || 0}
+        />
         </Col>
-        <Col xs={24} md={12}>
+        <Col xs={24} md={12} style={{ display: "flex" }}>
           <ManagerHealthCheckPieChart
-            participated={stats.agreedConsents || 0}
-            declined={stats.declinedConsents || 0}
-          />
-        </Col>
-      </Row>
-
+          participated={stats.agreedConsents || 0}
+          declined={stats.declinedConsents || 0}
+        />
+       </Col>
+    </Row>
       <Card
         title="Thống kê theo khối"
         style={{
