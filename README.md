@@ -43,7 +43,15 @@ npm start # hoặc: node index.js
 ### 2️⃣ Frontend
 
 ```bash
-5000) (hoặc port bạn cấu hình)
+cd School-Health-Management-System/frontend
+npm install
+npm run dev
+```
+
+### 🌐 Truy cập
+
+-   Frontend: [http://localhost:5173](http://localhost:5173)
+-   Backend (API): [http://localhost:3000](http://localhost:5000) (hoặc port bạn cấu hình)
 
 ---
 
