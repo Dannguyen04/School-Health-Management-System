@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import api from '../../utils/api';
 import { Listbox } from '@headlessui/react';
 import { ChevronUpDownIcon, CheckIcon } from '@heroicons/react/20/solid';
 
-const COLORS = ['#a78bfa', '#ff6b6b']; // Purple and red
+const COLORS = [
+  'url(#checkedGradient)',
+  'url(#notCheckedGradient)'
+];
 
 const ManagerHealthCheckPieChart = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [selectedCampaign, setSelectedCampaign] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [participated, setParticipated] = useState(0);
-  const [declined, setDeclined] = useState(0);
+  const [checked, setChecked] = useState(0);
+  const [notChecked, setNotChecked] = useState(0);
   const [total, setTotal] = useState(0);
 
-  // Fetch danh sách campaign khi mount
   useEffect(() => {
     const fetchCampaigns = async () => {
       setLoading(true);
@@ -36,73 +38,81 @@ const ManagerHealthCheckPieChart = () => {
     fetchCampaigns();
   }, []);
 
-  // Fetch dữ liệu chi tiết khi chọn campaign
   useEffect(() => {
     if (!selectedCampaign) return;
-    const fetchCampaignDetail = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
-        // Lấy danh sách medical checks theo campaign
-        const res = await api.get(`/medical-checks/campaign/${selectedCampaign}`);
-        if (res.data && res.data.data) {
-          const checks = res.data.data;
-          setTotal(checks.length);
-          setParticipated(checks.filter(c => c.status === 'COMPLETED').length);
-          setDeclined(checks.filter(c => c.status === 'DECLINED').length);
-        }
+        const [studentsRes, checksRes] = await Promise.all([
+          api.get(`/medical-campaigns/${selectedCampaign}/students`),
+          api.get(`/medical-checks/campaign/${selectedCampaign}`)
+        ]);
+        const allStudents = studentsRes.data.data;
+        const checks = checksRes.data.data;
+        const checkedStudentIds = new Set(checks.filter(c => c.status === 'COMPLETED').map(c => c.studentId));
+        const soDaKham = checkedStudentIds.size;
+        const soChuaKham = allStudents.length - soDaKham;
+        setTotal(allStudents.length);
+        setChecked(soDaKham);
+        setNotChecked(soChuaKham);
       } catch (err) {
-        setError('Lỗi khi lấy dữ liệu chiến dịch');
+        setError('Lỗi khi lấy dữ liệu');
         setTotal(0);
-        setParticipated(0);
-        setDeclined(0);
+        setChecked(0);
+        setNotChecked(0);
       } finally {
         setLoading(false);
       }
     };
-    fetchCampaignDetail();
+    fetchData();
   }, [selectedCampaign]);
 
+  const percent = total > 0 ? Math.round((checked / total) * 100) : 0;
   const data = [
-    { name: 'Tham gia', value: participated },
-    { name: 'Từ chối', value: declined },
+    { name: 'Đã khám', value: checked },
+    { name: 'Chưa khám', value: notChecked },
   ];
 
-  // Custom label to show name and value outside the slice
-  const renderLabel = ({ name, value, cx, cy, midAngle, outerRadius, fill, index }) => {
-    if (value === 0) return null;
-    const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 24;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-    return (
-      <text
-        x={x}
-        y={y}
-        fill={COLORS[index]}
-        textAnchor={x > cx ? 'start' : 'end'}
-        dominantBaseline="central"
-        fontWeight={600}
-        fontSize={16}
-      >
-        {`${name}: ${value}`}
+  // Custom legend
+  const renderLegend = () => (
+    <div className="flex justify-center gap-8 mt-6 text-base font-medium">
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-4 h-4 rounded-full" style={{ background: 'linear-gradient(90deg, #34d399 0%, #43e97b 100%)' }}></span>
+        Đã khám
+      </div>
+      <div className="flex items-center gap-2">
+        <span className="inline-block w-4 h-4 rounded-full" style={{ background: 'linear-gradient(90deg, #fb7185 0%, #ffb199 100%)' }}></span>
+        Chưa khám
+      </div>
+    </div>
+  );
+
+  // Center label
+  const renderCenterLabel = () => (
+    <g>
+      <text x="50%" y="48%" textAnchor="middle" dominantBaseline="middle" fontSize="48" fontWeight="bold" fill="#34d399">
+        {percent}%
       </text>
-    );
-  };
+      <text x="50%" y="62%" textAnchor="middle" dominantBaseline="middle" fontSize="18" fill="#888">
+        Đã khám
+      </text>
+    </g>
+  );
 
   return (
-    <div className="w-full max-w-2xl mx-auto bg-white rounded-3xl shadow p-10 mb-8 border border-[#e5e7eb]">
-      <h3 className="font-bold text-xl text-center mb-8 text-[#a78bfa] tracking-wide uppercase">
-        TỶ LỆ THAM GIA KHÁM SỨC KHỎE
+    <div className="w-full max-w-2xl mx-auto bg-white rounded-3xl shadow-lg p-10 mb-8 border border-[#e5e7eb]">
+      <h3 className="font-bold text-2xl text-center mb-8 text-[#34d399] tracking-wide uppercase font-sans">
+        SỐ HỌC SINH THAM GIA KHÁM SỨC KHỎE
       </h3>
-      <div className="mb-6 flex justify-center">
+      <div className="mb-8 flex justify-center">
         <Listbox value={selectedCampaign} onChange={setSelectedCampaign}>
-          <div className="relative w-72">
-            <Listbox.Button className="relative w-full cursor-pointer rounded-xl bg-white py-2 pl-4 pr-10 text-left border border-[#a78bfa] shadow-lg focus:outline-none focus:ring-2 focus:ring-[#a78bfa] text-lg font-semibold transition hover:border-[#7c3aed] hover:shadow-xl">
+          <div className="relative w-80">
+            <Listbox.Button className="relative w-full cursor-pointer rounded-xl bg-white py-3 pl-5 pr-12 text-left border border-[#34d399] shadow-lg focus:outline-none focus:ring-2 focus:ring-[#34d399] text-lg font-semibold transition hover:border-[#059669] hover:shadow-xl">
               <span className="block truncate">
                 {campaigns.find(c => c.id === selectedCampaign)?.name || 'Chọn chiến dịch'}
               </span>
               <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
-                <ChevronUpDownIcon className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                <ChevronUpDownIcon className="h-6 w-6 text-gray-400" aria-hidden="true" />
               </span>
             </Listbox.Button>
             <Listbox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-lg bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none z-10">
@@ -111,15 +121,15 @@ const ManagerHealthCheckPieChart = () => {
                   key={c.id}
                   value={c.id}
                   className={({ active }) =>
-                    `relative cursor-pointer select-none py-2 pl-10 pr-4 ${active ? 'bg-[#ede9fe] text-[#a78bfa]' : 'text-gray-900'}`
+                    `relative cursor-pointer select-none py-3 pl-12 pr-4 text-lg ${active ? 'bg-[#f0fdf4] text-[#34d399]' : 'text-gray-900'}`
                   }
                 >
                   {({ selected }) => (
                     <>
-                      <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}>{c.name}</span>
+                      <span className={`block truncate ${selected ? 'font-semibold' : 'font-normal'}`}>{c.name}</span>
                       {selected ? (
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-[#a78bfa]">
-                          <CheckIcon className="h-5 w-5" aria-hidden="true" />
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-[#34d399]">
+                          <CheckIcon className="h-6 w-6" aria-hidden="true" />
                         </span>
                       ) : null}
                     </>
@@ -131,35 +141,73 @@ const ManagerHealthCheckPieChart = () => {
         </Listbox>
       </div>
       {loading ? (
-        <div className="text-center text-gray-400 py-16">Đang tải dữ liệu...</div>
+        <div className="text-center text-gray-400 py-16 text-lg font-semibold">Đang tải dữ liệu...</div>
       ) : error ? (
-        <div className="text-center text-red-500 py-16">{error}</div>
+        <div className="text-center text-red-500 py-16 text-lg font-semibold">{error}</div>
       ) : total === 0 ? (
         <div className="text-gray-400 text-lg font-semibold py-16">Không có dữ liệu để hiển thị</div>
       ) : (
-        <ResponsiveContainer width="100%" height={350}>
-          <PieChart>
-            <Pie
-              data={data}
-              cx="50%"
-              cy="50%"
-              innerRadius={70}
-              outerRadius={100}
-              dataKey="value"
-              nameKey="name"
-              label={renderLabel}
-              labelLine={true}
-            >
-              {data.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-            <Legend iconType="circle" formatter={(value, entry, index) => (
-              <span style={{ color: COLORS[index], fontWeight: 600 }}>{value}</span>
-            )} />
-          </PieChart>
-        </ResponsiveContainer>
+        <>
+          <div className="relative flex justify-center items-center" style={{ minHeight: 370 }}>
+            <ResponsiveContainer width={370} height={370}>
+              <PieChart>
+                <defs>
+                  <linearGradient id="checkedGradient" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#34d399" />
+                    <stop offset="100%" stopColor="#43e97b" />
+                  </linearGradient>
+                  <linearGradient id="notCheckedGradient" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#fb7185" />
+                    <stop offset="100%" stopColor="#ffb199" />
+                  </linearGradient>
+                </defs>
+                <Pie
+                  data={data}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={110}
+                  outerRadius={150}
+                  dataKey="value"
+                  nameKey="name"
+                  isAnimationActive={true}
+                  labelLine={false}
+                  stroke="#fff"
+                  strokeWidth={3}
+                >
+                  {data.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                      style={{ filter: 'drop-shadow(0 4px 16px rgba(52,211,153,0.10))' }}
+                    />
+                  ))}
+                </Pie>
+                {renderCenterLabel()}
+                <Tooltip
+                  content={({ active, payload }) =>
+                    active && payload && payload.length ? (
+                      <div className="rounded-xl bg-white/90 px-4 py-2 shadow text-base font-semibold border border-[#e5e7eb]">
+                        <span style={{ color: payload[0].color }}>{payload[0].name}</span>: {payload[0].value}
+                      </div>
+                    ) : null
+                  }
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          {renderLegend()}
+          <div className="flex justify-center gap-8 mt-8 text-lg font-medium">
+            <div className="bg-[#f6fcfa] rounded-xl px-6 py-3 shadow border border-[#e5e7eb]">
+              Tổng số học sinh: <span className="font-bold text-[#1677ff]">{total}</span>
+            </div>
+            <div className="bg-[#f0fdf4] rounded-xl px-6 py-3 shadow border border-[#34d399]/30">
+              Đã khám: <span className="font-bold text-[#34d399]">{checked}</span>
+            </div>
+            <div className="bg-[#fff1f0] rounded-xl px-6 py-3 shadow border border-[#fb7185]/30">
+              Chưa khám: <span className="font-bold text-[#fb7185]">{notChecked}</span>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
