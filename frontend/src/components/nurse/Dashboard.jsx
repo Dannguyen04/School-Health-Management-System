@@ -23,7 +23,9 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { nurseAPI } from "../../utils/api";
 import "./Dashboard.css";
-import NurseDashboardChart, { ApprovedMedicinesChart } from "./NurseDashboardChart";
+import NurseDashboardChart, {
+  ApprovedMedicinesChart,
+} from "./NurseDashboardChart";
 
 const { Title, Text } = Typography;
 
@@ -499,17 +501,24 @@ const Dashboard = () => {
           <Card className="shadow-lg rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
               <span className="text-xl font-bold flex items-center gap-2">
-                <ExclamationCircleOutlined className="text-red-500" /> Biểu đồ sự cố y tế
+                <ExclamationCircleOutlined className="text-red-500" /> Biểu đồ
+                sự cố y tế
               </span>
             </div>
-            <NurseDashboardChart data={eventsByMonth} color="#36ae9a" icon={<ExclamationCircleOutlined className="text-red-500" />} chartType="event" />
+            <NurseDashboardChart
+              data={eventsByMonth}
+              color="#36ae9a"
+              icon={<ExclamationCircleOutlined className="text-red-500" />}
+              chartType="event"
+            />
           </Card>
         </Col>
         <Col xs={24} md={12}>
           <Card className="shadow-lg rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
               <span className="text-xl font-bold flex items-center gap-2">
-                <MedicineBoxOutlined className="text-[#fa8c16]" /> Biểu đồ thuốc đã duyệt
+                <MedicineBoxOutlined className="text-[#fa8c16]" /> Biểu đồ thuốc
+                đã duyệt
               </span>
             </div>
             <ApprovedMedicinesChart data={approvedMedicinesByMonth} />
