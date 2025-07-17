@@ -53,6 +53,7 @@ const VaccinationCampaigns = () => {
   const [selectedGrades, setSelectedGrades] = useState([]);
   const [allGrades, setAllGrades] = useState([]);
   const [consentLoading, setConsentLoading] = useState(false);
+  const [consentResult, setConsentResult] = useState(null); // null hoặc object kết quả
 
   // Get auth token
   const getAuthToken = () => {
@@ -230,6 +231,7 @@ const VaccinationCampaigns = () => {
   };
 
   const sendConsent = async (campaignId, grades) => {
+    setConsentLoading(true);
     try {
       const response = await axios.post(
         `/api/manager/vaccination-campaigns/${campaignId}/send-consent`,
@@ -237,16 +239,30 @@ const VaccinationCampaigns = () => {
         { headers: getHeaders() }
       );
       if (response.data.success) {
+        // Tính toán các khối có học sinh không đủ tuổi
+        const ineligibleStudents = response.data.data.ineligibleStudents || [];
+        const ineligibleGrades = Array.from(
+          new Set(ineligibleStudents.map((s) => s.grade))
+        );
+        setConsentResult({
+          notificationsCount: response.data.data.notificationsCount || 0,
+          ineligibleGrades,
+          message: response.data.message,
+        });
         message.success(
           response.data.message || "Đã gửi phiếu đồng ý thành công"
         );
       } else {
+        setConsentResult(null);
         message.error(response.data.error || "Không thể gửi phiếu đồng ý");
       }
     } catch (error) {
+      setConsentResult(null);
       message.error(
         error.response?.data?.error || "Không thể gửi phiếu đồng ý"
       );
+    } finally {
+      setConsentLoading(false);
     }
   };
 

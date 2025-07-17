@@ -32,40 +32,45 @@ const validateGender = (gender) =>
         (gender || "").toLowerCase()
     );
 const validateDate = (date) => !isNaN(new Date(date).getTime());
+// Validate class: 1 số (1-5) + 1 chữ in hoa
+const validateClassName = (className) => /^[1-5][A-Z]$/.test(className);
+// Validate grade: chỉ cho phép 1-5
+const validateGrade = (grade) => /^[1-5]$/.test(grade);
 
 function validateRow(row) {
     const errors = [];
-    if (!row.parentName) errors.push("Thiếu tên phụ huynh");
-    // Sửa lại validate email phụ huynh: kiểm tra đúng trường và loại bỏ khoảng trắng
-    if (!row.parentEmail) errors.push("Thiếu email phụ huynh");
+    if (!row.parentName) errors.push("Thiếu trường: Tên phụ huynh");
+    if (!row.parentEmail) errors.push("Thiếu trường: Email phụ huynh");
     else if (!validateEmail(row.parentEmail))
         errors.push("Email phụ huynh không hợp lệ");
-    if (!row.parentPhone) errors.push("Thiếu SĐT phụ huynh");
+    if (!row.parentPhone) errors.push("Thiếu trường: SĐT phụ huynh");
     else if (!validatePhone(row.parentPhone))
         errors.push("SĐT phụ huynh không hợp lệ");
-    if (!row.studentName) errors.push("Thiếu tên học sinh");
-    if (!row.studentCode) errors.push("Thiếu mã học sinh");
-    if (!row.studentEmail) errors.push("Thiếu email học sinh");
+    if (!row.studentName) errors.push("Thiếu trường: Họ và tên");
+    if (!row.studentEmail) errors.push("Thiếu trường: Email");
     else if (!validateEmail(row.studentEmail))
         errors.push("Email học sinh không hợp lệ");
-    if (!row.studentGender) errors.push("Thiếu giới tính học sinh");
+    if (!row.studentGender) errors.push("Thiếu trường: Giới tính");
     else if (!validateGender(row.studentGender))
         errors.push("Giới tính học sinh không hợp lệ");
-    if (!row.studentDOB) errors.push("Thiếu ngày sinh học sinh");
+    if (!row.studentDOB) errors.push("Thiếu trường: Ngày sinh");
     else if (!validateDate(row.studentDOB))
         errors.push("Ngày sinh học sinh không hợp lệ");
-    if (!row.studentClass) errors.push("Thiếu lớp học");
-    if (!row.studentGrade) errors.push("Thiếu khối học");
+    if (!row.studentClass) errors.push("Thiếu trường: Lớp");
+    else if (!validateClassName(row.studentClass))
+        errors.push("Lớp học phải có định dạng 1-5 + A-Z, ví dụ: 1A, 2B, 5C");
+    if (!row.studentGrade) errors.push("Thiếu trường: Khối");
+    else if (!validateGrade(row.studentGrade))
+        errors.push("Khối chỉ được nhập số từ 1 đến 5");
     return errors;
 }
 
-// Hàm tìm key gần đúng theo tên cột (bỏ qua khoảng trắng, không phân biệt hoa thường)
+// Hàm tìm key gần đúng theo tên cột (bỏ qua mọi loại khoảng trắng, không phân biệt hoa thường)
 function getColKey(row, colName) {
-    return Object.keys(row).find(
-        (k) =>
-            k.replace(/\s/g, "").toLowerCase() ===
-            colName.replace(/\s/g, "").toLowerCase()
-    );
+    // Loại bỏ mọi loại khoảng trắng (space, tab, non-breaking space, ...)
+    const normalize = (str) =>
+        (str || "").replace(/[\s\u00A0]+/g, "").toLowerCase();
+    return Object.keys(row).find((k) => normalize(k) === normalize(colName));
 }
 
 // Hàm làm sạch chuỗi: loại bỏ dấu phẩy, dấu cách, dấu /, ký tự xuống dòng ở đầu/cuối
@@ -128,13 +133,6 @@ function ImportParentsStudents() {
 
     // Cải thiện UI/UX: Group header, căn giữa, màu sắc, icon, responsive
     const columns = [
-        {
-            title: "Mã HS",
-            dataIndex: "studentCode",
-            key: "studentCode",
-            align: "center",
-            width: 80,
-        },
         {
             title: "Họ và tên",
             dataIndex: "studentName",
@@ -264,12 +262,15 @@ function ImportParentsStudents() {
                     // Xử lý ngày sinh
                     let rawDOB = getVal("Ngày sinh");
                     let studentDOB = normalizeDateString(rawDOB);
+                    // Log ra console các key thực tế đọc được từ file Excel
+                    if (idx === 0) {
+                        console.log(`Row ${idx + 2} keys:`, Object.keys(row));
+                    }
                     const obj = {
                         parentName: cleanString(getVal("Tên phụ huynh")),
                         parentEmail: cleanString(getVal("Email phụ huynh")),
                         parentPhone: cleanString(getVal("SĐT phụ huynh")),
                         studentName: cleanString(getVal("Họ và tên")),
-                        studentCode: cleanString(getVal("Mã học sinh")),
                         studentGender: cleanString(getVal("Giới tính")),
                         studentDOB,
                         studentClass: cleanString(getVal("Lớp")),
@@ -278,13 +279,14 @@ function ImportParentsStudents() {
                     };
                     if (Object.values(obj).every((v) => v === "")) {
                         console.log(
-                            `Row ${idx} is empty or mapping failed. Row keys:`,
+                            `Row ${
+                                idx + 2
+                            } is empty or mapping failed. Row keys:`,
                             Object.keys(row)
                         );
                     }
                     return obj;
                 });
-                console.log("Mapped preview data:", mapped);
                 setPreviewData(mapped);
                 setValidateLogs(mapped.map(validateRow));
             };
@@ -469,8 +471,6 @@ function ImportParentsStudents() {
                 >
                     {detailModal.row && (
                         <div style={{ fontSize: 15 }}>
-                            <b>Mã học sinh:</b> {detailModal.row.studentCode}
-                            <br />
                             <b>Họ và tên:</b> {detailModal.row.studentName}
                             <br />
                             <b>Email học sinh:</b>{" "}

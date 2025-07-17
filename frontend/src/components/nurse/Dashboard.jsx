@@ -23,7 +23,9 @@ import axios from "axios";
 import { useEffect, useState } from "react";
 import { nurseAPI } from "../../utils/api";
 import "./Dashboard.css";
-import NurseDashboardChart from "./NurseDashboardChart";
+import NurseDashboardChart, {
+  ApprovedMedicinesChart,
+} from "./NurseDashboardChart";
 
 const { Title, Text } = Typography;
 
@@ -60,6 +62,9 @@ const Dashboard = () => {
 
   // Thêm state cho tiến độ khám sức khỏe
   const [healthCheckupProgress, setHealthCheckupProgress] = useState({});
+
+  // Thêm state cho thuốc đã duyệt
+  const [approvedMedicines, setApprovedMedicines] = useState([]);
 
   const fetchDashboardData = async (isRefresh = false) => {
     try {
@@ -122,8 +127,25 @@ const Dashboard = () => {
     }
   };
 
+  const fetchApprovedMedicines = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/nurse/approved-medications", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.data.success) {
+        setApprovedMedicines(response.data.data || []);
+      } else {
+        setApprovedMedicines([]);
+      }
+    } catch {
+      setApprovedMedicines([]);
+    }
+  };
+
   useEffect(() => {
     fetchDashboardData();
+    fetchApprovedMedicines();
   }, []);
 
   // Fetch vaccination campaigns
@@ -244,6 +266,17 @@ const Dashboard = () => {
       return date.getMonth() + 1 === i + 1;
     }).length;
     return { thang: month, suco: count };
+  });
+
+  // Tổng hợp số thuốc đã duyệt theo tháng cho chart
+  const approvedMedicinesByMonth = Array.from({ length: 12 }, (_, i) => {
+    const month = (i + 1).toString();
+    const count = (approvedMedicines || []).filter((med) => {
+      if (med.status !== "APPROVED" || !med.updatedAt) return false;
+      const date = new Date(med.updatedAt);
+      return date.getMonth() + 1 === i + 1;
+    }).length;
+    return { thang: month, approved: count };
   });
 
   // Tạo dữ liệu timeline từ các sự kiện y tế, tiêm chủng, khám sức khỏe
@@ -462,9 +495,9 @@ const Dashboard = () => {
         </Col>
       </Row>
 
-      {/* Biểu đồ sự cố y tế ở trên */}
+      {/* Biểu đồ sự cố y tế và thuốc đã duyệt */}
       <Row gutter={[24, 24]} className="mb-8">
-        <Col xs={24}>
+        <Col xs={24} md={12}>
           <Card className="shadow-lg rounded-2xl p-6">
             <div className="flex items-center justify-between mb-6">
               <span className="text-xl font-bold flex items-center gap-2">
@@ -472,7 +505,23 @@ const Dashboard = () => {
                 sự cố y tế
               </span>
             </div>
-            <NurseDashboardChart data={eventsByMonth} />
+            <NurseDashboardChart
+              data={eventsByMonth}
+              color="#36ae9a"
+              icon={<ExclamationCircleOutlined className="text-red-500" />}
+              chartType="event"
+            />
+          </Card>
+        </Col>
+        <Col xs={24} md={12}>
+          <Card className="shadow-lg rounded-2xl p-6">
+            <div className="flex items-center justify-between mb-6">
+              <span className="text-xl font-bold flex items-center gap-2">
+                <MedicineBoxOutlined className="text-[#fa8c16]" /> Biểu đồ thuốc
+                đã duyệt
+              </span>
+            </div>
+            <ApprovedMedicinesChart data={approvedMedicinesByMonth} />
           </Card>
         </Col>
       </Row>

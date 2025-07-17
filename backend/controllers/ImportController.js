@@ -92,7 +92,7 @@ export const importParentsStudents = async (req, res) => {
             const parentAddress = cleanString(getVal("Địa chỉ phụ huynh"));
             const parentGender = cleanString(getVal("Giới tính phụ huynh"));
             const studentName = cleanString(getVal("Họ và tên"));
-            const studentCode = cleanString(getVal("Mã học sinh"));
+            // const studentCode = cleanString(getVal("Mã học sinh")); // Bỏ mã học sinh
             const studentGender = cleanString(getVal("Giới tính"));
             const studentClass = cleanString(getVal("Lớp"));
             const studentGrade = cleanString(getVal("Khối"));
@@ -105,7 +105,7 @@ export const importParentsStudents = async (req, res) => {
                 !parentEmail ||
                 !parentPhone ||
                 !studentName ||
-                !studentCode ||
+                // !studentCode || // Bỏ mã học sinh
                 !studentDOB ||
                 !studentGender ||
                 !studentClass ||
@@ -189,42 +189,66 @@ export const importParentsStudents = async (req, res) => {
                 parentId = parentProfile.id;
             }
 
-            // Kiểm tra mã học sinh đã tồn tại chưa
-            const existingStudent = await prisma.student.findFirst({
-                where: { studentCode },
-            });
-            if (existingStudent) {
-                errors.push(`Dòng ${rowNum}: Mã học sinh đã tồn tại.`);
-                continue;
-            }
+            // Bỏ kiểm tra mã học sinh đã tồn tại
+            // const existingStudent = await prisma.student.findFirst({
+            //     where: { studentCode },
+            // });
+            // if (existingStudent) {
+            //     errors.push(`Dòng ${rowNum}: Mã học sinh đã tồn tại.`);
+            //     continue;
+            // }
 
-            // Tạo user và student profile
-            const studentUser = await prisma.users.create({
-                data: {
-                    fullName: studentName,
-                    email: studentEmail,
-                    phone: null,
-                    address: studentAddress,
-                    password: "12345678", // default
-                    role: "STUDENT",
-                    isActive: true,
-                },
+            // Sinh studentCode đúng format và thứ tự hệ thống (STU0006, STU0007, ...)
+            const lastStudent = await prisma.student.findFirst({
+                orderBy: { studentCode: "desc" },
+                select: { studentCode: true },
             });
-            const student = await prisma.student.create({
+            let nextNumber = 1;
+            if (lastStudent && lastStudent.studentCode) {
+                const match = lastStudent.studentCode.match(/STU(\d+)/);
+                if (match) {
+                    nextNumber = parseInt(match[1], 10) + 1;
+                }
+            }
+            const studentCode = `STU${String(nextNumber).padStart(4, "0")}`;
+            // Kiểm tra email học sinh đã tồn tại chưa
+            const existingStudentUser = await prisma.users.findUnique({
+                where: { email: studentEmail },
+            });
+            let studentUserId;
+            if (!existingStudentUser) {
+                // Tạo user học sinh mới
+                const newStudentUser = await prisma.users.create({
+                    data: {
+                        fullName: studentName,
+                        email: studentEmail,
+                        phone: null,
+                        address: studentAddress,
+                        password: "12345678", // default
+                        role: "STUDENT",
+                        isActive: true,
+                    },
+                });
+                studentUserId = newStudentUser.id;
+            } else {
+                studentUserId = existingStudentUser.id;
+            }
+            // Khi tạo student, truyền thêm userId: studentUserId đúng với schema.
+            const newStudent = await prisma.student.create({
                 data: {
-                    userId: studentUser.id,
+                    userId: studentUserId,
                     studentCode,
                     dateOfBirth: new Date(studentDOB),
-                    gender: studentGender.toLowerCase(),
-                    grade: studentGrade,
+                    gender: studentGender,
                     class: studentClass,
-                    // address: studentAddress, // Đã bỏ dòng này vì không có cột address trong bảng student
+                    grade: studentGrade,
+                    // bloodType: ... (nếu có)
                 },
             });
             // Gán phụ huynh cho học sinh
             await prisma.studentParent.create({
                 data: {
-                    studentId: student.id,
+                    studentId: newStudent.id,
                     parentId: parentId,
                     relationship: "guardian",
                     isPrimary: true,

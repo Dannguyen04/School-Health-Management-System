@@ -484,6 +484,13 @@ const sendConsentNotification = async (req, res) => {
             });
         }
 
+        // Lấy thông tin vaccine để lấy minAge, maxAge
+        const vaccine = await prisma.vaccine.findUnique({
+            where: { id: campaign.vaccineId },
+        });
+        const minAge = vaccine?.minAge;
+        const maxAge = vaccine?.maxAge;
+
         // Nếu không truyền grades thì mặc định lấy tất cả targetGrades
         const selectedGrades =
             Array.isArray(grades) && grades.length > 0
@@ -498,10 +505,30 @@ const sendConsentNotification = async (req, res) => {
             },
         });
 
+        // Lọc học sinh theo độ tuổi hợp lệ
+        const now = new Date();
+        const eligibleStudents = students.filter((student) => {
+            if (!student.dateOfBirth) return false;
+            const birthDate = new Date(student.dateOfBirth);
+            let age = now.getFullYear() - birthDate.getFullYear();
+            // Điều chỉnh nếu chưa đến sinh nhật trong năm nay
+            const m = now.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && now.getDate() < birthDate.getDate())) {
+                age--;
+            }
+            if (minAge && age < minAge) return false;
+            if (maxAge && age > maxAge) return false;
+            return true;
+        });
+        // Danh sách học sinh không đủ tuổi
+        const ineligibleStudents = students.filter(
+            (student) => !eligibleStudents.includes(student)
+        );
+
         // Lấy tất cả userId của phụ huynh (loại trùng)
         const parentUserIds = Array.from(
             new Set(
-                students.flatMap((student) =>
+                eligibleStudents.flatMap((student) =>
                     student.parents.map((sp) => sp.parent.user.id)
                 )
             )
@@ -510,7 +537,7 @@ const sendConsentNotification = async (req, res) => {
         if (parentUserIds.length === 0) {
             return res.status(400).json({
                 success: false,
-                error: "Không tìm thấy phụ huynh nào cho các học sinh trong các khối đã chọn",
+                error: "Không tìm thấy phụ huynh nào cho các học sinh đủ điều kiện trong các khối đã chọn",
             });
         }
 
@@ -560,6 +587,18 @@ const sendConsentNotification = async (req, res) => {
                 },
                 sentGrades: selectedGrades,
                 notificationsCount: notifications.length,
+                eligibleStudents: eligibleStudents.map((s) => ({
+                    id: s.id,
+                    fullName: s.user?.fullName,
+                    grade: s.grade,
+                    dateOfBirth: s.dateOfBirth,
+                })),
+                ineligibleStudents: ineligibleStudents.map((s) => ({
+                    id: s.id,
+                    fullName: s.user?.fullName,
+                    grade: s.grade,
+                    dateOfBirth: s.dateOfBirth,
+                })),
             },
             message: `Đã gửi ${
                 notifications.length
@@ -579,7 +618,8 @@ const sendConsentNotification = async (req, res) => {
 // API để phụ huynh submit consent cho vaccination campaign
 const submitVaccinationConsent = async (req, res) => {
     try {
-        const { campaignId, studentId, consent, notes } = req.body;
+        const { campaignId, studentId, consent, notes, confirmVaccination } =
+            req.body;
 
         // Kiểm tra user có phải là parent không
         if (!req.user.parentProfile) {
@@ -634,6 +674,22 @@ const submitVaccinationConsent = async (req, res) => {
             include: { user: true },
         });
 
+        // Validation cho việc xác nhận tiêm chủng
+        if (consent === true && !confirmVaccination) {
+            return res.status(400).json({
+                success: false,
+                error: "Vui lòng xác nhận đồng ý cho con em tiêm chủng",
+            });
+        }
+
+        // Validation cho lý do từ chối
+        if (consent === false && (!notes || notes.trim() === "")) {
+            return res.status(400).json({
+                success: false,
+                error: "Vui lòng nhập lý do từ chối",
+            });
+        }
+
         // Kiểm tra xem đã có consent cho campaign và student này chưa
         const existingConsent = await prisma.vaccinationConsent.findUnique({
             where: {
@@ -674,7 +730,9 @@ const submitVaccinationConsent = async (req, res) => {
             res.json({
                 success: true,
                 data: updatedConsent,
-                message: "Cập nhật phiếu đồng ý tiêm chủng thành công",
+                message: consent
+                    ? "Cập nhật phiếu đồng ý tiêm chủng thành công. Con em của bạn sẽ được tiêm chủng theo lịch trình."
+                    : "Cập nhật phiếu từ chối tiêm chủng thành công.",
             });
         } else {
             // Create new consent with denormalized data
@@ -700,7 +758,9 @@ const submitVaccinationConsent = async (req, res) => {
             res.status(201).json({
                 success: true,
                 data: newConsent,
-                message: "Gửi phiếu đồng ý tiêm chủng thành công",
+                message: consent
+                    ? "Gửi phiếu đồng ý tiêm chủng thành công. Con em của bạn sẽ được tiêm chủng theo lịch trình."
+                    : "Gửi phiếu từ chối tiêm chủng thành công.",
             });
         }
     } catch (error) {
