@@ -1,6 +1,4 @@
 import {
-  DeleteOutlined,
-  EditOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
   FilterOutlined,
@@ -17,7 +15,6 @@ import {
   Input,
   message,
   Modal,
-  Popconfirm,
   Row,
   Select,
   Space,
@@ -256,7 +253,7 @@ const AlertsAndEvents = () => {
       render: (text, record) => (
         <div>
           <div className="font-medium">{text}</div>
-          <div className="text-sm text-gray-500">{record.grade}</div>
+          <div className="text-sm text-gray-500">{record.class}</div>
         </div>
       ),
     },
@@ -323,7 +320,7 @@ const AlertsAndEvents = () => {
           >
             Xem
           </Button>
-          <Button
+          {/* <Button
             icon={<EditOutlined />}
             size="small"
             onClick={() => handleEditEvent(record)}
@@ -340,7 +337,7 @@ const AlertsAndEvents = () => {
             <Button danger icon={<DeleteOutlined />} size="small">
               Xóa
             </Button>
-          </Popconfirm>
+          </Popconfirm> */}
         </Space>
       ),
     },
