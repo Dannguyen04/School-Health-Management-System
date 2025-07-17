@@ -618,7 +618,8 @@ const sendConsentNotification = async (req, res) => {
 // API để phụ huynh submit consent cho vaccination campaign
 const submitVaccinationConsent = async (req, res) => {
     try {
-        const { campaignId, studentId, consent, notes } = req.body;
+        const { campaignId, studentId, consent, notes, confirmVaccination } =
+            req.body;
 
         // Kiểm tra user có phải là parent không
         if (!req.user.parentProfile) {
@@ -673,6 +674,22 @@ const submitVaccinationConsent = async (req, res) => {
             include: { user: true },
         });
 
+        // Validation cho việc xác nhận tiêm chủng
+        if (consent === true && !confirmVaccination) {
+            return res.status(400).json({
+                success: false,
+                error: "Vui lòng xác nhận đồng ý cho con em tiêm chủng",
+            });
+        }
+
+        // Validation cho lý do từ chối
+        if (consent === false && (!notes || notes.trim() === "")) {
+            return res.status(400).json({
+                success: false,
+                error: "Vui lòng nhập lý do từ chối",
+            });
+        }
+
         // Kiểm tra xem đã có consent cho campaign và student này chưa
         const existingConsent = await prisma.vaccinationConsent.findUnique({
             where: {
@@ -713,7 +730,9 @@ const submitVaccinationConsent = async (req, res) => {
             res.json({
                 success: true,
                 data: updatedConsent,
-                message: "Cập nhật phiếu đồng ý tiêm chủng thành công",
+                message: consent
+                    ? "Cập nhật phiếu đồng ý tiêm chủng thành công. Con em của bạn sẽ được tiêm chủng theo lịch trình."
+                    : "Cập nhật phiếu từ chối tiêm chủng thành công.",
             });
         } else {
             // Create new consent with denormalized data
@@ -739,7 +758,9 @@ const submitVaccinationConsent = async (req, res) => {
             res.status(201).json({
                 success: true,
                 data: newConsent,
-                message: "Gửi phiếu đồng ý tiêm chủng thành công",
+                message: consent
+                    ? "Gửi phiếu đồng ý tiêm chủng thành công. Con em của bạn sẽ được tiêm chủng theo lịch trình."
+                    : "Gửi phiếu từ chối tiêm chủng thành công.",
             });
         }
     } catch (error) {

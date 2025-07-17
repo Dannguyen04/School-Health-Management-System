@@ -51,7 +51,7 @@ npm run dev
 ### 🌐 Truy cập
 
 -   Frontend: [http://localhost:5173](http://localhost:5173)
--   Backend (API): [http://localhost:3000](http://localhost:3000) (hoặc port bạn cấu hình)
+-   Backend (API): [http://localhost:3000](http://localhost:5000) (hoặc port bạn cấu hình)
 
 ---
 
