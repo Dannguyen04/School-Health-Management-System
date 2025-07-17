@@ -8,6 +8,7 @@ import {
     Avatar,
     Button,
     Card,
+    Checkbox,
     Descriptions,
     Divider,
     Empty,
@@ -47,6 +48,7 @@ const ConsentForms = () => {
         consent: null,
         studentId: null,
         reason: "",
+        confirmVaccination: false, // Thêm state cho checkbox xác nhận tiêm chủng
     });
 
     // Fetch children
@@ -128,6 +130,7 @@ const ConsentForms = () => {
             reason: "",
             studentName: child?.fullName || form.studentName || "-",
             className: child?.class || form.className || "-",
+            confirmVaccination: false, // Reset checkbox khi mở modal
         });
     };
     const closeConsentModal = () =>
@@ -137,8 +140,21 @@ const ConsentForms = () => {
             consent: null,
             studentId: null,
             reason: "",
+            confirmVaccination: false,
         });
     const handleConsent = async () => {
+        // Kiểm tra nếu đồng ý thì phải check checkbox
+        if (consentModal.consent === true && !consentModal.confirmVaccination) {
+            message.error("Vui lòng xác nhận đồng ý cho con em tiêm chủng");
+            return;
+        }
+
+        // Kiểm tra nếu từ chối thì phải có lý do
+        if (consentModal.consent === false && !consentModal.reason.trim()) {
+            message.error("Vui lòng nhập lý do từ chối");
+            return;
+        }
+
         try {
             const token = localStorage.getItem("token");
             const response = await axios.post(
@@ -148,6 +164,7 @@ const ConsentForms = () => {
                     studentId: consentModal.studentId,
                     consent: consentModal.consent,
                     notes: consentModal.consent ? "" : consentModal.reason,
+                    confirmVaccination: consentModal.confirmVaccination, // Thêm thông tin xác nhận tiêm chủng
                 },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -159,6 +176,7 @@ const ConsentForms = () => {
                     consent: null,
                     studentId: null,
                     reason: "",
+                    confirmVaccination: false,
                 });
                 // Refresh campaigns
                 const refreshed = await axios.get(
@@ -427,6 +445,40 @@ const ConsentForms = () => {
                                     </Descriptions.Item>
                                 )}
                             </Descriptions>
+
+                            {/* Thêm checkbox xác nhận tiêm chủng khi đồng ý */}
+                            {consentModal.consent === true && (
+                                <div className="mb-4 mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                    <Checkbox
+                                        checked={
+                                            consentModal.confirmVaccination
+                                        }
+                                        onChange={(e) =>
+                                            setConsentModal({
+                                                ...consentModal,
+                                                confirmVaccination:
+                                                    e.target.checked,
+                                            })
+                                        }
+                                        className="text-base"
+                                    >
+                                        <Text strong className="text-blue-800">
+                                            Tôi xác nhận đồng ý cho con em tôi
+                                            tham gia tiêm chủng trong chiến dịch
+                                            này
+                                        </Text>
+                                    </Checkbox>
+                                    <div className="mt-2 text-sm text-blue-600">
+                                        <Text type="secondary">
+                                            Bằng việc tích vào ô này, tôi cam
+                                            kết rằng con em tôi sẽ được tiêm
+                                            chủng theo đúng lịch trình và tuân
+                                            thủ các hướng dẫn y tế.
+                                        </Text>
+                                    </div>
+                                </div>
+                            )}
+
                             {consentModal.consent === false && (
                                 <div className="mb-2 mt-2">
                                     <Text strong>Lý do từ chối:</Text>
