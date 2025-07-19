@@ -218,6 +218,7 @@ const addStudent = async (req, res) => {
             gender,
             grade,
             class: studentClass,
+            academicYear,
             bloodType,
             parentName,
             parentId,
@@ -232,6 +233,7 @@ const addStudent = async (req, res) => {
             "gender",
             "studentClass",
             "grade",
+            "academicYear",
         ];
 
         const missingFields = requiredFields.filter((field) => {
@@ -322,6 +324,7 @@ const addStudent = async (req, res) => {
                     gender: gender.toLowerCase(),
                     grade: grade.toString(),
                     class: studentClass.trim(),
+                    academicYear: academicYear,
                     ...(bloodType && { bloodType: bloodType.trim() }),
                 },
             });
@@ -782,6 +785,7 @@ const updateStudent = async (req, res) => {
         gender,
         class: studentClass,
         grade,
+        academicYear,
         bloodType,
         emergencyContact,
         emergencyPhone,
@@ -797,6 +801,7 @@ const updateStudent = async (req, res) => {
             "gender",
             "studentClass",
             "grade",
+            "academicYear",
         ];
 
         const missingFields = requiredFields.filter((field) => {
@@ -902,6 +907,7 @@ const updateStudent = async (req, res) => {
                     gender: gender.toLowerCase(),
                     class: studentClass.trim(),
                     grade: grade.toString(),
+                    academicYear: academicYear,
                     ...(emergencyContact && {
                         emergencyContact: emergencyContact.trim(),
                     }),

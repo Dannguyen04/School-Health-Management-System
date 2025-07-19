@@ -18,9 +18,11 @@ import {
     MailOutlined,
     PhoneOutlined,
     InfoCircleOutlined,
+    DownloadOutlined,
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import axios from "axios";
+import { createImportTemplate } from "../../utils/createTemplate";
 
 const { Text } = Typography;
 
@@ -47,9 +49,6 @@ function validateRow(row) {
     else if (!validatePhone(row.parentPhone))
         errors.push("SĐT phụ huynh không hợp lệ");
     if (!row.studentName) errors.push("Thiếu trường: Họ và tên");
-    if (!row.studentEmail) errors.push("Thiếu trường: Email");
-    else if (!validateEmail(row.studentEmail))
-        errors.push("Email học sinh không hợp lệ");
     if (!row.studentGender) errors.push("Thiếu trường: Giới tính");
     else if (!validateGender(row.studentGender))
         errors.push("Giới tính học sinh không hợp lệ");
@@ -62,6 +61,7 @@ function validateRow(row) {
     if (!row.studentGrade) errors.push("Thiếu trường: Khối");
     else if (!validateGrade(row.studentGrade))
         errors.push("Khối chỉ được nhập số từ 1 đến 5");
+    if (!row.studentAcademicYear) errors.push("Thiếu trường: Năm học");
     return errors;
 }
 
@@ -275,7 +275,7 @@ function ImportParentsStudents() {
                         studentDOB,
                         studentClass: cleanString(getVal("Lớp")),
                         studentGrade: cleanString(getVal("Khối")),
-                        studentEmail: cleanString(getVal("Email")),
+                        studentAcademicYear: cleanString(getVal("Năm học")),
                     };
                     if (Object.values(obj).every((v) => v === "")) {
                         console.log(
@@ -372,10 +372,14 @@ function ImportParentsStudents() {
                 <Text type="secondary" style={{ fontSize: 13 }}>
                     Chọn file Excel mẫu (xlsx, xls) để thêm mới phụ huynh và học
                     sinh hàng loạt. <br />
-                    <a href="/template_import_parents_students.xlsx" download>
-                        {" "}
-                        Tải file mẫu{" "}
-                    </a>
+                    <Button
+                        type="link"
+                        icon={<DownloadOutlined />}
+                        onClick={createImportTemplate}
+                        style={{ padding: 0, height: "auto" }}
+                    >
+                        Tải file mẫu
+                    </Button>
                 </Text>
                 <Upload
                     beforeUpload={beforeUpload}
@@ -472,9 +476,6 @@ function ImportParentsStudents() {
                     {detailModal.row && (
                         <div style={{ fontSize: 15 }}>
                             <b>Họ và tên:</b> {detailModal.row.studentName}
-                            <br />
-                            <b>Email học sinh:</b>{" "}
-                            {detailModal.row.studentEmail}
                             <br />
                             <b>Ngày sinh:</b> {detailModal.row.studentDOB}
                             <br />

@@ -141,8 +141,10 @@ model Student {
   class            String
   grade            String
   bloodType        String?
+  academicYear     String?  // Thêm năm học (ví dụ: "2024-2025")
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  status           String   @default("active") // "active", "graduated", "left"
 
   user users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -159,6 +161,7 @@ model Student {
   @@map("students")
   @@index([grade])
   @@index([class])
+  @@index([academicYear])
 }
 
 model Parent {

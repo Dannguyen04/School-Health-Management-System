@@ -87,8 +87,8 @@ export const importParentsStudents = async (req, res) => {
             let rawParentDOB = getVal("Ngày sinh phụ huynh");
             let parentDOB = normalizeDateString(rawParentDOB);
             const parentName = cleanString(getVal("Tên phụ huynh"));
-            const parentEmail = cleanString(getVal("Email phụ huynh"));
             const parentPhone = cleanString(getVal("SĐT phụ huynh"));
+            const parentEmail = cleanString(getVal("Email phụ huynh"));
             const parentAddress = cleanString(getVal("Địa chỉ phụ huynh"));
             const parentGender = cleanString(getVal("Giới tính phụ huynh"));
             const studentName = cleanString(getVal("Họ và tên"));
@@ -96,8 +96,8 @@ export const importParentsStudents = async (req, res) => {
             const studentGender = cleanString(getVal("Giới tính"));
             const studentClass = cleanString(getVal("Lớp"));
             const studentGrade = cleanString(getVal("Khối"));
+            const studentAcademicYear = cleanString(getVal("Năm học"));
             const studentAddress = cleanString(getVal("Địa chỉ"));
-            const studentEmail = cleanString(getVal("Email"));
 
             // Validate bắt buộc
             if (
@@ -109,7 +109,8 @@ export const importParentsStudents = async (req, res) => {
                 !studentDOB ||
                 !studentGender ||
                 !studentClass ||
-                !studentGrade
+                !studentGrade ||
+                !studentAcademicYear
             ) {
                 errors.push(`Dòng ${rowNum}: Thiếu trường bắt buộc.`);
                 continue;
@@ -142,12 +143,6 @@ export const importParentsStudents = async (req, res) => {
             }
             if (!validateDate(studentDOB)) {
                 errors.push(`Dòng ${rowNum}: Ngày sinh học sinh không hợp lệ.`);
-                continue;
-            }
-            if (!studentEmail) {
-                errors.push(
-                    `Dòng ${rowNum}: Thiếu email học sinh và không thể tự sinh.`
-                );
                 continue;
             }
 
@@ -211,28 +206,33 @@ export const importParentsStudents = async (req, res) => {
                 }
             }
             const studentCode = `STU${String(nextNumber).padStart(4, "0")}`;
-            // Kiểm tra email học sinh đã tồn tại chưa
-            const existingStudentUser = await prisma.users.findUnique({
-                where: { email: studentEmail },
+
+            // Tạo email tự động cho học sinh
+            const generateStudentEmail = (fullName) => {
+                const normalizedName = fullName
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .toLowerCase()
+                    .replace(/\s+/g, ".");
+                const randomNum = Math.floor(Math.random() * 1000);
+                return `${normalizedName}${randomNum}@school.edu.vn`;
+            };
+
+            const studentEmail = generateStudentEmail(studentName);
+
+            // Tạo user học sinh mới
+            const newStudentUser = await prisma.users.create({
+                data: {
+                    fullName: studentName,
+                    email: studentEmail,
+                    phone: null,
+                    address: studentAddress,
+                    password: "12345678", // default
+                    role: "STUDENT",
+                    isActive: true,
+                },
             });
-            let studentUserId;
-            if (!existingStudentUser) {
-                // Tạo user học sinh mới
-                const newStudentUser = await prisma.users.create({
-                    data: {
-                        fullName: studentName,
-                        email: studentEmail,
-                        phone: null,
-                        address: studentAddress,
-                        password: "12345678", // default
-                        role: "STUDENT",
-                        isActive: true,
-                    },
-                });
-                studentUserId = newStudentUser.id;
-            } else {
-                studentUserId = existingStudentUser.id;
-            }
+            const studentUserId = newStudentUser.id;
             // Khi tạo student, truyền thêm userId: studentUserId đúng với schema.
             const newStudent = await prisma.student.create({
                 data: {
@@ -242,6 +242,7 @@ export const importParentsStudents = async (req, res) => {
                     gender: studentGender,
                     class: studentClass,
                     grade: studentGrade,
+                    academicYear: studentAcademicYear,
                     // bloodType: ... (nếu có)
                 },
             });
