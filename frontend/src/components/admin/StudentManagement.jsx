@@ -327,12 +327,29 @@ const StudentManagement = () => {
     };
 
     const handleEdit = (student) => {
+        console.log("📝 Student data for edit:", student);
         setEditingStudent(student);
+
+        // Map gender values from database to form values
+        const mapGender = (dbGender) => {
+            console.log("🔍 Mapping gender from:", dbGender);
+            if (dbGender === "Nữ" || dbGender === "female") {
+                console.log("✅ Mapped to: Nữ");
+                return "Nữ";
+            }
+            if (dbGender === "Nam" || dbGender === "male") {
+                console.log("✅ Mapped to: Nam");
+                return "Nam";
+            }
+            console.log("⚠️ No mapping found, using original:", dbGender);
+            return dbGender; // fallback
+        };
+
         form.setFieldsValue({
             studentCode: student.studentCode,
             name: student.name,
             dateOfBirth: dayjs(student.dateOfBirth),
-            gender: student.gender,
+            gender: mapGender(student.gender),
             grade: Number(student.grade),
             class: student.class,
             academicYear: student.academicYear,
@@ -344,6 +361,7 @@ const StudentManagement = () => {
     const handleSubmit = async () => {
         try {
             const values = await form.validateFields();
+            console.log("📝 Form values:", values);
 
             // Validate required fields
             if (
@@ -369,6 +387,13 @@ const StudentManagement = () => {
                 return `${normalizedName}${randomNum}@school.edu.vn`;
             };
 
+            // Map gender from Vietnamese to English
+            const mapGenderForBackend = (gender) => {
+                if (gender === "Nam") return "male";
+                if (gender === "Nữ") return "female";
+                return gender; // fallback
+            };
+
             // Validate parent selection for new students
             if (!editingStudent && !values.selectedParentId) {
                 message.error("Vui lòng chọn phụ huynh cho học sinh mới");
@@ -379,6 +404,10 @@ const StudentManagement = () => {
             let parentData = {};
             if (values.selectedParentId) {
                 parentData.parentId = values.selectedParentId;
+                console.log("✅ Parent data:", parentData);
+            } else if (!editingStudent) {
+                message.error("Phải chọn phụ huynh cho học sinh mới");
+                return;
             }
 
             setLoading(true);
@@ -401,12 +430,19 @@ const StudentManagement = () => {
                         email: values.email || generateEmail(values.name),
                         phone: values.emergencyPhone || "",
                         dateOfBirth: values.dateOfBirth.toISOString(),
-                        gender: values.gender,
+                        gender: mapGenderForBackend(values.gender),
                         grade: parseInt(values.grade),
-                        class: values.class,
+                        studentClass: values.class,
                         academicYear: values.academicYear,
                         ...parentData,
                     };
+                    console.log("📤 Sending updateValues:", updateValues);
+                    console.log(
+                        "🔍 Gender value:",
+                        values.gender,
+                        "Type:",
+                        typeof values.gender
+                    );
 
                     await axios.put(
                         `/api/admin/students/${editingStudent.id}`,
@@ -426,15 +462,16 @@ const StudentManagement = () => {
                         phone: values.emergencyPhone || "",
                         password: "defaultPassword123",
                         dateOfBirth: values.dateOfBirth.toISOString(),
-                        gender: values.gender,
+                        gender: mapGenderForBackend(values.gender),
                         grade: parseInt(values.grade),
-                        class: values.class,
+                        studentClass: values.class,
                         academicYear: values.academicYear,
                         studentCode:
                             values.studentCode ||
                             generateStudentCode(values.grade, values.class),
                         ...parentData,
                     };
+                    console.log("📤 Sending createValues:", createValues);
 
                     await axios.post("/api/admin/students", createValues, {
                         headers: {
@@ -456,6 +493,13 @@ const StudentManagement = () => {
                         : "Không thể thêm học sinh");
                 message.error(errorMessage);
                 console.error("Lỗi khi xử lý học sinh:", error);
+                console.error("Response data:", error.response?.data);
+                console.error(
+                    "Request data:",
+                    editingStudent
+                        ? "updateValues (see above log)"
+                        : createValues
+                );
             } finally {
                 setLoading(false);
             }
@@ -668,8 +712,8 @@ const StudentManagement = () => {
                             ]}
                         >
                             <Select>
-                                <Option value="male">Nam</Option>
-                                <Option value="female">Nữ</Option>
+                                <Option value="Nam">Nam</Option>
+                                <Option value="Nữ">Nữ</Option>
                             </Select>
                         </Form.Item>
                         <Form.Item

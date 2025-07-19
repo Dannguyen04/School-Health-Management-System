@@ -208,6 +208,13 @@ const addStudent = async (req, res) => {
     try {
         console.log("📝 Bắt đầu tạo học sinh mới...");
         console.log("📋 Dữ liệu nhận được:", req.body);
+        console.log("🔍 Kiểm tra các trường bắt buộc:");
+        requiredFields.forEach((field) => {
+            const value = req.body[field];
+            console.log(`  ${field}: ${value} (${value ? "OK" : "MISSING"})`);
+        });
+        console.log("👨‍👩‍👧‍👦 Parent data:", { parentId, newParentData, parentName });
+        console.log("📋 Full req.body:", req.body);
 
         const {
             fullName,
@@ -217,7 +224,7 @@ const addStudent = async (req, res) => {
             dateOfBirth,
             gender,
             grade,
-            class: studentClass,
+            studentClass,
             academicYear,
             bloodType,
             parentName,
@@ -237,7 +244,7 @@ const addStudent = async (req, res) => {
         ];
 
         const missingFields = requiredFields.filter((field) => {
-            const value = req.body[field === "studentClass" ? "class" : field];
+            const value = req.body[field];
             return !value || value.toString().trim() === "";
         });
 
@@ -249,6 +256,7 @@ const addStudent = async (req, res) => {
         }
 
         if (!parentId && !newParentData && !parentName) {
+            console.log("❌ Thiếu thông tin phụ huynh");
             return res.status(422).json({
                 success: false,
                 error: "Phải chọn phụ huynh hiện có hoặc tạo phụ huynh mới",
@@ -783,7 +791,7 @@ const updateStudent = async (req, res) => {
         phone,
         dateOfBirth,
         gender,
-        class: studentClass,
+        studentClass,
         grade,
         academicYear,
         bloodType,
@@ -805,7 +813,7 @@ const updateStudent = async (req, res) => {
         ];
 
         const missingFields = requiredFields.filter((field) => {
-            const value = req.body[field === "studentClass" ? "class" : field];
+            const value = req.body[field];
             return !value || value.toString().trim() === "";
         });
 
@@ -838,8 +846,27 @@ const updateStudent = async (req, res) => {
         }
 
         // Validate gender
+        console.log(
+            "🔍 Backend received gender:",
+            gender,
+            "Type:",
+            typeof gender
+        );
         const validGenders = ["male", "female", "other"];
+        if (!gender || typeof gender !== "string") {
+            console.log("❌ Gender is missing or invalid type:", gender);
+            return res.status(422).json({
+                success: false,
+                error: "Giới tính không hợp lệ",
+            });
+        }
         if (!validGenders.includes(gender.toLowerCase())) {
+            console.log(
+                "❌ Invalid gender:",
+                gender,
+                "Valid options:",
+                validGenders
+            );
             return res.status(422).json({
                 success: false,
                 error: `Giới tính phải là: ${validGenders.join(", ")}`,

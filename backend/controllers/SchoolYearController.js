@@ -34,7 +34,20 @@ const previewPromotion = async (req, res) => {
         const graduating = allStudents.filter((s) => s.grade === FINAL_GRADE);
         const promoting = allStudents.filter((s) => s.grade !== FINAL_GRADE);
 
-        res.json({ graduating, promoting });
+        // Lấy năm học hiện tại từ học sinh đầu tiên hoặc tính toán
+        let currentAcademicYear = null;
+        if (allStudents.length > 0) {
+            currentAcademicYear = allStudents[0].academicYear;
+        }
+        if (!currentAcademicYear) {
+            currentAcademicYear = getCurrentAcademicYear();
+        }
+
+        res.json({
+            graduating,
+            promoting,
+            currentAcademicYear,
+        });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
