@@ -22,12 +22,12 @@ const previewPromotion = async (req, res) => {
     try {
         const allStudents = await prisma.student.findMany({
             where: { status: "active" },
-            select: {
-                id: true,
-                userId: true,
-                grade: true,
-                class: true,
-                academicYear: true,
+            include: {
+                user: {
+                    select: {
+                        fullName: true,
+                    },
+                },
             },
         });
 

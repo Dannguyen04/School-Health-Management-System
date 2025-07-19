@@ -9,21 +9,10 @@ export const createImportTemplate = () => {
             "Giới tính": "Nam",
             Khối: "1",
             Lớp: "1A",
-            "Năm học": "2025-2030",
+            "Năm học": "2024-2025",
             "Tên phụ huynh": "Nguyễn Văn B",
-            "SĐT phụ huynh": "0912345678",
+            "SĐT phụ huynh": "0912345678", // Cột đã được format thành text
             "Email phụ huynh": "parentA@email.com",
-        },
-        {
-            "Họ và tên": "Trần Thị C",
-            "Ngày sinh": "20/08/2013",
-            "Giới tính": "Nữ",
-            Khối: "5",
-            Lớp: "5B",
-            "Năm học": "2020-2025",
-            "Tên phụ huynh": "Trần Văn D",
-            "SĐT phụ huynh": "0987654321",
-            "Email phụ huynh": "parentB@email.com",
         },
     ];
 
@@ -44,6 +33,32 @@ export const createImportTemplate = () => {
         { wch: 25 }, // Email phụ huynh
     ];
     ws["!cols"] = colWidths;
+
+    // Format toàn bộ cột số điện thoại thành text
+    const range = XLSX.utils.decode_range(ws["!ref"]);
+
+    // Đặt format cho toàn bộ cột số điện thoại (cột 7)
+    for (let R = range.s.r; R <= range.e.r; ++R) {
+        const cellAddress = XLSX.utils.encode_cell({ r: R, c: 7 }); // Cột SĐT phụ huynh (index 7)
+        if (ws[cellAddress]) {
+            // Đặt format cho cell số điện thoại
+            ws[cellAddress].t = "s"; // String type
+            ws[cellAddress].z = "@"; // Text format
+        }
+    }
+
+    // Thêm format cho cột số điện thoại trong sheet
+    if (!ws["!cols"]) ws["!cols"] = [];
+    if (!ws["!cols"][7]) ws["!cols"][7] = {};
+    ws["!cols"][7].customWidth = true;
+    ws["!cols"][7].width = 15;
+
+    // Đặt format cho header cột số điện thoại
+    const headerCell = XLSX.utils.encode_cell({ r: 0, c: 7 });
+    if (ws[headerCell]) {
+        ws[headerCell].t = "s";
+        ws[headerCell].z = "@";
+    }
 
     // Thêm sheet vào workbook
     XLSX.utils.book_append_sheet(wb, ws, "Import Template");

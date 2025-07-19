@@ -731,15 +731,15 @@ const StudentManagement = () => {
                             ]}
                         >
                             <Select placeholder="Chọn năm học">
-                                <Option value="2020-2025">2020-2025</Option>
-                                <Option value="2021-2026">2021-2026</Option>
-                                <Option value="2022-2027">2022-2027</Option>
-                                <Option value="2023-2028">2023-2028</Option>
-                                <Option value="2024-2029">2024-2029</Option>
-                                <Option value="2025-2030">2025-2030</Option>
-                                <Option value="2026-2031">2026-2031</Option>
-                                <Option value="2027-2032">2027-2032</Option>
-                                <Option value="2028-2033">2028-2033</Option>
+                                <Option value="2024-2025">2024-2025</Option>
+                                <Option value="2025-2026">2025-2026</Option>
+                                <Option value="2026-2027">2026-2027</Option>
+                                <Option value="2027-2028">2027-2028</Option>
+                                <Option value="2028-2029">2028-2029</Option>
+                                <Option value="2029-2030">2029-2030</Option>
+                                <Option value="2030-2031">2030-2031</Option>
+                                <Option value="2031-2032">2031-2032</Option>
+                                <Option value="2032-2033">2032-2033</Option>
                             </Select>
                         </Form.Item>
 

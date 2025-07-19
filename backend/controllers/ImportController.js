@@ -8,7 +8,27 @@ const validateGender = (gender) =>
     ["Nam", "Nữ", "nam", "nữ", "male", "female"].includes(
         (gender || "").toLowerCase()
     );
-const validatePhone = (phone) => /^\d{8,15}$/.test(phone || "");
+const validatePhone = (phone) => /^0\d{8,14}$/.test(phone || "");
+
+// Hàm tự động thêm số 0 ở đầu số điện thoại nếu chưa có
+const normalizePhoneNumber = (phone) => {
+    if (!phone) return phone;
+    const cleanPhone = phone.toString().replace(/\D/g, ""); // Chỉ giữ lại số
+    if (cleanPhone.length >= 9 && cleanPhone.length <= 15) {
+        return cleanPhone.startsWith("0") ? cleanPhone : `0${cleanPhone}`;
+    }
+    return phone; // Trả về nguyên bản nếu không hợp lệ
+};
+
+const validateSchoolYear = (schoolYear) => {
+    if (!schoolYear) return false;
+    const pattern = /^\d{4}-\d{4}$/;
+    if (!pattern.test(schoolYear)) return false;
+
+    const [startYear, endYear] = schoolYear.split("-");
+    // Kiểm tra năm học hợp lý (năm sau = năm trước + 1)
+    return parseInt(endYear) === parseInt(startYear) + 1;
+};
 
 // Hàm tìm key gần đúng theo tên cột (bỏ qua khoảng trắng, không phân biệt hoa thường)
 function getColKey(row, colName) {
@@ -20,10 +40,13 @@ function getColKey(row, colName) {
 }
 // Hàm làm sạch chuỗi: loại bỏ dấu phẩy, dấu cách, dấu /, ký tự xuống dòng ở đầu/cuối
 function cleanString(str) {
-    return String(str || "")
-        .replace(/[\s,\/\n\r]+$/g, "") // Xóa ở cuối
-        .replace(/^[\s,\/\n\r]+/g, "") // Xóa ở đầu
-        .trim();
+    return (
+        String(str || "")
+            .replace(/[\s,\/\n\r]+$/g, "") // Xóa ở cuối
+            .replace(/^[\s,\/\n\r]+/g, "") // Xóa ở đầu
+            // Không cần xóa dấu ' nữa vì cột đã được format thành text
+            .trim()
+    );
 }
 
 // Hàm chuẩn hóa chuỗi ngày về yyyy-MM-dd
@@ -87,7 +110,8 @@ export const importParentsStudents = async (req, res) => {
             let rawParentDOB = getVal("Ngày sinh phụ huynh");
             let parentDOB = normalizeDateString(rawParentDOB);
             const parentName = cleanString(getVal("Tên phụ huynh"));
-            const parentPhone = cleanString(getVal("SĐT phụ huynh"));
+            const rawParentPhone = cleanString(getVal("SĐT phụ huynh"));
+            const parentPhone = normalizePhoneNumber(rawParentPhone);
             const parentEmail = cleanString(getVal("Email phụ huynh"));
             const parentAddress = cleanString(getVal("Địa chỉ phụ huynh"));
             const parentGender = cleanString(getVal("Giới tính phụ huynh"));
@@ -121,7 +145,7 @@ export const importParentsStudents = async (req, res) => {
             }
             if (!validatePhone(parentPhone)) {
                 errors.push(
-                    `Dòng ${rowNum}: Số điện thoại phụ huynh không hợp lệ.`
+                    `Dòng ${rowNum}: Số điện thoại phụ huynh không hợp lệ. Hệ thống đã tự động thêm số 0 ở đầu nếu cần.`
                 );
                 continue;
             }
@@ -143,6 +167,14 @@ export const importParentsStudents = async (req, res) => {
             }
             if (!validateDate(studentDOB)) {
                 errors.push(`Dòng ${rowNum}: Ngày sinh học sinh không hợp lệ.`);
+                continue;
+            }
+
+            // Validate năm học
+            if (!validateSchoolYear(studentAcademicYear)) {
+                errors.push(
+                    `Dòng ${rowNum}: Năm học không đúng định dạng (VD: 2024-2025)`
+                );
                 continue;
             }
 
