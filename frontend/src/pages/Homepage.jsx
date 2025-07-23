@@ -149,21 +149,29 @@ const Homepage = () => {
                     id="hero"
                     className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[#36ae9a] via-[#4fd1c5] to-[#81e6d9] overflow-hidden"
                 >
+                    {/* Banner background image */}
+                    <img
+                        src="/img/banner.jpg"
+                        alt="Banner"
+                        className="absolute inset-0 w-full h-full object-cover object-center z-0 opacity-80 animate-zoom-in"
+                        style={{ filter: "brightness(0.85) blur(0px)" }}
+                    />
+                    {/* Overlay gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#36ae9a]/80 via-[#4fd1c5]/60 to-[#81e6d9]/70 z-10"></div>
+
                     {/* Animated background elements */}
-                    <div className="absolute inset-0">
+                    <div className="absolute inset-0 z-20 pointer-events-none">
                         <div className="absolute top-20 left-10 w-20 h-20 bg-white/10 rounded-full animate-pulse animate-float"></div>
                         <div className="absolute top-40 right-20 w-16 h-16 bg-white/10 rounded-full animate-pulse delay-1000 animate-float"></div>
                         <div className="absolute bottom-20 left-1/4 w-12 h-12 bg-white/10 rounded-full animate-pulse delay-2000 animate-float"></div>
                         <div className="absolute bottom-40 right-1/3 w-24 h-24 bg-white/10 rounded-full animate-pulse delay-1500 animate-float"></div>
-
-                        {/* Additional decorative elements */}
                         <div className="absolute top-1/4 left-1/6 w-8 h-8 bg-white/5 rounded-full animate-pulse delay-500"></div>
                         <div className="absolute bottom-1/3 right-1/6 w-10 h-10 bg-white/5 rounded-full animate-pulse delay-1500"></div>
                     </div>
 
-                    <div className="relative z-10 text-center px-4 py-20 text-white max-w-6xl mx-auto">
-                        <div className="mb-8 animate-fade-in-up">
-                            <div className="inline-flex items-center gap-2 glass text-white px-6 py-3 rounded-full text-sm font-medium mb-6 animate-pulse-glow">
+                    <div className="relative z-30 text-center px-4 py-20 text-white max-w-6xl mx-auto">
+                        <div className="mb-8 animate-fade-in-up animate-delay-200">
+                            <div className="inline-flex items-center gap-2 glass text-white px-6 py-3 rounded-full text-sm font-medium mb-6 animate-pulse-glow animate-delay-300">
                                 <FaRocket className="text-white" />
                                 <span>
                                     Hệ thống Quản lý Y tế Trường Tiểu học
@@ -171,14 +179,14 @@ const Homepage = () => {
                             </div>
                         </div>
 
-                        <h1 className="hero-title font-bold mb-8 leading-tight drop-shadow-lg text-reveal">
+                        <h1 className="hero-title font-bold mb-8 leading-tight drop-shadow-lg text-reveal animate-fade-in-up animate-delay-400">
                             Chăm sóc sức khỏe{" "}
                             <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-[#e6fffa]">
                                 học sinh tiểu học
                             </span>
                         </h1>
 
-                        <p className="text-xl md:text-2xl mb-12 drop-shadow max-w-4xl mx-auto leading-relaxed text-reveal">
+                        <p className="text-xl md:text-2xl mb-12 drop-shadow max-w-4xl mx-auto leading-relaxed text-reveal animate-fade-in-up animate-delay-600">
                             Hệ thống quản lý y tế học đường toàn diện cho trường
                             tiểu học Việt Nam. Kết nối nhà trường, phụ huynh và
                             y tế để đảm bảo sự phát triển khỏe mạnh cho học
@@ -186,11 +194,15 @@ const Homepage = () => {
                         </p>
 
                         {/* Hero Features */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-4xl mx-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-4xl mx-auto animate-fade-in-up animate-delay-800">
                             {heroFeatures.map((feature, index) => (
                                 <div key={index} className="group">
                                     <div
-                                        className={`w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-r ${feature.color} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
+                                        className={`w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-r ${
+                                            feature.color
+                                        } flex items-center justify-center group-hover:scale-110 transition-transform duration-300 animate-bounce-in animate-delay-${
+                                            900 + index * 100
+                                        }`}
                                     >
                                         <feature.icon
                                             size={20}
@@ -204,9 +216,9 @@ const Homepage = () => {
                             ))}
                         </div>
 
-                        <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
+                        <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12 animate-fade-in-up animate-delay-1000">
                             <button
-                                className="group bg-white text-[#36ae9a] font-bold px-10 py-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 text-lg transform hover:scale-105 flex items-center gap-3 btn-primary"
+                                className="group bg-white text-[#36ae9a] font-bold px-10 py-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 text-lg transform hover:scale-105 flex items-center gap-3 btn-primary animate-bounce-in animate-delay-1100"
                                 onClick={() => navigate("/auth")}
                                 data-original-text="Đăng nhập ngay"
                             >
@@ -214,7 +226,7 @@ const Homepage = () => {
                                 <FaArrowRight className="group-hover:translate-x-1 transition-transform" />
                             </button>
                             <button
-                                className="group bg-transparent border-2 border-white text-white font-bold px-10 py-4 rounded-full hover:bg-white hover:text-[#36ae9a] transition-all duration-300 text-lg transform hover:scale-105 flex items-center gap-3"
+                                className="group bg-transparent border-2 border-white text-white font-bold px-10 py-4 rounded-full hover:bg-white hover:text-[#36ae9a] transition-all duration-300 text-lg transform hover:scale-105 flex items-center gap-3 animate-bounce-in animate-delay-1200"
                                 onClick={handleLearnMore}
                             >
                                 <FaPlay className="group-hover:scale-110 transition-transform" />
@@ -223,11 +235,11 @@ const Homepage = () => {
                         </div>
 
                         {/* Enhanced Quick stats */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto animate-fade-in-up animate-delay-1300">
                             {stats.map((stat, index) => (
                                 <div
                                     key={index}
-                                    className="text-center stagger-item group"
+                                    className="text-center stagger-item group animate-bounce-in animate-delay-1400"
                                 >
                                     <div className="w-16 h-16 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                                         <stat.icon
@@ -249,7 +261,7 @@ const Homepage = () => {
                         </div>
 
                         {/* Trust indicators */}
-                        <div className="mt-12 pt-8 border-t border-white/20">
+                        <div className="mt-12 pt-8 border-t border-white/20 animate-fade-in-up animate-delay-1500">
                             <div className="text-center mb-6">
                                 <h3 className="text-lg font-semibold text-white mb-4">
                                     Được tin tưởng bởi
@@ -273,7 +285,7 @@ const Homepage = () => {
                     </div>
 
                     {/* Enhanced Scroll indicator */}
-                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+                    <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce z-40">
                         <div className="flex flex-col items-center gap-2">
                             <div className="w-6 h-10 border-2 border-white rounded-full flex justify-center">
                                 <div className="w-1 h-3 bg-white rounded-full mt-2 animate-pulse"></div>
@@ -282,7 +294,7 @@ const Homepage = () => {
                     </div>
 
                     {/* Floating elements */}
-                    <div className="absolute top-1/4 right-10 hidden lg:block">
+                    <div className="absolute top-1/4 right-10 hidden lg:block z-40">
                         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 shadow-lg animate-float">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
@@ -300,7 +312,7 @@ const Homepage = () => {
                         </div>
                     </div>
 
-                    <div className="absolute bottom-1/4 left-10 hidden lg:block">
+                    <div className="absolute bottom-1/4 left-10 hidden lg:block z-40">
                         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 shadow-lg animate-float delay-1000">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
@@ -318,7 +330,7 @@ const Homepage = () => {
                 </section>
 
                 {/* Why Choose Us Section */}
-                <section className="py-20 bg-white animate-on-scroll">
+                <section className="py-24 bg-gradient-to-br from-white to-[#f6fcfa] animate-fade-in-up animate-delay-200">
                     <div className="max-w-6xl mx-auto px-5">
                         <div className="text-center mb-16">
                             <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-6 py-3 rounded-full text-sm font-medium mb-6 stagger-item">
@@ -415,7 +427,7 @@ const Homepage = () => {
                 {/* Enhanced Benefits Section */}
                 <section
                     id="features"
-                    className="py-20 bg-gradient-to-br from-[#f6fcfa] to-[#e8f5f2] animate-on-scroll"
+                    className="py-24 bg-gradient-to-br from-[#f6fcfa] to-[#e8f5f2] animate-fade-in-up animate-delay-400"
                 >
                     <div className="max-w-6xl mx-auto px-5">
                         <div className="text-center mb-16">
@@ -492,7 +504,7 @@ const Homepage = () => {
                 </section>
 
                 {/* Statistics Section */}
-                <section className="py-20 bg-gradient-to-r from-[#36ae9a] to-[#4fd1c5] text-white animate-on-scroll">
+                <section className="py-24 bg-gradient-to-r from-[#36ae9a]/10 to-[#4fd1c5]/10 text-[#222] animate-fade-in-up animate-delay-600">
                     <div className="max-w-6xl mx-auto px-5">
                         <div className="text-center mb-16">
                             <h2 className="text-4xl md:text-5xl font-bold mb-6 stagger-item">
@@ -535,13 +547,62 @@ const Homepage = () => {
                 <section
                     id="about"
                     ref={aboutRef}
-                    className="animate-on-scroll"
+                    className="animate-fade-in-up animate-delay-800"
                 >
                     <About />
                 </section>
 
+                {/* Testimonial Section */}
+                <section className="py-24 bg-gradient-to-br from-[#e8f5f2] to-[#f6fcfa] animate-fade-in-up animate-delay-1000">
+                    <div className="max-w-5xl mx-auto px-5">
+                        <div className="text-center mb-12">
+                            <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-6 py-3 rounded-full text-sm font-medium mb-6">
+                                <FaStar className="text-[#36ae9a]" />
+                                <span>Cảm nhận phụ huynh & giáo viên</span>
+                            </div>
+                            <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#36ae9a] to-[#4fd1c5] leading-tight">
+                                Phản hồi thực tế
+                            </h2>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                            {testimonials.map((t, idx) => (
+                                <div
+                                    key={idx}
+                                    className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 flex flex-col items-center text-center group animate-fade-in-up animate-delay-1200"
+                                >
+                                    <img
+                                        src={t.avatar}
+                                        alt={t.name}
+                                        className="w-20 h-20 rounded-full object-cover border-4 border-[#36ae9a] shadow-lg mb-4 group-hover:scale-110 transition-transform duration-300"
+                                    />
+                                    <div className="flex gap-1 mb-2">
+                                        {[...Array(t.rating)].map((_, i) => (
+                                            <FaStar
+                                                key={i}
+                                                className="text-yellow-400"
+                                            />
+                                        ))}
+                                    </div>
+                                    <p className="text-gray-700 italic mb-4">
+                                        “{t.content}”
+                                    </p>
+                                    <div className="font-bold text-[#36ae9a]">
+                                        {t.name}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                        {t.role}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
                 {/* Blogs */}
-                <section id="blog" className="animate-on-scroll">
+                <section
+                    id="blog"
+                    className="animate-fade-in-up animate-delay-1200"
+                >
                     <Blogs />
                 </section>
             </main>

@@ -5,6 +5,7 @@ import {
     EyeOutlined,
     ClockCircleOutlined,
 } from "@ant-design/icons";
+import { useState } from "react";
 
 const BlogCard = ({
     img,
@@ -17,6 +18,7 @@ const BlogCard = ({
     date,
 }) => {
     const navigate = useNavigate();
+    const [imgError, setImgError] = useState(false);
 
     const handleClick = () => {
         if (id) {
@@ -48,22 +50,27 @@ const BlogCard = ({
 
     return (
         <div
-            className="group bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border border-gray-100"
+            className="group bg-white rounded-3xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-2xl hover:-translate-y-2 border border-gray-100 shadow-md animate-fade-in-up flex flex-col h-full"
             onClick={handleClick}
+            style={{ minHeight: 420 }}
         >
             {/* Image Container */}
-            <div className="relative overflow-hidden">
-                <img
-                    className="w-full h-48 object-cover transition-transform duration-300 group-hover:scale-110"
-                    src={img}
-                    alt={headlines}
-                />
+            <div className="relative overflow-hidden min-h-[200px] max-h-[200px] flex items-center justify-center bg-white">
+                {/* Nếu có ảnh và không lỗi thì hiển thị ảnh, nếu lỗi thì không hiển thị gì cả */}
+                {!imgError && img && (
+                    <img
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110 rounded-t-3xl"
+                        src={img}
+                        onError={() => setImgError(true)}
+                    />
+                )}
                 {/* Category Tag */}
                 {category && (
-                    <div className="absolute top-3 left-3">
+                    <div className="absolute top-3 left-3 z-10">
                         <Tag
                             color={getCategoryColor(category)}
-                            className="font-medium"
+                            className="font-medium text-base px-3 py-1 rounded-full shadow-md"
+                            style={{ borderRadius: 999 }}
                         >
                             {getCategoryLabel(category)}
                         </Tag>
@@ -73,20 +80,20 @@ const BlogCard = ({
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300"></div>
             </div>
 
-            {/* Content */}
-            <div className="p-6">
+            {/* Content - đảm bảo chỉ nằm ngoài ảnh */}
+            <div className="flex flex-col flex-1 p-7 min-h-[220px]">
                 {/* Title */}
-                <h3 className="text-lg font-semibold text-gray-800 mb-2 line-clamp-2 group-hover:text-[#36ae9a] transition-colors duration-300">
+                <h3 className="text-xl font-bold text-gray-800 mb-2 line-clamp-2 group-hover:bg-gradient-to-r group-hover:from-[#36ae9a] group-hover:to-[#4fd1c5] group-hover:text-transparent group-hover:bg-clip-text transition-all duration-300">
                     {headlines}
                 </h3>
 
                 {/* Excerpt */}
-                <p className="text-gray-600 mb-3 text-sm line-clamp-3 leading-relaxed">
+                <p className="text-gray-600 mb-4 text-base line-clamp-3 leading-relaxed flex-1">
                     {excerpt}
                 </p>
 
                 {/* Metadata */}
-                <div className="flex items-center justify-between text-xs text-gray-500">
+                <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
                     <Space size="small">
                         <div className="flex items-center gap-1">
                             <CalendarOutlined />
@@ -99,13 +106,13 @@ const BlogCard = ({
                     </Space>
                     <div className="flex items-center gap-1">
                         <EyeOutlined />
-                        <span>{views.toLocaleString()}</span>
+                        <span>{views?.toLocaleString?.() ?? views}</span>
                     </div>
                 </div>
 
                 {/* Read More Button */}
-                <div className="mt-3 pt-3 border-t border-gray-100">
-                    <div className="text-[#36ae9a] font-medium text-sm group-hover:text-[#2a8a7a] transition-colors duration-300">
+                <div className="mt-auto pt-3 border-t border-gray-100 flex justify-start">
+                    <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-[#36ae9a] to-[#4fd1c5] text-white font-semibold text-sm shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-300">
                         Đọc thêm →
                     </div>
                 </div>
