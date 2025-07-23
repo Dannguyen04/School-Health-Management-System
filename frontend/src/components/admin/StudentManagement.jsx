@@ -26,6 +26,7 @@ import axios from "axios";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import ImportParentsStudents from "./ImportParentsStudents";
+import SchoolYearPromotion from "./SchoolYearPromotion";
 
 const { Option } = Select;
 
@@ -40,6 +41,15 @@ const StudentManagement = () => {
   const [parents, setParents] = useState([]); // State for parents
   const [parentLoading, setParentLoading] = useState(false); // Loading for parents
 
+  // Function to generate student code
+  const generateStudentCode = (grade, className) => {
+    const currentYear = new Date().getFullYear();
+    const randomNum = Math.floor(Math.random() * 1000)
+      .toString()
+      .padStart(3, "0");
+    return `${currentYear}${grade}${className}${randomNum}`;
+  };
+
   // Parent modal states
   const [isParentModalVisible, setIsParentModalVisible] = useState(false);
   const [parentForm] = Form.useForm();
@@ -48,6 +58,7 @@ const StudentManagement = () => {
   const [parentSearchTerm, setParentSearchTerm] = useState(""); // Add search term state
 
   const [searchForm] = Form.useForm();
+  const [showPromotionModal, setShowPromotionModal] = useState(false);
 
   // Function to fetch parents
   const fetchParents = async () => {
@@ -130,13 +141,13 @@ const StudentManagement = () => {
       // Map the fetched data to match the table's expected structure
       const formattedStudents = response.data.data.map((user) => ({
         id: user.id,
-        studentCode: user.studentProfile?.studentCode,
+        studentCode: user.studentProfile?.studentCode || user.studentCode,
         name: user.fullName,
-        email: user.email,
         dateOfBirth: user.studentProfile?.dateOfBirth,
         gender: user.studentProfile?.gender,
         class: user.studentProfile?.class,
         grade: user.studentProfile?.grade,
+        academicYear: user.studentProfile?.academicYear,
         bloodType: user.studentProfile?.bloodType,
         status: user.isActive ? "active" : "inactive",
       }));
@@ -246,11 +257,7 @@ const StudentManagement = () => {
       dataIndex: "name",
       key: "name",
     },
-    {
-      title: "Email",
-      dataIndex: "email",
-      key: "email",
-    },
+
     {
       title: "Lớp",
       dataIndex: "class",
@@ -260,6 +267,11 @@ const StudentManagement = () => {
       title: "Khối",
       dataIndex: "grade",
       key: "grade",
+    },
+    {
+      title: "Năm học",
+      dataIndex: "academicYear",
+      key: "academicYear",
     },
     {
       title: "Thao tác",
@@ -299,15 +311,32 @@ const StudentManagement = () => {
   };
 
   const handleEdit = (student) => {
+    console.log("📝 Student data for edit:", student);
     setEditingStudent(student);
+
+    // Map gender values from database to form values
+    const mapGender = (dbGender) => {
+      console.log("🔍 Mapping gender from:", dbGender);
+      if (dbGender === "Nữ" || dbGender === "female") {
+        console.log("✅ Mapped to: Nữ");
+        return "Nữ";
+      }
+      if (dbGender === "Nam" || dbGender === "male") {
+        console.log("✅ Mapped to: Nam");
+        return "Nam";
+      }
+      console.log("⚠️ No mapping found, using original:", dbGender);
+      return dbGender; // fallback
+    };
+
     form.setFieldsValue({
       studentCode: student.studentCode,
       name: student.name,
-      email: student.email,
       dateOfBirth: dayjs(student.dateOfBirth),
-      gender: student.gender,
+      gender: mapGender(student.gender),
       grade: Number(student.grade),
       class: student.class,
+      academicYear: student.academicYear,
     });
     setSelectedParent(null);
     setIsModalVisible(true);
@@ -316,114 +345,148 @@ const StudentManagement = () => {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      console.log("📝 Form values:", values);
+
+      // Validate required fields
+      if (
+        !values.name ||
+        !values.dateOfBirth ||
+        !values.gender ||
+        !values.grade ||
+        !values.class ||
+        !values.academicYear
+      ) {
+        message.error("Vui lòng điền đầy đủ thông tin bắt buộc");
+        return;
+      }
+
+      // Generate email automatically for primary school students
+      const generateEmail = (fullName) => {
+        const normalizedName = fullName
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .toLowerCase()
+          .replace(/\s+/g, ".");
+        const randomNum = Math.floor(Math.random() * 1000);
+        return `${normalizedName}${randomNum}@school.edu.vn`;
+      };
+
+      // Map gender from Vietnamese to English
+      const mapGenderForBackend = (gender) => {
+        if (gender === "Nam") return "male";
+        if (gender === "Nữ") return "female";
+        return gender; // fallback
+      };
+
+      // Validate parent selection for new students
+      if (!editingStudent && !values.selectedParentId) {
+        message.error("Vui lòng chọn phụ huynh cho học sinh mới");
+        return;
+      }
 
       // Get parent data from selected parent
       let parentData = {};
       if (values.selectedParentId) {
         parentData.parentId = values.selectedParentId;
+        console.log("✅ Parent data:", parentData);
+      } else if (!editingStudent) {
+        message.error("Phải chọn phụ huynh cho học sinh mới");
+        return;
       }
 
-      const formattedValues = editingStudent
-        ? {
-            studentCode: values.studentCode,
-            fullName: values.name,
-            email: values.email,
-            phone: values.emergencyPhone,
-            password: "defaultPassword123",
-            dateOfBirth: values.dateOfBirth.toISOString(),
-            gender: values.gender,
-            grade: parseInt(values.grade),
-            class: values.class,
-            ...parentData,
-          }
-        : {
-            fullName: values.name,
-            email: values.email,
-            phone: values.emergencyPhone,
-            password: "defaultPassword123",
-            dateOfBirth: values.dateOfBirth.toISOString(),
-            gender: values.gender,
-            grade: parseInt(values.grade),
-            class: values.class,
-            ...parentData,
-          };
+      setLoading(true);
+      try {
+        const authToken = localStorage.getItem("token");
+        if (!authToken) {
+          message.error(
+            "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
+          );
+          setLoading(false);
+          setIsModalVisible(false);
+          return;
+        }
 
-      if (editingStudent) {
-        // Update student
-        setLoading(true);
-        try {
-          const authToken = localStorage.getItem("token");
-          if (!authToken) {
-            message.error(
-              "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
-            );
-            setLoading(false);
-            setIsModalVisible(false);
-            return;
-          }
-
+        if (editingStudent) {
+          // Update student
           const updateValues = {
             studentCode: values.studentCode,
             fullName: values.name,
-            email: values.email,
-            phone: values.emergencyPhone,
+            email: values.email || generateEmail(values.name),
+            phone: values.emergencyPhone || "",
             dateOfBirth: values.dateOfBirth.toISOString(),
-            gender: values.gender,
+            gender: mapGenderForBackend(values.gender),
             grade: parseInt(values.grade),
-            class: values.class,
+            studentClass: values.class,
+            academicYear: values.academicYear,
             ...parentData,
           };
+          console.log("📤 Sending updateValues:", updateValues);
+          console.log(
+            "🔍 Gender value:",
+            values.gender,
+            "Type:",
+            typeof values.gender
+          );
 
-          await axios.put(`/api/admin/${editingStudent.id}`, updateValues, {
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          });
+          await axios.put(
+            `/api/admin/students/${editingStudent.id}`,
+            updateValues,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+              },
+            }
+          );
           message.success("Cập nhật học sinh thành công");
-          fetchStudents();
-          fetchParents(); // Refresh parents list in case new parent was created
-        } catch (error) {
-          message.error(
-            error.response?.data?.error || "Không thể cập nhật học sinh"
-          );
-          console.error("Lỗi khi cập nhật học sinh:", error);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(true);
-        try {
-          const authToken = localStorage.getItem("token");
-          if (!authToken) {
-            message.error(
-              "Không tìm thấy token xác thực. Vui lòng đăng nhập lại."
-            );
-            setLoading(false);
-            setIsModalVisible(false);
-            return;
-          }
+        } else {
+          // Create new student
+          const createValues = {
+            fullName: values.name,
+            email: generateEmail(values.name),
+            phone: values.emergencyPhone || "",
+            password: "defaultPassword123",
+            dateOfBirth: values.dateOfBirth.toISOString(),
+            gender: mapGenderForBackend(values.gender),
+            grade: parseInt(values.grade),
+            studentClass: values.class,
+            academicYear: values.academicYear,
+            studentCode:
+              values.studentCode ||
+              generateStudentCode(values.grade, values.class),
+            ...parentData,
+          };
+          console.log("📤 Sending createValues:", createValues);
 
-          await axios.post("/api/admin", formattedValues, {
+          await axios.post("/api/admin/students", createValues, {
             headers: {
               Authorization: `Bearer ${authToken}`,
             },
           });
-
           message.success("Thêm học sinh thành công");
-          fetchStudents();
-          fetchParents(); // Refresh parents list in case new parent was created
-        } catch (error) {
-          message.error(
-            error.response?.data?.error || "Không thể thêm học sinh"
-          );
-          console.error("Lỗi khi thêm học sinh:", error);
-        } finally {
-          setLoading(false);
         }
+
+        // Refresh data
+        fetchStudents();
+        fetchParents();
+        setIsModalVisible(false);
+      } catch (error) {
+        const errorMessage =
+          error.response?.data?.error ||
+          (editingStudent
+            ? "Không thể cập nhật học sinh"
+            : "Không thể thêm học sinh");
+        message.error(errorMessage);
+        console.error("Lỗi khi xử lý học sinh:", error);
+        console.error("Response data:", error.response?.data);
+        console.error(
+          "Request data:",
+          editingStudent ? "updateValues (see above log)" : createValues
+        );
+      } finally {
+        setLoading(false);
       }
-      setIsModalVisible(false);
     } catch (error) {
-      console.error("Lỗi xác thực:", error);
+      console.error("Lỗi xác thực form:", error);
     }
   };
 
@@ -437,7 +500,7 @@ const StudentManagement = () => {
         return;
       }
       // Call deleteUser endpoint for students
-      await axios.delete(`/api/admin/${studentId}`, {
+      await axios.delete(`/api/admin/students/${studentId}`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -456,10 +519,24 @@ const StudentManagement = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Quản lý học sinh</h1>
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-          Thêm học sinh
-        </Button>
+        <Space>
+          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            Tạo học sinh
+          </Button>
+          <Button type="primary" onClick={() => setShowPromotionModal(true)}>
+            Chuyển năm học mới
+          </Button>
+        </Space>
       </div>
+      <Modal
+        open={showPromotionModal}
+        onCancel={() => setShowPromotionModal(false)}
+        footer={null}
+        width={600}
+        title="Chuyển năm học mới"
+      >
+        <SchoolYearPromotion />
+      </Modal>
 
       {/* Thêm chức năng import học sinh/phụ huynh */}
       <div style={{ marginBottom: 24 }}>
@@ -553,22 +630,7 @@ const StudentManagement = () => {
             >
               <Input />
             </Form.Item>
-            <Form.Item
-              name="email"
-              label="Email"
-              rules={[
-                {
-                  required: true,
-                  message: "Vui lòng nhập email!",
-                },
-                {
-                  type: "email",
-                  message: "Email không hợp lệ!",
-                },
-              ]}
-            >
-              <Input />
-            </Form.Item>
+
             <Form.Item
               name="dateOfBirth"
               label="Ngày sinh"
@@ -608,8 +670,8 @@ const StudentManagement = () => {
               ]}
             >
               <Select>
-                <Option value="male">Nam</Option>
-                <Option value="female">Nữ</Option>
+                <Option value="Nam">Nam</Option>
+                <Option value="Nữ">Nữ</Option>
               </Select>
             </Form.Item>
             <Form.Item
@@ -656,6 +718,28 @@ const StudentManagement = () => {
               ]}
             >
               <Input />
+            </Form.Item>
+            <Form.Item
+              name="academicYear"
+              label="Năm học"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng chọn năm học!",
+                },
+              ]}
+            >
+              <Select placeholder="Chọn năm học">
+                <Option value="2024-2025">2024-2025</Option>
+                <Option value="2025-2026">2025-2026</Option>
+                <Option value="2026-2027">2026-2027</Option>
+                <Option value="2027-2028">2027-2028</Option>
+                <Option value="2028-2029">2028-2029</Option>
+                <Option value="2029-2030">2029-2030</Option>
+                <Option value="2030-2031">2030-2031</Option>
+                <Option value="2031-2032">2031-2032</Option>
+                <Option value="2032-2033">2032-2033</Option>
+              </Select>
             </Form.Item>
 
             <Form.Item

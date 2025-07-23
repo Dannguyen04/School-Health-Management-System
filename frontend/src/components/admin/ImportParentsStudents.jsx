@@ -18,15 +18,27 @@ import {
     MailOutlined,
     PhoneOutlined,
     InfoCircleOutlined,
+    DownloadOutlined,
 } from "@ant-design/icons";
 import * as XLSX from "xlsx";
 import axios from "axios";
+import { createImportTemplate } from "../../utils/createTemplate";
 
 const { Text } = Typography;
 
 // Validate helpers
 const validateEmail = (email) => /.+@.+\..+/.test(email);
-const validatePhone = (phone) => /^\d{8,15}$/.test(phone || "");
+const validatePhone = (phone) => /^0\d{8,14}$/.test(phone || "");
+
+// Hàm tự động thêm số 0 ở đầu số điện thoại nếu chưa có
+const normalizePhoneNumber = (phone) => {
+    if (!phone) return phone;
+    const cleanPhone = phone.toString().replace(/\D/g, ""); // Chỉ giữ lại số
+    if (cleanPhone.length >= 9 && cleanPhone.length <= 15) {
+        return cleanPhone.startsWith("0") ? cleanPhone : `0${cleanPhone}`;
+    }
+    return phone; // Trả về nguyên bản nếu không hợp lệ
+};
 const validateGender = (gender) =>
     ["Nam", "Nữ", "nam", "nữ", "male", "female"].includes(
         (gender || "").toLowerCase()
@@ -37,6 +49,16 @@ const validateClassName = (className) => /^[1-5][A-Z]$/.test(className);
 // Validate grade: chỉ cho phép 1-5
 const validateGrade = (grade) => /^[1-5]$/.test(grade);
 
+const validateSchoolYear = (schoolYear) => {
+    if (!schoolYear) return false;
+    const pattern = /^\d{4}-\d{4}$/;
+    if (!pattern.test(schoolYear)) return false;
+
+    const [startYear, endYear] = schoolYear.split("-");
+    // Kiểm tra năm học hợp lý (năm sau = năm trước + 1)
+    return parseInt(endYear) === parseInt(startYear) + 1;
+};
+
 function validateRow(row) {
     const errors = [];
     if (!row.parentName) errors.push("Thiếu trường: Tên phụ huynh");
@@ -45,11 +67,10 @@ function validateRow(row) {
         errors.push("Email phụ huynh không hợp lệ");
     if (!row.parentPhone) errors.push("Thiếu trường: SĐT phụ huynh");
     else if (!validatePhone(row.parentPhone))
-        errors.push("SĐT phụ huynh không hợp lệ");
+        errors.push(
+            "SĐT phụ huynh không hợp lệ. Hệ thống đã tự động thêm số 0 ở đầu nếu cần."
+        );
     if (!row.studentName) errors.push("Thiếu trường: Họ và tên");
-    if (!row.studentEmail) errors.push("Thiếu trường: Email");
-    else if (!validateEmail(row.studentEmail))
-        errors.push("Email học sinh không hợp lệ");
     if (!row.studentGender) errors.push("Thiếu trường: Giới tính");
     else if (!validateGender(row.studentGender))
         errors.push("Giới tính học sinh không hợp lệ");
@@ -62,6 +83,9 @@ function validateRow(row) {
     if (!row.studentGrade) errors.push("Thiếu trường: Khối");
     else if (!validateGrade(row.studentGrade))
         errors.push("Khối chỉ được nhập số từ 1 đến 5");
+    if (!row.studentAcademicYear) errors.push("Thiếu trường: Năm học");
+    else if (!validateSchoolYear(row.studentAcademicYear))
+        errors.push("Năm học không đúng định dạng (VD: 2024-2025)");
     return errors;
 }
 
@@ -75,10 +99,13 @@ function getColKey(row, colName) {
 
 // Hàm làm sạch chuỗi: loại bỏ dấu phẩy, dấu cách, dấu /, ký tự xuống dòng ở đầu/cuối
 function cleanString(str) {
-    return String(str || "")
-        .replace(/[\s,\/\n\r]+$/g, "") // Xóa ở cuối
-        .replace(/^[\s,\/\n\r]+/g, "") // Xóa ở đầu
-        .trim();
+    return (
+        String(str || "")
+            .replace(/[\s,\/\n\r]+$/g, "") // Xóa ở cuối
+            .replace(/^[\s,\/\n\r]+/g, "") // Xóa ở đầu
+            // Không cần xóa dấu ' nữa vì cột đã được format thành text
+            .trim()
+    );
 }
 
 // Hàm chuyển số serial Excel thành chuỗi ngày yyyy-MM-dd
@@ -266,16 +293,17 @@ function ImportParentsStudents() {
                     if (idx === 0) {
                         console.log(`Row ${idx + 2} keys:`, Object.keys(row));
                     }
+                    const rawParentPhone = cleanString(getVal("SĐT phụ huynh"));
                     const obj = {
                         parentName: cleanString(getVal("Tên phụ huynh")),
                         parentEmail: cleanString(getVal("Email phụ huynh")),
-                        parentPhone: cleanString(getVal("SĐT phụ huynh")),
+                        parentPhone: normalizePhoneNumber(rawParentPhone),
                         studentName: cleanString(getVal("Họ và tên")),
                         studentGender: cleanString(getVal("Giới tính")),
                         studentDOB,
                         studentClass: cleanString(getVal("Lớp")),
                         studentGrade: cleanString(getVal("Khối")),
-                        studentEmail: cleanString(getVal("Email")),
+                        studentAcademicYear: cleanString(getVal("Năm học")),
                     };
                     if (Object.values(obj).every((v) => v === "")) {
                         console.log(
@@ -372,10 +400,21 @@ function ImportParentsStudents() {
                 <Text type="secondary" style={{ fontSize: 13 }}>
                     Chọn file Excel mẫu (xlsx, xls) để thêm mới phụ huynh và học
                     sinh hàng loạt. <br />
-                    <a href="/template_import_parents_students.xlsx" download>
-                        {" "}
-                        Tải file mẫu{" "}
-                    </a>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                        Lưu ý: Số điện thoại sẽ tự động thêm số 0 ở đầu nếu chưa
+                        có (VD: 912345678 → 0912345678). Template đã được format
+                        để toàn bộ cột số điện thoại là text. Năm học theo định
+                        dạng: 2024-2025, 2025-2026.
+                    </Text>
+                    <br />
+                    <Button
+                        type="link"
+                        icon={<DownloadOutlined />}
+                        onClick={createImportTemplate}
+                        style={{ padding: 0, height: "auto" }}
+                    >
+                        Tải file mẫu
+                    </Button>
                 </Text>
                 <Upload
                     beforeUpload={beforeUpload}
@@ -472,9 +511,6 @@ function ImportParentsStudents() {
                     {detailModal.row && (
                         <div style={{ fontSize: 15 }}>
                             <b>Họ và tên:</b> {detailModal.row.studentName}
-                            <br />
-                            <b>Email học sinh:</b>{" "}
-                            {detailModal.row.studentEmail}
                             <br />
                             <b>Ngày sinh:</b> {detailModal.row.studentDOB}
                             <br />
