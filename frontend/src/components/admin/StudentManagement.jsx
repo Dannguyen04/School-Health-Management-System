@@ -309,7 +309,7 @@ const StudentManagement = () => {
     setIsModalVisible(true);
   };
 
-  const handleEdit = (student) => {
+  const handleEdit = async (student) => {
     console.log("📝 Student data for edit:", student);
     setEditingStudent(student);
 
@@ -337,7 +337,37 @@ const StudentManagement = () => {
       class: student.class,
       academicYear: student.academicYear,
     });
-    setSelectedParent(null);
+
+    // Lấy phụ huynh chính của học sinh
+    try {
+      const authToken = localStorage.getItem("token");
+      if (!authToken) {
+        message.error("Không tìm thấy token xác thực. Vui lòng đăng nhập lại.");
+        setSelectedParent(null);
+      } else {
+        const response = await axios.get(
+          `/api/admin/students/${student.id}/parent`,
+          {
+            headers: { Authorization: `Bearer ${authToken}` },
+          }
+        );
+        if (response.data && response.data.success && response.data.data) {
+          setSelectedParent(response.data.data);
+          // Set luôn vào form để đảm bảo validate
+          form.setFieldsValue({
+            selectedParentId: response.data.data.id,
+            selectedParentName: response.data.data.fullName,
+          });
+        } else {
+          setSelectedParent(null);
+        }
+      }
+    } catch (error) {
+      setSelectedParent(null);
+      // Không báo lỗi to nếu không có phụ huynh, chỉ log
+      console.error("Không lấy được phụ huynh:", error);
+    }
+
     setIsModalVisible(true);
   };
 
