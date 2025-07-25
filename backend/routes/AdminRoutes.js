@@ -3,23 +3,16 @@ import studentRoutes from "./StudentRoutes.js";
 
 import {
     addRole,
-    deleteUser,
     filterUsers,
     getAllUsers,
     getDashboardStats,
     updateRole,
-    addStudent,
-    getAllStudents,
-    updateStudent,
-    filterStudents,
     getAllStudentsForNurse,
     getAllParents,
     addParent,
     updateParent,
     deleteParent,
     getAllGradesWithStudentCount,
-    getPassword,
-    updatePassword,
 } from "../controllers/AdminController.js";
 import {
     authenticateToken,
@@ -51,21 +44,9 @@ router.post("/users/", authenticateToken, verifyAdmin, addRole);
 
 router.get("/users/getAllUsers", authenticateToken, verifyAdmin, getAllUsers);
 
-router.delete("/users/:id", authenticateToken, verifyAdmin, deleteUser);
-
 router.put("/users/:id", authenticateToken, verifyAdmin, updateRole);
 
 router.get("/users/filter", authenticateToken, verifyAdmin, filterUsers);
-
-router.post("/", authenticateToken, verifyAdmin, addStudent);
-
-router.get("/", authenticateToken, verifyAdmin, getAllStudents);
-
-router.put("/:id", authenticateToken, verifyAdmin, updateStudent);
-
-router.delete("/:id", authenticateToken, verifyAdmin, deleteUser);
-
-router.get("/filter", authenticateToken, verifyAdmin, filterStudents);
 
 // Route cho y tá lấy danh sách học sinh
 router.get("/students-for-nurse", authenticateToken, getAllStudentsForNurse);
@@ -77,14 +58,6 @@ router.put("/parents/:id", authenticateToken, verifyAdmin, updateParent);
 router.delete("/parents/:id", authenticateToken, verifyAdmin, deleteParent);
 
 // Quản lí MK
-router.get("/user/password/:id", authenticateToken, verifyAdmin, getPassword);
-router.put(
-    "/user/password/:id",
-    authenticateToken,
-    verifyAdmin,
-    updatePassword
-);
-
 router.post(
     "/import-parents-students",
     uploadExcel,

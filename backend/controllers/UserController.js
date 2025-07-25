@@ -32,7 +32,6 @@ export const getAllUsers = async (req, res) => {
     try {
         const users = await prisma.users.findMany({
             include: {
-                studentProfile: true,
                 parentProfile: true,
                 nurseProfile: true,
                 managerProfile: true,
@@ -50,7 +49,6 @@ export const getUserById = async (req, res) => {
         const user = await prisma.users.findUnique({
             where: { id: req.params.id },
             include: {
-                studentProfile: true,
                 parentProfile: true,
                 nurseProfile: true,
                 managerProfile: true,
@@ -119,7 +117,6 @@ export const updateCurrentUserProfile = async (req, res) => {
                 updatedAt: new Date(),
             },
             include: {
-                studentProfile: true,
                 parentProfile: true,
                 nurseProfile: true,
                 managerProfile: true,
@@ -163,7 +160,6 @@ export const uploadProfilePhoto = async (req, res) => {
                 updatedAt: new Date(),
             },
             include: {
-                studentProfile: true,
                 parentProfile: true,
                 nurseProfile: true,
                 managerProfile: true,
