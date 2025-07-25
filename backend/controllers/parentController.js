@@ -49,12 +49,11 @@ export const getMyChildren = async (req, res) => {
             },
             include: {
                 student: {
-                    include: {
-                        user: {
-                            select: {
-                                fullName: true,
-                            },
-                        },
+                    select: {
+                        id: true,
+                        fullName: true,
+                        class: true,
+                        grade: true,
                         healthProfile: true,
                     },
                 },
@@ -66,7 +65,7 @@ export const getMyChildren = async (req, res) => {
 
         const children = childrenRelations.map((rel) => ({
             studentId: rel.student.id,
-            fullName: rel.student.user.fullName,
+            fullName: rel.student.fullName,
             class: rel.student.class,
             grade: rel.student.grade,
         }));
@@ -114,12 +113,6 @@ export const getHealthProfile = async (req, res) => {
                 student: {
                     include: {
                         healthProfile: true,
-                        user: {
-                            select: {
-                                fullName: true,
-                                email: true,
-                            },
-                        },
                     },
                 },
             },
@@ -169,8 +162,8 @@ export const getHealthProfile = async (req, res) => {
                 healthProfile: transformedHealthProfile,
                 student: {
                     id: studentParent.student.id,
-                    fullName: studentParent.student.user.fullName,
-                    email: studentParent.student.user.email,
+                    fullName: studentParent.student.fullName,
+                    email: studentParent.student.email,
                 },
             },
         });
@@ -248,7 +241,6 @@ export const upsertHealthProfile = async (req, res) => {
                 if (
                     !disease.group ||
                     !disease.name ||
-                    !disease.onsetDate ||
                     !disease.level ||
                     !disease.status
                 ) {
@@ -679,7 +671,12 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
             const campaignData = {
                 ...campaign,
                 // Đảm bảo trả về doseSchedules trong vaccine
-                vaccine: campaign.vaccine ? { ...campaign.vaccine, doseSchedules: campaign.vaccine.doseSchedules || [] } : null,
+                vaccine: campaign.vaccine
+                    ? {
+                          ...campaign.vaccine,
+                          doseSchedules: campaign.vaccine.doseSchedules || [],
+                      }
+                    : null,
                 childrenConsent: children.map((child) => {
                     const existingConsent = campaign.consents.find(
                         (consent) => consent.studentId === child.studentId
@@ -767,7 +764,12 @@ export const getStudentVaccinationCampaigns = async (req, res) => {
             scheduledDate: campaign.scheduledDate,
             deadline: campaign.deadline,
             status: campaign.status,
-            vaccine: campaign.vaccine ? { ...campaign.vaccine, doseSchedules: campaign.vaccine.doseSchedules || [] } : null,
+            vaccine: campaign.vaccine
+                ? {
+                      ...campaign.vaccine,
+                      doseSchedules: campaign.vaccine.doseSchedules || [],
+                  }
+                : null,
             vaccinated: campaign.vaccinationRecords.length > 0,
         }));
         return res.status(200).json({
@@ -866,7 +868,9 @@ export const getVaccinationHistory = async (req, res) => {
         const result = records.map((r) => ({
             id: r.id,
             administeredDate: r.administeredDate,
-            vaccine: r.vaccine ? { ...r.vaccine, doseSchedules: r.vaccine.doseSchedules || [] } : null,
+            vaccine: r.vaccine
+                ? { ...r.vaccine, doseSchedules: r.vaccine.doseSchedules || [] }
+                : null,
             campaign: r.campaign,
             dose: r.dose,
             status: r.status,
