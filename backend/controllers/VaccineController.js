@@ -39,6 +39,7 @@ const createVaccination = async (req, res) => {
             minAge,
             maxAge,
             maxDoseCount, // mới
+            doseSchedules // mới: mảng phác đồ mũi tiêm
         } = req.body;
 
         if (
@@ -52,6 +53,17 @@ const createVaccination = async (req, res) => {
                 success: false,
                 error: "Thiếu trường dữ liệu cần thiết: tên, yêu cầu, nhà sản xuất, nguồn gốc",
             });
+        }
+
+        // Validate doseSchedules nếu có
+        let doseSchedulesData = [];
+        if (doseSchedules && Array.isArray(doseSchedules)) {
+            doseSchedulesData = doseSchedules.map((d) => ({
+                doseOrder: Number(d.doseOrder),
+                minInterval: Number(d.minInterval),
+                recommendedInterval: Number(d.recommendedInterval),
+                description: d.description || null
+            }));
         }
 
         const existedVaccination = await prisma.vaccine.findFirst({
@@ -77,6 +89,7 @@ const createVaccination = async (req, res) => {
                 minAge: Number(minAge),
                 maxAge: Number(maxAge),
                 maxDoseCount: Number(maxDoseCount),
+                doseSchedules: doseSchedulesData, // mới
             },
         });
 
@@ -217,6 +230,7 @@ const updateVaccination = async (req, res) => {
         minAge,
         maxAge,
         maxDoseCount, // mới
+        doseSchedules // mới
     } = req.body;
     try {
         const existedVaccination = await prisma.vaccine.findUnique({
@@ -248,6 +262,18 @@ const updateVaccination = async (req, res) => {
                 });
             }
         }
+
+        // Validate doseSchedules nếu có
+        let doseSchedulesData = existedVaccination.doseSchedules || [];
+        if (doseSchedules && Array.isArray(doseSchedules)) {
+            doseSchedulesData = doseSchedules.map((d) => ({
+                doseOrder: Number(d.doseOrder),
+                minInterval: Number(d.minInterval),
+                recommendedInterval: Number(d.recommendedInterval),
+                description: d.description || null
+            }));
+        }
+
         const updated = await prisma.vaccine.update({
             where: { id },
             data: {
@@ -265,6 +291,7 @@ const updateVaccination = async (req, res) => {
                     maxDoseCount !== undefined
                         ? Number(maxDoseCount)
                         : existedVaccination.maxDoseCount,
+                doseSchedules: doseSchedulesData, // mới
             },
         });
 
