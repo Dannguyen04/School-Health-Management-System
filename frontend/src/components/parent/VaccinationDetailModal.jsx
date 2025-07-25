@@ -177,7 +177,9 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                             </Descriptions.Item>
                         )}
                     </Descriptions>
-                    <Divider orientation="left">Phác đồ mũi tiêm</Divider>
+                    <Typography.Title level={5} style={{ marginTop: 24, marginBottom: 8, color: '#36ae9a' }}>
+                        Phác đồ mũi tiêm
+                    </Typography.Title>
                     {((vaccination?.vaccine && Array.isArray(vaccination.vaccine.doseSchedules)) || (campaign?.vaccine && Array.isArray(campaign.vaccine.doseSchedules))) ? (
                         <table style={{ width: '100%', marginBottom: 16, borderCollapse: 'collapse', background: '#f6fcfa', borderRadius: 6 }}>
                             <thead>
