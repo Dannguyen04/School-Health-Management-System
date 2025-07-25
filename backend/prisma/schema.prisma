@@ -102,6 +102,15 @@ enum TreatmentStatus {
   COMPLETED // Đã hoàn thành (nếu cần)
 }
 
+// Định nghĩa embedded type cho phác đồ mũi tiêm
+
+type DoseSchedule {
+  doseOrder           Int      // Mũi số mấy (1, 2, 3...)
+  minInterval         Int      // Số ngày tối thiểu sau mũi trước
+  recommendedInterval Int      // Số ngày khuyến nghị
+  description         String?  // Ghi chú thêm nếu cần
+}
+
 // Main Models
 model users {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -159,6 +168,7 @@ model Student {
   @@index([class])
   @@index([academicYear])
 }
+
 
 model Parent {
   id         String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -403,6 +413,7 @@ model Vaccine {
   // Relations
   campaigns        VaccinationCampaign[]
   vaccinationRecords VaccinationRecord[]
+  doseSchedules DoseSchedule[] // Embedded array lưu phác đồ mũi tiêm
 
   @@map("vaccines")
 }
