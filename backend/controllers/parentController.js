@@ -678,6 +678,8 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
         const campaignsWithConsent = campaigns.map((campaign) => {
             const campaignData = {
                 ...campaign,
+                // Đảm bảo trả về doseSchedules trong vaccine
+                vaccine: campaign.vaccine ? { ...campaign.vaccine, doseSchedules: campaign.vaccine.doseSchedules || [] } : null,
                 childrenConsent: children.map((child) => {
                     const existingConsent = campaign.consents.find(
                         (consent) => consent.studentId === child.studentId
@@ -765,7 +767,7 @@ export const getStudentVaccinationCampaigns = async (req, res) => {
             scheduledDate: campaign.scheduledDate,
             deadline: campaign.deadline,
             status: campaign.status,
-            vaccineName: campaign.vaccine?.name || "",
+            vaccine: campaign.vaccine ? { ...campaign.vaccine, doseSchedules: campaign.vaccine.doseSchedules || [] } : null,
             vaccinated: campaign.vaccinationRecords.length > 0,
         }));
         return res.status(200).json({
@@ -864,7 +866,7 @@ export const getVaccinationHistory = async (req, res) => {
         const result = records.map((r) => ({
             id: r.id,
             administeredDate: r.administeredDate,
-            vaccine: r.vaccine,
+            vaccine: r.vaccine ? { ...r.vaccine, doseSchedules: r.vaccine.doseSchedules || [] } : null,
             campaign: r.campaign,
             dose: r.dose,
             status: r.status,
