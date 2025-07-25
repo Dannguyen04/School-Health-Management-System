@@ -21,6 +21,12 @@ export const createStudent = async (req, res) => {
       grade,
       academicYear,
       // studentCode, // Không nhận từ FE nữa
+      bloodType,
+      address,
+      phone,
+      ethnicity,
+      religion,
+      parentId, // <-- Thêm dòng này để nhận parentId
     } = req.body;
     const studentClass = studentClassFromClass || studentClassFromStudentClass;
 
@@ -32,6 +38,7 @@ export const createStudent = async (req, res) => {
       studentClass,
       grade,
       academicYear,
+      parentId, // log parentId
     });
 
     // Validate các trường bắt buộc (bỏ studentCode)
@@ -73,6 +80,19 @@ export const createStudent = async (req, res) => {
         // status sẽ mặc định là 'active', chỉ truyền nếu muốn override
       },
     });
+
+    // Nếu có parentId, tạo quan hệ StudentParent
+    if (parentId) {
+      await prisma.studentParent.create({
+        data: {
+          studentId: student.id,
+          parentId: parentId,
+          relationship: "guardian",
+          isPrimary: true,
+        },
+      });
+    }
+
     return res.status(201).json({ success: true, data: student });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
@@ -115,6 +135,43 @@ export const getStudentById = async (req, res) => {
         .status(404)
         .json({ success: false, error: "Không tìm thấy học sinh" });
     return res.status(200).json({ success: true, data: student });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Lấy phụ huynh chính của học sinh
+export const getStudentParent = async (req, res) => {
+  try {
+    const { id } = req.params; // id là studentId
+    const studentParent = await prisma.studentParent.findFirst({
+      where: {
+        studentId: id,
+        isPrimary: true,
+      },
+      include: {
+        parent: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+    if (!studentParent) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy phụ huynh cho học sinh này",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: studentParent.parent.id,
+        fullName: studentParent.parent.user.fullName,
+        email: studentParent.parent.user.email,
+        phone: studentParent.parent.user.phone,
+      },
+    });
   } catch (error) {
     return res.status(500).json({ success: false, error: error.message });
   }
