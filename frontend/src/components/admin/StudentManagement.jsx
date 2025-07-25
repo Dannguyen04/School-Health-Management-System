@@ -146,22 +146,20 @@ const StudentManagement = () => {
                 },
             });
 
-            // Map the fetched data to match the table's expected structure
-            const formattedStudents = response.data.data.map((user) => ({
-                id: user.id,
-                studentCode:
-                    user.studentProfile?.studentCode || user.studentCode,
-                name: user.fullName,
-                dateOfBirth: user.studentProfile?.dateOfBirth,
-                gender: user.studentProfile?.gender,
-                class: user.studentProfile?.class,
-                grade: user.studentProfile?.grade,
-                academicYear: user.studentProfile?.academicYear,
-                bloodType: user.studentProfile?.bloodType,
-                status: user.isActive ? "active" : "inactive",
+            // Map dữ liệu trả về đúng với table
+            const formattedStudents = response.data.data.map((student) => ({
+                id: student.id,
+                studentCode: student.studentCode,
+                name: student.fullName,
+                dateOfBirth: student.dateOfBirth,
+                gender: student.gender,
+                class: student.class,
+                grade: student.grade,
+                academicYear: student.academicYear,
+                status: student.status || "active",
             }));
             setStudents(formattedStudents);
-            setFilteredStudents(formattedStudents); // Initialize filtered students with all students
+            setFilteredStudents(formattedStudents);
         } catch (error) {
             message.error(
                 error.response?.data?.error ||
@@ -370,7 +368,8 @@ const StudentManagement = () => {
                 !values.gender ||
                 !values.grade ||
                 !values.class ||
-                !values.academicYear
+                !values.startYear ||
+                !values.endYear
             ) {
                 message.error("Vui lòng điền đầy đủ thông tin bắt buộc");
                 return;
@@ -456,6 +455,7 @@ const StudentManagement = () => {
                     message.success("Cập nhật học sinh thành công");
                 } else {
                     // Create new student
+                    const academicYear = `${values.startYear}-${values.endYear}`;
                     const createValues = {
                         fullName: values.name,
                         email: generateEmail(values.name),
@@ -465,7 +465,7 @@ const StudentManagement = () => {
                         gender: mapGenderForBackend(values.gender),
                         grade: parseInt(values.grade),
                         studentClass: values.class,
-                        academicYear: values.academicYear,
+                        academicYear: academicYear,
                         studentCode:
                             values.studentCode ||
                             generateStudentCode(values.grade, values.class),
@@ -764,28 +764,73 @@ const StudentManagement = () => {
                         >
                             <Input />
                         </Form.Item>
-                        <Form.Item
-                            name="academicYear"
-                            label="Năm học"
-                            rules={[
-                                {
-                                    required: true,
-                                    message: "Vui lòng chọn năm học!",
-                                },
-                            ]}
-                        >
-                            <Select placeholder="Chọn năm học">
-                                <Option value="2024-2025">2024-2025</Option>
-                                <Option value="2025-2026">2025-2026</Option>
-                                <Option value="2026-2027">2026-2027</Option>
-                                <Option value="2027-2028">2027-2028</Option>
-                                <Option value="2028-2029">2028-2029</Option>
-                                <Option value="2029-2030">2029-2030</Option>
-                                <Option value="2030-2031">2030-2031</Option>
-                                <Option value="2031-2032">2031-2032</Option>
-                                <Option value="2032-2033">2032-2033</Option>
-                            </Select>
-                        </Form.Item>
+                        <Row gutter={16}>
+                            <Col xs={12}>
+                                <Form.Item
+                                    name="startYear"
+                                    label="Năm bắt đầu"
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message:
+                                                "Vui lòng nhập năm bắt đầu!",
+                                        },
+                                        {
+                                            pattern: /^\d{4}$/,
+                                            message:
+                                                "Năm bắt đầu phải có 4 chữ số",
+                                        },
+                                    ]}
+                                >
+                                    <Input
+                                        placeholder="VD: 2020"
+                                        maxLength={4}
+                                    />
+                                </Form.Item>
+                            </Col>
+                            <Col xs={12}>
+                                <Form.Item
+                                    name="endYear"
+                                    label="Năm kết thúc"
+                                    rules={[
+                                        {
+                                            required: true,
+                                            message:
+                                                "Vui lòng nhập năm kết thúc!",
+                                        },
+                                        {
+                                            pattern: /^\d{4}$/,
+                                            message:
+                                                "Năm kết thúc phải có 4 chữ số",
+                                        },
+                                        ({ getFieldValue }) => ({
+                                            validator(_, value) {
+                                                const start =
+                                                    getFieldValue("startYear");
+                                                if (
+                                                    start &&
+                                                    value &&
+                                                    Number(value) <=
+                                                        Number(start)
+                                                ) {
+                                                    return Promise.reject(
+                                                        new Error(
+                                                            "Năm kết thúc phải lớn hơn năm bắt đầu"
+                                                        )
+                                                    );
+                                                }
+                                                return Promise.resolve();
+                                            },
+                                        }),
+                                    ]}
+                                >
+                                    <Input
+                                        placeholder="VD: 2025"
+                                        maxLength={4}
+                                    />
+                                </Form.Item>
+                            </Col>
+                        </Row>
 
                         <Form.Item
                             name="selectedParentId"
