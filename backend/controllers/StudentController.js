@@ -142,6 +142,45 @@ export const getStudentById = async (req, res) => {
     }
 };
 
+// Lấy phụ huynh chính của học sinh
+export const getStudentParent = async (req, res) => {
+    try {
+        const { id } = req.params; // id là studentId
+        const studentParent = await prisma.studentParent.findFirst({
+            where: {
+                studentId: id,
+                isPrimary: true,
+            },
+            include: {
+                parent: {
+                    include: {
+                        user: true,
+                    },
+                },
+            },
+        });
+        if (!studentParent) {
+            return res
+                .status(404)
+                .json({
+                    success: false,
+                    error: "Không tìm thấy phụ huynh cho học sinh này",
+                });
+        }
+        return res.status(200).json({
+            success: true,
+            data: {
+                id: studentParent.parent.id,
+                fullName: studentParent.parent.user.fullName,
+                email: studentParent.parent.user.email,
+                phone: studentParent.parent.user.phone,
+            },
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 // Cập nhật học sinh
 export const updateStudent = async (req, res) => {
     try {

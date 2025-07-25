@@ -5,6 +5,7 @@ import {
     getStudentById,
     updateStudent,
     deleteStudent,
+    getStudentParent,
 } from "../controllers/StudentController.js";
 import {
     authenticateToken,
@@ -20,6 +21,7 @@ router.get("/", authenticateToken, verifyAdmin, getAllStudents);
 router.get("/:id", authenticateToken, verifyAdmin, getStudentById);
 router.put("/:id", authenticateToken, verifyAdmin, updateStudent);
 router.delete("/:id", authenticateToken, verifyAdmin, deleteStudent);
+router.get("/:id/parent", authenticateToken, verifyAdmin, getStudentParent);
 
 // Route cho manager
 router.post("/manager", authenticateToken, verifyManager, createStudent);
