@@ -18,6 +18,7 @@ import UploadRoutes from "./routes/UploadRoutes.js";
 import UserRoutes from "./routes/UserRoutes.js";
 import VaccinationCampaignRoutes from "./routes/VaccinationCampaignRoutes.js";
 import VaccinationRoutes from "./routes/VaccinationRoutes.js";
+import SchoolYearRoutes from "./routes/SchoolYearRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -67,6 +68,7 @@ app.use("/api/medical-campaigns", MedicalCampaignRoutes);
 app.use("/api/blogs", BlogRoutes);
 app.use("/api/report-medical-check", ReportMedicalCheckRoutes);
 app.use("/api/upload", UploadRoutes);
+app.use("/api/school-year", SchoolYearRoutes);
 
 // 404 handler
 app.use("*", (req, res) => {

@@ -2,32 +2,53 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-// Helper function to update campaign statistics
+// Helper function để tính toán năm học từ ngày
+const getAcademicYearFromDate = (date) => {
+    const targetDate = new Date(date);
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth() + 1; // 0-based
+
+    // Năm học bắt đầu từ tháng 9 (tháng 9-12 thuộc năm học mới)
+    if (month >= 9) {
+        return `${year}-${year + 1}`;
+    } else {
+        return `${year - 1}-${year}`;
+    }
+};
+
+// Helper function để lấy năm học hiện tại
+const getCurrentAcademicYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1; // 0-based
+
+    // Năm học bắt đầu từ tháng 9 (tháng 9-12 thuộc năm học mới)
+    if (month >= 9) {
+        return `${year}-${year + 1}`;
+    } else {
+        return `${year - 1}-${year}`;
+    }
+};
+
+// Helper function để update campaign statistics
 const updateCampaignStatistics = async (campaignId) => {
     try {
-        // Count consented students
-        const consentedCount = await prisma.vaccinationConsent.count({
-            where: {
-                campaignId,
-                consent: true,
+        const campaign = await prisma.vaccinationCampaign.findUnique({
+            where: { id: campaignId },
+            include: {
+                consents: true,
+                vaccinationRecords: {
+                    where: { status: "COMPLETED" },
+                },
             },
         });
 
-        // Count vaccinated students (unique students)
-        const vaccinatedCount = await prisma.vaccinationRecord.count({
-            where: { campaignId },
-        });
+        if (!campaign) return;
 
-        // Get campaign to calculate completion rate
-        const campaign = await prisma.vaccinationCampaign.findUnique({
-            where: { id: campaignId },
-            select: { totalStudents: true },
-        });
-
+        const consentedCount = campaign.consents.length;
+        const vaccinatedCount = campaign.vaccinationRecords.length;
         const completionRate =
-            campaign?.totalStudents > 0
-                ? (vaccinatedCount / campaign.totalStudents) * 100
-                : 0;
+            consentedCount > 0 ? (vaccinatedCount / consentedCount) * 100 : 0;
 
         // Update campaign statistics
         await prisma.vaccinationCampaign.update({
@@ -178,28 +199,50 @@ const createVaccinationCampaign = async (req, res) => {
     }
 };
 
-// READ - Lấy tất cả chiến dịch tiêm chủng
+// GET - Lấy tất cả chiến dịch tiêm chủng với filter theo năm học
 const getAllVaccinationCampaigns = async (req, res) => {
     try {
+        const { academicYear } = req.query;
+        let whereClause = {};
+
+        // Nếu có filter theo năm học, tính toán từ scheduledDate
+        if (academicYear) {
+            const [startYear, endYear] = academicYear.split("-");
+            const startDate = new Date(parseInt(startYear), 8, 1); // Tháng 9
+            const endDate = new Date(parseInt(endYear), 7, 31); // Tháng 8 năm sau
+
+            whereClause = {
+                scheduledDate: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+            };
+        }
+
         const campaigns = await prisma.vaccinationCampaign.findMany({
-            orderBy: {
-                createdAt: "desc",
-            },
+            where: whereClause,
             include: {
                 vaccine: true,
             },
+            orderBy: {
+                createdAt: "desc",
+            },
         });
-        res.status(200).json({
+
+        // Thêm thông tin năm học được tính toán
+        const campaignsWithAcademicYear = campaigns.map((campaign) => ({
+            ...campaign,
+            calculatedAcademicYear: getAcademicYearFromDate(
+                campaign.scheduledDate
+            ),
+        }));
+
+        res.json({
             success: true,
-            data: campaigns,
-            total: campaigns.length,
+            data: campaignsWithAcademicYear,
         });
     } catch (error) {
-        console.error("Error fetching vaccination campaigns:", error);
-        res.status(500).json({
-            success: false,
-            error: "Lỗi server khi lấy danh sách chiến dịch",
-        });
+        res.status(500).json({ success: false, error: error.message });
     }
 };
 
