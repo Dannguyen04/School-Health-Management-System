@@ -14,7 +14,6 @@ import {
   FaPlay,
   FaRocket,
   FaShieldAlt,
-  FaStar,
   FaStethoscope,
   FaUserFriends,
   FaUserShield,
@@ -136,23 +135,23 @@ const Homepage = () => {
   ];
 
   return (
-    <div className="min-h-screen flex flex-col bg-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-br from-[#f6fcfa] to-[#e0f7fa]">
       <HomepageNavbar />
       <main className="flex-1">
         {/* Enhanced Hero Section */}
         <section
           id="hero"
-          className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-[#36ae9a] via-[#4fd1c5] to-[#81e6d9] overflow-hidden"
+          className="relative min-h-[80vh] flex items-center justify-center bg-gradient-to-br from-[#36ae9a] via-[#4fd1c5] to-[#b2ebf2] overflow-hidden"
         >
           {/* Banner background image */}
           <img
             src="/img/banner.jpg"
             alt="Banner"
             className="absolute inset-0 w-full h-full object-cover object-center z-0 opacity-80 animate-zoom-in"
-            style={{ filter: "brightness(0.85) blur(0px)" }}
+            style={{ filter: "brightness(0.9) blur(0px)" }}
           />
           {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#36ae9a]/80 via-[#4fd1c5]/60 to-[#81e6d9]/70 z-10"></div>
+          <div className="absolute inset-0 bg-gradient-to-br from-[#36ae9a]/80 via-[#4fd1c5]/60 to-[#b2ebf2]/70 z-10"></div>
 
           {/* Animated background elements */}
           <div className="absolute inset-0 z-20 pointer-events-none">
@@ -166,39 +165,39 @@ const Homepage = () => {
 
           <div className="relative z-30 text-center px-4 py-20 text-white max-w-6xl mx-auto">
             <div className="mb-8 animate-fade-in-up animate-delay-200">
-              <div className="inline-flex items-center gap-2 glass text-white px-6 py-3 rounded-full text-sm font-medium mb-6 animate-pulse-glow animate-delay-300">
-                <FaRocket className="text-white" />
+              <div className="inline-flex items-center gap-2 glass text-white px-6 py-3 rounded-full text-base font-semibold mb-6 animate-pulse-glow animate-delay-300 shadow-lg tracking-wide uppercase">
+                <FaRocket className="text-white text-lg" />
                 <span>Hệ thống Quản lý Y tế Trường Tiểu học</span>
               </div>
             </div>
 
-            <h1 className="hero-title font-bold mb-8 leading-tight drop-shadow-lg text-reveal animate-fade-in-up animate-delay-400">
+            <h1 className="font-extrabold text-4xl md:text-6xl mb-8 leading-tight drop-shadow-lg text-reveal animate-fade-in-up animate-delay-400">
               Chăm sóc sức khỏe{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-[#e6fffa]">
                 học sinh tiểu học
               </span>
             </h1>
 
-            <p className="text-xl md:text-2xl mb-12 drop-shadow max-w-4xl mx-auto leading-relaxed text-reveal animate-fade-in-up animate-delay-600">
+            <p className="text-xl md:text-2xl mb-12 drop-shadow max-w-3xl mx-auto leading-relaxed text-reveal animate-fade-in-up animate-delay-600">
               Hệ thống quản lý y tế học đường toàn diện cho trường tiểu học Việt
               Nam. Kết nối nhà trường, phụ huynh và y tế để đảm bảo sự phát
               triển khỏe mạnh cho học sinh.
             </p>
 
             {/* Hero Features */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 max-w-4xl mx-auto animate-fade-in-up animate-delay-800">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-12 max-w-4xl mx-auto animate-fade-in-up animate-delay-800">
               {heroFeatures.map((feature, index) => (
                 <div key={index} className="group">
                   <div
-                    className={`w-12 h-12 mx-auto mb-3 rounded-xl bg-gradient-to-r ${
+                    className={`w-14 h-14 mx-auto mb-3 rounded-xl bg-gradient-to-r ${
                       feature.color
                     } flex items-center justify-center group-hover:scale-110 transition-transform duration-300 animate-bounce-in animate-delay-${
                       900 + index * 100
                     }`}
                   >
-                    <feature.icon size={20} className="text-white" />
+                    <feature.icon size={24} className="text-white" />
                   </div>
-                  <p className="text-sm font-medium opacity-90 group-hover:opacity-100 transition-opacity">
+                  <p className="text-base font-medium opacity-90 group-hover:opacity-100 transition-opacity text-white drop-shadow">
                     {feature.text}
                   </p>
                 </div>
@@ -207,7 +206,7 @@ const Homepage = () => {
 
             <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12 animate-fade-in-up animate-delay-1000">
               <button
-                className="group bg-white text-[#36ae9a] font-bold px-10 py-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 text-lg transform hover:scale-105 flex items-center gap-3 btn-primary animate-bounce-in animate-delay-1100"
+                className="group bg-white text-[#36ae9a] font-bold px-10 py-4 rounded-full shadow-2xl hover:shadow-3xl transition-all duration-300 text-lg transform hover:scale-105 flex items-center gap-3 btn-primary animate-bounce-in animate-delay-1100 border-2 border-[#36ae9a]"
                 onClick={() => navigate("/auth")}
                 data-original-text="Đăng nhập ngay"
               >
@@ -224,7 +223,7 @@ const Homepage = () => {
             </div>
 
             {/* Enhanced Quick stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-3xl mx-auto animate-fade-in-up animate-delay-1300">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto animate-fade-in-up animate-delay-1300">
               {stats.map((stat, index) => (
                 <div
                   key={index}
@@ -233,13 +232,12 @@ const Homepage = () => {
                   <div className="w-16 h-16 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
                     <stat.icon size={24} className="text-white" />
                   </div>
-                  <div
-                    className="text-2xl md:text-3xl font-bold mb-1 counter"
-                    data-target={stat.target}
-                  >
+                  <div className="text-2xl md:text-3xl font-bold mb-1 counter text-white drop-shadow">
                     {stat.number}
                   </div>
-                  <div className="text-sm opacity-90">{stat.label}</div>
+                  <div className="text-sm opacity-90 text-white drop-shadow">
+                    {stat.label}
+                  </div>
                 </div>
               ))}
             </div>
@@ -251,7 +249,7 @@ const Homepage = () => {
                   Được tin tưởng bởi
                 </h3>
               </div>
-              <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 text-sm opacity-90">
+              <div className="flex flex-wrap justify-center items-center gap-6 md:gap-8 text-base opacity-90">
                 <div className="flex items-center gap-2">
                   <FaCheckCircle className="text-green-300" />
                   <span>Tuân thủ quy định Bộ Giáo dục</span>
@@ -311,90 +309,59 @@ const Homepage = () => {
         <section className="py-24 bg-gradient-to-br from-white to-[#f6fcfa] animate-fade-in-up animate-delay-200">
           <div className="max-w-6xl mx-auto px-5">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-6 py-3 rounded-full text-sm font-medium mb-6 stagger-item">
-                <FaAward className="text-[#36ae9a]" />
+              <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-6 py-3 rounded-full text-sm font-semibold mb-6 shadow-md tracking-wide uppercase animate-fade-in-up animate-delay-200">
+                <FaAward className="text-[#36ae9a] text-lg" />
                 <span>Lý do chọn chúng tôi</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6 leading-tight stagger-item">
+              <h2 className="text-4xl md:text-5xl font-extrabold text-gray-800 mb-6 leading-tight animate-fade-in-up animate-delay-300">
                 Tại sao chọn{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36ae9a] to-[#4fd1c5]">
                   hệ thống của chúng tôi?
                 </span>
               </h2>
-              <p className="text-lg text-gray-600 max-w-3xl mx-auto stagger-item">
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto animate-fade-in-up animate-delay-400">
                 Hệ thống được thiết kế đặc biệt cho môi trường giáo dục tiểu học
                 Việt Nam, đáp ứng đầy đủ các yêu cầu và quy định của Bộ Giáo
                 dục.
               </p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {[
-                {
-                  icon: FaShieldAlt,
-                  title: "An toàn & Bảo mật",
-                  description:
-                    "Tuân thủ nghiêm ngặt quy định bảo vệ dữ liệu cá nhân học sinh theo Luật An ninh mạng Việt Nam.",
-                  color: "from-blue-500 to-cyan-500",
-                  features: [
-                    "Mã hóa dữ liệu",
-                    "Kiểm soát truy cập",
-                    "Backup tự động",
-                  ],
-                },
-                {
-                  icon: FaRocket,
-                  title: "Dễ sử dụng",
-                  description:
-                    "Giao diện thân thiện, dễ dàng sử dụng cho mọi đối tượng từ giáo viên đến phụ huynh.",
-                  color: "from-green-500 to-emerald-500",
-                  features: [
-                    "Giao diện đơn giản",
-                    "Hướng dẫn chi tiết",
-                    "Hỗ trợ 24/7",
-                  ],
-                },
-                {
-                  icon: FaChartLine,
-                  title: "Hiệu quả cao",
-                  description:
-                    "Tối ưu hóa quy trình y tế học đường, tiết kiệm thời gian và nâng cao chất lượng chăm sóc.",
-                  color: "from-purple-500 to-pink-500",
-                  features: [
-                    "Quy trình tối ưu",
-                    "Báo cáo tự động",
-                    "Phân tích dữ liệu",
-                  ],
-                },
-              ].map((reason, index) => (
-                <div
-                  key={index}
-                  className="group bg-gradient-to-br from-gray-50 to-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 card-hover stagger-item"
-                >
-                  <div
-                    className={`w-16 h-16 rounded-xl bg-gradient-to-r ${reason.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}
-                  >
-                    <reason.icon size={28} className="text-white" />
-                  </div>
-                  <h3 className="font-bold text-xl mb-4 text-gray-800 group-hover:text-[#36ae9a] transition-colors">
-                    {reason.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed mb-6">
-                    {reason.description}
-                  </p>
-                  <ul className="space-y-2">
-                    {reason.features.map((feature, idx) => (
-                      <li
-                        key={idx}
-                        className="flex items-center gap-2 text-sm text-gray-600"
-                      >
-                        <FaCheckCircle className="text-green-500 text-xs" />
-                        <span>{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+              <WhyChooseCard
+                icon={FaShieldAlt}
+                color="from-blue-500 to-cyan-400"
+                title="An toàn & Bảo mật"
+                desc="Tuân thủ nghiêm ngặt quy định bảo vệ dữ liệu cá nhân học sinh theo Luật An ninh mạng Việt Nam."
+                features={[
+                  "Mã hóa dữ liệu",
+                  "Kiểm soát truy cập",
+                  "Backup tự động",
+                ]}
+                delay={0}
+              />
+              <WhyChooseCard
+                icon={FaRocket}
+                color="from-green-500 to-emerald-400"
+                title="Dễ sử dụng"
+                desc="Giao diện thân thiện, dễ dàng sử dụng cho mọi đối tượng từ giáo viên đến phụ huynh."
+                features={[
+                  "Giao diện đơn giản",
+                  "Hướng dẫn chi tiết",
+                  "Hỗ trợ 24/7",
+                ]}
+                delay={100}
+              />
+              <WhyChooseCard
+                icon={FaChartLine}
+                color="from-purple-500 to-pink-400"
+                title="Hiệu quả cao"
+                desc="Tối ưu hóa quy trình y tế học đường, tiết kiệm thời gian và nâng cao chất lượng chăm sóc."
+                features={[
+                  "Quy trình tối ưu",
+                  "Báo cáo tự động",
+                  "Phân tích dữ liệu",
+                ]}
+                delay={200}
+              />
             </div>
           </div>
         </section>
@@ -402,106 +369,55 @@ const Homepage = () => {
         {/* Enhanced Benefits Section */}
         <section
           id="features"
-          className="py-24 bg-gradient-to-br from-[#f6fcfa] to-[#e8f5f2] animate-fade-in-up animate-delay-400"
+          className="py-24 bg-white animate-fade-in-up animate-delay-400"
         >
           <div className="max-w-6xl mx-auto px-5">
             <div className="text-center mb-16">
-              <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-6 py-3 rounded-full text-sm font-medium mb-6 stagger-item">
-                <FaCheckCircle className="text-[#36ae9a]" />
+              <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-6 py-3 rounded-full text-sm font-semibold mb-6 shadow-md tracking-wide uppercase animate-fade-in-up animate-delay-200">
+                <FaCheckCircle className="text-[#36ae9a] text-lg" />
                 <span>Tính năng nổi bật</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6 leading-tight stagger-item">
+              <h2 className="text-4xl md:text-5xl font-extrabold text-gray-800 mb-6 leading-tight animate-fade-in-up animate-delay-300">
                 Quản lý y tế học đường{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#36ae9a] to-[#4fd1c5]">
                   toàn diện
                 </span>
               </h2>
-              <p className="text-lg text-gray-600 max-w-3xl mx-auto stagger-item">
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto animate-fade-in-up animate-delay-400">
                 Hệ thống được thiết kế đặc biệt cho trường tiểu học Việt Nam, hỗ
                 trợ đầy đủ các hoạt động y tế học đường theo quy định của Bộ
                 Giáo dục.
               </p>
             </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              {[
-                {
-                  icon: FaHeartbeat,
-                  title: "Khám sức khỏe định kỳ",
-                  description:
-                    "Quản lý lịch khám sức khỏe, theo dõi chiều cao, cân nặng và các chỉ số sức khỏe của học sinh.",
-                  color: "from-red-500 to-pink-500",
-                },
-                {
-                  icon: FaBell,
-                  title: "Thông báo tiêm chủng",
-                  description:
-                    "Nhắc nhở lịch tiêm chủng, quản lý sổ tiêm chủng và theo dõi tình trạng tiêm chủng của học sinh.",
-                  color: "from-yellow-500 to-orange-500",
-                },
-                {
-                  icon: FaPills,
-                  title: "Gửi thuốc cho trường",
-                  description:
-                    "Quản lý đơn thuốc, theo dõi việc gửi thuốc và đảm bảo học sinh uống thuốc đúng liều lượng.",
-                  color: "from-green-500 to-teal-500",
-                },
-                {
-                  icon: FaUserFriends,
-                  title: "Kết nối phụ huynh",
-                  description:
-                    "Tăng cường liên lạc giữa nhà trường và phụ huynh trong việc chăm sóc sức khỏe học sinh.",
-                  color: "from-blue-500 to-purple-500",
-                },
-              ].map((benefit, index) => (
-                <div
-                  key={index}
-                  className="group bg-white rounded-2xl p-8 shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 card-hover stagger-item"
-                >
-                  <div
-                    className={`w-16 h-16 rounded-xl bg-gradient-to-r ${benefit.color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}
-                  >
-                    <benefit.icon size={28} className="text-white" />
-                  </div>
-                  <h3 className="font-bold text-xl mb-4 text-gray-800 group-hover:text-[#36ae9a] transition-colors">
-                    {benefit.title}
-                  </h3>
-                  <p className="text-gray-600 leading-relaxed">
-                    {benefit.description}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Statistics Section */}
-        <section className="py-24 bg-gradient-to-r from-[#36ae9a]/10 to-[#4fd1c5]/10 text-[#222] animate-fade-in-up animate-delay-600">
-          <div className="max-w-6xl mx-auto px-5">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl md:text-5xl font-bold mb-6 stagger-item">
-                Thống kê hoạt động
-              </h2>
-              <p className="text-xl opacity-90 max-w-2xl mx-auto stagger-item">
-                Những con số thể hiện hiệu quả hoạt động y tế học đường
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {stats.map((stat, index) => (
-                <div key={index} className="text-center group stagger-item">
-                  <div className="w-20 h-20 mx-auto mb-4 bg-white/20 rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                    <stat.icon size={32} className="text-white" />
-                  </div>
-                  <div
-                    className="text-3xl md:text-4xl font-bold mb-2 group-hover:scale-110 transition-transform duration-300 counter"
-                    data-target={stat.target}
-                  >
-                    {stat.number}
-                  </div>
-                  <div className="text-lg opacity-90">{stat.label}</div>
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
+              <BenefitCard
+                icon={FaHeartbeat}
+                color="from-red-500 to-pink-400"
+                title="Khám sức khỏe định kỳ"
+                desc="Quản lý lịch khám sức khỏe, theo dõi chiều cao, cân nặng và các chỉ số sức khỏe của học sinh."
+                delay={0}
+              />
+              <BenefitCard
+                icon={FaBell}
+                color="from-yellow-400 to-orange-400"
+                title="Thông báo tiêm chủng"
+                desc="Nhắc nhở lịch tiêm chủng, quản lý sổ tiêm chủng và theo dõi tình trạng tiêm chủng của học sinh."
+                delay={100}
+              />
+              <BenefitCard
+                icon={FaPills}
+                color="from-green-500 to-teal-400"
+                title="Gửi thuốc cho trường"
+                desc="Quản lý đơn thuốc, theo dõi việc gửi thuốc và đảm bảo học sinh uống thuốc đúng liều lượng."
+                delay={200}
+              />
+              <BenefitCard
+                icon={FaUserFriends}
+                color="from-blue-500 to-purple-400"
+                title="Kết nối phụ huynh"
+                desc="Tăng cường liên lạc giữa nhà trường và phụ huynh trong việc chăm sóc sức khỏe học sinh."
+                delay={300}
+              />
             </div>
           </div>
         </section>
@@ -515,43 +431,6 @@ const Homepage = () => {
           <About />
         </section>
 
-        {/* Testimonial Section */}
-        <section className="py-24 bg-gradient-to-br from-[#e8f5f2] to-[#f6fcfa] animate-fade-in-up animate-delay-1000">
-          <div className="max-w-5xl mx-auto px-5">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-6 py-3 rounded-full text-sm font-medium mb-6">
-                <FaStar className="text-[#36ae9a]" />
-                <span>Cảm nhận phụ huynh & giáo viên</span>
-              </div>
-              <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#36ae9a] to-[#4fd1c5] leading-tight">
-                Phản hồi thực tế
-              </h2>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {testimonials.map((t, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 p-8 flex flex-col items-center text-center group animate-fade-in-up animate-delay-1200"
-                >
-                  <img
-                    src={t.avatar}
-                    alt={t.name}
-                    className="w-20 h-20 rounded-full object-cover border-4 border-[#36ae9a] shadow-lg mb-4 group-hover:scale-110 transition-transform duration-300"
-                  />
-                  <div className="flex gap-1 mb-2">
-                    {[...Array(t.rating)].map((_, i) => (
-                      <FaStar key={i} className="text-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-gray-700 italic mb-4">“{t.content}”</p>
-                  <div className="font-bold text-[#36ae9a]">{t.name}</div>
-                  <div className="text-sm text-gray-500">{t.role}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Blogs */}
         <section id="blog" className="animate-fade-in-up animate-delay-1200">
           <Blogs />
@@ -563,3 +442,69 @@ const Homepage = () => {
 };
 
 export default Homepage;
+
+function BenefitCard({ icon: Icon, color, title, desc, delay }) {
+  return (
+    <div
+      className={`group bg-white rounded-2xl p-10 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 card-hover animate-fade-in-up`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div
+        className={`w-20 h-20 rounded-xl bg-gradient-to-r ${color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}
+      >
+        <Icon size={36} className="text-white" />
+      </div>
+      <h3 className="font-bold text-2xl mb-4 text-gray-800 group-hover:text-[#36ae9a] transition-colors">
+        {title}
+      </h3>
+      <p className="text-gray-600 leading-relaxed text-base">{desc}</p>
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, number, label, delay }) {
+  return (
+    <div
+      className={`text-center group bg-white rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 animate-fade-in-up`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-r from-[#36ae9a] to-[#4fd1c5] rounded-full flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-lg">
+        <Icon size={36} className="text-white" />
+      </div>
+      <div className="text-3xl md:text-4xl font-extrabold mb-2 group-hover:scale-110 transition-transform duration-300 text-[#36ae9a]">
+        {number}
+      </div>
+      <div className="text-lg opacity-90 font-medium">{label}</div>
+    </div>
+  );
+}
+
+function WhyChooseCard({ icon: Icon, color, title, desc, features, delay }) {
+  return (
+    <div
+      className={`group bg-gradient-to-br from-gray-50 to-white rounded-2xl p-10 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 border border-gray-100 card-hover animate-fade-in-up`}
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div
+        className={`w-20 h-20 rounded-xl bg-gradient-to-r ${color} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300 shadow-lg`}
+      >
+        <Icon size={36} className="text-white" />
+      </div>
+      <h3 className="font-bold text-2xl mb-4 text-gray-800 group-hover:text-[#36ae9a] transition-colors">
+        {title}
+      </h3>
+      <p className="text-gray-600 leading-relaxed mb-6 text-base">{desc}</p>
+      <ul className="space-y-2">
+        {features.map((feature, idx) => (
+          <li
+            key={idx}
+            className="flex items-center gap-2 text-sm text-gray-600"
+          >
+            <FaCheckCircle className="text-green-500 text-xs" />
+            <span>{feature}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
