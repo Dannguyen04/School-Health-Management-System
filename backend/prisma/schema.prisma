@@ -143,17 +143,17 @@ model users {
 
 model Student {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId           String   @unique @db.ObjectId
   studentCode      String   @unique
-  fullName         String
   dateOfBirth      DateTime
   gender           String
   class            String
   grade            String
-  academicYear     String                          // Năm học, ví dụ: "2020-2025"
-  status           String   @default("active")
+  bloodType        String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
+  user users @relation(fields: [userId], references: [id], onDelete: Cascade)
   // Relations
   parents             StudentParent[]
   healthProfile       HealthProfile?
@@ -167,7 +167,6 @@ model Student {
   @@map("students")
   @@index([grade])
   @@index([class])
-  @@index([academicYear])
 }
 
 model Parent {
