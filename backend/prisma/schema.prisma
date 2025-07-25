@@ -117,7 +117,6 @@ model users {
   updatedAt DateTime @updatedAt
 
   // Relations based on role
-  studentProfile Student?
   parentProfile  Parent?
   nurseProfile   SchoolNurse?
   managerProfile Manager?
