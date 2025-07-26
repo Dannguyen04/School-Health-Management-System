@@ -761,7 +761,7 @@ const submitVaccinationConsent = async (req, res) => {
                     // Update denormalized data if needed
                     campaignName: campaign.name,
                     vaccineName: campaign.vaccineName,
-                    studentName: student.user.fullName,
+                    studentName: student.fullName,
                     parentName: parent.user.fullName,
                     studentGrade: student.grade,
                 },
@@ -789,7 +789,7 @@ const submitVaccinationConsent = async (req, res) => {
                     // Denormalized data
                     campaignName: campaign.name,
                     vaccineName: campaign.vaccineName,
-                    studentName: student.user.fullName,
+                    studentName: student.fullName,
                     parentName: parent.user.fullName,
                     studentGrade: student.grade,
                 },
@@ -839,11 +839,7 @@ const getCampaignConsents = async (req, res) => {
         const consents = await prisma.vaccinationConsent.findMany({
             where: { campaignId: id },
             include: {
-                student: {
-                    include: {
-                        user: true,
-                    },
-                },
+                student: true,
                 parent: {
                     include: {
                         user: true,

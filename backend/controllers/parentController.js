@@ -725,7 +725,7 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
                     );
                     return {
                         studentId: child.studentId,
-                        studentName: child.student.user.fullName,
+                        studentName: child.student.fullName,
                         consent: existingConsent
                             ? existingConsent.consent
                             : null,
@@ -743,7 +743,7 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
             data: campaignsWithConsent,
             children: children.map((child) => ({
                 id: child.studentId,
-                fullName: child.student.user.fullName,
+                fullName: child.student.fullName,
                 grade: child.student.grade,
             })),
         });

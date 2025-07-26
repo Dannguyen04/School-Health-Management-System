@@ -1,133 +1,144 @@
-import { EyeOutlined, MailOutlined } from "@ant-design/icons";
+import React, { useState, useEffect } from "react";
 import {
-    Button,
     Card,
-    Col,
-    DatePicker,
-    Descriptions,
-    Divider,
+    Table,
+    Button,
+    Modal,
     Form,
     Input,
-    InputNumber,
-    message,
-    Modal,
-    Row,
     Select,
-    Steps,
-    Table,
-    Tabs,
+    Space,
+    message,
+    Spin,
     Tag,
+    Row,
+    Col,
     Typography,
+    Divider,
+    Descriptions,
+    Badge,
+    Tooltip,
+    Popconfirm,
+    Alert,
+    Tabs,
+    DatePicker,
+    InputNumber,
+    Checkbox,
+    Radio,
+    Upload,
+    Image,
+    Steps,
 } from "antd";
-import axios from "axios";
+import {
+    SearchOutlined,
+    ReloadOutlined,
+    EyeOutlined,
+    EditOutlined,
+    PlusOutlined,
+    CalendarOutlined,
+    UserOutlined,
+    HeartOutlined,
+    FileTextOutlined,
+    SendOutlined,
+    ClockCircleOutlined,
+    CheckCircleOutlined,
+    CloseCircleOutlined,
+    ExclamationCircleOutlined,
+    UploadOutlined,
+    DownloadOutlined,
+    PrinterOutlined,
+    MessageOutlined,
+    ScheduleOutlined,
+} from "@ant-design/icons";
 import dayjs from "dayjs";
-import { ErrorMessage, Formik } from "formik";
-import { useEffect, useState } from "react";
+import { nurseAPI } from "../../utils/api";
+import { Formik, Form as FormikForm, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 
-const { TextArea } = Input;
+const { Title, Text } = Typography;
 const { Option } = Select;
-const { Title } = Typography;
+const { TabPane } = Tabs;
+const { TextArea } = Input;
 const { RangePicker } = DatePicker;
-
-// Yup schema validate - relaxed for better usability
-const checkupSchema = Yup.object().shape({
-    scheduledDate: Yup.date().required("Vui lòng chọn ngày khám"),
-    height: Yup.number()
-        .typeError("Chiều cao phải là số")
-        .min(0.1, "Chiều cao phải lớn hơn 0")
-        .required("Chiều cao là bắt buộc"),
-    weight: Yup.number()
-        .typeError("Cân nặng phải là số")
-        .min(0.1, "Cân nặng phải lớn hơn 0")
-        .required("Cân nặng là bắt buộc"),
-    pulse: Yup.number()
-        .typeError("Mạch phải là số")
-        .min(1, "Mạch phải lớn hơn 0")
-        .required("Mạch là bắt buộc"),
-    systolicBP: Yup.number()
-        .typeError("Huyết áp tâm thu phải là số")
-        .min(1, "Huyết áp tâm thu phải lớn hơn 0")
-        .required("Huyết áp tâm thu là bắt buộc"),
-    diastolicBP: Yup.number()
-        .typeError("Huyết áp tâm trương phải là số")
-        .min(1, "Huyết áp tâm trương phải lớn hơn 0")
-        .required("Huyết áp tâm trương là bắt buộc"),
-    physicalClassification: Yup.string()
-        .oneOf(["EXCELLENT", "GOOD", "AVERAGE", "WEAK"])
-        .required("Chọn phân loại"),
-    visionRightNoGlasses: Yup.number()
-        .typeError("Thị lực phải là số")
-        .min(0, "Thị lực không được nhỏ hơn 0")
-        .required("Thị lực là bắt buộc"),
-    visionLeftNoGlasses: Yup.number()
-        .typeError("Thị lực phải là số")
-        .min(0, "Thị lực không được nhỏ hơn 0")
-        .required("Thị lực là bắt buộc"),
-    visionRightWithGlasses: Yup.number()
-        .typeError("Thị lực phải là số")
-        .min(0, "Thị lực không được nhỏ hơn 0")
-        .required("Thị lực là bắt buộc"),
-    visionLeftWithGlasses: Yup.number()
-        .typeError("Thị lực phải là số")
-        .min(0, "Thị lực không được nhỏ hơn 0")
-        .required("Thị lực là bắt buộc"),
-    hearingLeftNormal: Yup.number()
-        .typeError("Thính lực phải là số")
-        .min(0, "Thính lực không được nhỏ hơn 0")
-        .required("Thính lực là bắt buộc"),
-    hearingLeftWhisper: Yup.number()
-        .typeError("Thính lực phải là số")
-        .min(0, "Thính lực không được nhỏ hơn 0")
-        .required("Thính lực là bắt buộc"),
-    hearingRightNormal: Yup.number()
-        .typeError("Thính lực phải là số")
-        .min(0, "Thính lực không được nhỏ hơn 0")
-        .required("Thính lực là bắt buộc"),
-    hearingRightWhisper: Yup.number()
-        .typeError("Thính lực phải là số")
-        .min(0, "Thính lực không được nhỏ hơn 0")
-        .required("Thính lực là bắt buộc"),
-    dentalUpperJaw: Yup.string().required("Nhập kết quả răng hàm trên"),
-    dentalLowerJaw: Yup.string().required("Nhập kết quả răng hàm dưới"),
-    clinicalNotes: Yup.string().required(),
-    overallHealth: Yup.string()
-        .oneOf(["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"])
-        .required("Chọn trạng thái"),
-    recommendations: Yup.string(),
-    requiresFollowUp: Yup.boolean().required("Chọn"),
-    followUpDate: Yup.date().nullable(),
-    notes: Yup.string(),
-});
 
 const HealthCheckups = () => {
     const [campaigns, setCampaigns] = useState([]);
-    const [students, setStudents] = useState([]);
     const [selectedCampaign, setSelectedCampaign] = useState(null);
-    const [loading, setLoading] = useState(false);
+    const [students, setStudents] = useState([]);
     const [reports, setReports] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [activeTab, setActiveTab] = useState("campaigns");
     const [checkupModal, setCheckupModal] = useState(false);
     const [checkupStudent, setCheckupStudent] = useState(null);
-    const [checkupForm] = Form.useForm();
-    const [detailReport, setDetailReport] = useState(null);
     const [detailModalVisible, setDetailModalVisible] = useState(false);
+    const [detailReport, setDetailReport] = useState(null);
     const [editModalVisible, setEditModalVisible] = useState(false);
-    const [editInitialValues, setEditInitialValues] = useState(null);
-    const [activeTab, setActiveTab] = useState("campaigns");
+    const [editInitialValues, setEditInitialValues] = useState({});
     const [consultModalVisible, setConsultModalVisible] = useState(false);
     const [consultReport, setConsultReport] = useState(null);
     const [consultRange, setConsultRange] = useState([]);
-    const [consultLoading, setConsultLoading] = useState(false);
     const [currentStep, setCurrentStep] = useState(0);
+    const [consultLoading, setConsultLoading] = useState(false);
 
-    const stepTitles = [
-        "Thông tin cơ bản",
-        "Thị lực",
-        "Thính lực",
-        "Răng miệng",
-        "Đánh giá tổng thể",
-        "Xem lại thông tin",
-    ];
+ // Yup schema validate
+const checkupSchema = Yup.object().shape({
+  scheduledDate: Yup.date().required("Vui lòng chọn ngày khám"),
+  height: Yup.number().min(50).max(250).required("Chiều cao 50-250cm"),
+  weight: Yup.number().min(10).max(200).required("Cân nặng 10-200kg"),
+  pulse: Yup.number().min(40).max(200).required("Mạch 40-200"),
+  systolicBP: Yup.number().min(60).max(250).required("Tâm thu 60-250"),
+  diastolicBP: Yup.number().min(30).max(150).required("Tâm trương 30-150"),
+  physicalClassification: Yup.string()
+    .oneOf(["EXCELLENT", "GOOD", "AVERAGE", "WEAK"])
+    .required("Chọn phân loại"),
+  visionRightNoGlasses: Yup.number().required(),
+  visionLeftNoGlasses: Yup.number().required(),
+  visionRightWithGlasses: Yup.number().required(),
+  visionLeftWithGlasses: Yup.number().required(),
+  hearingLeftNormal: Yup.number().required(),
+  hearingLeftWhisper: Yup.number().required(),
+  hearingRightNormal: Yup.number().required(),
+  hearingRightWhisper: Yup.number().required(),
+  dentalUpperJaw: Yup.string().required("Nhập kết quả răng hàm trên"),
+  dentalLowerJaw: Yup.string().required("Nhập kết quả răng hàm dưới"),
+  clinicalNotes: Yup.string().required(),
+  overallHealth: Yup.string()
+    .oneOf(["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"])
+    .required("Chọn trạng thái"),
+  recommendations: Yup.string(),
+  requiresFollowUp: Yup.boolean().required("Chọn"),
+  followUpDate: Yup.date().nullable(),
+  notes: Yup.string(),
+});
+
+const HealthCheckups = () => {
+  const [campaigns, setCampaigns] = useState([]);
+  const [students, setStudents] = useState([]);
+  const [selectedCampaign, setSelectedCampaign] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [checkupModal, setCheckupModal] = useState(false);
+  const [checkupStudent, setCheckupStudent] = useState(null);
+  const [checkupForm] = Form.useForm();
+  const [detailReport, setDetailReport] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editInitialValues, setEditInitialValues] = useState(null);
+  const [activeTab, setActiveTab] = useState("campaigns");
+  const [consultModalVisible, setConsultModalVisible] = useState(false);
+  const [consultReport, setConsultReport] = useState(null);
+  const [consultRange, setConsultRange] = useState([]);
+  const [consultLoading, setConsultLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const stepTitles = [
+    "Thông tin cơ bản",
+    "Thị lực",
+    "Thính lực",
+    "Răng miệng",
+    "Đánh giá tổng thể",
+    "Xem lại thông tin",
+  ];
 
     const stepSchemas = [
         Yup.object({
@@ -166,98 +177,444 @@ const HealthCheckups = () => {
         checkupSchema,
     ];
 
-    // Fetch danh sách campaign khi vào trang
+  // Fetch danh sách campaign khi vào trang
+  useEffect(() => {
+    const fetchCampaigns = async () => {
+      setLoading(true);
+      try {
+        const res = await axios.get("/api/medical-campaigns", {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        });
+        setCampaigns(res.data.data || []);
+      } catch {
+        setCampaigns([]);
+      }
+      setLoading(false);
+    };
+    fetchCampaigns();
+  }, []);
+
+  // Khi chọn campaign, fetch chi tiết campaign và danh sách học sinh phù hợp
+  const handleSelectCampaign = async (campaign) => {
+    setLoading(true);
+    try {
+      // Lấy chi tiết campaign
+      const resCampaign = await axios.get(
+        `/api/medical-campaigns/${campaign.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      const campaignDetail = resCampaign.data.data;
+      setSelectedCampaign(campaignDetail);
+
+      // Lấy danh sách học sinh
+      const resStudents = await axios.get("/api/admin/students-for-nurse", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      // Lọc theo targetGrades từ campaign chi tiết (ép kiểu về string để tránh lỗi)
+      const filtered = (resStudents.data.data || []).filter((s) =>
+        (campaignDetail.targetGrades || [])
+          .map(String)
+          .includes(String(s.grade))
+      );
+      setStudents(filtered);
+
+      // Lấy danh sách báo cáo khám sức khỏe của campaign này
+      const resReports = await axios.get(
+        `/api/medical-checks/campaign/${campaignDetail.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      setReports(resReports.data.data || []);
+      setActiveTab("students");
+    } catch {
+      setStudents([]);
+      setReports([]);
+    }
+    setLoading(false);
+  };
+
+  // Khi bấm Khám sức khỏe
+  const handleCreateCheckup = (student) => {
+    setCheckupStudent(student);
+    setCheckupModal(true);
+    checkupForm.resetFields();
+  };
+
+  // Khi bấm xem chi tiết báo cáo
+  const handleViewDetail = (report) => {
+    setDetailReport(report);
+    setDetailModalVisible(true);
+  };
+
+  // Khi bấm chỉnh sửa báo cáo
+  const handleEditReport = (report) => {
+    setEditInitialValues({
+      scheduledDate: report.scheduledDate ? dayjs(report.scheduledDate) : null,
+      height: report.height,
+      weight: report.weight,
+      pulse: report.pulse,
+      systolicBP: report.systolicBP,
+      diastolicBP: report.diastolicBP,
+      physicalClassification: report.physicalClassification,
+      visionRightNoGlasses: report.visionRightNoGlasses,
+      visionLeftNoGlasses: report.visionLeftNoGlasses,
+      visionRightWithGlasses: report.visionRightWithGlasses,
+      visionLeftWithGlasses: report.visionLeftWithGlasses,
+      hearingLeftNormal: report.hearingLeftNormal,
+      hearingLeftWhisper: report.hearingLeftWhisper,
+      hearingRightNormal: report.hearingRightNormal,
+      hearingRightWhisper: report.hearingRightWhisper,
+      dentalUpperJaw: report.dentalUpperJaw,
+      dentalLowerJaw: report.dentalLowerJaw,
+      clinicalNotes: report.clinicalNotes,
+      overallHealth: report.overallHealth,
+      recommendations: report.recommendations,
+      requiresFollowUp: report.requiresFollowUp,
+      followUpDate: report.followUpDate ? dayjs(report.followUpDate) : null,
+      notes: report.notes,
+    });
+    setDetailModalVisible(false);
+    setEditModalVisible(true);
+  };
+
+  // Hàm mở modal gửi kết quả & đặt lịch tư vấn
+  const handleOpenConsultModal = (report) => {
+    setConsultReport(report);
+    setConsultRange([]);
+    setConsultModalVisible(true);
+  };
+
+  // Hàm gửi kết quả & lịch tư vấn (mock API)
+  const handleSendConsult = async () => {
+    if (!consultRange.length) {
+      message.error("Vui lòng chọn khoảng thời gian tư vấn");
+      return;
+    }
+
+    const [start, end] = consultRange;
+    const now = dayjs();
+
+    // Validate thời gian không được trong quá khứ
+    if (start.isBefore(now)) {
+      message.error("Thời gian bắt đầu không được trong quá khứ");
+      return;
+    }
+
+    if (end.isBefore(now)) {
+      message.error("Thời gian kết thúc không được trong quá khứ");
+      return;
+    }
+
+    // Validate thời gian kết thúc phải sau thời gian bắt đầu
+    if (end.isBefore(start) || end.isSame(start)) {
+      message.error("Thời gian kết thúc phải sau thời gian bắt đầu");
+      return;
+    }
+
+    setConsultLoading(true);
+    try {
+      await axios.post(
+        `/api/report-medical-check/${consultReport.id}/schedule-consultation`,
+        {
+          consultationStart: start,
+          consultationEnd: end,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+      message.success("Đã đặt lịch tư vấn và gửi thông báo cho phụ huynh!");
+      setConsultModalVisible(false);
+      setConsultReport(null);
+      setConsultRange([]);
+      // Refetch lại danh sách báo cáo nếu cần
+      if (selectedCampaign) {
+        const resReports = await axios.get(
+          `/api/medical-checks/campaign/${selectedCampaign.id}`,
+          {
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("token")}`,
+            },
+          }
+        );
+        setReports(resReports.data.data || []);
+      }
+    } catch (err) {
+      message.error(
+        err.response?.data?.error ||
+          "Đặt lịch tư vấn thất bại, vui lòng thử lại"
+      );
+    }
+    setConsultLoading(false);
+  };
+
+  // Table columns chỉ cho students
+  const studentColumns = [
+    { title: "Mã học sinh", dataIndex: "studentCode", key: "studentCode" },
+    { title: "Tên học sinh", dataIndex: "fullName", key: "fullName" },
+    { title: "Lớp", dataIndex: "class", key: "class" },
+    { title: "Khối", dataIndex: "grade", key: "grade" },
+    {
+      title: "Trạng thái",
+      key: "status",
+      render: (_, record) => {
+        const report = reports.find((r) => r.studentId === record.id);
+        if (report) {
+          return (
+            <Tag color={report.status === "COMPLETED" ? "green" : "orange"}>
+              {report.status === "COMPLETED" ? "Hoàn thành" : "Chưa hoàn thành"}
+            </Tag>
+          );
+        }
+        return <Tag color="orange">Chưa hoàn thành</Tag>;
+      },
+    },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (_, record) => {
+        const report = reports.find((r) => r.studentId === record.id);
+        if (report) {
+          return (
+            <Button
+              type="default"
+              icon={<EyeOutlined />}
+              shape="round"
+              size="small"
+              style={{
+                color: "#1677ff",
+                borderColor: "#1677ff",
+                fontWeight: 500,
+              }}
+              onClick={() => handleViewDetail(report)}
+            >
+              Chi tiết
+            </Button>
+          );
+        }
+        return (
+          <Button type="primary" onClick={() => handleCreateCheckup(record)}>
+            Khám sức khỏe
+          </Button>
+        );
+      },
+    },
+  ];
+
+  // Table columns cho campaign
+  const campaignColumns = [
+    { title: "Tên chiến dịch", dataIndex: "name", key: "name" },
+    { title: "Mô tả", dataIndex: "description", key: "description" },
+    {
+      title: "Ngày bắt đầu",
+      dataIndex: "scheduledDate",
+      key: "scheduledDate",
+      render: (date) => date && new Date(date).toLocaleDateString(),
+    },
+    {
+      title: "Ngày kết thúc",
+      dataIndex: "deadline",
+      key: "deadline",
+      render: (date) => date && new Date(date).toLocaleDateString(),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => (
+        <Tag color={status === "ACTIVE" ? "green" : "default"}>
+          {status === "ACTIVE" ? "Đang diễn ra" : "Đã kết thúc"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Hành động",
+      key: "actions",
+      render: (_, record) => (
+        <Button type="primary" onClick={() => handleSelectCampaign(record)}>
+          Chọn chiến dịch
+        </Button>
+      ),
+    },
+  ];
+
+      const reportColumns = [
+            {
+                  title: "Mã học sinh",
+                  dataIndex: ["student", "studentCode"],
+                  key: "studentCode",
+            },
+            {
+                  title: "Tên học sinh",
+                  dataIndex: ["student", "user", "fullName"],
+                  key: "fullName",
+            },
+            {
+                  title: "Lớp",
+                  dataIndex: ["student", "class"],
+                  key: "class",
+            },
+            {
+                  title: "Khối",
+                  dataIndex: ["student", "grade"],
+                  key: "grade",
+            },
+            {
+                  title: "Ngày khám",
+                  dataIndex: "scheduledDate",
+                  key: "scheduledDate",
+                  render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+            },
+            {
+                  title: "Trạng thái",
+                  dataIndex: "status",
+                  key: "status",
+                  render: (status) => (
+                        <Tag color={status === "COMPLETED" ? "green" : "orange"}>
+                              {status === "COMPLETED" ? "Hoàn thành" : "Đã lên lịch"}
+                        </Tag>
+                  ),
+            },
+            {
+                  title: "Sức khỏe tổng thể",
+                  dataIndex: "overallHealth",
+                  key: "overallHealth",
+                  render: (health) => {
+                        const statusMap = {
+                              NORMAL: { text: "Bình thường", color: "green" },
+                              NEEDS_ATTENTION: { text: "Cần chú ý", color: "orange" },
+                              REQUIRES_TREATMENT: { text: "Cần điều trị", color: "red" },
+                        };
+                        const status = statusMap[health] || {
+                              text: health,
+                              color: "default",
+                        };
+                        return <Tag color={status.color}>{status.text}</Tag>;
+                  },
+            },
+            {
+                  title: "Thao tác",
+                  key: "actions",
+                  render: (_, record) => {
+                        const isNeedConsult =
+                              record.overallHealth === "NEEDS_ATTENTION" ||
+                              record.overallHealth === "REQUIRES_TREATMENT";
+                        return (
+                              <>
+                                    <Button
+                                          type="default"
+                                          icon={<EyeOutlined />}
+                                          shape="round"
+                                          size="small"
+                                          style={{
+                                                color: "#1677ff",
+                                                borderColor: "#1677ff",
+                                                fontWeight: 500,
+                                                marginRight: 8,
+                                          }}
+                                          onClick={() => handleViewDetail(record)}
+                                    >
+                                          Chi tiết
+                                    </Button>
+                                    {isNeedConsult && (
+                                          <Button
+                                                type="primary"
+                                                icon={<MessageOutlined />}
+                                                shape="round"
+                                                size="small"
+                                                onClick={() => handleOpenConsultModal(record)}
+                                          >
+                                                Đặt lịch tư vấn
+                                          </Button>
+                                    )}
+                              </>
+                        );
+                  },
+            },
+      ];
+
+    // Fetch campaigns
     useEffect(() => {
         const fetchCampaigns = async () => {
-            setLoading(true);
             try {
-                const res = await axios.get("/api/medical-campaigns", {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem(
-                            "token"
-                        )}`,
-                    },
-                });
-                setCampaigns(res.data.data || []);
-            } catch {
-                setCampaigns([]);
+                const response = await nurseAPI.getAllMedicalCampaigns();
+                if (response.data.success) {
+                    setCampaigns(response.data.data || []);
+                }
+            } catch (error) {
+                console.error("Error fetching campaigns:", error);
+                message.error("Không thể tải danh sách chiến dịch");
             }
-            setLoading(false);
         };
         fetchCampaigns();
     }, []);
 
-    // Khi chọn campaign, fetch chi tiết campaign và danh sách học sinh phù hợp
+    // Handle campaign selection
     const handleSelectCampaign = async (campaign) => {
         setLoading(true);
         try {
             // Lấy chi tiết campaign
-            const resCampaign = await axios.get(
-                `/api/medical-campaigns/${campaign.id}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem(
-                            "token"
-                        )}`,
-                    },
-                }
+            const resCampaign = await nurseAPI.getMedicalCampaignById(
+                campaign.id
             );
+            if (!resCampaign.data.success) {
+                throw new Error("Không thể tải chi tiết chiến dịch");
+            }
             const campaignDetail = resCampaign.data.data;
             setSelectedCampaign(campaignDetail);
 
-            // Lấy danh sách học sinh
-            const resStudents = await axios.get(
-                "/api/admin/students-for-nurse",
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem(
-                            "token"
-                        )}`,
-                    },
-                }
-            );
-            // Lọc theo targetGrades từ campaign chi tiết (ép kiểu về string để tránh lỗi)
-            const filtered = (resStudents.data.data || []).filter((s) =>
-                (campaignDetail.targetGrades || [])
-                    .map(String)
-                    .includes(String(s.grade))
-            );
-            setStudents(filtered);
+            // Lấy danh sách học sinh cho campaign này
+            const studentsResponse =
+                await nurseAPI.getStudentsForMedicalCampaign(campaign.id);
+            if (!studentsResponse.data.success) {
+                throw new Error("Không thể tải danh sách học sinh");
+            }
+            setStudents(studentsResponse.data.data || []);
 
             // Lấy danh sách báo cáo khám sức khỏe của campaign này
-            const resReports = await axios.get(
-                `/api/medical-checks/campaign/${campaignDetail.id}`,
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem(
-                            "token"
-                        )}`,
-                    },
-                }
+            const resReports = await nurseAPI.getMedicalChecksByCampaign(
+                campaign.id
             );
-            setReports(resReports.data.data || []);
+            if (resReports.data.success) {
+                setReports(resReports.data.data || []);
+            } else {
+                setReports([]);
+            }
             setActiveTab("students");
-        } catch {
+        } catch (error) {
+            console.error("Error selecting campaign:", error);
+            message.error(error.message || "Không thể tải dữ liệu chiến dịch");
             setStudents([]);
             setReports([]);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
-    // Khi bấm Khám sức khỏe
+    // Handler functions
     const handleCreateCheckup = (student) => {
         setCheckupStudent(student);
         setCheckupModal(true);
-        checkupForm.resetFields();
     };
 
-    // Khi bấm xem chi tiết báo cáo
     const handleViewDetail = (report) => {
         setDetailReport(report);
         setDetailModalVisible(true);
     };
 
-    // Khi bấm chỉnh sửa báo cáo
     const handleEditReport = (report) => {
         setEditInitialValues({
             scheduledDate: report.scheduledDate
@@ -292,14 +649,13 @@ const HealthCheckups = () => {
         setEditModalVisible(true);
     };
 
-    // Hàm mở modal gửi kết quả & đặt lịch tư vấn
     const handleOpenConsultModal = (report) => {
         setConsultReport(report);
         setConsultRange([]);
         setConsultModalVisible(true);
     };
 
-    // Hàm gửi kết quả & lịch tư vấn (mock API)
+    // Hàm gửi kết quả & lịch tư vấn
     const handleSendConsult = async () => {
         if (!consultRange.length) {
             message.error("Vui lòng chọn khoảng thời gian tư vấn");
@@ -328,20 +684,10 @@ const HealthCheckups = () => {
 
         setConsultLoading(true);
         try {
-            await axios.post(
-                `/api/report-medical-check/${consultReport.id}/schedule-consultation`,
-                {
-                    consultationStart: start,
-                    consultationEnd: end,
-                },
-                {
-                    headers: {
-                        Authorization: `Bearer ${localStorage.getItem(
-                            "token"
-                        )}`,
-                    },
-                }
-            );
+            await nurseAPI.scheduleMedicalCheckConsultation(consultReport.id, {
+                consultationStart: start,
+                consultationEnd: end,
+            });
             message.success(
                 "Đã đặt lịch tư vấn và gửi thông báo cho phụ huynh!"
             );
@@ -350,15 +696,8 @@ const HealthCheckups = () => {
             setConsultRange([]);
             // Refetch lại danh sách báo cáo nếu cần
             if (selectedCampaign) {
-                const resReports = await axios.get(
-                    `/api/medical-checks/campaign/${selectedCampaign.id}`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem(
-                                "token"
-                            )}`,
-                        },
-                    }
+                const resReports = await nurseAPI.getMedicalChecksByCampaign(
+                    selectedCampaign.id
                 );
                 setReports(resReports.data.data || []);
             }
@@ -371,324 +710,7 @@ const HealthCheckups = () => {
         setConsultLoading(false);
     };
 
-    // Table columns chỉ cho students
-    const studentColumns = [
-        { title: "Mã học sinh", dataIndex: "studentCode", key: "studentCode" },
-        { title: "Tên học sinh", dataIndex: "fullName", key: "fullName" },
-        { title: "Lớp", dataIndex: "class", key: "class" },
-        { title: "Khối", dataIndex: "grade", key: "grade" },
-        {
-            title: "Trạng thái",
-            key: "status",
-            render: (_, record) => {
-                const report = reports.find((r) => r.studentId === record.id);
-                if (report) {
-                    return (
-                        <Tag
-                            color={
-                                report.status === "COMPLETED"
-                                    ? "green"
-                                    : "orange"
-                            }
-                        >
-                            {report.status === "COMPLETED"
-                                ? "Hoàn thành"
-                                : "Chưa hoàn thành"}
-                        </Tag>
-                    );
-                }
-                return <Tag color="orange">Chưa hoàn thành</Tag>;
-            },
-        },
-        {
-            title: "Thao tác",
-            key: "actions",
-            render: (_, record) => {
-                const report = reports.find((r) => r.studentId === record.id);
-                if (report) {
-                    return (
-                        <Button
-                            type="default"
-                            icon={<EyeOutlined />}
-                            shape="round"
-                            size="small"
-                            style={{
-                                color: "#1677ff",
-                                borderColor: "#1677ff",
-                                fontWeight: 500,
-                            }}
-                            onClick={() => handleViewDetail(report)}
-                        >
-                            Chi tiết
-                        </Button>
-                    );
-                }
-                return (
-                    <Button
-                        type="primary"
-                        onClick={() => handleCreateCheckup(record)}
-                    >
-                        Khám sức khỏe
-                    </Button>
-                );
-            },
-        },
-    ];
-
-    // Table columns cho campaign
-    const campaignColumns = [
-        { title: "Tên chiến dịch", dataIndex: "name", key: "name" },
-        { title: "Mô tả", dataIndex: "description", key: "description" },
-        {
-            title: "Ngày bắt đầu",
-            dataIndex: "scheduledDate",
-            key: "scheduledDate",
-            render: (date) => date && new Date(date).toLocaleDateString(),
-        },
-        {
-            title: "Ngày kết thúc",
-            dataIndex: "deadline",
-            key: "deadline",
-            render: (date) => date && new Date(date).toLocaleDateString(),
-        },
-        {
-            title: "Trạng thái",
-            dataIndex: "status",
-            key: "status",
-            render: (status) => (
-                <Tag color={status === "ACTIVE" ? "green" : "default"}>
-                    {status === "ACTIVE" ? "Đang diễn ra" : "Đã kết thúc"}
-                </Tag>
-            ),
-        },
-        {
-            title: "Hành động",
-            key: "actions",
-            render: (_, record) => (
-                <Button
-                    type="primary"
-                    onClick={() => handleSelectCampaign(record)}
-                >
-                    Chọn chiến dịch
-                </Button>
-            ),
-        },
-    ];
-
-    const reportColumns = [
-        {
-            title: "Mã học sinh",
-            dataIndex: ["student", "studentCode"],
-            key: "studentCode",
-        },
-        {
-            title: "Tên học sinh",
-            dataIndex: ["student", "user", "fullName"],
-            key: "fullName",
-        },
-        {
-            title: "Lớp",
-            dataIndex: ["student", "class"],
-            key: "class",
-        },
-        {
-            title: "Khối",
-            dataIndex: ["student", "grade"],
-            key: "grade",
-        },
-        {
-            title: "Ngày khám",
-            dataIndex: "scheduledDate",
-            key: "scheduledDate",
-            render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
-        },
-        {
-            title: "Trạng thái",
-            dataIndex: "status",
-            key: "status",
-            render: (status) => (
-                <Tag color={status === "COMPLETED" ? "green" : "orange"}>
-                    {status === "COMPLETED" ? "Hoàn thành" : "Đã lên lịch"}
-                </Tag>
-            ),
-        },
-        {
-            title: "Sức khỏe tổng thể",
-            dataIndex: "overallHealth",
-            key: "overallHealth",
-            render: (health) => {
-                const statusMap = {
-                    NORMAL: { text: "Bình thường", color: "green" },
-                    NEEDS_ATTENTION: { text: "Cần chú ý", color: "orange" },
-                    REQUIRES_TREATMENT: { text: "Cần điều trị", color: "red" },
-                };
-                const status = statusMap[health] || {
-                    text: health,
-                    color: "default",
-                };
-                return <Tag color={status.color}>{status.text}</Tag>;
-            },
-        },
-        {
-            title: "Thao tác",
-            key: "actions",
-            render: (_, record) => {
-                const isNeedConsult =
-                    record.overallHealth === "NEEDS_ATTENTION" ||
-                    record.overallHealth === "REQUIRES_TREATMENT";
-                return (
-                    <>
-                        <Button
-                            type="default"
-                            icon={<EyeOutlined />}
-                            shape="round"
-                            size="small"
-                            style={{
-                                color: "#1677ff",
-                                borderColor: "#1677ff",
-                                fontWeight: 500,
-                                marginRight: 8,
-                            }}
-                            onClick={() => handleViewDetail(record)}
-                        >
-                            Chi tiết
-                        </Button>
-                        {isNeedConsult && (
-                            <Button
-                                type="primary"
-                                icon={<MailOutlined />}
-                                shape="round"
-                                size="small"
-                                onClick={() => handleOpenConsultModal(record)}
-                            >
-                                Đặt lịch tư vấn
-                            </Button>
-                        )}
-                    </>
-                );
-            },
-        },
-    ];
-
-    const items = [
-        {
-            key: "campaigns",
-            label: "Chiến dịch khám sức khỏe",
-            children: (
-                <Card title="Chọn chiến dịch kiểm tra sức khỏe">
-                    <Table
-                        dataSource={campaigns}
-                        columns={campaignColumns}
-                        rowKey="id"
-                        loading={loading}
-                        pagination={false}
-                    />
-                </Card>
-            ),
-        },
-        {
-            key: "students",
-            label: "Danh sách học sinh",
-            children: selectedCampaign ? (
-                <Card title="Danh sách học sinh phù hợp">
-                    <Table
-                        dataSource={students}
-                        columns={studentColumns}
-                        rowKey="id"
-                        loading={loading}
-                        pagination={{ pageSize: 5 }}
-                    />
-                </Card>
-            ) : (
-                <Card>
-                    <div className="text-center text-gray-500">
-                        Vui lòng chọn chiến dịch trước
-                    </div>
-                </Card>
-            ),
-        },
-        {
-            key: "reports",
-            label: "Báo cáo khám sức khỏe",
-            children: selectedCampaign ? (
-                <Card title="Danh sách báo cáo khám sức khỏe">
-                    {/* Alert thống kê học sinh cần chú ý, cần điều trị */}
-                    {(() => {
-                        const needsAttention = reports.filter(
-                            (r) => r.overallHealth === "NEEDS_ATTENTION"
-                        ).length;
-                        const requiresTreatment = reports.filter(
-                            (r) => r.overallHealth === "REQUIRES_TREATMENT"
-                        ).length;
-                        if (needsAttention + requiresTreatment === 0)
-                            return null;
-                        return (
-                            <div style={{ marginBottom: 16 }}>
-                                <Row gutter={16}>
-                                    {needsAttention > 0 && (
-                                        <Col>
-                                            <div
-                                                style={{
-                                                    background: "#fffbe6",
-                                                    border: "1px solid #ffe58f",
-                                                    borderRadius: 4,
-                                                    padding: "8px 16px",
-                                                    color: "#faad14",
-                                                    fontWeight: 500,
-                                                    marginRight: 8,
-                                                }}
-                                            >
-                                                {needsAttention} học sinh{" "}
-                                                <span
-                                                    style={{ color: "#faad14" }}
-                                                >
-                                                    cần chú ý
-                                                </span>
-                                            </div>
-                                        </Col>
-                                    )}
-                                    {requiresTreatment > 0 && (
-                                        <Col>
-                                            <div
-                                                style={{
-                                                    background: "#fff1f0",
-                                                    border: "1px solid #ffa39e",
-                                                    borderRadius: 4,
-                                                    padding: "8px 16px",
-                                                    color: "#cf1322",
-                                                    fontWeight: 500,
-                                                }}
-                                            >
-                                                {requiresTreatment} học sinh{" "}
-                                                <span
-                                                    style={{ color: "#cf1322" }}
-                                                >
-                                                    cần điều trị
-                                                </span>
-                                            </div>
-                                        </Col>
-                                    )}
-                                </Row>
-                            </div>
-                        );
-                    })()}
-                    <Table
-                        dataSource={reports}
-                        columns={reportColumns}
-                        rowKey="id"
-                        loading={loading}
-                        pagination={{ pageSize: 5 }}
-                    />
-                </Card>
-            ) : (
-                <Card>
-                    <div className="text-center text-gray-500">
-                        Vui lòng chọn chiến dịch trước
-                    </div>
-                </Card>
-            ),
-        },
-    ];
+    // ... rest of the code remains unchanged
 
     return (
         <div className="space-y-6">
@@ -706,7 +728,7 @@ const HealthCheckups = () => {
                         </Button>
                     }
                 >
-                    <Descriptions bordered column={2}>
+                    <Descriptions variant="bordered" column={2}>
                         <Descriptions.Item label="Mô tả">
                             {selectedCampaign.description || "Không có"}
                         </Descriptions.Item>
@@ -744,8 +766,66 @@ const HealthCheckups = () => {
             <Tabs
                 activeKey={activeTab}
                 onChange={setActiveTab}
-                items={items}
                 size="large"
+                items={[
+                    {
+                        key: "campaigns",
+                        label: "Chiến dịch khám sức khỏe",
+                        children: (
+                            <Card title="Chọn chiến dịch kiểm tra sức khỏe">
+                                <Table
+                                    dataSource={campaigns}
+                                    columns={campaignColumns}
+                                    rowKey="id"
+                                    loading={loading}
+                                    pagination={false}
+                                />
+                            </Card>
+                        ),
+                    },
+                    {
+                        key: "students",
+                        label: "Danh sách học sinh",
+                        children: selectedCampaign ? (
+                            <Card title="Danh sách học sinh phù hợp">
+                                <Table
+                                    dataSource={students}
+                                    columns={studentColumns}
+                                    rowKey="id"
+                                    loading={loading}
+                                    pagination={{ pageSize: 5 }}
+                                />
+                            </Card>
+                        ) : (
+                            <Card>
+                                <div className="text-center text-gray-500">
+                                    Vui lòng chọn chiến dịch trước
+                                </div>
+                            </Card>
+                        ),
+                    },
+                    {
+                        key: "reports",
+                        label: "Báo cáo khám sức khỏe",
+                        children: selectedCampaign ? (
+                            <Card title="Danh sách báo cáo khám sức khỏe">
+                                <Table
+                                    dataSource={reports}
+                                    columns={reportColumns}
+                                    rowKey="id"
+                                    loading={loading}
+                                    pagination={{ pageSize: 5 }}
+                                />
+                            </Card>
+                        ) : (
+                            <Card>
+                                <div className="text-center text-gray-500">
+                                    Vui lòng chọn chiến dịch trước
+                                </div>
+                            </Card>
+                        ),
+                    },
+                ]}
             />
             {/* Các Modal giữ nguyên */}
             {/* Modal nhập báo cáo khám sức khỏe */}
@@ -762,24 +842,24 @@ const HealthCheckups = () => {
                 <Formik
                     initialValues={{
                         scheduledDate: null,
-                        height: undefined,
-                        weight: undefined,
-                        pulse: undefined,
-                        systolicBP: undefined,
-                        diastolicBP: undefined,
-                        physicalClassification: undefined,
-                        visionRightNoGlasses: undefined,
-                        visionLeftNoGlasses: undefined,
-                        visionRightWithGlasses: undefined,
-                        visionLeftWithGlasses: undefined,
-                        hearingLeftNormal: undefined,
-                        hearingLeftWhisper: undefined,
-                        hearingRightNormal: undefined,
-                        hearingRightWhisper: undefined,
+                        height: null,
+                        weight: null,
+                        pulse: null,
+                        systolicBP: null,
+                        diastolicBP: null,
+                        physicalClassification: "",
+                        visionRightNoGlasses: null,
+                        visionLeftNoGlasses: null,
+                        visionRightWithGlasses: null,
+                        visionLeftWithGlasses: null,
+                        hearingLeftNormal: null,
+                        hearingLeftWhisper: null,
+                        hearingRightNormal: null,
+                        hearingRightWhisper: null,
                         dentalUpperJaw: "",
                         dentalLowerJaw: "",
                         clinicalNotes: "",
-                        overallHealth: undefined,
+                        overallHealth: "",
                         recommendations: "",
                         requiresFollowUp: false,
                         followUpDate: null,
@@ -817,21 +897,11 @@ const HealthCheckups = () => {
                         // Submit cuối cùng
                         if (!selectedCampaign || !checkupStudent) return;
                         try {
-                            await axios.post(
-                                "/api/medical-checks/create",
-                                {
-                                    ...values,
-                                    studentId: checkupStudent.id,
-                                    campaignId: selectedCampaign.id,
-                                },
-                                {
-                                    headers: {
-                                        Authorization: `Bearer ${localStorage.getItem(
-                                            "token"
-                                        )}`,
-                                    },
-                                }
-                            );
+                            await nurseAPI.createMedicalCheck({
+                                ...values,
+                                studentId: checkupStudent.id,
+                                campaignId: selectedCampaign.id,
+                            });
                             message.success(
                                 "Tạo báo cáo khám sức khỏe thành công"
                             );
@@ -839,16 +909,10 @@ const HealthCheckups = () => {
                             setCheckupStudent(null);
                             setCurrentStep(0);
                             // Refetch lại danh sách báo cáo
-                            const resReports = await axios.get(
-                                `/api/medical-checks/campaign/${selectedCampaign.id}`,
-                                {
-                                    headers: {
-                                        Authorization: `Bearer ${localStorage.getItem(
-                                            "token"
-                                        )}`,
-                                    },
-                                }
-                            );
+                            const resReports =
+                                await nurseAPI.getMedicalChecksByCampaign(
+                                    selectedCampaign.id
+                                );
                             setReports(resReports.data.data || []);
                             resetForm();
                         } catch (err) {
@@ -1850,7 +1914,11 @@ const HealthCheckups = () => {
                                 : ""}
                         </Typography.Text>
                         <Divider orientation="left">Thông tin cơ bản</Divider>
-                        <Descriptions column={2} size="small" bordered>
+                        <Descriptions
+                            column={2}
+                            size="small"
+                            variant="bordered"
+                        >
                             <Descriptions.Item label="Chiều cao">
                                 {detailReport.height} cm
                             </Descriptions.Item>
@@ -1883,7 +1951,11 @@ const HealthCheckups = () => {
                             </Descriptions.Item>
                         </Descriptions>
                         <Divider orientation="left">Thị lực</Divider>
-                        <Descriptions column={2} size="small" bordered>
+                        <Descriptions
+                            column={2}
+                            size="small"
+                            variant="bordered"
+                        >
                             <Descriptions.Item label="Phải (không kính)">
                                 {detailReport.visionRightNoGlasses}
                             </Descriptions.Item>
@@ -1898,7 +1970,11 @@ const HealthCheckups = () => {
                             </Descriptions.Item>
                         </Descriptions>
                         <Divider orientation="left">Thính lực</Divider>
-                        <Descriptions column={2} size="small" bordered>
+                        <Descriptions
+                            column={2}
+                            size="small"
+                            variant="bordered"
+                        >
                             <Descriptions.Item label="Trái (bình thường)">
                                 {detailReport.hearingLeftNormal}
                             </Descriptions.Item>
@@ -1913,7 +1989,11 @@ const HealthCheckups = () => {
                             </Descriptions.Item>
                         </Descriptions>
                         <Divider orientation="left">Răng miệng</Divider>
-                        <Descriptions column={2} size="small" bordered>
+                        <Descriptions
+                            column={2}
+                            size="small"
+                            variant="bordered"
+                        >
                             <Descriptions.Item label="Răng hàm trên">
                                 {detailReport.dentalUpperJaw}
                             </Descriptions.Item>
@@ -1922,7 +2002,11 @@ const HealthCheckups = () => {
                             </Descriptions.Item>
                         </Descriptions>
                         <Divider orientation="left">Đánh giá tổng thể</Divider>
-                        <Descriptions column={2} size="small" bordered>
+                        <Descriptions
+                            column={2}
+                            size="small"
+                            variant="bordered"
+                        >
                             <Descriptions.Item label="Sức khỏe tổng thể">
                                 <Tag
                                     color={
@@ -1993,30 +2077,17 @@ const HealthCheckups = () => {
                             { setSubmitting, resetForm }
                         ) => {
                             try {
-                                await axios.put(
-                                    `/api/medical-checks/${detailReport.id}`,
-                                    values,
-                                    {
-                                        headers: {
-                                            Authorization: `Bearer ${localStorage.getItem(
-                                                "token"
-                                            )}`,
-                                        },
-                                    }
+                                await nurseAPI.updateMedicalCheckResults(
+                                    detailReport.id,
+                                    values
                                 );
                                 message.success("Cập nhật báo cáo thành công");
                                 setEditModalVisible(false);
                                 // Refetch lại danh sách báo cáo
-                                const resReports = await axios.get(
-                                    `/api/medical-checks/campaign/${selectedCampaign.id}`,
-                                    {
-                                        headers: {
-                                            Authorization: `Bearer ${localStorage.getItem(
-                                                "token"
-                                            )}`,
-                                        },
-                                    }
-                                );
+                                const resReports =
+                                    await nurseAPI.getMedicalChecksByCampaign(
+                                        selectedCampaign.id
+                                    );
                                 setReports(resReports.data.data || []);
                                 resetForm();
                             } catch (err) {
