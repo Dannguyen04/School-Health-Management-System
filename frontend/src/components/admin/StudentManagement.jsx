@@ -668,7 +668,7 @@ const StudentManagement = () => {
                   message: "Tên không được quá 50 ký tự",
                 },
                 {
-                  pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                  pattern: /^[\p{L}\s]+$/u,
                   message: "Tên chỉ được chứa chữ cái và khoảng trắng",
                 },
               ]}
@@ -676,18 +676,11 @@ const StudentManagement = () => {
               <Input
                 placeholder="Nhập tên (chỉ chữ cái và khoảng trắng)"
                 maxLength={50}
-                onKeyPress={(e) => {
-                  // Chỉ cho phép nhập chữ cái, khoảng trắng và dấu tiếng Việt
-                  const allowedChars = /[a-zA-ZÀ-ỹ\s]/;
-                  if (!allowedChars.test(e.key)) {
-                    e.preventDefault();
-                  }
-                }}
                 onPaste={(e) => {
                   // Ngăn chặn paste nội dung không hợp lệ
                   e.preventDefault();
                   const pastedText = e.clipboardData.getData("text");
-                  const cleanText = pastedText.replace(/[^a-zA-ZÀ-ỹ\s]/g, "");
+                  const cleanText = pastedText.replace(/[^\p{L}\s]/gu, "");
                   const input = e.target;
                   const start = input.selectionStart;
                   const end = input.selectionEnd;
@@ -979,7 +972,7 @@ const StudentManagement = () => {
                       message: "Tên không được quá 50 ký tự",
                     },
                     {
-                      pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                      pattern: /^[\p{L}\s]+$/u,
                       message: "Tên chỉ được chứa chữ cái và khoảng trắng",
                     },
                   ]}
@@ -987,13 +980,6 @@ const StudentManagement = () => {
                   <Input
                     placeholder="Nhập tên (chỉ chữ cái và khoảng trắng)"
                     maxLength={50}
-                    onKeyPress={(e) => {
-                      // Chỉ cho phép nhập chữ cái, khoảng trắng và dấu tiếng Việt
-                      const allowedChars = /[a-zA-ZÀ-ỹ\s]/;
-                      if (!allowedChars.test(e.key)) {
-                        e.preventDefault();
-                      }
-                    }}
                   />
                 </Form.Item>
               </Col>

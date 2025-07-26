@@ -48,7 +48,7 @@ const UserManagement = () => {
       .required("Vui lòng nhập tên")
       .min(2, "Tên phải có ít nhất 2 ký tự")
       .max(50, "Tên không được quá 50 ký tự")
-      .matches(/^[a-zA-ZÀ-ỹ\s]+$/, "Tên chỉ được chứa chữ cái và khoảng trắng"),
+      .matches(/^[\p{L}\s]+$/u, "Tên chỉ được chứa chữ cái và khoảng trắng"),
     email: Yup.string()
       .required("Vui lòng nhập email")
       .email("Email không hợp lệ"),
@@ -439,13 +439,6 @@ const UserManagement = () => {
                   onBlur={handleBlur}
                   placeholder="Nhập tên (chỉ chữ cái và khoảng trắng)"
                   maxLength={50}
-                  onKeyPress={(e) => {
-                    // Chỉ cho phép nhập chữ cái, khoảng trắng và dấu tiếng Việt
-                    const allowedChars = /[a-zA-ZÀ-ỹ\s]/;
-                    if (!allowedChars.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
                 />
               </Form.Item>
               <Form.Item
