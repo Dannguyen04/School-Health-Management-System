@@ -631,11 +631,7 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
     const children = await prisma.studentParent.findMany({
       where: { parentId },
       include: {
-        student: {
-          include: {
-            user: { select: { fullName: true } },
-          },
-        },
+        student: true,
       },
     });
     if (!children || children.length === 0) {
