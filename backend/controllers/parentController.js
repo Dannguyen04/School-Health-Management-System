@@ -269,17 +269,57 @@ export const upsertHealthProfile = async (req, res) => {
             });
         }
 
+        // Validation cơ bản cho các trường số
+        if (vision !== null && vision !== undefined && vision !== "") {
+            const visionNum = parseFloat(vision);
+            if (isNaN(visionNum) || visionNum < 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Thị lực phải là số không âm",
+                });
+            }
+        }
+
+        if (hearing !== null && hearing !== undefined && hearing !== "") {
+            const hearingNum = parseFloat(hearing);
+            if (isNaN(hearingNum) || hearingNum < 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Thính lực phải là số không âm",
+                });
+            }
+        }
+
+        if (height !== null && height !== undefined && height !== "") {
+            const heightNum = parseFloat(height);
+            if (isNaN(heightNum) || heightNum <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Chiều cao phải là số dương",
+                });
+            }
+        }
+
+        if (weight !== null && weight !== undefined && weight !== "") {
+            const weightNum = parseFloat(weight);
+            if (isNaN(weightNum) || weightNum <= 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: "Cân nặng phải là số dương",
+                });
+            }
+        }
         // Transform data for storage
         const healthProfileData = {
-            vision: vision || null,
-            hearing: hearing || null,
-            height: height ? parseFloat(height) : null,
-            weight: weight ? parseFloat(weight) : null,
+            vision: vision || "",
+            hearing: hearing || "",
+            height: height ? parseFloat(height) : "",
+            weight: weight ? parseFloat(weight) : "",
             allergies: allergies || [],
             chronicDiseases: chronicDiseases || [],
             medications: medications || [],
-            treatmentHistory: treatmentHistory || null,
-            notes: notes || null,
+            treatmentHistory: treatmentHistory || "",
+            notes: notes || "",
             lastUpdatedBy: req.user.id,
         };
 
@@ -453,7 +493,7 @@ export const requestMedication = async (req, res) => {
                 error: "You must be a parent to access this resource",
             });
         }
-        // Validate customTimes (giờ hành chính 07:00 - 17:00)
+        // Validate customTimes - linh hoạt hơn cho thực tế
         if (customTimes) {
             let timesArr;
             try {
@@ -467,18 +507,20 @@ export const requestMedication = async (req, res) => {
                 });
             }
             const isValid = timesArr.every((t) => {
-                // t: "HH:mm"
+                // t: "HH:mm" 
+                if (!t || typeof t !== 'string') return false;
                 const [h, m] = t.split(":").map(Number);
                 if (isNaN(h) || isNaN(m)) return false;
-                // Giờ hành chính: 7h00 đến 17h00 (17:00 vẫn hợp lệ)
-                return h >= 7 && (h < 17 || (h === 17 && m === 0));
+                // Validation linh hoạt: 00:00 - 23:59
+                return h >= 0 && h <= 23 && m >= 0 && m <= 59;
             });
             if (!isValid) {
                 return res.status(400).json({
                     success: false,
-                    error: "customTimes chỉ được phép trong giờ hành chính (07:00 - 17:00)",
+                    error: "customTimes phải có định dạng giờ hợp lệ (HH:mm)",
                 });
             }
+        }
         }
         const parentId = req.user.parentProfile.id;
         const studentParent = await prisma.studentParent.findFirst({
