@@ -637,7 +637,7 @@ const scheduleConsultation = async (req, res) => {
             .map((sp) => sp.parent?.user)
             .filter(Boolean);
         // Tạo nội dung notification chi tiết
-        const studentName = updatedCheck.student.user.fullName;
+        const studentName = updatedCheck.student.fullName;
         const startStr = new Date(consultationStart).toLocaleString();
         const endStr = new Date(consultationEnd).toLocaleString();
         const title = `Lịch tư vấn sức khỏe cho học sinh ${studentName}`;

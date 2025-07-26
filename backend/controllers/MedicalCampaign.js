@@ -393,7 +393,13 @@ export const notifyParentsAboutCampaign = async (req, res) => {
             where: {
                 grade: { in: campaign.targetGrades },
             },
-            select: { id: true, user: { select: { fullName: true } } },
+            select: {
+                id: true,
+                studentCode: true,
+                fullName: true,
+                grade: true,
+                class: true,
+            },
         });
         if (!students.length) {
             return res.status(404).json({
@@ -473,7 +479,15 @@ export const getStudentsForMedicalCampaign = async (req, res) => {
         }
         const students = await prisma.student.findMany({
             where: { grade: { in: campaign.targetGrades } },
-            select: { id: true, user: { select: { fullName: true } } },
+            select: {
+                id: true,
+                studentCode: true,
+                fullName: true,
+                grade: true,
+                class: true,
+                dateOfBirth: true,
+                gender: true,
+            },
         });
         res.json({ success: true, data: students });
     } catch (error) {

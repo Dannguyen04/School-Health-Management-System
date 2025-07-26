@@ -39,6 +39,7 @@ import {
 import axios from "axios";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
+import { nurseAPI } from "../../utils/api";
 
 const { TextArea } = Input;
 const { Text, Title, Paragraph } = Typography;
@@ -150,10 +151,7 @@ const StudentTreatment = () => {
     const fetchTreatments = async () => {
         setLoading(true);
         try {
-            const token = localStorage.getItem("token");
-            const response = await axios.get("/api/nurse/student-treatments", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const response = await nurseAPI.getStudentTreatments();
             if (response.data.success) {
                 setTreatments(response.data.data);
                 setSummary(response.data.summary || {});
@@ -197,13 +195,7 @@ const StudentTreatment = () => {
         setHistoryLoading(true);
         setHistoryTitle(`${record.studentName} - ${record.medication.name}`);
         try {
-            const token = localStorage.getItem("token");
-            const response = await axios.get(
-                `/api/nurse/medication-history/${record.id}`,
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
+            const response = await nurseAPI.getMedicationHistory(record.id);
             if (response.data.success) {
                 setHistoryData(response.data.data);
             } else {
@@ -220,17 +212,11 @@ const StudentTreatment = () => {
 
     const handleStopTreatment = async (record) => {
         try {
-            const token = localStorage.getItem("token");
-            await axios.patch(
-                `/api/nurse/student-treatments/${record.id}/stop`,
-                {},
-                {
-                    headers: { Authorization: `Bearer ${token}` },
-                }
-            );
+            await nurseAPI.stopStudentTreatment(record.id);
             message.success("Đã dừng điều trị cho học sinh này");
             fetchTreatments();
-        } catch {
+        } catch (error) {
+            console.error("Error stopping treatment:", error);
             message.error("Lỗi khi dừng điều trị");
         }
     };

@@ -152,9 +152,9 @@ const assignParentToStudent = async (
 
     return {
       success: true,
-      message: `Đã gán phụ huynh ${parent.user.fullName} cho học sinh ${studentParent.student.user.fullName}`,
+      message: `Đã gán phụ huynh ${parent.user.fullName} cho học sinh ${studentParent.student.fullName}`,
       data: {
-        studentName: studentParent.student.user.fullName,
+        studentName: studentParent.student.fullName,
         parentName: studentParent.parent.user.fullName,
         parentEmail: studentParent.parent.user.email,
         parentPhone: studentParent.parent.user.phone,
@@ -670,7 +670,7 @@ const getAllStudentsForNurse = async (req, res) => {
   try {
     const students = await prisma.student.findMany({
       where: {
-        isActive: true,
+        status: "active",
       },
       include: {
         healthProfile: true,
@@ -692,7 +692,6 @@ const getAllStudentsForNurse = async (req, res) => {
       class: student.class,
       gender: student.gender,
       dateOfBirth: student.dateOfBirth,
-      bloodType: student.bloodType,
       healthProfile: student.healthProfile,
       parentId: student.parents?.[0]?.parentId,
     }));

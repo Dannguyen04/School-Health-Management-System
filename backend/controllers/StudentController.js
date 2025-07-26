@@ -21,7 +21,6 @@ export const createStudent = async (req, res) => {
       grade,
       academicYear,
       // studentCode, // Không nhận từ FE nữa
-      bloodType,
       address,
       phone,
       ethnicity,
