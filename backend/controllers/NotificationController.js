@@ -175,8 +175,8 @@ export const sendMedicalEventNotification = async (req, res) => {
             const notification = await prisma.notification.create({
                 data: {
                     userId: parentId,
-                    title: `Sự kiện y tế - ${medicalEvent.student.user.fullName}`,
-                    message: `Học sinh ${medicalEvent.student.user.fullName} đã có sự kiện y tế: ${medicalEvent.title}. Mức độ: ${medicalEvent.severity}. Vui lòng liên hệ với nhà trường để biết thêm chi tiết.`,
+                    title: `Sự kiện y tế - ${medicalEvent.student.fullName}`,
+                    message: `Học sinh ${medicalEvent.student.fullName} đã có sự kiện y tế: ${medicalEvent.title}. Mức độ: ${medicalEvent.severity}. Vui lòng liên hệ với nhà trường để biết thêm chi tiết.`,
                     type: "medical_event",
                     status: "SENT",
                     sentAt: new Date(),
@@ -383,7 +383,7 @@ export const getNotificationById = async (req, res) => {
                             occurredAt: medicalEvent.occurredAt,
                             resolvedAt: medicalEvent.resolvedAt,
                             createdAt: medicalEvent.createdAt,
-                            studentName: medicalEvent.student.user.fullName,
+                            studentName: medicalEvent.student.fullName,
                             nurseName:
                                 medicalEvent.nurse?.user?.fullName ||
                                 "Chưa phân công",
