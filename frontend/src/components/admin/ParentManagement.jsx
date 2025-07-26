@@ -43,7 +43,7 @@ const ParentManagement = () => {
       errors.name = "Tên phải có ít nhất 2 ký tự";
     } else if (values.name.length > 50) {
       errors.name = "Tên không được quá 50 ký tự";
-    } else if (!/^[a-zA-ZÀ-ỹ\s]+$/.test(values.name)) {
+    } else if (!/^[\p{L}\s]+$/u.test(values.name)) {
       errors.name = "Tên chỉ được chứa chữ cái và khoảng trắng";
     }
     if (!values.email) {
@@ -383,13 +383,6 @@ const ParentManagement = () => {
                   onBlur={handleBlur}
                   placeholder="Nhập tên (chỉ chữ cái và khoảng trắng)"
                   maxLength={50}
-                  onKeyPress={(e) => {
-                    // Chỉ cho phép nhập chữ cái, khoảng trắng và dấu tiếng Việt
-                    const allowedChars = /[a-zA-ZÀ-ỹ\s]/;
-                    if (!allowedChars.test(e.key)) {
-                      e.preventDefault();
-                    }
-                  }}
                 />
               </Form.Item>
               <Form.Item
