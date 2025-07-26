@@ -2,27 +2,30 @@ import express from "express";
 import studentRoutes from "./StudentRoutes.js";
 
 import {
-    addRole,
-    filterUsers,
-    getAllUsers,
-    getDashboardStats,
-    updateRole,
-    getAllStudentsForNurse,
-    getAllParents,
-    addParent,
-    updateParent,
-    deleteParent,
-    getAllGradesWithStudentCount,
+  addParent,
+  addRole,
+  deleteParent,
+  deleteUser,
+  filterUsers,
+  getAllGradesWithStudentCount,
+  getAllParents,
+  getAllStudentsForNurse,
+  getAllUsers,
+  getDashboardStats,
+  getUserPassword,
+  updateParent,
+  updateRole,
+  updateUserPassword,
 } from "../controllers/AdminController.js";
+import { importParentsStudents } from "../controllers/ImportController.js";
 import {
-    authenticateToken,
-    verifyAdmin,
+  authenticateToken,
+  verifyAdmin,
 } from "../middleware/authenticateToken.js";
 import {
-    uploadExcel,
-    handleUploadError,
+  handleUploadError,
+  uploadExcel,
 } from "../middleware/uploadMiddleware.js";
-import { importParentsStudents } from "../controllers/ImportController.js";
 
 const router = express.Router();
 
@@ -31,10 +34,10 @@ router.post("/admin", authenticateToken, verifyAdmin);
 
 // Dashboard statistics
 router.get(
-    "/dashboard/stats",
-    authenticateToken,
-    verifyAdmin,
-    getDashboardStats
+  "/dashboard/stats",
+  authenticateToken,
+  verifyAdmin,
+  getDashboardStats
 );
 
 // Mount các route con liên quan đến student
@@ -46,7 +49,23 @@ router.get("/users/getAllUsers", authenticateToken, verifyAdmin, getAllUsers);
 
 router.put("/users/:id", authenticateToken, verifyAdmin, updateRole);
 
+router.delete("/users/:id", authenticateToken, verifyAdmin, deleteUser);
+
 router.get("/users/filter", authenticateToken, verifyAdmin, filterUsers);
+
+// Quản lý mật khẩu user
+router.get(
+  "/user/password/:id",
+  authenticateToken,
+  verifyAdmin,
+  getUserPassword
+);
+router.put(
+  "/user/password/:id",
+  authenticateToken,
+  verifyAdmin,
+  updateUserPassword
+);
 
 // Route cho y tá lấy danh sách học sinh
 router.get("/students-for-nurse", authenticateToken, getAllStudentsForNurse);
@@ -59,17 +78,17 @@ router.delete("/parents/:id", authenticateToken, verifyAdmin, deleteParent);
 
 // Quản lí MK
 router.post(
-    "/import-parents-students",
-    uploadExcel,
-    handleUploadError,
-    importParentsStudents
+  "/import-parents-students",
+  uploadExcel,
+  handleUploadError,
+  importParentsStudents
 );
 
 router.get(
-    "/grades-with-count",
-    authenticateToken,
-    verifyAdmin,
-    getAllGradesWithStudentCount
+  "/grades-with-count",
+  authenticateToken,
+  verifyAdmin,
+  getAllGradesWithStudentCount
 );
 
 export default router;

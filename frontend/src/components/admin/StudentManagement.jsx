@@ -511,7 +511,9 @@ const StudentManagement = () => {
         console.error("Response data:", error.response?.data);
         console.error(
           "Request data:",
-          editingStudent ? "updateValues (see above log)" : createValues
+          editingStudent
+            ? "updateValues (see above log)"
+            : "createValues (see above log)"
         );
       } finally {
         setLoading(false);
@@ -657,9 +659,49 @@ const StudentManagement = () => {
                   required: true,
                   message: "Vui lòng nhập họ và tên!",
                 },
+                {
+                  min: 2,
+                  message: "Tên phải có ít nhất 2 ký tự",
+                },
+                {
+                  max: 50,
+                  message: "Tên không được quá 50 ký tự",
+                },
+                {
+                  pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                  message: "Tên chỉ được chứa chữ cái và khoảng trắng",
+                },
               ]}
             >
-              <Input />
+              <Input
+                placeholder="Nhập tên (chỉ chữ cái và khoảng trắng)"
+                maxLength={50}
+                onKeyPress={(e) => {
+                  // Chỉ cho phép nhập chữ cái, khoảng trắng và dấu tiếng Việt
+                  const allowedChars = /[a-zA-ZÀ-ỹ\s]/;
+                  if (!allowedChars.test(e.key)) {
+                    e.preventDefault();
+                  }
+                }}
+                onPaste={(e) => {
+                  // Ngăn chặn paste nội dung không hợp lệ
+                  e.preventDefault();
+                  const pastedText = e.clipboardData.getData("text");
+                  const cleanText = pastedText.replace(/[^a-zA-ZÀ-ỹ\s]/g, "");
+                  const input = e.target;
+                  const start = input.selectionStart;
+                  const end = input.selectionEnd;
+                  const value = input.value;
+                  input.value =
+                    value.substring(0, start) +
+                    cleanText +
+                    value.substring(end);
+                  input.setSelectionRange(
+                    start + cleanText.length,
+                    start + cleanText.length
+                  );
+                }}
+              />
             </Form.Item>
 
             <Form.Item
@@ -928,9 +970,31 @@ const StudentManagement = () => {
                       required: true,
                       message: "Vui lòng nhập tên phụ huynh!",
                     },
+                    {
+                      min: 2,
+                      message: "Tên phải có ít nhất 2 ký tự",
+                    },
+                    {
+                      max: 50,
+                      message: "Tên không được quá 50 ký tự",
+                    },
+                    {
+                      pattern: /^[a-zA-ZÀ-ỹ\s]+$/,
+                      message: "Tên chỉ được chứa chữ cái và khoảng trắng",
+                    },
                   ]}
                 >
-                  <Input placeholder="Nhập tên phụ huynh" />
+                  <Input
+                    placeholder="Nhập tên (chỉ chữ cái và khoảng trắng)"
+                    maxLength={50}
+                    onKeyPress={(e) => {
+                      // Chỉ cho phép nhập chữ cái, khoảng trắng và dấu tiếng Việt
+                      const allowedChars = /[a-zA-ZÀ-ỹ\s]/;
+                      if (!allowedChars.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                  />
                 </Form.Item>
               </Col>
               <Col span={8}>
@@ -960,9 +1024,41 @@ const StudentManagement = () => {
                       required: true,
                       message: "Vui lòng nhập số điện thoại!",
                     },
+                    {
+                      validator: (_, value) => {
+                        if (!value) return Promise.resolve();
+
+                        // Loại bỏ tất cả ký tự không phải số
+                        const cleanPhone = value.replace(/\D/g, "");
+
+                        // Kiểm tra format số điện thoại Việt Nam
+                        const vietnamPhoneRegex =
+                          /^(0|\+84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
+
+                        if (!vietnamPhoneRegex.test(cleanPhone)) {
+                          return Promise.reject(
+                            new Error(
+                              "Số điện thoại không đúng định dạng Việt Nam"
+                            )
+                          );
+                        }
+
+                        return Promise.resolve();
+                      },
+                    },
                   ]}
                 >
-                  <Input placeholder="Nhập số điện thoại" />
+                  <Input
+                    placeholder="VD: 0901234567 hoặc +84901234567"
+                    maxLength={12}
+                    onKeyPress={(e) => {
+                      // Chỉ cho phép nhập số, dấu + và dấu cách
+                      const allowedChars = /[0-9+\s]/;
+                      if (!allowedChars.test(e.key)) {
+                        e.preventDefault();
+                      }
+                    }}
+                  />
                 </Form.Item>
               </Col>
             </Row>
