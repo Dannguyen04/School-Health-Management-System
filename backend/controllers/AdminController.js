@@ -456,6 +456,127 @@ const updateRole = async (req, res) => {
   }
 };
 
+// Xóa người dùng
+const deleteUser = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    // Kiểm tra user có tồn tại không
+    const user = await prisma.users.findUnique({
+      where: { id },
+      include: {
+        parentProfile: true,
+        nurseProfile: true,
+        managerProfile: true,
+        adminProfile: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
+    }
+
+    // Không cho phép xóa chính mình
+    if (user.id === req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: "Không thể xóa tài khoản của chính mình",
+      });
+    }
+
+    // Xóa user trong transaction để đảm bảo tính nhất quán
+    await prisma.$transaction(async (tx) => {
+      // Lưu thông tin user trước khi xóa để audit log
+      const userInfo = {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      };
+
+      if (user.role === "SCHOOL_NURSE") {
+        // Xóa các bản ghi tiêm chủng của nurse
+        await tx.vaccinationRecord.updateMany({
+          where: { nurseId: user.nurseProfile?.id },
+          data: { nurseId: null },
+        });
+
+        // Xóa các sự kiện y tế của nurse
+        await tx.medicalEvent.deleteMany({
+          where: { createdById: user.id },
+        });
+      }
+
+      // Xóa các notification của user
+      await tx.notification.deleteMany({
+        where: { userId: user.id },
+      });
+
+      // Xóa các audit log của user
+      await tx.auditLog.deleteMany({
+        where: { userId: user.id },
+      });
+
+      // Xóa user (các profile sẽ tự động bị xóa do onDelete: Cascade)
+      await tx.users.delete({
+        where: { id },
+      });
+
+      // Tạo audit log cho việc xóa user
+      await createAuditLog(
+        tx,
+        req.user.id,
+        "delete",
+        "user",
+        user.id,
+        {
+          deletedUser: userInfo,
+          deletedBy: {
+            id: req.user.id,
+            fullName: req.user.fullName,
+            role: req.user.role,
+          },
+        },
+        req
+      );
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Đã xóa người dùng ${user.fullName} thành công`,
+      data: {
+        deletedUserId: user.id,
+        deletedUserName: user.fullName,
+        deletedUserRole: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi khi xóa người dùng:", error);
+
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
+    }
+
+    if (error.code === "P2003") {
+      return res.status(400).json({
+        success: false,
+        error: "Không thể xóa người dùng do có dữ liệu liên quan",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Lỗi máy chủ nội bộ",
+    });
+  }
+};
+
 // Xóa toàn bộ các hàm liên quan đến Student (addStudent, updateStudent, deleteStudent, getAllStudents, filterStudents, và các hàm helper liên quan student)
 
 const filterUsers = async (req, res) => {
@@ -984,12 +1105,125 @@ process.on("SIGINT", async () => {
   process.exit(0);
 });
 
+// Lấy password hiện tại của user (chỉ admin mới được phép)
+const getUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.users.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        password: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        password: user.password,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy password:", error);
+    res.status(500).json({
+      success: false,
+      error: "Lỗi máy chủ khi lấy thông tin mật khẩu",
+    });
+  }
+};
+
+// Cập nhật password cho user (chỉ admin mới được phép)
+const updateUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password, cfPassword } = req.body;
+
+    if (!password || !cfPassword) {
+      return res.status(400).json({
+        success: false,
+        error: "Vui lòng nhập đầy đủ mật khẩu và xác nhận mật khẩu",
+      });
+    }
+
+    if (password !== cfPassword) {
+      return res.status(400).json({
+        success: false,
+        error: "Mật khẩu xác nhận không khớp",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: "Mật khẩu phải có ít nhất 8 ký tự",
+      });
+    }
+
+    const user = await prisma.users.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
+    }
+
+    await prisma.users.update({
+      where: { id },
+      data: {
+        password: password,
+        updatedAt: new Date(),
+      },
+    });
+
+    await createAuditLog(
+      prisma,
+      req.user.id,
+      "update",
+      "password",
+      id,
+      { userId: id, passwordChanged: true },
+      req
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật mật khẩu thành công",
+    });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật password:", error);
+    res.status(500).json({
+      success: false,
+      error: "Lỗi máy chủ khi cập nhật mật khẩu",
+    });
+  }
+};
+
 export {
   addRole,
+  deleteUser,
   filterUsers,
   getAllGradesWithStudentCount,
   getAllStudentsForNurse,
   getAllUsers,
   getDashboardStats,
+  getUserPassword,
   updateRole,
+  updateUserPassword,
 };

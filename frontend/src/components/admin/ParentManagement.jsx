@@ -43,6 +43,8 @@ const ParentManagement = () => {
       errors.name = "Tên phải có ít nhất 2 ký tự";
     } else if (values.name.length > 50) {
       errors.name = "Tên không được quá 50 ký tự";
+    } else if (!/^[a-zA-ZÀ-ỹ\s]+$/.test(values.name)) {
+      errors.name = "Tên chỉ được chứa chữ cái và khoảng trắng";
     }
     if (!values.email) {
       errors.email = "Vui lòng nhập email";
@@ -51,8 +53,17 @@ const ParentManagement = () => {
     }
     if (!values.phone) {
       errors.phone = "Vui lòng nhập số điện thoại";
-    } else if (!/^[0-9]{10,11}$/.test(values.phone)) {
-      errors.phone = "Số điện thoại không hợp lệ";
+    } else {
+      // Loại bỏ tất cả ký tự không phải số
+      const cleanPhone = values.phone.replace(/\D/g, "");
+
+      // Kiểm tra format số điện thoại Việt Nam
+      const vietnamPhoneRegex =
+        /^(0|\+84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
+
+      if (!vietnamPhoneRegex.test(cleanPhone)) {
+        errors.phone = "Số điện thoại không đúng định dạng Việt Nam";
+      }
     }
     return errors;
   };
@@ -370,7 +381,15 @@ const ParentManagement = () => {
                   value={values.name}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  placeholder="Nhập tên phụ huynh"
+                  placeholder="Nhập tên (chỉ chữ cái và khoảng trắng)"
+                  maxLength={50}
+                  onKeyPress={(e) => {
+                    // Chỉ cho phép nhập chữ cái, khoảng trắng và dấu tiếng Việt
+                    const allowedChars = /[a-zA-ZÀ-ỹ\s]/;
+                    if (!allowedChars.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               </Form.Item>
               <Form.Item
@@ -396,7 +415,15 @@ const ParentManagement = () => {
                   value={values.phone}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  placeholder="Nhập số điện thoại"
+                  placeholder="VD: 0901234567 hoặc +84901234567"
+                  maxLength={12}
+                  onKeyPress={(e) => {
+                    // Chỉ cho phép nhập số, dấu + và dấu cách
+                    const allowedChars = /[0-9+\s]/;
+                    if (!allowedChars.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               </Form.Item>
               <div style={{ textAlign: "right", marginTop: 24 }}>

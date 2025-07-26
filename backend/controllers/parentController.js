@@ -269,59 +269,59 @@ export const upsertHealthProfile = async (req, res) => {
       });
     }
 
-        // Validation cơ bản cho các trường số
-        if (vision !== null && vision !== undefined && vision !== "") {
-            const visionNum = parseFloat(vision);
-            if (isNaN(visionNum) || visionNum < 0) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Thị lực phải là số không âm",
-                });
-            }
-        }
+    // Validation cơ bản cho các trường số
+    if (vision !== null && vision !== undefined && vision !== "") {
+      const visionNum = parseFloat(vision);
+      if (isNaN(visionNum) || visionNum < 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Thị lực phải là số không âm",
+        });
+      }
+    }
 
-        if (hearing !== null && hearing !== undefined && hearing !== "") {
-            const hearingNum = parseFloat(hearing);
-            if (isNaN(hearingNum) || hearingNum < 0) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Thính lực phải là số không âm",
-                });
-            }
-        }
+    if (hearing !== null && hearing !== undefined && hearing !== "") {
+      const hearingNum = parseFloat(hearing);
+      if (isNaN(hearingNum) || hearingNum < 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Thính lực phải là số không âm",
+        });
+      }
+    }
 
-        if (height !== null && height !== undefined && height !== "") {
-            const heightNum = parseFloat(height);
-            if (isNaN(heightNum) || heightNum <= 0) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Chiều cao phải là số dương",
-                });
-            }
-        }
+    if (height !== null && height !== undefined && height !== "") {
+      const heightNum = parseFloat(height);
+      if (isNaN(heightNum) || heightNum <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Chiều cao phải là số dương",
+        });
+      }
+    }
 
-        if (weight !== null && weight !== undefined && weight !== "") {
-            const weightNum = parseFloat(weight);
-            if (isNaN(weightNum) || weightNum <= 0) {
-                return res.status(400).json({
-                    success: false,
-                    error: "Cân nặng phải là số dương",
-                });
-            }
-        }
-        // Transform data for storage
-        const healthProfileData = {
-            vision: vision || "",
-            hearing: hearing || "",
-            height: height ? parseFloat(height) : "",
-            weight: weight ? parseFloat(weight) : "",
-            allergies: allergies || [],
-            chronicDiseases: chronicDiseases || [],
-            medications: medications || [],
-            treatmentHistory: treatmentHistory || "",
-            notes: notes || "",
-            lastUpdatedBy: req.user.id,
-        };
+    if (weight !== null && weight !== undefined && weight !== "") {
+      const weightNum = parseFloat(weight);
+      if (isNaN(weightNum) || weightNum <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Cân nặng phải là số dương",
+        });
+      }
+    }
+    // Transform data for storage
+    const healthProfileData = {
+      vision: vision || "",
+      hearing: hearing || "",
+      height: height ? parseFloat(height) : "",
+      weight: weight ? parseFloat(weight) : "",
+      allergies: allergies || [],
+      chronicDiseases: chronicDiseases || [],
+      medications: medications || [],
+      treatmentHistory: treatmentHistory || "",
+      notes: notes || "",
+      lastUpdatedBy: req.user.id,
+    };
 
     const healthProfile = await prisma.healthProfile.upsert({
       where: {
@@ -451,181 +451,174 @@ export const requestMedication = async (req, res) => {
       usageNote,
     });
 
-        if (
-            !medicationName ||
-            !dosage ||
-            !frequency ||
-            !startDate ||
-            !unit ||
-            !type
-        ) {
-            return res.status(400).json({
-                success: false,
-                error: "Thiếu thông tin bắt buộc: medicationName, dosage, frequency, startDate, unit, type",
-            });
-        }
-        if (stockQuantity !== undefined && isNaN(Number(stockQuantity))) {
-            return res.status(400).json({
-                success: false,
-                error: "Số lượng thuốc (stockQuantity) phải là số",
-            });
-        }
-        let parsedStartDate = null;
-        let parsedEndDate = null;
-        try {
-            parsedStartDate = new Date(startDate);
-            if (endDate) parsedEndDate = new Date(endDate);
-            if (
-                isNaN(parsedStartDate.getTime()) ||
-                (endDate && isNaN(parsedEndDate.getTime()))
-            ) {
-                throw new Error();
-            }
-        } catch {
-            return res.status(400).json({
-                success: false,
-                error: "Ngày bắt đầu/kết thúc không hợp lệ",
-            });
-        }
-        if (!req.user.parentProfile) {
-            return res.status(403).json({
-                success: false,
-                error: "You must be a parent to access this resource",
-            });
-        }
-        // Validate customTimes - linh hoạt hơn cho thực tế
-        if (customTimes) {
-            let timesArr;
-            try {
-                timesArr = Array.isArray(customTimes)
-                    ? customTimes
-                    : JSON.parse(customTimes);
-            } catch {
-                return res.status(400).json({
-                    success: false,
-                    error: 'customTimes phải là mảng giờ hợp lệ (VD: ["08:00", "12:30"])',
-                });
-            }
-            const isValid = timesArr.every((t) => {
-                // t: "HH:mm" 
-                if (!t || typeof t !== 'string') return false;
-                const [h, m] = t.split(":").map(Number);
-                if (isNaN(h) || isNaN(m)) return false;
-                // Validation linh hoạt: 00:00 - 23:59
-                return h >= 0 && h <= 23 && m >= 0 && m <= 59;
-            });
-            if (!isValid) {
-                return res.status(400).json({
-                    success: false,
-                    error: "customTimes phải có định dạng giờ hợp lệ (HH:mm)",
-                });
-            }
-        }
-        }
-        const parentId = req.user.parentProfile.id;
-        const studentParent = await prisma.studentParent.findFirst({
-            where: {
-                parentId: parentId,
-                studentId: studentId,
-            },
-        });
-        if (!studentParent) {
-            console.log(
-                "[requestMedication] Không tìm thấy studentParent hoặc không đúng quyền"
-            );
-            return res.status(403).json({
-                success: false,
-                error: "You are not authorized to request medication for this student",
-            });
-        }
-        let image = null;
-        if (req.file) {
-            console.log(
-                "[requestMedication] Đã nhận file ảnh:",
-                req.file.filename
-            );
-            image = `/api/uploads/medicine-images/${req.file.filename}`;
-        } else {
-            console.log("[requestMedication] Không nhận được file ảnh");
-        }
-        // Lưu thông tin thuốc trực tiếp vào StudentMedication
-        try {
-            const studentMedication = await prisma.studentMedication.create({
-                data: {
-                    studentId,
-                    parentId,
-                    name: medicationName,
-                    description: description || "",
-                    type,
-                    dosage,
-                    unit,
-                    manufacturer: manufacturer || null,
-                    frequency,
-                    customTimes: customTimes ? JSON.parse(customTimes) : [], // lịch mẫu cố định mỗi ngày
-                    todaySchedules: customTimes ? JSON.parse(customTimes) : [], // lịch còn lại trong ngày, khởi tạo bằng customTimes
-                    instructions: instructions || null,
-                    status: "PENDING_APPROVAL",
-                    treatmentStatus: "ONGOING",
-                    startDate: parsedStartDate,
-                    endDate: parsedEndDate || null,
-                    image,
-                    stockQuantity:
-                        stockQuantity !== undefined ? Number(stockQuantity) : 1,
-                    usageNote: usageNote || null,
-                },
-            });
-            console.log(
-                "[requestMedication] Đã tạo studentMedication:",
-                studentMedication
-            );
-            // Gửi notification cho tất cả y tá
-            const nurses = await prisma.schoolNurse.findMany({
-                include: { user: true },
-            });
-            // Lấy tên học sinh
-            const student = await prisma.student.findUnique({
-                where: { id: studentId },
-                include: { user: true },
-            });
-            const studentName = student?.user?.fullName || "học sinh";
-            for (const nurse of nurses) {
-                await prisma.notification.create({
-                    data: {
-                        userId: nurse.userId,
-                        title: "Yêu cầu gửi thuốc mới",
-                        message: `Có yêu cầu gửi thuốc mới cho học sinh ${studentName} từ phụ huynh. Vui lòng kiểm tra và xác nhận!`,
-                        type: "medication",
-                        status: "SENT",
-                        sentAt: new Date(),
-                    },
-                });
-            }
-            res.json({
-                success: true,
-                data: studentMedication,
-                message: "Medication request submitted successfully",
-            });
-        } catch (insertErr) {
-            console.error(
-                "[requestMedication] Lỗi khi insert studentMedication:",
-                insertErr
-            );
-            return res.status(500).json({
-                success: false,
-                error: "Lỗi khi lưu thông tin thuốc vào database!",
-            });
-        }
-    } catch (error) {
-        console.error(
-            "Error requesting medication:",
-            error.message,
-            error.stack
-        );
-        res.status(500).json({
-            success: false,
-            error: "Internal server error",
-        });
+    if (
+      !medicationName ||
+      !dosage ||
+      !frequency ||
+      !startDate ||
+      !unit ||
+      !type
+    ) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Thiếu thông tin bắt buộc: medicationName, dosage, frequency, startDate, unit, type",
+      });
     }
+    if (stockQuantity !== undefined && isNaN(Number(stockQuantity))) {
+      return res.status(400).json({
+        success: false,
+        error: "Số lượng thuốc (stockQuantity) phải là số",
+      });
+    }
+    let parsedStartDate = null;
+    let parsedEndDate = null;
+    try {
+      parsedStartDate = new Date(startDate);
+      if (endDate) parsedEndDate = new Date(endDate);
+      if (
+        isNaN(parsedStartDate.getTime()) ||
+        (endDate && isNaN(parsedEndDate.getTime()))
+      ) {
+        throw new Error();
+      }
+    } catch {
+      return res.status(400).json({
+        success: false,
+        error: "Ngày bắt đầu/kết thúc không hợp lệ",
+      });
+    }
+    if (!req.user.parentProfile) {
+      return res.status(403).json({
+        success: false,
+        error: "You must be a parent to access this resource",
+      });
+    }
+    // Validate customTimes - linh hoạt hơn cho thực tế
+    if (customTimes) {
+      let timesArr;
+      try {
+        timesArr = Array.isArray(customTimes)
+          ? customTimes
+          : JSON.parse(customTimes);
+      } catch {
+        return res.status(400).json({
+          success: false,
+          error: 'customTimes phải là mảng giờ hợp lệ (VD: ["08:00", "12:30"])',
+        });
+      }
+      const isValid = timesArr.every((t) => {
+        // t: "HH:mm"
+        if (!t || typeof t !== "string") return false;
+        const [h, m] = t.split(":").map(Number);
+        if (isNaN(h) || isNaN(m)) return false;
+        // Validation linh hoạt: 00:00 - 23:59
+        return h >= 0 && h <= 23 && m >= 0 && m <= 59;
+      });
+      if (!isValid) {
+        return res.status(400).json({
+          success: false,
+          error: "customTimes phải có định dạng giờ hợp lệ (HH:mm)",
+        });
+      }
+    }
+    const parentId = req.user.parentProfile.id;
+    const studentParent = await prisma.studentParent.findFirst({
+      where: {
+        parentId: parentId,
+        studentId: studentId,
+      },
+    });
+    if (!studentParent) {
+      console.log(
+        "[requestMedication] Không tìm thấy studentParent hoặc không đúng quyền"
+      );
+      return res.status(403).json({
+        success: false,
+        error: "You are not authorized to request medication for this student",
+      });
+    }
+    let image = null;
+    if (req.file) {
+      console.log("[requestMedication] Đã nhận file ảnh:", req.file.filename);
+      image = `/api/uploads/medicine-images/${req.file.filename}`;
+    } else {
+      console.log("[requestMedication] Không nhận được file ảnh");
+    }
+    // Lưu thông tin thuốc trực tiếp vào StudentMedication
+    try {
+      const studentMedication = await prisma.studentMedication.create({
+        data: {
+          studentId,
+          parentId,
+          name: medicationName,
+          description: description || "",
+          type,
+          dosage,
+          unit,
+          manufacturer: manufacturer || null,
+          frequency,
+          customTimes: customTimes ? JSON.parse(customTimes) : [], // lịch mẫu cố định mỗi ngày
+          todaySchedules: customTimes ? JSON.parse(customTimes) : [], // lịch còn lại trong ngày, khởi tạo bằng customTimes
+          instructions: instructions || null,
+          status: "PENDING_APPROVAL",
+          treatmentStatus: "ONGOING",
+          startDate: parsedStartDate,
+          endDate: parsedEndDate || null,
+          image,
+          stockQuantity:
+            stockQuantity !== undefined ? Number(stockQuantity) : 1,
+          usageNote: usageNote || null,
+        },
+      });
+      console.log(
+        "[requestMedication] Đã tạo studentMedication:",
+        studentMedication
+      );
+      // Gửi notification cho tất cả y tá
+      const nurses = await prisma.schoolNurse.findMany({
+        include: { user: true },
+      });
+      // Lấy tên học sinh
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+        include: { user: true },
+      });
+      const studentName = student?.user?.fullName || "học sinh";
+      for (const nurse of nurses) {
+        await prisma.notification.create({
+          data: {
+            userId: nurse.userId,
+            title: "Yêu cầu gửi thuốc mới",
+            message: `Có yêu cầu gửi thuốc mới cho học sinh ${studentName} từ phụ huynh. Vui lòng kiểm tra và xác nhận!`,
+            type: "medication",
+            status: "SENT",
+            sentAt: new Date(),
+          },
+        });
+      }
+      res.json({
+        success: true,
+        data: studentMedication,
+        message: "Medication request submitted successfully",
+      });
+    } catch (insertErr) {
+      console.error(
+        "[requestMedication] Lỗi khi insert studentMedication:",
+        insertErr
+      );
+      return res.status(500).json({
+        success: false,
+        error: "Lỗi khi lưu thông tin thuốc vào database!",
+      });
+    }
+  } catch (error) {
+    console.error("Error requesting medication:", error.message, error.stack);
+    res.status(500).json({
+      success: false,
+      error: "Internal server error",
+    });
+  }
 };
 
 // --- SỬA HÀM LẤY THUỐC CỦA HỌC SINH ---
@@ -678,7 +671,11 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
     const children = await prisma.studentParent.findMany({
       where: { parentId },
       include: {
-        student: true,
+        student: {
+          include: {
+            user: { select: { fullName: true } },
+          },
+        },
       },
     });
     if (!children || children.length === 0) {
