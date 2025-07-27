@@ -314,7 +314,7 @@ const getAllUsers = async (req, res) => {
     const users = await prisma.users.findMany({
       where: {
         role: {
-          notIn: ["STUDENT", "PARENT"],
+          notIn: ["STUDENT"],
         },
       },
       include: {

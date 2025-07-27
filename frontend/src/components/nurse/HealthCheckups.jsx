@@ -35,46 +35,412 @@ const { TabPane } = Tabs;
 const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
-// Yup schema validate
+// Yup schema validate - nhất quán với backend
 const checkupSchema = Yup.object().shape({
   scheduledDate: Yup.date().required("Vui lòng chọn ngày khám"),
   height: Yup.number()
-    .min(50, "Chiều cao quá thấp (tối thiểu 50cm)")
-    .max(250, "Chiều cao quá cao (tối đa 250cm)")
-    .required("Bắt buộc điền"),
+    .positive("Chiều cao phải là số dương")
+    .min(50, "Chiều cao không hợp lệ (50-250cm)")
+    .max(250, "Chiều cao không hợp lệ (50-250cm)")
+    .required("Vui lòng nhập chiều cao"),
   weight: Yup.number()
-    .min(5, "Cân nặng quá thấp (tối thiểu 5kg)")
-    .max(150, "Cân nặng quá cao (tối đa 150kg)")
-    .required("Bắt buộc điền"),
+    .positive("Cân nặng phải là số dương")
+    .min(10, "Cân nặng không hợp lệ (10-200kg)")
+    .max(200, "Cân nặng không hợp lệ (10-200kg)")
+    .required("Vui lòng nhập cân nặng"),
   pulse: Yup.number()
-    .min(40)
-    .max(200)
-    .nullable()
-    .required("Mạch phải từ 40-200"),
+    .positive("Mạch phải là số dương")
+    .min(40, "Mạch không hợp lệ (40-200)")
+    .max(200, "Mạch không hợp lệ (40-200)")
+    .required("Vui lòng nhập mạch"),
   systolicBP: Yup.number()
-    .min(60)
-    .max(250)
-    .nullable()
-    .required("Tâm thu phải từ 60-250"),
+    .positive("Huyết áp tâm thu phải là số dương")
+    .min(60, "Huyết áp tâm thu không hợp lệ (60-250)")
+    .max(250, "Huyết áp tâm thu không hợp lệ (60-250)")
+    .required("Vui lòng nhập huyết áp tâm thu"),
   diastolicBP: Yup.number()
-    .min(30)
-    .max(150)
-    .nullable()
-    .required("Tâm trương phải từ 30-150"),
+    .positive("Huyết áp tâm trương phải là số dương")
+    .min(30, "Huyết áp tâm trương không hợp lệ (30-150)")
+    .max(150, "Huyết áp tâm trương không hợp lệ (30-150)")
+    .required("Vui lòng nhập huyết áp tâm trương"),
   physicalClassification: Yup.string()
     .oneOf(["EXCELLENT", "GOOD", "AVERAGE", "WEAK"])
     .required("Chọn phân loại"),
-  visionRightNoGlasses: Yup.number().nullable().required(),
-  visionLeftNoGlasses: Yup.number().nullable().required(),
-  visionRightWithGlasses: Yup.number().nullable().required(),
-  visionLeftWithGlasses: Yup.number().nullable().required(),
-  hearingLeftNormal: Yup.number().nullable().required(),
-  hearingLeftWhisper: Yup.number().nullable().required(),
-  hearingRightNormal: Yup.number().nullable().required(),
-  hearingRightWhisper: Yup.number().nullable().required(),
-  dentalUpperJaw: Yup.string().required("Nhập kết quả răng hàm trên"),
-  dentalLowerJaw: Yup.string().required("Nhập kết quả răng hàm dưới"),
-  clinicalNotes: Yup.string().required(),
+  visionRightNoGlasses: Yup.mixed()
+    .test("vision-validation", "Thị lực không được là số âm", function (value) {
+      if (typeof value === "number") {
+        return value >= 0;
+      }
+      return true;
+    })
+    .test(
+      "vision-validation",
+      "Thị lực không được chỉ chứa chữ cái",
+      function (value) {
+        if (typeof value === "string" && /^[a-zA-Z]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "vision-validation",
+      "Thị lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("vision-validation", "Giá trị thị lực quá cao", function (value) {
+      if (typeof value === "number" && value > 20) {
+        return false;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thị lực mắt phải (không kính)"),
+  visionLeftNoGlasses: Yup.mixed()
+    .test("vision-validation", "Thị lực không được là số âm", function (value) {
+      if (typeof value === "number") {
+        return value >= 0;
+      }
+      return true;
+    })
+    .test(
+      "vision-validation",
+      "Thị lực không được chỉ chứa chữ cái",
+      function (value) {
+        if (typeof value === "string" && /^[a-zA-Z]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "vision-validation",
+      "Thị lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("vision-validation", "Giá trị thị lực quá cao", function (value) {
+      if (typeof value === "number" && value > 20) {
+        return false;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thị lực mắt trái (không kính)"),
+  visionRightWithGlasses: Yup.mixed()
+    .test("vision-validation", "Thị lực không được là số âm", function (value) {
+      if (typeof value === "number") {
+        return value >= 0;
+      }
+      return true;
+    })
+    .test(
+      "vision-validation",
+      "Thị lực không được chỉ chứa chữ cái",
+      function (value) {
+        if (typeof value === "string" && /^[a-zA-Z]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "vision-validation",
+      "Thị lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("vision-validation", "Giá trị thị lực quá cao", function (value) {
+      if (typeof value === "number" && value > 20) {
+        return false;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thị lực mắt phải (có kính)"),
+  visionLeftWithGlasses: Yup.mixed()
+    .test("vision-validation", "Thị lực không được là số âm", function (value) {
+      if (typeof value === "number") {
+        return value >= 0;
+      }
+      return true;
+    })
+    .test(
+      "vision-validation",
+      "Thị lực không được chỉ chứa chữ cái",
+      function (value) {
+        if (typeof value === "string" && /^[a-zA-Z]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "vision-validation",
+      "Thị lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("vision-validation", "Giá trị thị lực quá cao", function (value) {
+      if (typeof value === "number" && value > 20) {
+        return false;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thị lực mắt trái (có kính)"),
+  hearingLeftNormal: Yup.mixed()
+    .test(
+      "hearing-validation",
+      "Thính lực không được là số âm",
+      function (value) {
+        if (typeof value === "number") {
+          return value >= 0;
+        }
+        return true;
+      }
+    )
+    .test(
+      "hearing-validation",
+      "Thính lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("hearing-validation", "Giá trị thính lực quá cao", function (value) {
+      if (typeof value === "number" && value > 10) {
+        return false;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thính lực tai trái (bình thường)"),
+  hearingLeftWhisper: Yup.mixed()
+    .test(
+      "hearing-validation",
+      "Thính lực không được là số âm",
+      function (value) {
+        if (typeof value === "number") {
+          return value >= 0;
+        }
+        return true;
+      }
+    )
+    .test(
+      "hearing-validation",
+      "Thính lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("hearing-validation", "Giá trị thính lực quá cao", function (value) {
+      if (typeof value === "number" && value > 10) {
+        return false;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thính lực tai trái (thì thầm)"),
+  hearingRightNormal: Yup.mixed()
+    .test(
+      "hearing-validation",
+      "Thính lực không được là số âm",
+      function (value) {
+        if (typeof value === "number") {
+          return value >= 0;
+        }
+        return true;
+      }
+    )
+    .test(
+      "hearing-validation",
+      "Thính lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("hearing-validation", "Giá trị thính lực quá cao", function (value) {
+      if (typeof value === "number" && value > 10) {
+        return false;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thính lực tai phải (bình thường)"),
+  hearingRightWhisper: Yup.mixed()
+    .test(
+      "hearing-validation",
+      "Thính lực không được là số âm",
+      function (value) {
+        if (typeof value === "number") {
+          return value >= 0;
+        }
+        return true;
+      }
+    )
+    .test(
+      "hearing-validation",
+      "Thính lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("hearing-validation", "Giá trị thính lực quá cao", function (value) {
+      if (typeof value === "number" && value > 10) {
+        return false;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thính lực tai phải (thì thầm)"),
+  dentalUpperJaw: Yup.string()
+    .min(2, "Kết quả răng hàm trên phải có ít nhất 2 ký tự")
+    .max(100, "Kết quả răng hàm trên không được quá 100 ký tự")
+    .test(
+      "dental-validation",
+      "Kết quả răng hàm trên không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "dental-validation",
+      "Kết quả răng hàm trên phải là text, không được chỉ chứa số",
+      function (value) {
+        if (typeof value === "string" && /^[0-9\s]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .required("Vui lòng nhập kết quả răng hàm trên"),
+  dentalLowerJaw: Yup.string()
+    .min(2, "Kết quả răng hàm dưới phải có ít nhất 2 ký tự")
+    .max(100, "Kết quả răng hàm dưới không được quá 100 ký tự")
+    .test(
+      "dental-validation",
+      "Kết quả răng hàm dưới không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "dental-validation",
+      "Kết quả răng hàm dưới phải là text, không được chỉ chứa số",
+      function (value) {
+        if (typeof value === "string" && /^[0-9\s]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .required("Vui lòng nhập kết quả răng hàm dưới"),
+  clinicalNotes: Yup.string()
+    .min(3, "Ghi chú lâm sàng phải có ít nhất 3 ký tự")
+    .max(500, "Ghi chú lâm sàng không được quá 500 ký tự")
+    .test(
+      "clinical-validation",
+      "Ghi chú lâm sàng không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "clinical-validation",
+      "Ghi chú lâm sàng phải là text, không được chỉ chứa số",
+      function (value) {
+        if (typeof value === "string" && /^[0-9\s]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .required("Vui lòng nhập ghi chú lâm sàng"),
   overallHealth: Yup.string()
     .oneOf(["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"])
     .required("Chọn trạng thái"),
@@ -832,8 +1198,8 @@ const HealthCheckups = () => {
             notes: "",
           }}
           validationSchema={stepSchemas[currentStep]}
-          validateOnChange={false}
-          validateOnBlur={false}
+          validateOnChange={true}
+          validateOnBlur={true}
           onSubmit={async (
             values,
             { setSubmitting, resetForm, setFieldError }
@@ -885,6 +1251,7 @@ const HealthCheckups = () => {
             handleSubmit,
             validateForm,
             setFieldError,
+            setFieldTouched,
           }) => (
             <form onSubmit={handleSubmit}>
               <Steps
@@ -924,8 +1291,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={50}
-                      max={250}
                       style={{ width: "100%" }}
                       value={values.height}
                       onChange={(v) => setFieldValue("height", v)}
@@ -943,8 +1308,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={10}
-                      max={200}
                       style={{ width: "100%" }}
                       value={values.weight}
                       onChange={(v) => setFieldValue("weight", v)}
@@ -962,8 +1325,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={40}
-                      max={200}
                       style={{ width: "100%" }}
                       value={values.pulse}
                       onChange={(v) => setFieldValue("pulse", v)}
@@ -981,8 +1342,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={60}
-                      max={250}
                       style={{ width: "100%" }}
                       value={values.systolicBP}
                       onChange={(v) => setFieldValue("systolicBP", v)}
@@ -1000,8 +1359,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={30}
-                      max={150}
                       style={{ width: "100%" }}
                       value={values.diastolicBP}
                       onChange={(v) => setFieldValue("diastolicBP", v)}
@@ -1024,13 +1381,13 @@ const HealthCheckups = () => {
                     label="Phải (không kính)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thị lực (VD: 10/10, 1.5, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.visionRightNoGlasses}
-                      onChange={(v) => setFieldValue("visionRightNoGlasses", v)}
+                      onChange={(e) =>
+                        setFieldValue("visionRightNoGlasses", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="visionRightNoGlasses"
@@ -1044,13 +1401,13 @@ const HealthCheckups = () => {
                     label="Trái (không kính)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thị lực (VD: 10/10, 1.5, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.visionLeftNoGlasses}
-                      onChange={(v) => setFieldValue("visionLeftNoGlasses", v)}
+                      onChange={(e) =>
+                        setFieldValue("visionLeftNoGlasses", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="visionLeftNoGlasses"
@@ -1064,14 +1421,12 @@ const HealthCheckups = () => {
                     label="Phải (có kính)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thị lực (VD: 10/10, 1.5, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.visionRightWithGlasses}
-                      onChange={(v) =>
-                        setFieldValue("visionRightWithGlasses", v)
+                      onChange={(e) =>
+                        setFieldValue("visionRightWithGlasses", e.target.value)
                       }
                     />
                     <ErrorMessage
@@ -1086,14 +1441,12 @@ const HealthCheckups = () => {
                     label="Trái (có kính)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thị lực (VD: 10/10, 1.5, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.visionLeftWithGlasses}
-                      onChange={(v) =>
-                        setFieldValue("visionLeftWithGlasses", v)
+                      onChange={(e) =>
+                        setFieldValue("visionLeftWithGlasses", e.target.value)
                       }
                     />
                     <ErrorMessage
@@ -1114,13 +1467,13 @@ const HealthCheckups = () => {
                     label="Trái (bình thường)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thính lực (VD: 8, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.hearingLeftNormal}
-                      onChange={(v) => setFieldValue("hearingLeftNormal", v)}
+                      onChange={(e) =>
+                        setFieldValue("hearingLeftNormal", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="hearingLeftNormal"
@@ -1134,13 +1487,13 @@ const HealthCheckups = () => {
                     label="Trái (thì thầm)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thính lực (VD: 8, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.hearingLeftWhisper}
-                      onChange={(v) => setFieldValue("hearingLeftWhisper", v)}
+                      onChange={(e) =>
+                        setFieldValue("hearingLeftWhisper", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="hearingLeftWhisper"
@@ -1154,13 +1507,13 @@ const HealthCheckups = () => {
                     label="Phải (bình thường)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thính lực (VD: 8, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.hearingRightNormal}
-                      onChange={(v) => setFieldValue("hearingRightNormal", v)}
+                      onChange={(e) =>
+                        setFieldValue("hearingRightNormal", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="hearingRightNormal"
@@ -1174,13 +1527,13 @@ const HealthCheckups = () => {
                     label="Phải (thì thầm)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thính lực (VD: 8, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.hearingRightWhisper}
-                      onChange={(v) => setFieldValue("hearingRightWhisper", v)}
+                      onChange={(e) =>
+                        setFieldValue("hearingRightWhisper", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="hearingRightWhisper"
@@ -1201,6 +1554,7 @@ const HealthCheckups = () => {
                     required
                   >
                     <Input
+                      placeholder="Nhập kết quả khám răng hàm trên (VD: Tốt, Sâu răng, Cần điều trị)"
                       value={values.dentalUpperJaw}
                       onChange={(e) =>
                         setFieldValue("dentalUpperJaw", e.target.value)
@@ -1219,6 +1573,7 @@ const HealthCheckups = () => {
                     required
                   >
                     <Input
+                      placeholder="Nhập kết quả khám răng hàm dưới (VD: Tốt, Sâu răng, Cần điều trị)"
                       value={values.dentalLowerJaw}
                       onChange={(e) =>
                         setFieldValue("dentalLowerJaw", e.target.value)
@@ -1339,6 +1694,7 @@ const HealthCheckups = () => {
                     required
                   >
                     <Input.TextArea
+                      placeholder="Nhập ghi chú lâm sàng chi tiết về tình trạng sức khỏe của học sinh"
                       rows={2}
                       value={values.clinicalNotes}
                       onChange={(e) =>
@@ -1607,14 +1963,15 @@ const HealthCheckups = () => {
                           return;
                         }
                       }
-                      // Validate bằng Yup như cũ
+                      // Validate bằng Yup và để Formik tự động hiển thị lỗi
                       const stepErrs = await validateForm();
                       if (Object.keys(stepErrs).length === 0) {
                         setCurrentStep(currentStep + 1);
                       } else {
-                        message.error(
-                          "Vui lòng kiểm tra lại các trường bắt buộc!"
-                        );
+                        // Đánh dấu tất cả các trường có lỗi là "touched" để hiển thị lỗi
+                        Object.keys(stepErrs).forEach((fieldName) => {
+                          setFieldTouched(fieldName, true, false);
+                        });
                       }
                     }}
                     loading={isSubmitting}
@@ -1657,32 +2014,39 @@ const HealthCheckups = () => {
         {detailReport && (
           <div>
             <Typography.Title level={4} style={{ marginBottom: 0 }}>
-              {detailReport.student?.user?.fullName ||
-                detailReport.student?.fullName ||
-                ""}
+              {detailReport.student?.fullName || ""}
             </Typography.Title>
-            <Typography.Text type="secondary">
+            <Typography.Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 4 }}
+            >
+              {detailReport.campaign?.name && (
+                <>
+                  Chiến dịch: <b>{detailReport.campaign.name}</b>
+                  <br />
+                </>
+              )}
               Ngày khám:{" "}
               {detailReport.scheduledDate
                 ? dayjs(detailReport.scheduledDate).format("DD/MM/YYYY")
-                : ""}
+                : "N/A"}
             </Typography.Text>
             <Divider orientation="left">Thông tin cơ bản</Divider>
-            <Descriptions column={2} size="small" variant="bordered">
+            <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Chiều cao">
-                {detailReport.height} cm
+                {detailReport.height ? `${detailReport.height} cm` : "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Cân nặng">
-                {detailReport.weight} kg
+                {detailReport.weight ? `${detailReport.weight} kg` : "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Mạch">
-                {detailReport.pulse}
+                {detailReport.pulse || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Huyết áp tâm thu">
-                {detailReport.systolicBP}
+                {detailReport.systolicBP || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Huyết áp tâm trương">
-                {detailReport.diastolicBP}
+                {detailReport.diastolicBP || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Phân loại thể lực">
                 {(() => {
@@ -1694,52 +2058,53 @@ const HealthCheckups = () => {
                   };
                   return (
                     map[detailReport.physicalClassification] ||
-                    detailReport.physicalClassification
+                    detailReport.physicalClassification ||
+                    "N/A"
                   );
                 })()}
               </Descriptions.Item>
             </Descriptions>
             <Divider orientation="left">Thị lực</Divider>
-            <Descriptions column={2} size="small" variant="bordered">
+            <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Phải (không kính)">
-                {detailReport.visionRightNoGlasses}
+                {detailReport.visionRightNoGlasses || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Trái (không kính)">
-                {detailReport.visionLeftNoGlasses}
+                {detailReport.visionLeftNoGlasses || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Phải (có kính)">
-                {detailReport.visionRightWithGlasses}
+                {detailReport.visionRightWithGlasses || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Trái (có kính)">
-                {detailReport.visionLeftWithGlasses}
+                {detailReport.visionLeftWithGlasses || "N/A"}
               </Descriptions.Item>
             </Descriptions>
             <Divider orientation="left">Thính lực</Divider>
-            <Descriptions column={2} size="small" variant="bordered">
+            <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Trái (bình thường)">
-                {detailReport.hearingLeftNormal}
+                {detailReport.hearingLeftNormal || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Trái (thì thầm)">
-                {detailReport.hearingLeftWhisper}
+                {detailReport.hearingLeftWhisper || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Phải (bình thường)">
-                {detailReport.hearingRightNormal}
+                {detailReport.hearingRightNormal || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Phải (thì thầm)">
-                {detailReport.hearingRightWhisper}
+                {detailReport.hearingRightWhisper || "N/A"}
               </Descriptions.Item>
             </Descriptions>
             <Divider orientation="left">Răng miệng</Divider>
-            <Descriptions column={2} size="small" variant="bordered">
+            <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Răng hàm trên">
-                {detailReport.dentalUpperJaw}
+                {detailReport.dentalUpperJaw || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Răng hàm dưới">
-                {detailReport.dentalLowerJaw}
+                {detailReport.dentalLowerJaw || "N/A"}
               </Descriptions.Item>
             </Descriptions>
             <Divider orientation="left">Đánh giá tổng thể</Divider>
-            <Descriptions column={2} size="small" variant="bordered">
+            <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Sức khỏe tổng thể">
                 <Tag
                   color={
@@ -1758,7 +2123,8 @@ const HealthCheckups = () => {
                     };
                     return (
                       map[detailReport.overallHealth] ||
-                      detailReport.overallHealth
+                      detailReport.overallHealth ||
+                      "N/A"
                     );
                   })()}
                 </Tag>
@@ -1773,14 +2139,14 @@ const HealthCheckups = () => {
               </Descriptions.Item>
               <Descriptions.Item label="Khuyến nghị">
                 <Typography.Text strong>
-                  {detailReport.recommendations}
+                  {detailReport.recommendations || "N/A"}
                 </Typography.Text>
               </Descriptions.Item>
               <Descriptions.Item label="Ghi chú lâm sàng" span={2}>
-                {detailReport.clinicalNotes}
+                {detailReport.clinicalNotes || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Ghi chú thêm" span={2}>
-                {detailReport.notes}
+                {detailReport.notes || "N/A"}
               </Descriptions.Item>
             </Descriptions>
           </div>

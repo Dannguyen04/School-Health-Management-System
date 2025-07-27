@@ -93,9 +93,12 @@ const ParentManagement = () => {
       setParents(formattedParents);
       setFilteredParents(formattedParents);
     } catch (error) {
-      message.error(
-        error.response?.data?.message || "Không thể tải danh sách phụ huynh"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể tải danh sách phụ huynh";
+      message.error(`Lỗi khi tải danh sách phụ huynh: ${errorMessage}`);
       console.error("Lỗi khi tải danh sách phụ huynh:", error);
     } finally {
       setTableLoading(false);
@@ -216,7 +219,13 @@ const ParentManagement = () => {
       message.success("Xóa phụ huynh thành công");
       fetchParents();
     } catch (error) {
-      message.error(error.response?.data?.message || "Không thể xóa phụ huynh");
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể xóa phụ huynh";
+      message.error(`Lỗi khi xóa phụ huynh: ${errorMessage}`);
+      console.error("Lỗi khi xóa phụ huynh:", error);
     } finally {
       setTableLoading(false);
     }
@@ -248,9 +257,14 @@ const ParentManagement = () => {
       resetForm();
       fetchParents();
     } catch (error) {
-      message.error(
-        error.response?.data?.message || "Không thể lưu thông tin phụ huynh"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể lưu thông tin phụ huynh";
+      const action = editingParent ? "cập nhật" : "thêm";
+      message.error(`Lỗi khi ${action} phụ huynh: ${errorMessage}`);
+      console.error("Lỗi khi lưu thông tin phụ huynh:", error);
     } finally {
       setSubmitting(false);
     }
