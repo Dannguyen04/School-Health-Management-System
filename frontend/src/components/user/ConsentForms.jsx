@@ -96,6 +96,7 @@ const ConsentForms = () => {
         let forms = [];
         campaigns.forEach((c) => {
             c.childrenConsent?.forEach((childConsent) => {
+                console.log("Child consent data:", childConsent); // Debug log
                 forms.push({
                     ...c,
                     consent: childConsent.consent,
@@ -127,7 +128,8 @@ const ConsentForms = () => {
             campaign: form,
             consent,
             studentId: form.studentId,
-            reason: "",
+            reason: form.reason || "",
+            consentDate: form.consentDate || null,
             studentName: child?.fullName || form.studentName || "-",
             className: child?.class || form.className || "-",
             confirmVaccination: false, // Reset checkbox khi mở modal
@@ -140,6 +142,7 @@ const ConsentForms = () => {
             consent: null,
             studentId: null,
             reason: "",
+            consentDate: null,
             confirmVaccination: false,
         });
     const handleConsent = async () => {
@@ -176,6 +179,7 @@ const ConsentForms = () => {
                     consent: null,
                     studentId: null,
                     reason: "",
+                    consentDate: null,
                     confirmVaccination: false,
                 });
                 // Refresh campaigns
@@ -263,7 +267,14 @@ const ConsentForms = () => {
                                 </div>
                                 <div className="mb-2">
                                     <Text type="secondary">Vắc xin: </Text>
-                                    <Text>{form.vaccine?.name || "-"}</Text>
+                                    <Text
+                                        style={{
+                                            wordBreak: "keep-all",
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {form.vaccine?.name || "-"}
+                                    </Text>
                                 </div>
                                 <div className="mb-2">
                                     <Text type="secondary">Thời gian: </Text>
@@ -382,14 +393,29 @@ const ConsentForms = () => {
                             <Divider orientation="left">
                                 Thông tin chiến dịch
                             </Divider>
-                            <Descriptions column={2} size="small" bordered>
+                            <Descriptions column={1} size="small" bordered>
                                 <Descriptions.Item label="Tên chiến dịch">
-                                    {consentModal.campaign.name}
+                                    <span
+                                        style={{
+                                            wordBreak: "keep-all",
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {consentModal.campaign.name}
+                                    </span>
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Vắc xin">
-                                    {consentModal.campaign.vaccine?.name || "-"}
+                                    <span
+                                        style={{
+                                            wordBreak: "keep-all",
+                                            whiteSpace: "nowrap",
+                                        }}
+                                    >
+                                        {consentModal.campaign.vaccine?.name ||
+                                            "-"}
+                                    </span>
                                 </Descriptions.Item>
-                                <Descriptions.Item label="Thời gian" span={2}>
+                                <Descriptions.Item label="Thời gian">
                                     {new Date(
                                         consentModal.campaign.scheduledDate
                                     ).toLocaleDateString("vi-VN")}{" "}
@@ -403,7 +429,7 @@ const ConsentForms = () => {
                                         consentModal.campaign.status
                                     )}
                                 </Descriptions.Item>
-                                <Descriptions.Item label="Mô tả" span={2}>
+                                <Descriptions.Item label="Mô tả">
                                     {consentModal.campaign.description || "-"}
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Số liều tối đa">
@@ -411,6 +437,30 @@ const ConsentForms = () => {
                                         ?.maxDoseCount || "-"}
                                 </Descriptions.Item>
                             </Descriptions>
+
+                            {/* Lưu ý về số liều tối đa */}
+                            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                                <div className="flex items-start gap-2">
+                                    <span className="text-yellow-600 text-lg">
+                                        ⚠️
+                                    </span>
+                                    <div>
+                                        <Text
+                                            strong
+                                            className="text-yellow-800 text-sm"
+                                        >
+                                            Lưu ý quan trọng:
+                                        </Text>
+                                        <Text className="text-yellow-700 text-sm block mt-1">
+                                            Phụ huynh vui lòng đọc kỹ thông tin
+                                            số liều tối đa để đảm bảo con em
+                                            không bị tiêm quá số liều quy định.
+                                            Việc tiêm quá liều có thể gây ảnh
+                                            hưởng đến sức khỏe của học sinh.
+                                        </Text>
+                                    </div>
+                                </div>
+                            </div>
                             <Divider orientation="left">
                                 Thông tin học sinh
                             </Divider>
@@ -425,25 +475,28 @@ const ConsentForms = () => {
                             <Divider orientation="left">
                                 Trạng thái xác nhận
                             </Divider>
-                            <Descriptions column={2} size="small" bordered>
+                            <Descriptions column={1} size="small" bordered>
                                 <Descriptions.Item label="Trạng thái xác nhận">
                                     {statusTag(consentModal.campaign.consent)}
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Ngày xác nhận">
-                                    {consentModal.campaign.consentDate
-                                        ? new Date(
-                                              consentModal.campaign.consentDate
-                                          ).toLocaleDateString("vi-VN")
+                                    {consentModal.consentDate
+                                        ? (() => {
+                                              try {
+                                                  return new Date(
+                                                      consentModal.consentDate
+                                                  ).toLocaleDateString("vi-VN");
+                                              } catch (error) {
+                                                  console.log(
+                                                      "Error parsing date:",
+                                                      consentModal.consentDate,
+                                                      error
+                                                  );
+                                                  return consentModal.consentDate;
+                                              }
+                                          })()
                                         : "-"}
                                 </Descriptions.Item>
-                                {consentModal.campaign.reason && (
-                                    <Descriptions.Item
-                                        label="Lý do từ chối"
-                                        span={2}
-                                    >
-                                        {consentModal.campaign.reason}
-                                    </Descriptions.Item>
-                                )}
                             </Descriptions>
 
                             {/* Thêm checkbox xác nhận tiêm chủng khi đồng ý */}
@@ -470,10 +523,12 @@ const ConsentForms = () => {
                                     </Checkbox>
                                     <div className="mt-2 text-sm text-blue-600">
                                         <Text type="secondary">
-                                            Bằng việc tích vào ô này, tôi cam
-                                            kết rằng con em tôi sẽ được tiêm
-                                            chủng theo đúng lịch trình và tuân
-                                            thủ các hướng dẫn y tế.
+                                            Bằng việc xác nhận này, tôi xin cam
+                                            kết mọi thông tin về con em là phù
+                                            hợp với chiến dịch tiêm vaccine. Tôi
+                                            sẽ chịu mọi trách nhiệm nếu có vấn
+                                            đề xảy ra trong quá trình thực hiện
+                                            tiêm chủng tại trường.
                                         </Text>
                                     </div>
                                 </div>

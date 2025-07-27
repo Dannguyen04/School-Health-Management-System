@@ -581,23 +581,44 @@ const scheduleConsultation = async (req, res) => {
   try {
     const { id } = req.params; // medicalCheckId
     const { consultationStart, consultationEnd } = req.body;
+
+    console.log("Schedule consultation request:", {
+      id,
+      consultationStart,
+      consultationEnd,
+    });
+
     if (!consultationStart || !consultationEnd) {
       return res.status(400).json({
         success: false,
         error: "Thiếu thông tin thời gian tư vấn",
       });
     }
-    // Update MedicalCheck
-    const updatedCheck = await prisma.medicalCheck.update({
+
+    // Validate thời gian
+    const startDate = new Date(consultationStart);
+    const endDate = new Date(consultationEnd);
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      return res.status(400).json({
+        success: false,
+        error: "Định dạng thời gian không hợp lệ",
+      });
+    }
+
+    if (endDate <= startDate) {
+      return res.status(400).json({
+        success: false,
+        error: "Thời gian kết thúc phải sau thời gian bắt đầu",
+      });
+    }
+
+    // Kiểm tra medical check có tồn tại không
+    const existingCheck = await prisma.medicalCheck.findUnique({
       where: { id },
-      data: {
-        consultationStart: new Date(consultationStart),
-        consultationEnd: new Date(consultationEnd),
-      },
       include: {
         student: {
           include: {
-            user: true,
             parents: {
               include: {
                 parent: {
@@ -609,33 +630,96 @@ const scheduleConsultation = async (req, res) => {
         },
       },
     });
+
+    if (!existingCheck) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy báo cáo khám sức khỏe",
+      });
+    }
+
+    console.log("Found medical check:", existingCheck.id);
+    console.log(
+      "Student parents count:",
+      existingCheck.student?.parents?.length || 0
+    );
+
+    // Update MedicalCheck
+    const updatedCheck = await prisma.medicalCheck.update({
+      where: { id },
+      data: {
+        consultationStart: startDate,
+        consultationEnd: endDate,
+      },
+      include: {
+        student: {
+          include: {
+            parents: {
+              include: {
+                parent: {
+                  include: { user: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    console.log("Updated medical check successfully");
+
     // Lấy thông tin phụ huynh
     const parentUsers = (updatedCheck.student.parents || [])
       .map((sp) => sp.parent?.user)
       .filter(Boolean);
+
+    console.log("Parent users found:", parentUsers.length);
+
     // Tạo nội dung notification chi tiết
     const studentName = updatedCheck.student.fullName;
-    const startStr = new Date(consultationStart).toLocaleString();
-    const endStr = new Date(consultationEnd).toLocaleString();
+    const startStr = startDate.toLocaleString();
+    const endStr = endDate.toLocaleString();
     const title = `Lịch tư vấn sức khỏe cho học sinh ${studentName}`;
     const message = `${studentName} đã có vấn đề về sức khỏe cần chú ý.\nNhà trường đã đặt lịch tư vấn sức khỏe cho học sinh từ ${startStr} đến ${endStr}.\n\nVui lòng kiểm tra chi tiết trong hệ thống hoặc liên hệ nhà trường để biết thêm thông tin.`;
-    // Log campaignId để debug
-    console.log("DEBUG campaignId:", updatedCheck.campaignId);
-    for (const parent of parentUsers) {
-      await prisma.notification.create({
-        data: {
-          userId: parent.id,
-          title,
-          message,
-          type: "medical_consultation",
-          status: "SENT",
-          sentAt: new Date(),
-          medicalCheckCampaignId: updatedCheck.campaignId,
-        },
-      });
+
+    // Tạo notifications cho phụ huynh (nếu có)
+    if (parentUsers.length > 0) {
+      try {
+        const notificationPromises = parentUsers.map((parent) =>
+          prisma.notification.create({
+            data: {
+              userId: parent.id,
+              title,
+              message,
+              type: "medical_consultation",
+              status: "SENT",
+              sentAt: new Date(),
+              medicalCheckCampaignId: updatedCheck.campaignId,
+            },
+          })
+        );
+
+        await Promise.all(notificationPromises);
+        console.log(
+          "Notifications created successfully for",
+          parentUsers.length,
+          "parents"
+        );
+      } catch (notificationError) {
+        console.error("Error creating notifications:", notificationError);
+        // Không fail toàn bộ request nếu chỉ lỗi notification
+      }
+    } else {
+      console.log("No parents found for student, skipping notifications");
     }
-    return res.status(200).json({ success: true, data: updatedCheck });
+
+    return res.status(200).json({
+      success: true,
+      data: updatedCheck,
+      message: "Đặt lịch tư vấn thành công",
+    });
   } catch (error) {
+    console.error("Schedule consultation error:", error);
     return handleError(error, res, "Đặt lịch tư vấn thất bại");
   }
 };

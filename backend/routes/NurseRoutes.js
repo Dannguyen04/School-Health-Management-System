@@ -1,53 +1,54 @@
 import express from "express";
 import {
-    createBlogPost,
-    deleteBlogPost,
-    getAllBlogPosts,
-    getBlogCategories,
-    getBlogPostById,
-    getPublishedBlogPosts,
-    updateBlogPost,
+  createBlogPost,
+  deleteBlogPost,
+  getAllBlogPosts,
+  getBlogCategories,
+  getBlogPostById,
+  getPublishedBlogPosts,
+  updateBlogPost,
 } from "../controllers/BlogController.js";
 import {
-    approveMedicationRequest,
-    createMedicalEvent,
-    createMedicalInventory,
-    deleteMedicalEvent,
-    deleteMedicalInventory,
-    getAllMedicalEvents,
-    getApprovedMedications,
-    getDashboardStats,
-    getEligibleStudentsForVaccination,
-    getInventoryCategories,
-    getInventoryStats,
-    getMedicalEventById,
-    getMedicalInventory,
-    getMedicationHistory,
-    getMedicationRequestById,
-    getMedicationRequestStats,
-    getPendingMedicationRequests,
-    getRecentMedicalEvents,
-    getStudentsForCampaign,
-    getStudentTreatments,
-    getUpcomingVaccinations,
-    getVaccinationCampaigns,
-    getVaccinationReport,
-    getVaccinationStats,
-    giveMedicineToStudent,
-    performVaccination,
-    reportVaccinationResult,
-    stopStudentTreatment,
-    updateMedicalEvent,
-    updateMedicalEventStatus,
-    updateMedicalInventory,
-    getScheduledTreatments,
-    scheduleTreatment,
-    completeScheduledTreatment,
-    cancelScheduledTreatment,
+  approveMedicationRequest,
+  cancelScheduledTreatment,
+  completeScheduledTreatment,
+  createMedicalEvent,
+  createMedicalInventory,
+  deleteMedicalEvent,
+  deleteMedicalInventory,
+  getAllMedicalEvents,
+  getApprovedMedications,
+  getDashboardStats,
+  getEligibleStudentsForVaccination,
+  getInventoryCategories,
+  getInventoryStats,
+  getMedicalEventById,
+  getMedicalInventory,
+  getMedicationHistory,
+  getMedicationRequestById,
+  getMedicationRequestStats,
+  getPendingMedicationRequests,
+  getRecentMedicalEvents,
+  getScheduledTreatments,
+  getStudentsForCampaign,
+  getStudentTreatments,
+  getStudentVaccinationHistory,
+  getUpcomingVaccinations,
+  getVaccinationCampaigns,
+  getVaccinationReport,
+  getVaccinationStats,
+  giveMedicineToStudent,
+  performVaccination,
+  reportVaccinationResult,
+  scheduleTreatment,
+  stopStudentTreatment,
+  updateMedicalEvent,
+  updateMedicalEventStatus,
+  updateMedicalInventory,
 } from "../controllers/NurseController.js";
 import {
-    authenticateToken,
-    verifyNurse,
+  authenticateToken,
+  verifyNurse,
 } from "../middleware/authenticateToken.js";
 
 const router = express.Router();
@@ -80,22 +81,26 @@ router.patch("/medical-events/:eventId/status", updateMedicalEventStatus);
 router.get("/vaccination-campaigns", getVaccinationCampaigns);
 router.get("/campaigns/:campaignId/students", getStudentsForCampaign);
 router.get(
-    "/vaccination-campaigns/:campaignId/eligible-students",
-    verifyNurse,
-    getEligibleStudentsForVaccination
+  "/vaccination-campaigns/:campaignId/eligible-students",
+  verifyNurse,
+  getEligibleStudentsForVaccination
 );
 router.get("/vaccination-campaigns/:campaignId/stats", getVaccinationStats);
 router.post("/vaccinations/perform", verifyNurse, performVaccination);
 router.put("/vaccinations/report/:id", reportVaccinationResult);
 router.get("/vaccination-report/:campaignId", getVaccinationReport);
+router.get(
+  "/students/:studentId/vaccination-history/:vaccineId",
+  getStudentVaccinationHistory
+);
 
 // Medication request routes
 router.get("/medication-requests", getPendingMedicationRequests);
 router.get("/medication-requests/stats", getMedicationRequestStats);
 router.get("/medication-requests/:requestId", getMedicationRequestById);
 router.patch(
-    "/medication-requests/:requestId/approve",
-    approveMedicationRequest
+  "/medication-requests/:requestId/approve",
+  approveMedicationRequest
 );
 
 // Thuốc đã được phê duyệt
@@ -111,8 +116,8 @@ router.patch("/student-treatments/:id/stop", stopStudentTreatment);
 router.get("/scheduled-treatments", getScheduledTreatments);
 router.post("/schedule-treatment/:studentMedicationId", scheduleTreatment);
 router.post(
-    "/scheduled-treatments/:scheduleId/complete",
-    completeScheduledTreatment
+  "/scheduled-treatments/:scheduleId/complete",
+  completeScheduledTreatment
 );
 router.delete("/scheduled-treatments/:scheduleId", cancelScheduledTreatment);
 

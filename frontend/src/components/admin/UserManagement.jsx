@@ -120,9 +120,12 @@ const UserManagement = () => {
       setUsers(formattedUsers);
       setFilteredUsers(formattedUsers);
     } catch (error) {
-      message.error(
-        error.response?.data?.message || "Không thể tải danh sách người dùng"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể tải danh sách người dùng";
+      message.error(`Lỗi khi tải danh sách người dùng: ${errorMessage}`);
       console.error("Lỗi khi tải danh sách người dùng:", error);
     } finally {
       setTableLoading(false);
@@ -246,7 +249,12 @@ const UserManagement = () => {
       message.success("Xóa người dùng thành công");
       fetchUsers();
     } catch (error) {
-      message.error(error.response?.data?.error || "Không thể xóa người dùng");
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể xóa người dùng";
+      message.error(`Lỗi khi xóa người dùng: ${errorMessage}`);
       console.error("Lỗi khi xóa người dùng:", error);
     } finally {
       setTableLoading(false);
@@ -303,9 +311,13 @@ const UserManagement = () => {
       setIsModalVisible(false);
       resetForm();
     } catch (error) {
-      message.error(
-        error.response?.data?.error || "Không thể thực hiện thao tác"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể thực hiện thao tác";
+      const action = editingUser ? "cập nhật" : "thêm";
+      message.error(`Lỗi khi ${action} người dùng: ${errorMessage}`);
       console.error("Lỗi:", error);
     } finally {
       setSubmitting(false);

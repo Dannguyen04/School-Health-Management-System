@@ -1,5 +1,6 @@
 import { HeartOutlined } from "@ant-design/icons";
 import {
+  Alert,
   Button,
   Descriptions,
   Divider,
@@ -24,6 +25,8 @@ const HealthCheckupResults = () => {
   const [checkupResults, setCheckupResults] = useState([]);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedCheckup, setSelectedCheckup] = useState(null);
+  const [consultationModalVisible, setConsultationModalVisible] =
+    useState(false);
 
   useEffect(() => {
     fetchChildren();
@@ -129,14 +132,67 @@ const HealthCheckupResults = () => {
       key: "bmi",
     },
     {
-      title: "Thị lực",
-      dataIndex: "vision",
-      key: "vision",
+      title: "Tình trạng sức khỏe",
+      key: "healthStatus",
+      render: (_, record) => {
+        const status = record.raw.overallHealth;
+        const statusMap = {
+          NORMAL: { text: "Bình thường", color: "green" },
+          NEEDS_ATTENTION: { text: "Cần chú ý", color: "orange" },
+          REQUIRES_TREATMENT: { text: "Cần điều trị", color: "red" },
+        };
+        const statusInfo = statusMap[status] || {
+          text: status,
+          color: "default",
+        };
+        return <Tag color={statusInfo.color}>{statusInfo.text}</Tag>;
+      },
     },
     {
-      title: "Huyết áp",
-      dataIndex: "bloodPressure",
-      key: "bloodPressure",
+      title: "Lịch tư vấn",
+      key: "consultation",
+      render: (_, record) => {
+        const hasConsultation =
+          record.raw.consultationStart && record.raw.consultationEnd;
+        if (!hasConsultation) {
+          return <span className="text-gray-400">Chưa có</span>;
+        }
+
+        const startDate = new Date(record.raw.consultationStart);
+        const endDate = new Date(record.raw.consultationEnd);
+        const now = new Date();
+
+        let statusText = "Đã đặt lịch";
+        let statusColor = "blue";
+
+        if (now > endDate) {
+          statusText = "Đã hoàn thành";
+          statusColor = "green";
+        } else if (now >= startDate && now <= endDate) {
+          statusText = "Đang diễn ra";
+          statusColor = "orange";
+        }
+
+        return (
+          <div className="flex flex-col gap-1">
+            <Tag color={statusColor}>{statusText}</Tag>
+            <div className="text-xs text-gray-600">
+              {startDate.toLocaleDateString("vi-VN")} -{" "}
+              {endDate.toLocaleDateString("vi-VN")}
+              <br />
+              {startDate.toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}{" "}
+              -{" "}
+              {endDate.toLocaleTimeString("vi-VN", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </div>
+          </div>
+        );
+      },
     },
     {
       title: "Ghi chú",
@@ -147,15 +203,46 @@ const HealthCheckupResults = () => {
       title: "Thao tác",
       key: "actions",
       render: (_, record) => (
-        <Button
-          type="link"
-          onClick={() => {
-            setSelectedCheckup(record.raw);
-            setDetailModalVisible(true);
-          }}
-        >
-          Xem chi tiết
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button
+            type="primary"
+            size="small"
+            style={{
+              backgroundColor: "#36ae9a",
+              borderColor: "#36ae9a",
+              borderRadius: "6px",
+              fontWeight: "500",
+              height: "32px",
+              boxShadow: "0 2px 4px rgba(54, 174, 154, 0.2)",
+            }}
+            onClick={() => {
+              setSelectedCheckup(record.raw);
+              setDetailModalVisible(true);
+            }}
+          >
+            Xem chi tiết
+          </Button>
+          {record.raw.consultationStart && record.raw.consultationEnd && (
+            <Button
+              type="default"
+              size="small"
+              style={{
+                color: "#36ae9a",
+                borderColor: "#36ae9a",
+                borderRadius: "6px",
+                fontWeight: "500",
+                height: "32px",
+                backgroundColor: "#f0f9f7",
+              }}
+              onClick={() => {
+                setSelectedCheckup(record.raw);
+                setConsultationModalVisible(true);
+              }}
+            >
+              Xem lịch tư vấn
+            </Button>
+          )}
+        </div>
       ),
     },
   ];
@@ -383,6 +470,160 @@ const HealthCheckupResults = () => {
                 {selectedCheckup.notes || "N/A"}
               </Descriptions.Item>
             </Descriptions>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal chi tiết lịch tư vấn */}
+      <Modal
+        title={
+          <div>
+            <div>Chi tiết lịch tư vấn sức khỏe</div>
+            <div
+              style={{ fontSize: "14px", color: "#666", fontWeight: "normal" }}
+            >
+              {selectedCheckup?.studentName || ""}
+            </div>
+          </div>
+        }
+        open={consultationModalVisible}
+        onCancel={() => setConsultationModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        {selectedCheckup && (
+          <div>
+            {/* Alert tình trạng sức khỏe */}
+            <Alert
+              message={`Tình trạng sức khỏe: ${
+                selectedCheckup.overallHealth === "NEEDS_ATTENTION"
+                  ? "Cần chú ý"
+                  : "Cần điều trị"
+              }`}
+              type={
+                selectedCheckup.overallHealth === "NEEDS_ATTENTION"
+                  ? "warning"
+                  : "error"
+              }
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+
+            {/* Thông tin lịch tư vấn */}
+            <Descriptions title="Thông tin lịch tư vấn" column={1} bordered>
+              <Descriptions.Item label="Ngày tư vấn">
+                {selectedCheckup.consultationStart
+                  ? new Date(
+                      selectedCheckup.consultationStart
+                    ).toLocaleDateString("vi-VN")
+                  : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thời gian">
+                {selectedCheckup.consultationStart &&
+                selectedCheckup.consultationEnd
+                  ? `${new Date(
+                      selectedCheckup.consultationStart
+                    ).toLocaleDateString("vi-VN")} ${new Date(
+                      selectedCheckup.consultationStart
+                    ).toLocaleTimeString("vi-VN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })} - ${new Date(
+                      selectedCheckup.consultationEnd
+                    ).toLocaleDateString("vi-VN")} ${new Date(
+                      selectedCheckup.consultationEnd
+                    ).toLocaleTimeString("vi-VN", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}`
+                  : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                {(() => {
+                  const startDate = new Date(selectedCheckup.consultationStart);
+                  const endDate = new Date(selectedCheckup.consultationEnd);
+                  const now = new Date();
+
+                  if (now > endDate) {
+                    return <Tag color="green">Đã hoàn thành</Tag>;
+                  } else if (now >= startDate && now <= endDate) {
+                    return <Tag color="orange">Đang diễn ra</Tag>;
+                  } else {
+                    return <Tag color="blue">Đã đặt lịch</Tag>;
+                  }
+                })()}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* Thông tin khám sức khỏe liên quan */}
+            <Divider orientation="left">
+              Thông tin khám sức khỏe liên quan
+            </Divider>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="Ngày khám">
+                {selectedCheckup.scheduledDate
+                  ? new Date(selectedCheckup.scheduledDate).toLocaleDateString(
+                      "vi-VN"
+                    )
+                  : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Chiến dịch">
+                {selectedCheckup.campaign?.name || "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Chiều cao">
+                {selectedCheckup.height
+                  ? `${selectedCheckup.height} cm`
+                  : "N/A"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Cân nặng">
+                {selectedCheckup.weight
+                  ? `${selectedCheckup.weight} kg`
+                  : "N/A"}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* Ghi chú lâm sàng */}
+            {selectedCheckup.clinicalNotes && (
+              <>
+                <Divider orientation="left">Ghi chú lâm sàng</Divider>
+                <div
+                  style={{
+                    background: "#f5f5f5",
+                    padding: 12,
+                    borderRadius: 6,
+                    border: "1px solid #d9d9d9",
+                  }}
+                >
+                  {selectedCheckup.clinicalNotes}
+                </div>
+              </>
+            )}
+
+            {/* Khuyến nghị */}
+            {selectedCheckup.recommendations && (
+              <>
+                <Divider orientation="left">Khuyến nghị</Divider>
+                <div
+                  style={{
+                    background: "#fff7e6",
+                    padding: 12,
+                    borderRadius: 6,
+                    border: "1px solid #ffd591",
+                  }}
+                >
+                  {selectedCheckup.recommendations}
+                </div>
+              </>
+            )}
+
+            {/* Hướng dẫn */}
+            <Alert
+              message="Hướng dẫn"
+              description="Vui lòng liên hệ với nhà trường hoặc y tá học đường để biết thêm chi tiết về buổi tư vấn này. Nếu cần thay đổi lịch, vui lòng liên hệ trước ít nhất 24 giờ."
+              type="info"
+              showIcon
+              style={{ marginTop: 16 }}
+            />
           </div>
         )}
       </Modal>

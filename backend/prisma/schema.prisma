@@ -302,8 +302,8 @@ model MedicalEvent {
   updatedAt  DateTime  @updatedAt
 
   student   Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  nurse     SchoolNurse? @relation(fields: [nurseId], references: [id])
-  createdBy users        @relation("EventCreator", fields: [createdById], references: [id])
+  nurse     SchoolNurse? @relation(fields: [nurseId], references: [id], onDelete: SetNull)
+  createdBy users        @relation("EventCreator", fields: [createdById], references: [id], onDelete: Restrict)
 
 
 
@@ -341,8 +341,8 @@ model StudentMedication {
   stockQuantity Int // Số lượng thuốc phụ huynh gửi
   usageNote   String? // Ghi chú sử dụng từ phụ huynh
 
-  student    Student    @relation(fields: [studentId], references: [id])
-  parent     Parent     @relation(fields: [parentId], references: [id])
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parent     Parent     @relation(fields: [parentId], references: [id], onDelete: Cascade)
   medicationAdministrationLogs MedicationAdministrationLog[] 
 
   @@map("student_medications")
@@ -380,7 +380,7 @@ model VaccinationCampaign {
   updatedAt     DateTime       @updatedAt
 
   // Relations
-  vaccine             Vaccine              @relation(fields: [vaccineId], references: [id])
+  vaccine             Vaccine              @relation(fields: [vaccineId], references: [id], onDelete: Restrict)
   notifications       Notification[]
   consents            VaccinationConsent[]
   vaccinationRecords  VaccinationRecord[]
@@ -489,10 +489,10 @@ model VaccinationRecord {
   updatedAt        DateTime @updatedAt
 
   // Relations
-  vaccine    Vaccine             @relation(fields: [vaccineId], references: [id])
-  campaign   VaccinationCampaign @relation(fields: [campaignId], references: [id])
-  student    Student             @relation(fields: [studentId], references: [id])
-  nurse      SchoolNurse         @relation(fields: [nurseId], references: [id])
+  vaccine    Vaccine             @relation(fields: [vaccineId], references: [id], onDelete: Restrict)
+  campaign   VaccinationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  student    Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  nurse      SchoolNurse         @relation(fields: [nurseId], references: [id], onDelete: Restrict)
 
   @@map("vaccination_records")
   @@index([vaccineId])
@@ -545,14 +545,14 @@ model MedicalCheck {
   physicalClassification PhysicalClassification    // Phân loại thể lực (e.g., "Tốt", "Trung bình", "Yếu")
 
   // Khám Lâm Sàng
-  visionRightNoGlasses Float      // Thị lực mắt phải không kính (e.g., 8/10)
-  visionLeftNoGlasses  Float      // Thị lực mắt trái không kính
-  visionRightWithGlasses Float    // Thị lực mắt phải có kính
-  visionLeftWithGlasses  Float    // Thị lực mắt trái có kính
-  hearingLeftNormal    Float      // Thính lực tai trái nói thường (m)
-  hearingLeftWhisper   Float      // Thính lực tai trái nói thầm (m)
-  hearingRightNormal   Float      // Thính lực tai phải nói thường (m)
-  hearingRightWhisper  Float      // Thính lực tai phải nói thầm (m)
+  visionRightNoGlasses String      // Thị lực mắt phải không kính (e.g., 8/10, "Bình thường")
+  visionLeftNoGlasses  String      // Thị lực mắt trái không kính
+  visionRightWithGlasses String    // Thị lực mắt phải có kính
+  visionLeftWithGlasses  String    // Thị lực mắt trái có kính
+  hearingLeftNormal    String      // Thính lực tai trái nói thường (e.g., 8, "Bình thường")
+  hearingLeftWhisper   String      // Thính lực tai trái nói thầm
+  hearingRightNormal   String      // Thính lực tai phải nói thường
+  hearingRightWhisper  String      // Thính lực tai phải nói thầm
   dentalUpperJaw       String     // Kết quả khám hàm trên
   dentalLowerJaw       String     // Kết quả khám hàm dưới
   clinicalNotes        String     // Ghi chú các bệnh lý từ khám lâm sàng (nhi khoa, tuần hoàn, hô hấp, tiêu hóa, thận-tiết niệu, thần kinh, tâm thần, mắt, tai mũi họng, răng hàm mặt)
@@ -575,9 +575,9 @@ model MedicalCheck {
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
 
-  student              Student              @relation(fields: [studentId], references: [id])
+  student              Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
   campaign             MedicalCheckCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  nurse                SchoolNurse   ?      @relation(fields: [nurseId], references: [id])
+  nurse                SchoolNurse   ?      @relation(fields: [nurseId], references: [id], onDelete: SetNull)
 
   @@map("medical_checks")
 }
@@ -601,7 +601,7 @@ model Post {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  author users @relation(fields: [authorId], references: [id])
+  author users @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
   @@map("posts")
 }
@@ -662,9 +662,9 @@ model MedicationAdministrationLog {
   dosageGiven         String
   notes               String?
 
-  studentMedication   StudentMedication @relation(fields: [studentMedicationId], references: [id])
-  student             Student           @relation(fields: [studentId], references: [id])
-  nurse               SchoolNurse       @relation(fields: [nurseId], references: [id])
+  studentMedication   StudentMedication @relation(fields: [studentMedicationId], references: [id], onDelete: Cascade)
+  student             Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  nurse               SchoolNurse       @relation(fields: [nurseId], references: [id], onDelete: Restrict)
 
   @@map("medication_administration_logs")
 }
