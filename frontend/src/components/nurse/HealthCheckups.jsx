@@ -4,6 +4,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import {
+  Alert,
   Button,
   Card,
   Col,
@@ -98,9 +99,28 @@ const checkupSchema = Yup.object().shape({
         return true;
       }
     )
-    .test("vision-validation", "Giá trị thị lực quá cao", function (value) {
-      if (typeof value === "number" && value > 20) {
-        return false;
+    .test("vision-validation", "Thị lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
       }
       return true;
     })
@@ -137,9 +157,28 @@ const checkupSchema = Yup.object().shape({
         return true;
       }
     )
-    .test("vision-validation", "Giá trị thị lực quá cao", function (value) {
-      if (typeof value === "number" && value > 20) {
-        return false;
+    .test("vision-validation", "Thị lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
       }
       return true;
     })
@@ -176,9 +215,28 @@ const checkupSchema = Yup.object().shape({
         return true;
       }
     )
-    .test("vision-validation", "Giá trị thị lực quá cao", function (value) {
-      if (typeof value === "number" && value > 20) {
-        return false;
+    .test("vision-validation", "Thị lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
       }
       return true;
     })
@@ -215,9 +273,28 @@ const checkupSchema = Yup.object().shape({
         return true;
       }
     )
-    .test("vision-validation", "Giá trị thị lực quá cao", function (value) {
-      if (typeof value === "number" && value > 20) {
-        return false;
+    .test("vision-validation", "Thị lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
       }
       return true;
     })
@@ -248,9 +325,28 @@ const checkupSchema = Yup.object().shape({
         return true;
       }
     )
-    .test("hearing-validation", "Giá trị thính lực quá cao", function (value) {
-      if (typeof value === "number" && value > 10) {
-        return false;
+    .test("hearing-validation", "Thính lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
       }
       return true;
     })
@@ -281,9 +377,28 @@ const checkupSchema = Yup.object().shape({
         return true;
       }
     )
-    .test("hearing-validation", "Giá trị thính lực quá cao", function (value) {
-      if (typeof value === "number" && value > 10) {
-        return false;
+    .test("hearing-validation", "Thính lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
       }
       return true;
     })
@@ -314,9 +429,28 @@ const checkupSchema = Yup.object().shape({
         return true;
       }
     )
-    .test("hearing-validation", "Giá trị thính lực quá cao", function (value) {
-      if (typeof value === "number" && value > 10) {
-        return false;
+    .test("hearing-validation", "Thính lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
       }
       return true;
     })
@@ -347,9 +481,28 @@ const checkupSchema = Yup.object().shape({
         return true;
       }
     )
-    .test("hearing-validation", "Giá trị thính lực quá cao", function (value) {
-      if (typeof value === "number" && value > 10) {
-        return false;
+    .test("hearing-validation", "Thính lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
       }
       return true;
     })
@@ -450,6 +603,24 @@ const checkupSchema = Yup.object().shape({
   notes: Yup.string(),
 });
 
+// Helper function để xác định trạng thái tư vấn
+const getConsultationStatus = (report) => {
+  if (report.consultationStart && report.consultationEnd) {
+    const now = dayjs();
+    const start = dayjs(report.consultationStart);
+    const end = dayjs(report.consultationEnd);
+
+    if (now.isBefore(start)) {
+      return { status: "SCHEDULED", text: "Đã đặt lịch", color: "blue" };
+    } else if (now.isAfter(end)) {
+      return { status: "COMPLETED", text: "Đã tư vấn", color: "green" };
+    } else {
+      return { status: "IN_PROGRESS", text: "Đang tư vấn", color: "orange" };
+    }
+  }
+  return { status: "NOT_SCHEDULED", text: "Chưa đặt", color: "default" };
+};
+
 const HealthCheckups = () => {
   const [campaigns, setCampaigns] = useState([]);
   const [students, setStudents] = useState([]);
@@ -469,6 +640,7 @@ const HealthCheckups = () => {
   const [consultRange, setConsultRange] = useState([]);
   const [consultLoading, setConsultLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [hasCompletedAllSteps, setHasCompletedAllSteps] = useState(false);
   const [searchForm] = Form.useForm();
   const [displayedStudents, setDisplayedStudents] = useState([]);
 
@@ -583,6 +755,8 @@ const HealthCheckups = () => {
     setCheckupStudent(student);
     setCheckupModal(true);
     checkupForm.resetFields();
+    setCurrentStep(0);
+    setHasCompletedAllSteps(false);
   };
 
   // Khi bấm xem chi tiết báo cáo
@@ -624,12 +798,35 @@ const HealthCheckups = () => {
 
   // Hàm mở modal gửi kết quả & đặt lịch tư vấn
   const handleOpenConsultModal = (report) => {
+    // Kiểm tra xem đã có lịch tư vấn chưa
+    if (report.consultationStart && report.consultationEnd) {
+      Modal.confirm({
+        title: "Lịch tư vấn đã tồn tại",
+        content: `Học sinh này đã có lịch tư vấn từ ${dayjs(
+          report.consultationStart
+        ).format("DD/MM/YYYY HH:mm")} đến ${dayjs(
+          report.consultationEnd
+        ).format("DD/MM/YYYY HH:mm")}. Bạn có muốn thay đổi lịch không?`,
+        okText: "Thay đổi lịch",
+        cancelText: "Hủy",
+        onOk: () => {
+          setConsultReport(report);
+          setConsultRange([
+            dayjs(report.consultationStart),
+            dayjs(report.consultationEnd),
+          ]);
+          setConsultModalVisible(true);
+        },
+      });
+      return;
+    }
+
     setConsultReport(report);
     setConsultRange([]);
     setConsultModalVisible(true);
   };
 
-  // Hàm gửi kết quả & lịch tư vấn (mock API)
+  // Hàm gửi kết quả & lịch tư vấn
   const handleSendConsult = async () => {
     if (!consultRange.length) {
       message.error("Vui lòng chọn khoảng thời gian tư vấn");
@@ -656,30 +853,89 @@ const HealthCheckups = () => {
       return;
     }
 
+    // Validate thời gian tư vấn tối thiểu (1 giờ)
+    const duration = end.diff(start, "minute");
+    if (duration < 60) {
+      message.error("Thời gian tư vấn phải ít nhất 1 giờ");
+      return;
+    }
+
+    // Validate dữ liệu trước khi gửi
+    if (!consultReport || !consultReport.id) {
+      message.error("Dữ liệu báo cáo không hợp lệ");
+      return;
+    }
+
+    console.log("Consult report:", consultReport); // Debug log
+
     setConsultLoading(true);
     try {
-      await nurseAPI.scheduleMedicalCheckConsultation(consultReport.id, {
-        consultationStart: start,
-        consultationEnd: end,
-      });
-      message.success("Đã đặt lịch tư vấn và gửi thông báo cho phụ huynh!");
-      setConsultModalVisible(false);
-      setConsultReport(null);
-      setConsultRange([]);
-      // Refetch lại danh sách báo cáo nếu cần
-      if (selectedCampaign) {
-        const resReports = await nurseAPI.getMedicalChecksByCampaign(
-          selectedCampaign.id
+      // Format dữ liệu thời gian đúng định dạng ISO string
+      const consultationData = {
+        consultationStart: start.toISOString(),
+        consultationEnd: end.toISOString(),
+      };
+
+      console.log("Sending consultation data:", consultationData); // Debug log
+      console.log("Medical check ID:", consultReport.id); // Debug log
+
+      const response = await nurseAPI.scheduleMedicalCheckConsultation(
+        consultReport.id,
+        consultationData
+      );
+
+      console.log("Response:", response); // Debug log
+
+      if (response.data.success) {
+        // Cập nhật ngay lập tức trong state thay vì refetch
+        setReports((prevReports) =>
+          prevReports.map((report) =>
+            report.id === consultReport.id
+              ? {
+                  ...report,
+                  consultationStart: start.toDate(),
+                  consultationEnd: end.toDate(),
+                }
+              : report
+          )
         );
-        if (resReports.data.success) {
-          setReports(resReports.data.data || []);
-        }
+
+        message.success(
+          `Đã đặt lịch tư vấn thành công cho ${consultReport.student?.fullName}! 
+           Thông báo đã được gửi đến phụ huynh.`,
+          5
+        );
+
+        setConsultModalVisible(false);
+        setConsultReport(null);
+        setConsultRange([]);
+      } else {
+        // Xử lý trường hợp response.success = false
+        console.error("Response success false:", response.data); // Debug log
+        message.error(
+          response.data?.error || "Đặt lịch tư vấn thất bại, vui lòng thử lại"
+        );
       }
     } catch (err) {
-      message.error(
-        err.response?.data?.error ||
-          "Đặt lịch tư vấn thất bại, vui lòng thử lại"
-      );
+      console.error("Consultation error:", err); // Debug log
+      console.error("Error response:", err.response); // Debug log
+
+      // Xử lý các loại lỗi khác nhau
+      if (err.response?.status === 400) {
+        message.error(
+          err.response?.data?.error ||
+            "Dữ liệu không hợp lệ, vui lòng kiểm tra lại"
+        );
+      } else if (err.response?.status === 404) {
+        message.error("Không tìm thấy báo cáo khám sức khỏe");
+      } else if (err.response?.status === 500) {
+        message.error("Lỗi server, vui lòng thử lại sau");
+      } else {
+        message.error(
+          err.response?.data?.error ||
+            "Đặt lịch tư vấn thất bại, vui lòng thử lại"
+        );
+      }
     }
     setConsultLoading(false);
   };
@@ -903,6 +1159,16 @@ const HealthCheckups = () => {
       },
     },
     {
+      title: "Trạng thái tư vấn",
+      key: "consultationStatus",
+      align: "center",
+      width: 120,
+      render: (_, record) => {
+        const status = getConsultationStatus(record);
+        return <Tag color={status.color}>{status.text}</Tag>;
+      },
+    },
+    {
       title: "Thao tác",
       key: "actions",
       align: "center",
@@ -912,7 +1178,7 @@ const HealthCheckups = () => {
           record.overallHealth === "NEEDS_ATTENTION" ||
           record.overallHealth === "REQUIRES_TREATMENT";
         return (
-          <>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <Button
               type="default"
               icon={<EyeOutlined />}
@@ -922,7 +1188,6 @@ const HealthCheckups = () => {
                 color: "#1677ff",
                 borderColor: "#1677ff",
                 fontWeight: 500,
-                marginRight: 8,
               }}
               onClick={() => handleViewDetail(record)}
             >
@@ -935,11 +1200,20 @@ const HealthCheckups = () => {
                 shape="round"
                 size="small"
                 onClick={() => handleOpenConsultModal(record)}
+                disabled={record.consultationStart && record.consultationEnd}
+                style={{
+                  backgroundColor:
+                    record.consultationStart && record.consultationEnd
+                      ? "#d9d9d9"
+                      : undefined,
+                }}
               >
-                Đặt lịch tư vấn
+                {record.consultationStart && record.consultationEnd
+                  ? "Đã đặt lịch"
+                  : "Đặt lịch tư vấn"}
               </Button>
             )}
-          </>
+          </div>
         );
       },
     },
@@ -1138,25 +1412,74 @@ const HealthCheckups = () => {
 
       {/* Modal tư vấn */}
       <Modal
-        title="Đặt lịch tư vấn"
+        title={
+          <div>
+            <div>Đặt lịch tư vấn</div>
+            <div
+              style={{ fontSize: "14px", color: "#666", fontWeight: "normal" }}
+            >
+              {consultReport?.student?.fullName} -{" "}
+              {consultReport?.student?.studentCode}
+            </div>
+          </div>
+        }
         open={consultModalVisible}
         onOk={handleSendConsult}
         onCancel={() => setConsultModalVisible(false)}
         confirmLoading={consultLoading}
         okText="Đặt lịch"
         cancelText="Hủy"
+        width={600}
       >
-        <Form layout="vertical">
-          <Form.Item label="Chọn khoảng thời gian tư vấn">
+        <div>
+          {/* Alert tình trạng sức khỏe */}
+          {consultReport && (
+            <Alert
+              message={`Tình trạng: ${
+                consultReport.overallHealth === "NEEDS_ATTENTION"
+                  ? "Cần chú ý"
+                  : "Cần điều trị"
+              }`}
+              type={
+                consultReport.overallHealth === "NEEDS_ATTENTION"
+                  ? "warning"
+                  : "error"
+              }
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Ghi chú lâm sàng */}
+          {consultReport?.clinicalNotes && (
+            <Form.Item label="Ghi chú lâm sàng">
+              <TextArea
+                value={consultReport.clinicalNotes}
+                readOnly
+                rows={2}
+                style={{ backgroundColor: "#f5f5f5" }}
+              />
+            </Form.Item>
+          )}
+
+          {/* Chọn thời gian tư vấn */}
+          <Form.Item label="Chọn khoảng thời gian tư vấn" required>
             <RangePicker
               value={consultRange}
               onChange={setConsultRange}
               showTime
               format="DD/MM/YYYY HH:mm"
               placeholder={["Từ ngày/giờ", "Đến ngày/giờ"]}
+              disabledDate={(current) =>
+                current && current < dayjs().startOf("day")
+              }
+              style={{ width: "100%" }}
             />
+            <div style={{ fontSize: "12px", color: "#666", marginTop: 4 }}>
+              * Thời gian tư vấn tối thiểu 1 giờ
+            </div>
           </Form.Item>
-        </Form>
+        </div>
       </Modal>
 
       {/* Modal nhập báo cáo khám sức khỏe */}
@@ -1204,8 +1527,8 @@ const HealthCheckups = () => {
             values,
             { setSubmitting, resetForm, setFieldError }
           ) => {
-            if (currentStep < 5) {
-              setCurrentStep(5);
+            // Chỉ submit khi ở step cuối (step 5)
+            if (currentStep !== 5) {
               setSubmitting(false);
               return;
             }
@@ -1966,7 +2289,16 @@ const HealthCheckups = () => {
                       // Validate bằng Yup và để Formik tự động hiển thị lỗi
                       const stepErrs = await validateForm();
                       if (Object.keys(stepErrs).length === 0) {
-                        setCurrentStep(currentStep + 1);
+                        // Nếu đã hoàn thành tất cả steps trước đó và đang edit từ step cuối
+                        if (hasCompletedAllSteps && currentStep < 4) {
+                          setCurrentStep(5); // Nhảy thẳng về step cuối
+                        } else {
+                          setCurrentStep(currentStep + 1);
+                          // Đánh dấu đã hoàn thành tất cả steps khi đến step cuối
+                          if (currentStep === 4) {
+                            setHasCompletedAllSteps(true);
+                          }
+                        }
                       } else {
                         // Đánh dấu tất cả các trường có lỗi là "touched" để hiển thị lỗi
                         Object.keys(stepErrs).forEach((fieldName) => {
