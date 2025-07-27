@@ -191,8 +191,8 @@ const createMedicalCheck = async (req, res) => {
         success: false,
         error: "Phân loại thể lực không hợp lệ",
       });
-    // Validate các trường float lâm sàng
-    const floatFields = [
+    // Validate các trường thị lực và thính lực (có thể là số hoặc string)
+    const visionHearingFields = [
       visionRightNoGlasses,
       visionLeftNoGlasses,
       visionRightWithGlasses,
@@ -202,20 +202,144 @@ const createMedicalCheck = async (req, res) => {
       hearingRightNormal,
       hearingRightWhisper,
     ];
-    if (floatFields.some((f) => typeof f !== "number"))
+
+    // Kiểm tra kiểu dữ liệu
+    if (
+      visionHearingFields.some(
+        (f) => typeof f !== "number" && typeof f !== "string"
+      )
+    ) {
       return res.status(400).json({
         success: false,
-        error: "Các trường thị lực/thính lực phải là số",
+        error: "Các trường thị lực/thính lực phải là số hoặc chuỗi",
       });
+    }
+
+    // Validate thị lực (có thể là số hoặc string)
+    const visionFields = [
+      visionRightNoGlasses,
+      visionLeftNoGlasses,
+      visionRightWithGlasses,
+      visionLeftWithGlasses,
+    ];
+    visionFields.forEach((field, index) => {
+      if (typeof field === "string") {
+        // Nếu là string số, validate range
+        const numValue = parseFloat(field);
+        if (!isNaN(numValue)) {
+          if (numValue < 0) {
+            return res.status(400).json({
+              success: false,
+              error: "Thị lực không được là số âm",
+            });
+          }
+          if (numValue > 20) {
+            return res.status(400).json({
+              success: false,
+              error: "Giá trị thị lực quá cao",
+            });
+          }
+        }
+      }
+    });
+
+    // Validate thính lực (có thể là số hoặc string)
+    const hearingFields = [
+      hearingLeftNormal,
+      hearingLeftWhisper,
+      hearingRightNormal,
+      hearingRightWhisper,
+    ];
+    hearingFields.forEach((field, index) => {
+      if (typeof field === "string") {
+        // Nếu là string số, validate range
+        const numValue = parseFloat(field);
+        if (!isNaN(numValue)) {
+          if (numValue < 0) {
+            return res.status(400).json({
+              success: false,
+              error: "Thính lực không được là số âm",
+            });
+          }
+          if (numValue > 10) {
+            return res.status(400).json({
+              success: false,
+              error: "Giá trị thính lực quá cao",
+            });
+          }
+        }
+      }
+    });
+    // Validate các trường răng miệng và ghi chú
     if (
       typeof dentalUpperJaw !== "string" ||
       typeof dentalLowerJaw !== "string" ||
       typeof clinicalNotes !== "string"
-    )
+    ) {
       return res.status(400).json({
         success: false,
         error: "Kết quả khám hàm và ghi chú phải là chuỗi",
       });
+    }
+
+    // Validate độ dài và nội dung cho răng miệng
+    if (dentalUpperJaw.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: "Kết quả răng hàm trên phải có ít nhất 2 ký tự",
+      });
+    }
+    if (dentalUpperJaw.length > 100) {
+      return res.status(400).json({
+        success: false,
+        error: "Kết quả răng hàm trên không được quá 100 ký tự",
+      });
+    }
+    if (dentalLowerJaw.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: "Kết quả răng hàm dưới phải có ít nhất 2 ký tự",
+      });
+    }
+    if (dentalLowerJaw.length > 100) {
+      return res.status(400).json({
+        success: false,
+        error: "Kết quả răng hàm dưới không được quá 100 ký tự",
+      });
+    }
+    if (clinicalNotes.length < 3) {
+      return res.status(400).json({
+        success: false,
+        error: "Ghi chú lâm sàng phải có ít nhất 3 ký tự",
+      });
+    }
+    if (clinicalNotes.length > 500) {
+      return res.status(400).json({
+        success: false,
+        error: "Ghi chú lâm sàng không được quá 500 ký tự",
+      });
+    }
+
+    // Kiểm tra không được chỉ chứa số cho răng miệng
+    const onlyNumbersRegex = /^[0-9\s]+$/;
+    if (onlyNumbersRegex.test(dentalUpperJaw)) {
+      return res.status(400).json({
+        success: false,
+        error: "Kết quả răng hàm trên phải là text, không được chỉ chứa số",
+      });
+    }
+    if (onlyNumbersRegex.test(dentalLowerJaw)) {
+      return res.status(400).json({
+        success: false,
+        error: "Kết quả răng hàm dưới phải là text, không được chỉ chứa số",
+      });
+    }
+    if (onlyNumbersRegex.test(clinicalNotes)) {
+      return res.status(400).json({
+        success: false,
+        error: "Ghi chú lâm sàng phải là text, không được chỉ chứa số",
+      });
+    }
     // Validate enum overallHealth
     if (
       !["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"].includes(
@@ -325,13 +449,22 @@ const createMedicalCheck = async (req, res) => {
         nurse: { include: { user: true } },
       },
     });
-    const avgVision = (
-      (visionRightWithGlasses + visionLeftWithGlasses) /
-      2
-    ).toFixed(1);
-    const avgHearing = ((hearingLeftNormal + hearingRightNormal) / 2).toFixed(
-      1
-    );
+    // Tính trung bình thị lực và thính lực (chỉ khi là số)
+    let avgVision = "N/A";
+    let avgHearing = "N/A";
+
+    const visionRightNum = parseFloat(visionRightWithGlasses);
+    const visionLeftNum = parseFloat(visionLeftWithGlasses);
+    const hearingLeftNum = parseFloat(hearingLeftNormal);
+    const hearingRightNum = parseFloat(hearingRightNormal);
+
+    if (!isNaN(visionRightNum) && !isNaN(visionLeftNum)) {
+      avgVision = ((visionRightNum + visionLeftNum) / 2).toFixed(1);
+    }
+
+    if (!isNaN(hearingLeftNum) && !isNaN(hearingRightNum)) {
+      avgHearing = ((hearingLeftNum + hearingRightNum) / 2).toFixed(1);
+    }
 
     try {
       await prisma.healthProfile.update({

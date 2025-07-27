@@ -671,11 +671,7 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
     const children = await prisma.studentParent.findMany({
       where: { parentId },
       include: {
-        student: {
-          include: {
-            user: { select: { fullName: true } },
-          },
-        },
+        student: true,
       },
     });
     if (!children || children.length === 0) {
@@ -716,11 +712,20 @@ export const getVaccinationCampaignsForParent = async (req, res) => {
           const existingConsent = campaign.consents.find(
             (consent) => consent.studentId === child.studentId
           );
+          console.log(
+            "Existing consent for student",
+            child.studentId,
+            "(" + child.student.fullName + ")",
+            ":",
+            existingConsent
+          ); // Debug log
           return {
             studentId: child.studentId,
             studentName: child.student.fullName,
+            className: child.student.class || null,
             consent: existingConsent ? existingConsent.consent : null,
             consentDate: existingConsent ? existingConsent.createdAt : null,
+            reason: existingConsent ? existingConsent.notes : null,
           };
         }),
       };

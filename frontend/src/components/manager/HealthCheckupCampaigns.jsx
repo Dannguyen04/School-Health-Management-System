@@ -348,12 +348,6 @@ const HealthCheckupCampaigns = () => {
         normalizeString(c.name).includes(searchName)
       );
     }
-    if (values.type) {
-      const searchType = normalizeString(values.type);
-      filtered = filtered.filter((c) =>
-        normalizeString(c.type || "").includes(searchType)
-      );
-    }
     if (values.status) {
       filtered = filtered.filter((c) => c.status === values.status);
     }
@@ -464,23 +458,12 @@ const HealthCheckupCampaigns = () => {
       <Card>
         <Form form={searchForm} onFinish={handleSearch} layout="vertical">
           <Row gutter={16}>
-            <Col xs={24} sm={8}>
+            <Col xs={36} sm={12}>
               <Form.Item name="name" label="Tên chiến dịch">
                 <Input placeholder="Nhập tên chiến dịch" />
               </Form.Item>
             </Col>
-            <Col xs={24} sm={8}>
-              <Form.Item name="type" label="Loại khám">
-                <Select placeholder="Chọn loại khám" allowClear>
-                  <Select.Option value="Khám tổng quát">
-                    Khám tổng quát
-                  </Select.Option>
-                  <Select.Option value="Khám mắt">Khám mắt</Select.Option>
-                  <Select.Option value="Khám răng">Khám răng</Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col xs={24} sm={8}>
+            <Col xs={36} sm={12}>
               <Form.Item name="status" label="Trạng thái">
                 <Select placeholder="Chọn trạng thái" allowClear>
                   <Select.Option value="ACTIVE">Đang diễn ra</Select.Option>

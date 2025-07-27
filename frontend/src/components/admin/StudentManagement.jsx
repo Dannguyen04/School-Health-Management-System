@@ -79,9 +79,12 @@ const StudentManagement = () => {
 
       setParents(response.data.data);
     } catch (error) {
-      message.error(
-        error.response?.data?.error || "Không thể tải danh sách phụ huynh"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể tải danh sách phụ huynh";
+      message.error(`Lỗi khi tải danh sách phụ huynh: ${errorMessage}`);
       console.error("Lỗi khi tải danh sách phụ huynh:", error);
     } finally {
       setParentLoading(false);
@@ -153,9 +156,12 @@ const StudentManagement = () => {
       setStudents(formattedStudents);
       setFilteredStudents(formattedStudents);
     } catch (error) {
-      message.error(
-        error.response?.data?.error || "Không thể tải danh sách học sinh"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể tải danh sách học sinh";
+      message.error(`Lỗi khi tải danh sách học sinh: ${errorMessage}`);
       console.error("Lỗi khi tải danh sách học sinh:", error);
     } finally {
       setTableLoading(false);
@@ -223,9 +229,12 @@ const StudentManagement = () => {
       setSelectedParent(newParent);
       message.success("Tạo phụ huynh mới thành công");
     } catch (error) {
-      message.error(
-        error.response?.data?.error || "Không thể tạo phụ huynh mới"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể tạo phụ huynh mới";
+      message.error(`Lỗi khi tạo phụ huynh mới: ${errorMessage}`);
       console.error("Lỗi khi tạo phụ huynh:", error);
     } finally {
       setParentModalLoading(false);
@@ -503,10 +512,13 @@ const StudentManagement = () => {
       } catch (error) {
         const errorMessage =
           error.response?.data?.error ||
+          error.response?.data?.message ||
+          error.message ||
           (editingStudent
             ? "Không thể cập nhật học sinh"
             : "Không thể thêm học sinh");
-        message.error(errorMessage);
+        const action = editingStudent ? "cập nhật" : "thêm";
+        message.error(`Lỗi khi ${action} học sinh: ${errorMessage}`);
         console.error("Lỗi khi xử lý học sinh:", error);
         console.error("Response data:", error.response?.data);
         console.error(
@@ -541,7 +553,12 @@ const StudentManagement = () => {
       message.success("Xóa học sinh thành công");
       fetchStudents(); // Refresh data after deletion
     } catch (error) {
-      message.error(error.response?.data?.error || "Không thể xóa học sinh");
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể xóa học sinh";
+      message.error(`Lỗi khi xóa học sinh: ${errorMessage}`);
       console.error("Lỗi khi xóa học sinh:", error);
     } finally {
       setTableLoading(false);
