@@ -48,6 +48,9 @@ const Vaccination = () => {
   const [isViewReportModalVisible, setIsViewReportModalVisible] =
     useState(false);
   const [viewedVaccinationRecord, setViewedVaccinationRecord] = useState(null);
+  const [studentVaccinationHistory, setStudentVaccinationHistory] = useState(
+    []
+  );
 
   // const getAuthToken = () => {
   //     return localStorage.getItem("token");
@@ -170,21 +173,36 @@ const Vaccination = () => {
   // Perform vaccination
   const performVaccination = async (values) => {
     try {
+      // Tự động tính toán doseOrder dựa trên lịch sử tiêm chủng
+      const nextDose = getNextRecommendedDose(
+        selectedCampaign?.vaccine?.doseSchedules || [],
+        studentVaccinationHistory
+      );
+
+      if (!nextDose) {
+        message.error("Không thể xác định mũi tiêm tiếp theo");
+        return;
+      }
+
       const payload = {
         ...values,
         campaignId: selectedCampaign.id,
         studentId: selectedStudent.id,
         batchNumber: values.batchNumber,
         doseType: values.doseType,
+        doseOrder: nextDose.doseOrder, // Tự động tính toán doseOrder
         doseLabel: getDoseLabel(values.doseType),
-        // Nếu muốn tự động sinh doseOrder/doseLabel có thể thêm ở đây
       };
+
+      console.log("Vaccination payload:", payload); // Debug log
+
       const response = await nurseAPI.performVaccination(payload);
       if (response.data.success) {
         message.success("Đã thực hiện tiêm chủng thành công");
         setIsModalVisible(false);
         vaccinationForm.resetFields();
         setSelectedStudent(null);
+        setStudentVaccinationHistory([]); // Reset history
 
         // Lấy batchNumber từ response nếu có
         const newBatchNumber =
@@ -259,9 +277,112 @@ const Vaccination = () => {
     setCampaignBatchNumber("");
   };
 
+  // Helper function to get dose schedule display
+  const getDoseScheduleDisplay = (doseSchedules = []) => {
+    if (!doseSchedules || doseSchedules.length === 0) {
+      return [];
+    }
+
+    return doseSchedules.map((dose) => {
+      const studentDoseRecord = studentVaccinationHistory.find(
+        (record) => record.doseOrder === dose.doseOrder
+      );
+
+      return {
+        ...dose,
+        isCompleted: !!studentDoseRecord,
+        administeredDate: studentDoseRecord?.administeredDate,
+        status: studentDoseRecord ? "completed" : "pending",
+        isNextDose:
+          !studentDoseRecord &&
+          (dose.doseOrder === 1 ||
+            studentVaccinationHistory.some(
+              (record) => record.doseOrder === dose.doseOrder - 1
+            )),
+      };
+    });
+  };
+
+  // Helper function to get next recommended dose
+  const getNextRecommendedDose = (doseSchedules = [], studentHistory = []) => {
+    if (!doseSchedules || doseSchedules.length === 0) {
+      return null;
+    }
+
+    // Tìm mũi đầu tiên chưa được tiêm
+    for (let i = 0; i < doseSchedules.length; i++) {
+      const dose = doseSchedules[i];
+      const isCompleted = studentHistory.some(
+        (record) => record.doseOrder === dose.doseOrder
+      );
+
+      if (!isCompleted) {
+        return {
+          ...dose,
+          isFirstDose: dose.doseOrder === 1,
+          canAdminister:
+            dose.doseOrder === 1 ||
+            (dose.doseOrder > 1 &&
+              studentHistory.some(
+                (record) => record.doseOrder === dose.doseOrder - 1
+              )),
+        };
+      }
+    }
+
+    return null;
+  };
+
+  // Helper function to check if student can receive next dose
+  const canReceiveNextDose = (nextDose, studentHistory) => {
+    if (!nextDose) return false;
+
+    if (nextDose.doseOrder === 1) return true;
+
+    // Kiểm tra mũi trước đã được tiêm chưa
+    const previousDose = studentHistory.find(
+      (record) => record.doseOrder === nextDose.doseOrder - 1
+    );
+
+    if (!previousDose) return false;
+
+    // Kiểm tra khoảng cách tối thiểu
+    const daysSinceLastDose = Math.floor(
+      (new Date() - new Date(previousDose.administeredDate)) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    return daysSinceLastDose >= (nextDose.minInterval || 0);
+  };
+
+  // Fetch student vaccination history
+  const fetchStudentVaccinationHistory = async (studentId, vaccineId) => {
+    try {
+      const response = await nurseAPI.getStudentVaccinationHistory(
+        studentId,
+        vaccineId
+      );
+      if (response.data.success) {
+        setStudentVaccinationHistory(response.data.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching student vaccination history:", error);
+      setStudentVaccinationHistory([]);
+    }
+  };
+
   // Khi mở modal tiêm cho học sinh
-  const handlePerformVaccination = (student) => {
+  const handlePerformVaccination = async (student) => {
     setSelectedStudent(student);
+
+    // Fetch vaccination history for this student and vaccine
+    if (selectedCampaign?.vaccine?.id) {
+      await fetchStudentVaccinationHistory(
+        student.id,
+        selectedCampaign.vaccine.id
+      );
+    }
+
     // Ưu tiên lấy batchNumber từ state (vừa tiêm xong)
     let latestBatchNumber = campaignBatchNumber;
     // Nếu state chưa có, lấy từ vaccinationReports
@@ -275,13 +396,27 @@ const Vaccination = () => {
         latestBatchNumber = firstBatch.batchNumber;
       }
     }
+
+    // Tự động gợi ý mũi tiếp theo
+    const nextDose = getNextRecommendedDose(
+      selectedCampaign?.vaccine?.doseSchedules || [],
+      studentVaccinationHistory
+    );
+
     vaccinationForm.setFieldsValue({
       batchNumber: latestBatchNumber || "",
       administeredDate: null,
-      dose: undefined,
+      doseOrder: nextDose?.doseOrder || 1,
+      doseType:
+        nextDose?.doseOrder === 1
+          ? "PRIMARY"
+          : nextDose?.doseOrder > 1
+          ? "BOOSTER"
+          : undefined,
       doseAmount: 0.5,
       notes: "",
     });
+
     setBatchNumberDisabled(!!latestBatchNumber); // Nếu đã có batchNumber thì disable
     setIsModalVisible(true);
   };
@@ -817,6 +952,170 @@ const Vaccination = () => {
     setIsViewReportModalVisible(true);
   };
 
+  // Component hiển thị phác đồ mũi tiêm
+  const DoseScheduleDisplay = ({ doseSchedules, studentHistory }) => {
+    const scheduleDisplay = getDoseScheduleDisplay(doseSchedules);
+    const nextDose = getNextRecommendedDose(doseSchedules, studentHistory);
+    const canReceive = canReceiveNextDose(nextDose, studentHistory);
+
+    if (!scheduleDisplay || scheduleDisplay.length === 0) {
+      return (
+        <Alert
+          message="Không có thông tin phác đồ mũi tiêm"
+          type="warning"
+          showIcon
+        />
+      );
+    }
+
+    return (
+      <div style={{ marginBottom: 16 }}>
+        <div
+          style={{
+            background: "#f6ffed",
+            border: "1px solid #b7eb8f",
+            borderRadius: 6,
+            padding: 12,
+            marginBottom: 12,
+          }}
+        >
+          <div style={{ fontWeight: 600, marginBottom: 8, color: "#389e0d" }}>
+            📋 Phác đồ mũi tiêm
+          </div>
+          <div style={{ fontSize: 14, color: "#666" }}>
+            Tổng cộng: {scheduleDisplay.length} mũi | Đã tiêm:{" "}
+            {scheduleDisplay.filter((d) => d.isCompleted).length} mũi | Còn lại:{" "}
+            {scheduleDisplay.filter((d) => !d.isCompleted).length} mũi
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gap: 8,
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          }}
+        >
+          {scheduleDisplay.map((dose) => (
+            <div
+              key={dose.doseOrder}
+              style={{
+                border:
+                  dose.isNextDose && canReceive
+                    ? "2px solid #1890ff"
+                    : dose.isCompleted
+                    ? "2px solid #52c41a"
+                    : "2px solid #d9d9d9",
+                borderRadius: 8,
+                padding: 12,
+                background:
+                  dose.isNextDose && canReceive
+                    ? "#e6f7ff"
+                    : dose.isCompleted
+                    ? "#f6ffed"
+                    : "#fafafa",
+                position: "relative",
+              }}
+            >
+              {/* Badge trạng thái */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: -8,
+                  right: -8,
+                  background: dose.isCompleted
+                    ? "#52c41a"
+                    : dose.isNextDose && canReceive
+                    ? "#1890ff"
+                    : "#d9d9d9",
+                  color: "white",
+                  borderRadius: "50%",
+                  width: 24,
+                  height: 24,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 12,
+                  fontWeight: "bold",
+                }}
+              >
+                {dose.isCompleted
+                  ? "✓"
+                  : dose.isNextDose && canReceive
+                  ? "→"
+                  : "○"}
+              </div>
+
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                Mũi {dose.doseOrder}
+              </div>
+
+              {dose.isCompleted ? (
+                <div style={{ fontSize: 12, color: "#52c41a" }}>
+                  ✓ Đã tiêm:{" "}
+                  {dose.administeredDate
+                    ? dayjs(dose.administeredDate).format("DD/MM/YYYY")
+                    : "N/A"}
+                </div>
+              ) : dose.isNextDose && canReceive ? (
+                <div
+                  style={{ fontSize: 12, color: "#1890ff", fontWeight: 500 }}
+                >
+                  → Mũi tiếp theo (có thể tiêm)
+                </div>
+              ) : dose.isNextDose && !canReceive ? (
+                <div style={{ fontSize: 12, color: "#faad14" }}>
+                  ⏳ Chưa đủ thời gian (cần {dose.minInterval || 0} ngày)
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "#999" }}>
+                  ○ Chưa đến lượt
+                </div>
+              )}
+
+              {!dose.isCompleted && dose.doseOrder > 1 && (
+                <div style={{ fontSize: 11, color: "#666", marginTop: 4 }}>
+                  Khoảng cách: {dose.minInterval || 0}-
+                  {dose.recommendedInterval || 0} ngày
+                </div>
+              )}
+
+              {dose.description && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#666",
+                    marginTop: 4,
+                    fontStyle: "italic",
+                  }}
+                >
+                  {dose.description}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Thông tin mũi tiếp theo */}
+        {nextDose && (
+          <Alert
+            message={`Mũi tiếp theo: Mũi ${nextDose.doseOrder}`}
+            description={
+              canReceive
+                ? "Học sinh có thể tiêm mũi này ngay bây giờ"
+                : `Cần đợi thêm ${nextDose.minInterval || 0} ngày sau mũi ${
+                    nextDose.doseOrder - 1
+                  }`
+            }
+            type={canReceive ? "success" : "warning"}
+            showIcon
+            style={{ marginTop: 12 }}
+          />
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -882,8 +1181,9 @@ const Vaccination = () => {
           vaccinationForm.resetFields();
           setSelectedStudent(null);
           setBatchNumberDisabled(false);
+          setStudentVaccinationHistory([]);
         }}
-        width={600}
+        width={800}
       >
         {selectedStudent && (
           <div style={{ marginBottom: 16 }}>
@@ -897,6 +1197,24 @@ const Vaccination = () => {
             />
           </div>
         )}
+
+        {/* Hiển thị phác đồ mũi tiêm */}
+        {selectedCampaign?.vaccine?.doseSchedules && (
+          <DoseScheduleDisplay
+            doseSchedules={selectedCampaign.vaccine.doseSchedules}
+            studentHistory={studentVaccinationHistory}
+          />
+        )}
+
+        {/* Thông báo về doseOrder tự động */}
+        <Alert
+          message="Thông tin mũi tiêm"
+          description="Số mũi tiêm đã được tự động tính toán dựa trên lịch sử tiêm chủng của học sinh. Bạn có thể chỉnh sửa nếu cần thiết."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+
         {/* Nút đổi số lô vaccine */}
         {batchNumberDisabled && (
           <div style={{ marginBottom: 12, textAlign: "right" }}>
@@ -905,6 +1223,7 @@ const Vaccination = () => {
             </Button>
           </div>
         )}
+
         <Form
           form={vaccinationForm}
           layout="vertical"
@@ -921,6 +1240,27 @@ const Vaccination = () => {
             ]}
           >
             <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item
+            name="doseOrder"
+            label="Số mũi tiêm"
+            rules={[
+              {
+                required: true,
+                message: "Vui lòng nhập số mũi tiêm",
+              },
+              {
+                type: "number",
+                min: 1,
+                message: "Số mũi tiêm phải lớn hơn 0",
+              },
+            ]}
+          >
+            <InputNumber
+              min={1}
+              style={{ width: "100%" }}
+              placeholder="Nhập số mũi tiêm"
+            />
           </Form.Item>
           <Form.Item
             name="doseType"
