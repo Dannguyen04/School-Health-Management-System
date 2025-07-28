@@ -3,14 +3,6 @@ import {
     CloseOutlined,
     FileTextOutlined,
     UserOutlined,
-    ClockCircleOutlined,
-    CalendarOutlined,
-    CheckCircleOutlined,
-    CloseCircleOutlined,
-    ExclamationCircleOutlined,
-    MedicineBoxOutlined,
-    SafetyCertificateOutlined,
-    AlertOutlined,
 } from "@ant-design/icons";
 import {
     Avatar,
@@ -26,8 +18,6 @@ import {
     Tabs,
     Tag,
     Typography,
-    Timeline,
-    Badge,
 } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -167,13 +157,6 @@ const ConsentForms = () => {
 
     const forms = getAllConsents();
 
-    // Sort forms by date (newest first)
-    const sortedForms = forms.sort((a, b) => {
-        const dateA = new Date(a.scheduledDate);
-        const dateB = new Date(b.scheduledDate);
-        return dateB - dateA;
-    });
-
     // Handle consent actions
     const openConsentModal = (form, consent) => {
         const child = children.find((c) => c.studentId === form.studentId);
@@ -260,7 +243,7 @@ const ConsentForms = () => {
     // UI
     return (
         <div className="min-h-screen bg-[#f6fcfa]">
-            <div className="w-full max-w-6xl mx-auto px-4 pt-24">
+            <div className="w-full max-w-4xl mx-auto px-4 pt-24">
                 {/* Header đồng bộ */}
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-4">
@@ -289,185 +272,123 @@ const ConsentForms = () => {
                     ]}
                 />
 
-                {/* Timeline Consent forms */}
-                {sortedForms.length > 0 ? (
-                    <div className="bg-white rounded-xl shadow-lg p-4">
-                        <Timeline
-                            mode="left"
-                            items={sortedForms.map((form) => ({
-                                color: getTimelineColor(
-                                    form.consent,
-                                    form.status
-                                ),
-                                children: (
-                                    <Card
-                                        className={`mb-3 rounded-lg shadow-sm border-0 hover:shadow-md transition-shadow duration-300 ${getCardColor(
-                                            form.consent,
-                                            form.status
-                                        )}`}
-                                        styles={{ body: { padding: 16 } }}
+                {/* Consent forms list */}
+                {forms.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {forms.map((form) => (
+                            <Card
+                                key={form.id + "-" + form.studentId}
+                                className="rounded-xl shadow border-0 hover:shadow-lg transition-shadow duration-300"
+                                styles={{ body: { padding: 20 } }}
+                            >
+                                <div className="flex items-center gap-3 mb-2">
+                                    <FileTextOutlined className="text-xl text-[#36ae9a]" />
+                                    <Title level={5} className="mb-0">
+                                        {form.name}
+                                    </Title>
+                                </div>
+                                <div className="mb-2 flex items-center gap-2">
+                                    <Avatar icon={<UserOutlined />} size={24} />
+                                    <span className="font-semibold">
+                                        {form.studentName}
+                                    </span>
+                                    {form.className && (
+                                        <span className="text-gray-400">
+                                            ({form.className})
+                                        </span>
+                                    )}
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">Loại phiếu: </Text>
+                                    <Text strong>Tiêm chủng</Text>
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">Vắc xin: </Text>
+                                    <Text
+                                        style={{
+                                            wordBreak: "keep-all",
+                                            whiteSpace: "nowrap",
+                                        }}
                                     >
-                                        {/* Header Section */}
-                                        <div className="flex items-start justify-between mb-3">
-                                            <div className="flex items-center gap-3">
-                                                {getCardIcon(
-                                                    form.consent,
-                                                    form.status
-                                                )}
-                                                <Title
-                                                    level={4}
-                                                    className="mb-0 text-red-800 font-bold bg-gradient-to-r from-red-700 to-red-900 bg-clip-text text-transparent"
-                                                >
-                                                    {form.name}
-                                                </Title>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                {statusTag(form.consent)}
-                                                {campaignStatusTag(form.status)}
-                                            </div>
-                                        </div>
-
-                                        {/* Main Content Section */}
-                                        <div className="space-y-3 mb-3">
-                                            {/* Student Information */}
-                                            <div className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200">
-                                                <UserOutlined className="text-teal-600 text-base" />
-                                                <span className="font-semibold text-teal-800 text-base">
-                                                    {form.studentName}
-                                                </span>
-                                                {form.className && (
-                                                    <span className="text-teal-500 text-sm font-medium">
-                                                        ({form.className})
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Campaign Details - Two Row Layout */}
-                                            <div className="space-y-2">
-                                                {/* First Row - Time and Vaccine */}
-                                                <div className="flex flex-wrap gap-4 text-sm">
-                                                    <div className="flex items-center gap-2">
-                                                        <CalendarOutlined className="text-purple-500 text-base" />
-                                                        <span className="text-purple-700 font-medium">
-                                                            Thời gian:{" "}
-                                                            <span className="text-purple-900 font-semibold">
-                                                                {new Date(
-                                                                    form.scheduledDate
-                                                                ).toLocaleDateString(
-                                                                    "vi-VN"
-                                                                )}{" "}
-                                                                -{" "}
-                                                                {new Date(
-                                                                    form.deadline
-                                                                ).toLocaleDateString(
-                                                                    "vi-VN"
-                                                                )}
-                                                            </span>
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <FileTextOutlined className="text-orange-500 text-base" />
-                                                        <span className="text-orange-700 font-medium">
-                                                            Vắc xin:{" "}
-                                                            <span className="text-orange-900 font-semibold">
-                                                                {form.vaccine
-                                                                    ?.name ||
-                                                                    "-"}
-                                                            </span>
-                                                        </span>
-                                                    </div>
-                                                </div>
-
-                                                {/* Second Row - Status and Reason */}
-                                                <div className="flex flex-wrap gap-4 text-sm">
-                                                    {form.consentDate && (
-                                                        <div className="flex items-center gap-2">
-                                                            <ClockCircleOutlined className="text-blue-500 text-base" />
-                                                            <span className="text-blue-700">
-                                                                {form.consent ===
-                                                                    true &&
-                                                                    "Đã đồng ý"}
-                                                                {form.consent ===
-                                                                    false &&
-                                                                    "Đã từ chối"}
-                                                                {" lúc "}
-                                                                <span className="text-blue-900 font-semibold">
-                                                                    {new Date(
-                                                                        form.consentDate
-                                                                    ).toLocaleDateString(
-                                                                        "vi-VN"
-                                                                    )}
-                                                                </span>
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                    {form.reason && (
-                                                        <div className="flex items-center gap-2">
-                                                            <ExclamationCircleOutlined className="text-rose-500 text-base" />
-                                                            <span className="text-rose-700 font-medium">
-                                                                Lý do từ chối:{" "}
-                                                                <span className="text-rose-900 font-semibold">
-                                                                    {
-                                                                        form.reason
-                                                                    }
-                                                                </span>
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Action Buttons */}
-                                        <div className="flex gap-2 pt-3 border-t border-gray-100">
+                                        {form.vaccine?.name || "-"}
+                                    </Text>
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">Thời gian: </Text>
+                                    <Text>
+                                        {new Date(
+                                            form.scheduledDate
+                                        ).toLocaleDateString("vi-VN")}{" "}
+                                        -{" "}
+                                        {new Date(
+                                            form.deadline
+                                        ).toLocaleDateString("vi-VN")}
+                                    </Text>
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">
+                                        Trạng thái chiến dịch:{" "}
+                                    </Text>
+                                    {campaignStatusTag(form.status)}
+                                </div>
+                                <div className="mb-2">
+                                    <Text type="secondary">
+                                        Trạng thái xác nhận:{" "}
+                                    </Text>
+                                    {statusTag(form.consent)}
+                                </div>
+                                {form.consentDate && (
+                                    <div className="mb-2 text-xs text-gray-500">
+                                        {form.consent === true && "Đã đồng ý"}
+                                        {form.consent === false && "Đã từ chối"}
+                                        {" lúc "}
+                                        {new Date(
+                                            form.consentDate
+                                        ).toLocaleDateString("vi-VN")}
+                                    </div>
+                                )}
+                                {form.reason && (
+                                    <div className="mb-2 text-xs text-red-500">
+                                        Lý do từ chối: {form.reason}
+                                    </div>
+                                )}
+                                <div className="flex gap-2 mt-4">
+                                    <Button
+                                        onClick={() =>
+                                            openConsentModal(form, null)
+                                        }
+                                        icon={<FileTextOutlined />}
+                                    >
+                                        Xem chi tiết
+                                    </Button>
+                                    {form.consent === null && (
+                                        <>
                                             <Button
+                                                type="primary"
+                                                icon={<CheckOutlined />}
                                                 onClick={() =>
-                                                    openConsentModal(form, null)
+                                                    openConsentModal(form, true)
                                                 }
-                                                icon={<FileTextOutlined />}
-                                                size="middle"
-                                                className="flex items-center gap-2"
                                             >
-                                                Xem chi tiết
+                                                Đồng ý
                                             </Button>
-                                            {form.consent === null && (
-                                                <>
-                                                    <Button
-                                                        type="primary"
-                                                        icon={<CheckOutlined />}
-                                                        onClick={() =>
-                                                            openConsentModal(
-                                                                form,
-                                                                true
-                                                            )
-                                                        }
-                                                        size="middle"
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        Đồng ý
-                                                    </Button>
-                                                    <Button
-                                                        danger
-                                                        icon={<CloseOutlined />}
-                                                        onClick={() =>
-                                                            openConsentModal(
-                                                                form,
-                                                                false
-                                                            )
-                                                        }
-                                                        size="middle"
-                                                        className="flex items-center gap-2"
-                                                    >
-                                                        Từ chối
-                                                    </Button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </Card>
-                                ),
-                                dot: getTimelineIcon(form.consent, form.status),
-                            }))}
-                        />
+                                            <Button
+                                                danger
+                                                icon={<CloseOutlined />}
+                                                onClick={() =>
+                                                    openConsentModal(
+                                                        form,
+                                                        false
+                                                    )
+                                                }
+                                            >
+                                                Từ chối
+                                            </Button>
+                                        </>
+                                    )}
+                                </div>
+                            </Card>
+                        ))}
                     </div>
                 ) : (
                     <Card className="rounded-xl shadow border-0">
@@ -553,6 +474,123 @@ const ConsentForms = () => {
                                         ?.maxDoseCount || "-"}
                                 </Descriptions.Item>
                             </Descriptions>
+
+                            {/* Thông tin phác đồ mũi tiêm */}
+                            {consentModal.campaign.vaccine?.doseSchedules &&
+                                consentModal.campaign.vaccine.doseSchedules
+                                    .length > 0 && (
+                                    <div className="mt-4">
+                                        <Divider orientation="left">
+                                            Phác đồ mũi tiêm
+                                        </Divider>
+                                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                            <div className="space-y-3">
+                                                {consentModal.campaign.vaccine.doseSchedules.map(
+                                                    (dose) => (
+                                                        <div
+                                                            key={dose.doseOrder}
+                                                            className="flex items-center gap-3 p-3 bg-white rounded-lg border border-blue-100"
+                                                        >
+                                                            <div className="flex-shrink-0 w-8 h-8 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm font-semibold">
+                                                                {dose.doseOrder}
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <div className="flex items-center gap-2 mb-1">
+                                                                    <Text
+                                                                        strong
+                                                                        className="text-blue-800"
+                                                                    >
+                                                                        Mũi{" "}
+                                                                        {
+                                                                            dose.doseOrder
+                                                                        }
+                                                                    </Text>
+                                                                    {dose.doseOrder ===
+                                                                        1 && (
+                                                                        <Tag
+                                                                            color="green"
+                                                                            size="small"
+                                                                        >
+                                                                            Mũi
+                                                                            đầu
+                                                                        </Tag>
+                                                                    )}
+                                                                    {dose.doseOrder >
+                                                                        1 && (
+                                                                        <Tag
+                                                                            color="blue"
+                                                                            size="small"
+                                                                        >
+                                                                            Mũi
+                                                                            nhắc
+                                                                        </Tag>
+                                                                    )}
+                                                                </div>
+                                                                <div className="text-sm text-gray-600 space-y-1">
+                                                                    <div>
+                                                                        <Text type="secondary">
+                                                                            Độ
+                                                                            tuổi:{" "}
+                                                                        </Text>
+                                                                        <Text
+                                                                            strong
+                                                                        >
+                                                                            {
+                                                                                dose.minAge
+                                                                            }{" "}
+                                                                            -{" "}
+                                                                            {dose.maxAge ||
+                                                                                "Không giới hạn"}{" "}
+                                                                            tuổi
+                                                                        </Text>
+                                                                    </div>
+                                                                    <div>
+                                                                        <Text type="secondary">
+                                                                            Khoảng
+                                                                            cách
+                                                                            tối
+                                                                            thiểu:{" "}
+                                                                        </Text>
+                                                                        <Text
+                                                                            strong
+                                                                        >
+                                                                            {
+                                                                                dose.minInterval
+                                                                            }{" "}
+                                                                            ngày
+                                                                        </Text>
+                                                                    </div>
+                                                                    {dose.description && (
+                                                                        <div>
+                                                                            <Text type="secondary">
+                                                                                Ghi
+                                                                                chú:{" "}
+                                                                            </Text>
+                                                                            <Text>
+                                                                                {
+                                                                                    dose.description
+                                                                                }
+                                                                            </Text>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )
+                                                )}
+                                            </div>
+                                            <div className="mt-3 p-2 bg-blue-100 rounded text-sm text-blue-700">
+                                                <Text strong>💡 Lưu ý:</Text>{" "}
+                                                Phác đồ trên cho biết thông tin
+                                                chi tiết về từng mũi tiêm, bao
+                                                gồm độ tuổi phù hợp và khoảng
+                                                cách tối thiểu giữa các mũi.
+                                                Việc tuân thủ đúng phác đồ sẽ
+                                                đảm bảo hiệu quả vaccine tối ưu.
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
                             {/* Lưu ý về số liều tối đa */}
                             <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
