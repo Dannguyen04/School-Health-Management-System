@@ -103,7 +103,7 @@ const SchoolYearPromotion = () => {
         setDetailModalOpen(true);
     };
 
-    // Xác nhận chuyển năm học
+    // Xác nhận chuyển lớp
     const handlePromote = () => {
         if (!newAcademicYear) {
             message.error("Không thể tính toán năm học mới!");
@@ -111,12 +111,12 @@ const SchoolYearPromotion = () => {
         }
 
         Modal.confirm({
-            title: "Xác nhận chuyển năm học",
+            title: "Xác nhận chuyển lớp",
             icon: <ExclamationCircleOutlined />,
             content: (
                 <div>
                     <p>
-                        Bạn chắc chắn muốn chuyển năm học cho{" "}
+                        Bạn chắc chắn muốn chuyển lớp cho{" "}
                         <strong>{promoting.length + graduating.length}</strong>{" "}
                         học sinh?
                     </p>
@@ -143,17 +143,17 @@ const SchoolYearPromotion = () => {
                         newAcademicYear: newAcademicYear,
                     });
                     setResult(
-                        `Chuyển năm học thành công! Năm học mới: ${response.data.newAcademicYear}`
+                        `Chuyển lớp thành công! Năm học mới: ${response.data.newAcademicYear}`
                     );
                     setResultType("success");
-                    message.success("Chuyển năm học thành công!");
+                    message.success("Chuyển lớp thành công!");
                 } catch (err) {
                     setResult(
                         "Có lỗi xảy ra: " +
                             (err.response?.data?.error || err.message)
                     );
                     setResultType("error");
-                    message.error("Có lỗi xảy ra khi chuyển năm học!");
+                    message.error("Có lỗi xảy ra khi chuyển lớp!");
                 }
                 setLoading(false);
             },
@@ -180,7 +180,7 @@ const SchoolYearPromotion = () => {
                         style={{ textAlign: "center", background: "#f0f8ff" }}
                     >
                         <Statistic
-                            title="Học sinh sẽ lên lớp"
+                            title="Học sinh sẽ lên lớp (Lớp 1,2,3,4)"
                             value={promoting.length}
                             prefix={<UserOutlined />}
                             valueStyle={{ color: "#1890ff", fontSize: 24 }}
@@ -193,7 +193,7 @@ const SchoolYearPromotion = () => {
                         style={{ textAlign: "center", background: "#f6ffed" }}
                     >
                         <Statistic
-                            title="Học sinh cuối cấp"
+                            title="Học sinh tốt nghiệp (Lớp 5)"
                             value={graduating.length}
                             prefix={<TrophyOutlined />}
                             valueStyle={{ color: "#52c41a", fontSize: 24 }}
@@ -216,7 +216,7 @@ const SchoolYearPromotion = () => {
             </Row>
 
             <Card
-                title="Thông tin chuyển năm học"
+                title="Thông tin chuyển lớp"
                 style={{ marginBottom: 16, width: "100%" }}
             >
                 <Space direction="vertical" style={{ width: "100%" }}>
@@ -257,8 +257,8 @@ const SchoolYearPromotion = () => {
                         </Col>
                     </Row>
                     <Alert
-                        message="Thông tin chuyển năm học"
-                        description={`Học sinh khối 5 sẽ tốt nghiệp, các khối khác sẽ lên lớp. Tất cả học sinh sẽ được chuyển từ năm học ${currentAcademicYear} sang năm học ${newAcademicYear} tự động.`}
+                        message="Thông tin chuyển lớp"
+                        description={`Học sinh lớp 5 sẽ tốt nghiệp, học sinh lớp 1,2,3,4 sẽ lên lớp. Tất cả học sinh sẽ được chuyển từ năm học ${currentAcademicYear} sang năm học ${newAcademicYear} tự động.`}
                         type="info"
                         showIcon
                         style={{ marginTop: 8 }}
@@ -273,7 +273,7 @@ const SchoolYearPromotion = () => {
                             <Space>
                                 <TrophyOutlined style={{ color: "#52c41a" }} />
                                 <Text strong>
-                                    Lớp sẽ tốt nghiệp -{" "}
+                                    Lớp 5 sẽ tốt nghiệp -{" "}
                                     {
                                         Object.keys(
                                             groupStudentsByClass(graduating)
@@ -332,7 +332,7 @@ const SchoolYearPromotion = () => {
                     title={
                         <Space>
                             <Text strong>
-                                Lớp sẽ lên lớp -{" "}
+                                Lớp 1,2,3,4 sẽ lên lớp -{" "}
                                 {
                                     Object.keys(groupStudentsByClass(promoting))
                                         .length
@@ -401,7 +401,8 @@ const SchoolYearPromotion = () => {
                         <div>
                             <Text type="secondary">
                                 Tổng cộng: {graduating.length} học sinh tốt
-                                nghiệp + {promoting.length} học sinh lên lớp
+                                nghiệp (lớp 5) + {promoting.length} học sinh lên
+                                lớp (lớp 1,2,3,4)
                             </Text>
                         </div>
                         <Button
@@ -418,8 +419,7 @@ const SchoolYearPromotion = () => {
                                 minWidth: 300,
                             }}
                         >
-                            Xác nhận chuyển năm học ({promoting.length} học
-                            sinh)
+                            Xác nhận chuyển lớp ({promoting.length} học sinh)
                         </Button>
                         {!newAcademicYear && (
                             <Text type="warning" style={{ fontSize: 12 }}>
@@ -465,18 +465,23 @@ const SchoolYearPromotion = () => {
                                 <Card size="small" title="Thông tin học sinh">
                                     <div>
                                         <Text strong>Tên học sinh:</Text>{" "}
-                                        {selectedStudent.user?.fullName ||
+                                        {selectedStudent.fullName ||
                                             "Chưa có tên"}
                                     </div>
                                     <div>
                                         <Text strong>Lớp hiện tại:</Text>{" "}
-                                        {selectedStudent.class} (Khối{" "}
+                                        {selectedStudent.class} (Lớp{" "}
                                         {selectedStudent.grade})
                                     </div>
                                     <div>
                                         <Text strong>Lớp mới:</Text>{" "}
-                                        {nextClass(selectedStudent.class)} (Khối{" "}
-                                        {parseInt(selectedStudent.grade) + 1})
+                                        {selectedStudent.grade === "5"
+                                            ? "Tốt nghiệp"
+                                            : nextClass(selectedStudent.class) +
+                                              " (Lớp " +
+                                              (parseInt(selectedStudent.grade) +
+                                                  1) +
+                                              ")"}
                                     </div>
                                     <div>
                                         <Text strong>Năm học hiện tại:</Text>{" "}
@@ -505,7 +510,7 @@ const SchoolYearPromotion = () => {
                                         </Text>
                                     </div>
                                     <div style={{ marginTop: 8 }}>
-                                        <Text strong>Học sinh cùng khối:</Text>
+                                        <Text strong>Học sinh cùng lớp:</Text>
                                         <br />
                                         <Text type="secondary">
                                             {
@@ -524,7 +529,7 @@ const SchoolYearPromotion = () => {
                                 <Card size="small" title="Thống kê tổng quan">
                                     <div>
                                         <Text strong>
-                                            Tổng học sinh lên lớp:
+                                            Tổng học sinh lên lớp (Lớp 1,2,3,4):
                                         </Text>
                                         <br />
                                         <Text type="secondary">

@@ -55,8 +55,14 @@ const validateSchoolYear = (schoolYear) => {
     if (!pattern.test(schoolYear)) return false;
 
     const [startYear, endYear] = schoolYear.split("-");
-    // Kiểm tra năm học hợp lý (năm sau = năm trước + 1)
-    return parseInt(endYear) === parseInt(startYear) + 1;
+    const start = parseInt(startYear);
+    const end = parseInt(endYear);
+
+    // Kiểm tra năm học hợp lý:
+    // 1. Năm bắt đầu phải là số hợp lệ
+    // 2. Năm kết thúc phải lớn hơn năm bắt đầu
+    // 3. Cho phép khoảng thời gian hợp lý (ví dụ: 2020-2025, 2024-2025, etc.)
+    return start > 1900 && end > start && end <= start + 10;
 };
 
 function validateRow(row) {
@@ -85,7 +91,7 @@ function validateRow(row) {
         errors.push("Khối chỉ được nhập số từ 1 đến 5");
     if (!row.studentAcademicYear) errors.push("Thiếu trường: Năm học");
     else if (!validateSchoolYear(row.studentAcademicYear))
-        errors.push("Năm học không đúng định dạng (VD: 2024-2025)");
+        errors.push("Năm học không đúng định dạng (VD: 2020-2025, 2024-2025)");
     return errors;
 }
 
@@ -404,7 +410,7 @@ function ImportParentsStudents() {
                         Lưu ý: Số điện thoại sẽ tự động thêm số 0 ở đầu nếu chưa
                         có (VD: 912345678 → 0912345678). Template đã được format
                         để toàn bộ cột số điện thoại là text. Năm học theo định
-                        dạng: 2024-2025, 2025-2026.
+                        dạng: 2020-2025, 2024-2025, 2025-2026.
                     </Text>
                     <br />
                     <Button

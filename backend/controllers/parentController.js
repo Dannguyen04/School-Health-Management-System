@@ -52,6 +52,7 @@ export const getMyChildren = async (req, res) => {
           select: {
             id: true,
             fullName: true,
+            studentCode: true,
             class: true,
             grade: true,
             healthProfile: true,
@@ -66,6 +67,7 @@ export const getMyChildren = async (req, res) => {
     const children = childrenRelations.map((rel) => ({
       studentId: rel.student.id,
       fullName: rel.student.fullName,
+      studentCode: rel.student.studentCode,
       class: rel.student.class,
       grade: rel.student.grade,
     }));

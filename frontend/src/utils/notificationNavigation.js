@@ -26,7 +26,34 @@ export function navigateByNotificationType(
             navigate("/manager/vaccination-campaigns");
             break;
         case "vaccination":
-            navigate("/parent/medical-schedule");
+            if (notification.studentId) {
+                navigate("/parent/medical-schedule", {
+                    state: { selectedStudentId: notification.studentId },
+                });
+            } else {
+                // Nếu không có studentId, thử lấy tên học sinh từ message
+                let match = notification.message.match(/cho học sinh (.+)$/);
+                if (!match) {
+                    match = notification.message.match(/^Học sinh (.+?) đã/);
+                }
+                if (match && match[1]) {
+                    const studentName = match[1].trim();
+                    const children = JSON.parse(
+                        localStorage.getItem("children") || "[]"
+                    );
+                    const found = children.find(
+                        (child) => child.fullName === studentName
+                    );
+                    if (found) {
+                        navigate("/parent/medical-schedule", {
+                            state: { selectedStudentId: found.studentId },
+                        });
+                        break;
+                    }
+                }
+                // Fallback: không tìm được thì navigate bình thường
+                navigate("/parent/medical-schedule");
+            }
             break;
         case "medical_check":
             navigate("/parent/health-checkup-results");
@@ -59,7 +86,44 @@ export function navigateByNotificationType(
             });
             break;
         case "medical_consultation":
-            navigate("/parent/health-checkup-results");
+            // Xử lý thông báo lịch tư vấn sức khỏe
+            // Tìm studentName và studentCode từ nội dung thông báo
+            const studentNameMatch = notification.message.match(
+                /^([^(]+) \(Mã học sinh: ([^)]+)\) đã có vấn đề về sức khỏe/
+            );
+            if (
+                studentNameMatch &&
+                studentNameMatch[1] &&
+                studentNameMatch[2]
+            ) {
+                const studentName = studentNameMatch[1].trim();
+                const studentCode = studentNameMatch[2].trim();
+                // Điều hướng đến trang health-checkup-results với thông tin học sinh
+                navigate("/parent/health-checkup-results", {
+                    state: {
+                        selectedStudentName: studentName,
+                        selectedStudentCode: studentCode,
+                        scrollToConsultation: true,
+                    },
+                });
+            } else {
+                // Fallback: tìm chỉ tên học sinh nếu không có studentCode
+                const fallbackMatch = notification.message.match(
+                    /^([^đ]+) đã có vấn đề về sức khỏe/
+                );
+                if (fallbackMatch && fallbackMatch[1]) {
+                    const studentName = fallbackMatch[1].trim();
+                    navigate("/parent/health-checkup-results", {
+                        state: {
+                            selectedStudentName: studentName,
+                            scrollToConsultation: true,
+                        },
+                    });
+                } else {
+                    // Fallback: điều hướng đến trang health-checkup-results
+                    navigate("/parent/health-checkup-results");
+                }
+            }
             break;
         case "medical_check_campaign":
             navigate("/nurse/health-checkups");

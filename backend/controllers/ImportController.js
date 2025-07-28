@@ -26,8 +26,14 @@ const validateSchoolYear = (schoolYear) => {
     if (!pattern.test(schoolYear)) return false;
 
     const [startYear, endYear] = schoolYear.split("-");
-    // Kiểm tra năm học hợp lý (năm sau = năm trước + 1)
-    return parseInt(endYear) === parseInt(startYear) + 1;
+    const start = parseInt(startYear);
+    const end = parseInt(endYear);
+
+    // Kiểm tra năm học hợp lý:
+    // 1. Năm bắt đầu phải là số hợp lệ
+    // 2. Năm kết thúc phải lớn hơn năm bắt đầu
+    // 3. Cho phép khoảng thời gian hợp lý (ví dụ: 2020-2025, 2024-2025, etc.)
+    return start > 1900 && end > start && end <= start + 10;
 };
 
 // Hàm tìm key gần đúng theo tên cột (bỏ qua khoảng trắng, không phân biệt hoa thường)
@@ -173,7 +179,7 @@ export const importParentsStudents = async (req, res) => {
             // Validate năm học
             if (!validateSchoolYear(studentAcademicYear)) {
                 errors.push(
-                    `Dòng ${rowNum}: Năm học không đúng định dạng (VD: 2024-2025)`
+                    `Dòng ${rowNum}: Năm học không đúng định dạng (VD: 2020-2025, 2024-2025)`
                 );
                 continue;
             }
@@ -265,11 +271,11 @@ export const importParentsStudents = async (req, res) => {
                 },
             });
             const studentUserId = newStudentUser.id;
-            // Khi tạo student, truyền thêm userId: studentUserId đúng với schema.
+            // Tạo student record (không có userId vì Student model không có userId field)
             const newStudent = await prisma.student.create({
                 data: {
-                    userId: studentUserId,
                     studentCode,
+                    fullName: studentName,
                     dateOfBirth: new Date(studentDOB),
                     gender: studentGender,
                     class: studentClass,

@@ -660,11 +660,7 @@ export const createMedicalEvent = async (req, res) => {
 
       // Gửi thông báo cho từng phụ huynh
       for (const studentParent of studentParents) {
-        if (
-          studentParent.parent &&
-          studentParent.parent.user &&
-          studentParent.parent.user.id
-        ) {
+        if (studentParent.parent.user) {
           await prisma.notification.create({
             data: {
               userId: studentParent.parent.user.id,
@@ -675,11 +671,6 @@ export const createMedicalEvent = async (req, res) => {
               sentAt: new Date(),
             },
           });
-        } else {
-          console.warn(
-            "Cannot send notification: parent or parent user not found for student:",
-            studentId
-          );
         }
       }
     } catch (notificationError) {
@@ -1420,28 +1411,17 @@ export const performVaccination = async (req, res) => {
         },
       });
       for (const studentParent of studentParents) {
-        if (
-          studentParent.parent &&
-          studentParent.parent.user &&
-          studentParent.parent.user.id
-        ) {
-          await prisma.notification.create({
-            data: {
-              userId: studentParent.parent.user.id,
-              title: `Thông báo tiêm chủng cho học sinh ${student.fullName}`,
-              message: `Học sinh ${student.fullName} đã được tiêm chủng thành công trong chiến dịch ${campaign.name}.`,
-              type: "vaccination",
-              status: "SENT",
-              sentAt: new Date(),
-              vaccinationCampaignId: campaignId,
-            },
-          });
-        } else {
-          console.warn(
-            "Cannot send notification: parent or parent user not found for student:",
-            studentId
-          );
-        }
+        await prisma.notification.create({
+          data: {
+            userId: studentParent.parent.user.id,
+            title: `Thông báo tiêm chủng cho học sinh ${student.fullName}`,
+            message: `Học sinh ${student.fullName} đã được tiêm chủng thành công trong chiến dịch ${campaign.name}.`,
+            type: "vaccination",
+            status: "SENT",
+            sentAt: new Date(),
+            vaccinationCampaignId: campaignId,
+          },
+        });
       }
     } catch (notificationError) {
       console.error("Error sending notifications:", notificationError);
@@ -1524,7 +1504,7 @@ export const reportVaccinationResult = async (req, res) => {
     });
 
     // Nếu cần theo dõi, tạo thông báo cho nurse
-    if (followUpRequired && req.user && req.user.id) {
+    if (followUpRequired) {
       await prisma.notification.create({
         data: {
           userId: req.user.id,
@@ -1542,10 +1522,6 @@ export const reportVaccinationResult = async (req, res) => {
           vaccinationCampaignId: vaccination.campaignId,
         },
       });
-    } else if (followUpRequired && (!req.user || !req.user.id)) {
-      console.warn(
-        "Cannot send notification: user or user id not found for vaccination followup"
-      );
     }
 
     res.json({
@@ -1677,7 +1653,6 @@ export const approveMedicationRequest = async (req, res) => {
           include: {
             user: {
               select: {
-                id: true,
                 fullName: true,
                 email: true,
                 phone: true,
@@ -1732,7 +1707,6 @@ export const approveMedicationRequest = async (req, res) => {
           include: {
             user: {
               select: {
-                id: true,
                 fullName: true,
               },
             },
@@ -1744,11 +1718,7 @@ export const approveMedicationRequest = async (req, res) => {
 
     // Gửi thông báo cho phụ huynh
     try {
-      if (
-        medicationRequest.parent &&
-        medicationRequest.parent.user &&
-        medicationRequest.parent.user.id
-      ) {
+      if (medicationRequest.parent && medicationRequest.parent.user) {
         await prisma.notification.create({
           data: {
             userId: medicationRequest.parent.user.id,
@@ -1763,11 +1733,6 @@ export const approveMedicationRequest = async (req, res) => {
             sentAt: new Date(),
           },
         });
-      } else {
-        console.warn(
-          "Cannot send notification: parent or parent user not found for medication request:",
-          requestId
-        );
       }
     } catch (notificationError) {
       console.error("Error sending notification:", notificationError);
@@ -2309,7 +2274,11 @@ export const giveMedicineToStudent = async (req, res) => {
     const studentMedication = await prisma.studentMedication.findUnique({
       where: { id: studentMedicationId },
       include: {
-        student: true,
+        student: {
+          include: {
+            user: { select: { fullName: true, email: true } },
+          },
+        },
         parent: {
           include: {
             user: { select: { fullName: true, email: true } },
@@ -2968,22 +2937,15 @@ export const scheduleTreatment = async (req, res) => {
           });
 
     for (const nurse of nurses) {
-      if (nurse.userId) {
-        await prisma.notification.create({
-          data: {
-            userId: nurse.userId,
-            title: "Lịch cấp phát thuốc mới",
-            message: `Học sinh ${studentMedication.student.fullName} cần được cấp phát thuốc ${studentMedication.name} vào ${timeString}`,
-            type: "medication",
-            status: "SENT",
-          },
-        });
-      } else {
-        console.warn(
-          "Cannot send notification: nurse userId not found for nurse:",
-          nurse.id
-        );
-      }
+      await prisma.notification.create({
+        data: {
+          userId: nurse.userId,
+          title: "Lịch cấp phát thuốc mới",
+          message: `Học sinh ${studentMedication.student.fullName} cần được cấp phát thuốc ${studentMedication.name} vào ${timeString}`,
+          type: "medication",
+          status: "SENT",
+        },
+      });
     }
 
     res.json({

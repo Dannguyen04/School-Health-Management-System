@@ -95,41 +95,6 @@ const Footer = () => {
                             y tế để đảm bảo sự phát triển khỏe mạnh cho học sinh
                             tiểu học.
                         </p>
-
-                        {/* Social Media */}
-                        <div className="flex gap-4">
-                            {[
-                                {
-                                    icon: FaFacebook,
-                                    href: "#",
-                                    label: "Facebook",
-                                },
-                                {
-                                    icon: FaTwitter,
-                                    href: "#",
-                                    label: "Twitter",
-                                },
-                                {
-                                    icon: FaInstagram,
-                                    href: "#",
-                                    label: "Instagram",
-                                },
-                                {
-                                    icon: FaLinkedin,
-                                    href: "#",
-                                    label: "LinkedIn",
-                                },
-                            ].map((social, index) => (
-                                <a
-                                    key={index}
-                                    href={social.href}
-                                    className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30 transition-colors duration-300 group"
-                                    aria-label={social.label}
-                                >
-                                    <social.icon className="text-white group-hover:scale-110 transition-transform duration-300" />
-                                </a>
-                            ))}
-                        </div>
                     </div>
 
                     {/* Quick Links */}
@@ -212,26 +177,6 @@ const Footer = () => {
                                 © 2024 Hệ thống Quản lý Y tế Trường Tiểu học.
                                 Tất cả quyền được bảo lưu.
                             </p>
-                        </div>
-                        <div className="flex gap-6 text-sm">
-                            <a
-                                href="#"
-                                className="text-white/90 hover:text-white transition-colors"
-                            >
-                                Chính sách bảo mật
-                            </a>
-                            <a
-                                href="#"
-                                className="text-white/90 hover:text-white transition-colors"
-                            >
-                                Điều khoản sử dụng
-                            </a>
-                            <a
-                                href="#"
-                                className="text-white/90 hover:text-white transition-colors"
-                            >
-                                Sơ đồ trang
-                            </a>
                         </div>
                     </div>
                 </div>
