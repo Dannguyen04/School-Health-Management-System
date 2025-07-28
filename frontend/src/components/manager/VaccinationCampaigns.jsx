@@ -1103,7 +1103,7 @@ const VaccinationCampaigns = () => {
           columns={[
             {
               title: "Học sinh",
-              dataIndex: ["student", "user", "fullName"],
+              dataIndex: ["student", "fullName"],
               key: "studentName",
             },
             {

@@ -35,6 +35,7 @@ const Vaccination = () => {
   const [displayedStudents, setDisplayedStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [vaccinationForm] = Form.useForm();
+  const [reportForm] = Form.useForm(); // Thêm form riêng cho báo cáo
   const [searchForm] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isReportModalVisible, setIsReportModalVisible] = useState(false);
@@ -518,38 +519,54 @@ const Vaccination = () => {
 
   // Report vaccination result
   const reportVaccinationResult = async (values) => {
+    console.log("=== reportVaccinationResult called ===");
+    console.log("Form values:", values);
+    console.log("selectedStudent:", selectedStudent);
+    console.log("selectedCampaign:", selectedCampaign);
+
     try {
       const normalized = normalizeReportValues(values);
+      console.log("Normalized values:", normalized);
 
       // selectedStudent giờ là vaccinationRecord, cần lấy đúng ID
       const vaccinationRecordId = selectedStudent.id; // ID của vaccination record
       const studentId = selectedStudent.studentId; // ID của student
 
-      console.log("Gửi lên backend:", {
+      console.log("IDs:", { vaccinationRecordId, studentId });
+
+      const payload = {
         ...normalized,
         campaignId: selectedCampaign.id,
         studentId: studentId,
         vaccinationRecordId: vaccinationRecordId,
-      });
+      };
+
+      console.log("Gửi lên backend:", payload);
 
       // Gửi vaccination record ID thay vì student ID
       const response = await nurseAPI.reportVaccinationResult(
         vaccinationRecordId,
         normalized
       );
+
+      console.log("Backend response:", response);
+
       if (response.data.success) {
         message.success("Đã báo cáo kết quả tiêm chủng");
         setIsReportModalVisible(false);
         setSelectedStudent(null);
-        vaccinationForm.resetFields();
+        reportForm.resetFields();
         setCurrentDoseLabel("");
 
         // Cập nhật dữ liệu học sinh và báo cáo tiêm chủng
         await refreshCampaignData();
       } else {
+        console.error("Backend returned error:", response.data);
         message.error(response.data.error || "Lỗi khi báo cáo kết quả");
       }
     } catch (error) {
+      console.error("Error in reportVaccinationResult:", error);
+      console.error("Error response:", error.response?.data);
       message.error(error.response?.data?.error || "Lỗi khi báo cáo kết quả");
     }
   };
@@ -737,7 +754,7 @@ const Vaccination = () => {
     setCurrentDoseLabel(getDoseLabel(vaccinationRecord.doseType) || "");
 
     // Set giá trị mặc định cho các trường đã nhập khi thực hiện tiêm
-    vaccinationForm.setFieldsValue({
+    reportForm.setFieldsValue({
       administeredDate: vaccinationRecord.administeredDate
         ? dayjs(vaccinationRecord.administeredDate)
         : null,
@@ -1706,11 +1723,22 @@ const Vaccination = () => {
       <Modal
         title="Báo cáo kết quả tiêm chủng"
         open={isReportModalVisible}
-        onOk={() => vaccinationForm.submit()}
+        onOk={() => {
+          console.log("=== Modal OK button clicked ===");
+          console.log(
+            "Form values before submit:",
+            reportForm.getFieldsValue()
+          );
+          console.log(
+            "Form is valid:",
+            reportForm.getFieldsError().length === 0
+          );
+          reportForm.submit();
+        }}
         onCancel={() => {
           setIsReportModalVisible(false);
           setSelectedStudent(null);
-          vaccinationForm.resetFields();
+          reportForm.resetFields();
           setCurrentDoseLabel("");
         }}
         width={600}
@@ -1757,11 +1785,12 @@ const Vaccination = () => {
           </div>
         )}
         <Form
-          form={vaccinationForm}
+          form={reportForm}
           layout="vertical"
           onFinish={reportVaccinationResult}
           onFinishFailed={(err) => {
             console.log("Form failed:", err);
+            message.error("Vui lòng kiểm tra lại thông tin nhập vào");
           }}
         >
           <Form.Item
@@ -1790,7 +1819,7 @@ const Vaccination = () => {
               placeholder="Mô tả tác dụng phụ (nếu có)"
               onChange={() => {
                 // Trigger validation for reaction field when side effects change
-                vaccinationForm.validateFields(["reaction"]);
+                reportForm.validateFields(["reaction"]);
               }}
             />
           </Form.Item>
@@ -1808,7 +1837,7 @@ const Vaccination = () => {
               allowClear
               onChange={() => {
                 // Trigger validation for side effects field when reaction changes
-                vaccinationForm.validateFields(["sideEffects"]);
+                reportForm.validateFields(["sideEffects"]);
               }}
             >
               <Select.Option value="NONE">Không có phản ứng</Select.Option>
