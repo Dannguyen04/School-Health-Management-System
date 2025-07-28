@@ -421,7 +421,7 @@ const Vaccination = () => {
         studentId: selectedStudent.id,
         batchNumber: values.batchNumber.trim().toUpperCase(), // Chuẩn hóa batch number
         doseType: values.doseType,
-        doseOrder: nextDose.doseOrder,
+        doseOrder: values.doseOrder,
         doseLabel: getDoseLabel(values.doseType),
         administeredDate: values.administeredDate
           ? values.administeredDate.format()
