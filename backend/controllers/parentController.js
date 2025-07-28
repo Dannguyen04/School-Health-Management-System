@@ -582,7 +582,6 @@ export const requestMedication = async (req, res) => {
       // Lấy tên học sinh
       const student = await prisma.student.findUnique({
         where: { id: studentId },
-        include: { user: true },
       });
       const studentName = student?.user?.fullName || "học sinh";
       for (const nurse of nurses) {

@@ -163,7 +163,7 @@ const ConfirmedMedicines = () => {
     twice: "2 lần/ngày",
     three: "3 lần/ngày",
     four: "4 lần/ngày",
-    "as-needed": "Khi cần thiết",
+    "as-needed": "Khi cần",
     custom: "Tùy chỉnh",
   };
 
