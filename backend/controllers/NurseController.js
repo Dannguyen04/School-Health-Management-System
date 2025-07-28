@@ -535,6 +535,60 @@ export const getAllMedicalEvents = async (req, res) => {
             },
         });
 
+        // Hàm dịch severity sang tiếng Việt
+        const getSeverityLabel = (severity) => {
+            switch (severity?.toLowerCase()) {
+                case "critical":
+                    return "Nguy kịch";
+                case "high":
+                    return "Cao";
+                case "medium":
+                    return "Trung bình";
+                case "low":
+                    return "Thấp";
+                default:
+                    return severity;
+            }
+        };
+
+        // Hàm dịch status sang tiếng Việt
+        const getStatusLabel = (status) => {
+            switch (status) {
+                case "RESOLVED":
+                    return "Đã giải quyết";
+                case "IN_PROGRESS":
+                    return "Đang xử lý";
+                case "REFERRED":
+                    return "Đã chuyển viện";
+                case "PENDING":
+                    return "Chờ xử lý";
+                default:
+                    return status;
+            }
+        };
+
+        // Hàm dịch type sang tiếng Việt
+        const getTypeLabel = (type) => {
+            switch (type) {
+                case "ACCIDENT":
+                    return "Tai nạn";
+                case "FEVER":
+                    return "Sốt";
+                case "FALL":
+                    return "Ngã";
+                case "EPIDEMIC":
+                    return "Dịch bệnh";
+                case "ALLERGY_REACTION":
+                    return "Dị ứng";
+                case "CHRONIC_DISEASE_EPISODE":
+                    return "Bệnh mãn tính";
+                case "OTHER":
+                    return "Khác";
+                default:
+                    return type;
+            }
+        };
+
         const formattedEvents = events.map((event) => ({
             id: event.id,
             studentId: event.student.id,
@@ -545,8 +599,11 @@ export const getAllMedicalEvents = async (req, res) => {
             title: event.title,
             description: event.description,
             type: event.type,
+            typeLabel: getTypeLabel(event.type),
             status: event.status,
+            statusLabel: getStatusLabel(event.status),
             severity: event.severity,
+            severityLabel: getSeverityLabel(event.severity),
             location: event.location,
             symptoms: event.symptoms,
             treatment: event.treatment,
@@ -566,7 +623,7 @@ export const getAllMedicalEvents = async (req, res) => {
         console.error("Error getting all medical events:", error);
         res.status(500).json({
             success: false,
-            error: "Error getting medical events",
+            error: "Lỗi khi lấy danh sách sự kiện y tế",
         });
     }
 };
@@ -592,6 +649,60 @@ export const createMedicalEvent = async (req, res) => {
         const nurseId = req.user.nurseProfile?.id;
         const createdById = req.user.id;
 
+        // Hàm dịch severity sang tiếng Việt
+        const getSeverityLabel = (severity) => {
+            switch (severity?.toLowerCase()) {
+                case "critical":
+                    return "Nguy kịch";
+                case "high":
+                    return "Cao";
+                case "medium":
+                    return "Trung bình";
+                case "low":
+                    return "Thấp";
+                default:
+                    return severity;
+            }
+        };
+
+        // Hàm dịch status sang tiếng Việt
+        const getStatusLabel = (status) => {
+            switch (status) {
+                case "RESOLVED":
+                    return "Đã giải quyết";
+                case "IN_PROGRESS":
+                    return "Đang xử lý";
+                case "REFERRED":
+                    return "Đã chuyển viện";
+                case "PENDING":
+                    return "Chờ xử lý";
+                default:
+                    return status;
+            }
+        };
+
+        // Hàm dịch type sang tiếng Việt
+        const getTypeLabel = (type) => {
+            switch (type) {
+                case "ACCIDENT":
+                    return "Tai nạn";
+                case "FEVER":
+                    return "Sốt";
+                case "FALL":
+                    return "Ngã";
+                case "EPIDEMIC":
+                    return "Dịch bệnh";
+                case "ALLERGY_REACTION":
+                    return "Dị ứng";
+                case "CHRONIC_DISEASE_EPISODE":
+                    return "Bệnh mãn tính";
+                case "OTHER":
+                    return "Khác";
+                default:
+                    return type;
+            }
+        };
+
         const newEvent = await prisma.medicalEvent.create({
             data: {
                 studentId,
@@ -614,13 +725,9 @@ export const createMedicalEvent = async (req, res) => {
                     select: {
                         id: true,
                         studentCode: true,
+                        fullName: true,
                         grade: true,
                         class: true,
-                        user: {
-                            select: {
-                                fullName: true,
-                            },
-                        },
                     },
                 },
                 nurse: {
@@ -668,7 +775,11 @@ export const createMedicalEvent = async (req, res) => {
                         data: {
                             userId: studentParent.parent.user.id,
                             title: `Sự kiện y tế - ${newEvent.student.fullName}`,
-                            message: `Học sinh ${newEvent.student.fullName} đã có sự kiện y tế: ${title}. Mức độ: ${severity}. Vui lòng liên hệ với nhà trường để biết thêm chi tiết.`,
+                            message: `Học sinh ${
+                                newEvent.student.fullName
+                            } đã có sự kiện y tế: ${title}. Mức độ: ${getSeverityLabel(
+                                severity
+                            )}. Vui lòng liên hệ với nhà trường để biết thêm chi tiết.`,
                             type: "medical_event",
                             status: "SENT",
                             sentAt: new Date(),
@@ -691,8 +802,11 @@ export const createMedicalEvent = async (req, res) => {
             title: newEvent.title,
             description: newEvent.description,
             type: newEvent.type,
+            typeLabel: getTypeLabel(newEvent.type),
             status: newEvent.status,
+            statusLabel: getStatusLabel(newEvent.status),
             severity: newEvent.severity,
+            severityLabel: getSeverityLabel(newEvent.severity),
             location: newEvent.location,
             symptoms: newEvent.symptoms,
             treatment: newEvent.treatment,
@@ -706,13 +820,13 @@ export const createMedicalEvent = async (req, res) => {
         res.status(201).json({
             success: true,
             data: formattedEvent,
-            message: "Medical event created successfully",
+            message: "Đã tạo sự kiện y tế thành công",
         });
     } catch (error) {
         console.error("Error creating medical event:", error);
         res.status(500).json({
             success: false,
-            error: "Error creating medical event",
+            error: "Lỗi khi tạo sự kiện y tế",
         });
     }
 };
@@ -805,13 +919,13 @@ export const updateMedicalEvent = async (req, res) => {
         res.json({
             success: true,
             data: formattedEvent,
-            message: "Medical event updated successfully",
+            message: "Đã cập nhật sự kiện y tế thành công",
         });
     } catch (error) {
         console.error("Error updating medical event:", error);
         res.status(500).json({
             success: false,
-            error: "Error updating medical event",
+            error: "Lỗi khi cập nhật sự kiện y tế",
         });
     }
 };
@@ -827,13 +941,13 @@ export const deleteMedicalEvent = async (req, res) => {
 
         res.json({
             success: true,
-            message: "Medical event deleted successfully",
+            message: "Đã xóa sự kiện y tế thành công",
         });
     } catch (error) {
         console.error("Error deleting medical event:", error);
         res.status(500).json({
             success: false,
-            error: "Error deleting medical event",
+            error: "Lỗi khi xóa sự kiện y tế",
         });
     }
 };
@@ -875,7 +989,7 @@ export const getMedicalEventById = async (req, res) => {
         if (!event) {
             return res.status(404).json({
                 success: false,
-                error: "Medical event not found",
+                error: "Không tìm thấy sự kiện y tế",
             });
         }
 
@@ -883,9 +997,63 @@ export const getMedicalEventById = async (req, res) => {
         if (!event.student) {
             return res.status(404).json({
                 success: false,
-                error: "Student information not found",
+                error: "Không tìm thấy thông tin học sinh",
             });
         }
+
+        // Hàm dịch severity sang tiếng Việt
+        const getSeverityLabel = (severity) => {
+            switch (severity?.toLowerCase()) {
+                case "critical":
+                    return "Nguy kịch";
+                case "high":
+                    return "Cao";
+                case "medium":
+                    return "Trung bình";
+                case "low":
+                    return "Thấp";
+                default:
+                    return severity;
+            }
+        };
+
+        // Hàm dịch status sang tiếng Việt
+        const getStatusLabel = (status) => {
+            switch (status) {
+                case "RESOLVED":
+                    return "Đã giải quyết";
+                case "IN_PROGRESS":
+                    return "Đang xử lý";
+                case "REFERRED":
+                    return "Đã chuyển viện";
+                case "PENDING":
+                    return "Chờ xử lý";
+                default:
+                    return status;
+            }
+        };
+
+        // Hàm dịch type sang tiếng Việt
+        const getTypeLabel = (type) => {
+            switch (type) {
+                case "ACCIDENT":
+                    return "Tai nạn";
+                case "FEVER":
+                    return "Sốt";
+                case "FALL":
+                    return "Ngã";
+                case "EPIDEMIC":
+                    return "Dịch bệnh";
+                case "ALLERGY_REACTION":
+                    return "Dị ứng";
+                case "CHRONIC_DISEASE_EPISODE":
+                    return "Bệnh mãn tính";
+                case "OTHER":
+                    return "Khác";
+                default:
+                    return type;
+            }
+        };
 
         const formattedEvent = {
             id: event.id,
@@ -897,8 +1065,11 @@ export const getMedicalEventById = async (req, res) => {
             title: event.title,
             description: event.description,
             type: event.type,
+            typeLabel: getTypeLabel(event.type),
             status: event.status,
+            statusLabel: getStatusLabel(event.status),
             severity: event.severity,
+            severityLabel: getSeverityLabel(event.severity),
             location: event.location,
             symptoms: event.symptoms,
             treatment: event.treatment,
@@ -918,7 +1089,7 @@ export const getMedicalEventById = async (req, res) => {
         console.error("Error getting medical event:", error);
         res.status(500).json({
             success: false,
-            error: "Error getting medical event",
+            error: "Lỗi khi lấy thông tin sự kiện y tế",
         });
     }
 };
