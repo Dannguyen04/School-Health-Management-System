@@ -421,7 +421,7 @@ const Vaccination = () => {
         studentId: selectedStudent.id,
         batchNumber: values.batchNumber.trim().toUpperCase(), // Chuẩn hóa batch number
         doseType: values.doseType,
-        doseOrder: values.doseOrder,
+        doseOrder: nextDose.doseOrder,
         doseLabel: getDoseLabel(values.doseType),
         administeredDate: values.administeredDate
           ? values.administeredDate.format()
@@ -1663,6 +1663,8 @@ const Vaccination = () => {
             >
               <Select.Option value="PRIMARY">Liều cơ bản</Select.Option>
               <Select.Option value="BOOSTER">Liều nhắc lại</Select.Option>
+              <Select.Option value="CATCHUP">Tiêm bù</Select.Option>
+              <Select.Option value="ADDITIONAL">Liều bổ sung</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item
