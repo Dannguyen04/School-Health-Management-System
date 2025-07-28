@@ -3,6 +3,13 @@ import {
     CloseOutlined,
     FileTextOutlined,
     UserOutlined,
+    ClockCircleOutlined,
+    CheckCircleOutlined,
+    CloseCircleOutlined,
+    ExclamationCircleOutlined,
+    SafetyCertificateOutlined,
+    AlertOutlined,
+    MedicineBoxOutlined,
 } from "@ant-design/icons";
 import {
     Avatar,
@@ -18,6 +25,7 @@ import {
     Tabs,
     Tag,
     Typography,
+    Timeline,
 } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -157,6 +165,13 @@ const ConsentForms = () => {
 
     const forms = getAllConsents();
 
+    // Sort forms by date (newest first)
+    const sortedForms = forms.sort((a, b) => {
+        const dateA = new Date(a.scheduledDate);
+        const dateB = new Date(b.scheduledDate);
+        return dateB - dateA;
+    });
+
     // Handle consent actions
     const openConsentModal = (form, consent) => {
         const child = children.find((c) => c.studentId === form.studentId);
@@ -243,7 +258,7 @@ const ConsentForms = () => {
     // UI
     return (
         <div className="min-h-screen bg-[#f6fcfa]">
-            <div className="w-full max-w-4xl mx-auto px-4 pt-24">
+            <div className="w-full max-w-6xl mx-auto px-4 pt-24">
                 {/* Header đồng bộ */}
                 <div className="text-center mb-8">
                     <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-4">
@@ -272,123 +287,180 @@ const ConsentForms = () => {
                     ]}
                 />
 
-                {/* Consent forms list */}
-                {forms.length > 0 ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {forms.map((form) => (
-                            <Card
-                                key={form.id + "-" + form.studentId}
-                                className="rounded-xl shadow border-0 hover:shadow-lg transition-shadow duration-300"
-                                styles={{ body: { padding: 20 } }}
-                            >
-                                <div className="flex items-center gap-3 mb-2">
-                                    <FileTextOutlined className="text-xl text-[#36ae9a]" />
-                                    <Title level={5} className="mb-0">
-                                        {form.name}
-                                    </Title>
-                                </div>
-                                <div className="mb-2 flex items-center gap-2">
-                                    <Avatar icon={<UserOutlined />} size={24} />
-                                    <span className="font-semibold">
-                                        {form.studentName}
-                                    </span>
-                                    {form.className && (
-                                        <span className="text-gray-400">
-                                            ({form.className})
-                                        </span>
-                                    )}
-                                </div>
-                                <div className="mb-2">
-                                    <Text type="secondary">Loại phiếu: </Text>
-                                    <Text strong>Tiêm chủng</Text>
-                                </div>
-                                <div className="mb-2">
-                                    <Text type="secondary">Vắc xin: </Text>
-                                    <Text
-                                        style={{
-                                            wordBreak: "keep-all",
-                                            whiteSpace: "nowrap",
-                                        }}
-                                    >
-                                        {form.vaccine?.name || "-"}
-                                    </Text>
-                                </div>
-                                <div className="mb-2">
-                                    <Text type="secondary">Thời gian: </Text>
-                                    <Text>
-                                        {new Date(
-                                            form.scheduledDate
-                                        ).toLocaleDateString("vi-VN")}{" "}
-                                        -{" "}
-                                        {new Date(
-                                            form.deadline
-                                        ).toLocaleDateString("vi-VN")}
-                                    </Text>
-                                </div>
-                                <div className="mb-2">
-                                    <Text type="secondary">
-                                        Trạng thái chiến dịch:{" "}
-                                    </Text>
-                                    {campaignStatusTag(form.status)}
-                                </div>
-                                <div className="mb-2">
-                                    <Text type="secondary">
-                                        Trạng thái xác nhận:{" "}
-                                    </Text>
-                                    {statusTag(form.consent)}
-                                </div>
-                                {form.consentDate && (
-                                    <div className="mb-2 text-xs text-gray-500">
-                                        {form.consent === true && "Đã đồng ý"}
-                                        {form.consent === false && "Đã từ chối"}
-                                        {" lúc "}
-                                        {new Date(
-                                            form.consentDate
-                                        ).toLocaleDateString("vi-VN")}
+                {/* Timeline view for consent forms */}
+                {sortedForms.length > 0 ? (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                        <Timeline
+                            mode="left"
+                            items={sortedForms.map((form) => ({
+                                color: getTimelineColor(
+                                    form.consent,
+                                    form.status
+                                ),
+                                children: (
+                                    <div className="mb-6">
+                                        <Card
+                                            className={`rounded-lg shadow-sm border-0 hover:shadow-md transition-shadow duration-300 ${getCardColor(
+                                                form.consent,
+                                                form.status
+                                            )}`}
+                                            styles={{ body: { padding: 16 } }}
+                                        >
+                                            <div className="flex items-start justify-between mb-3">
+                                                <div className="flex items-center gap-3">
+                                                    {getCardIcon(
+                                                        form.consent,
+                                                        form.status
+                                                    )}
+                                                    <div>
+                                                        <Title
+                                                            level={5}
+                                                            className="mb-1"
+                                                        >
+                                                            {form.name}
+                                                        </Title>
+                                                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                                                            <Avatar
+                                                                icon={
+                                                                    <UserOutlined />
+                                                                }
+                                                                size={20}
+                                                            />
+                                                            <span className="font-medium">
+                                                                {
+                                                                    form.studentName
+                                                                }
+                                                            </span>
+                                                            {form.className && (
+                                                                <span className="text-gray-400">
+                                                                    (
+                                                                    {
+                                                                        form.className
+                                                                    }
+                                                                    )
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end gap-1">
+                                                    {statusTag(form.consent)}
+                                                    {campaignStatusTag(
+                                                        form.status
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3 text-sm">
+                                                <div>
+                                                    <Text type="secondary">
+                                                        Vắc xin:{" "}
+                                                    </Text>
+                                                    <Text
+                                                        strong
+                                                        className="text-blue-600"
+                                                    >
+                                                        {form.vaccine?.name ||
+                                                            "-"}
+                                                    </Text>
+                                                </div>
+                                                <div>
+                                                    <Text type="secondary">
+                                                        Thời gian:{" "}
+                                                    </Text>
+                                                    <Text>
+                                                        {new Date(
+                                                            form.scheduledDate
+                                                        ).toLocaleDateString(
+                                                            "vi-VN"
+                                                        )}{" "}
+                                                        -{" "}
+                                                        {new Date(
+                                                            form.deadline
+                                                        ).toLocaleDateString(
+                                                            "vi-VN"
+                                                        )}
+                                                    </Text>
+                                                </div>
+                                            </div>
+
+                                            {form.consentDate && (
+                                                <div className="mb-2 text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
+                                                    {form.consent === true &&
+                                                        "✅ Đã đồng ý"}
+                                                    {form.consent === false &&
+                                                        "❌ Đã từ chối"}
+                                                    {" lúc "}
+                                                    {new Date(
+                                                        form.consentDate
+                                                    ).toLocaleDateString(
+                                                        "vi-VN"
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {form.reason && (
+                                                <div className="mb-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded">
+                                                    <Text strong>
+                                                        Lý do từ chối:
+                                                    </Text>{" "}
+                                                    {form.reason}
+                                                </div>
+                                            )}
+
+                                            <div className="flex gap-2 mt-3">
+                                                <Button
+                                                    size="small"
+                                                    onClick={() =>
+                                                        openConsentModal(
+                                                            form,
+                                                            null
+                                                        )
+                                                    }
+                                                    icon={<FileTextOutlined />}
+                                                >
+                                                    Xem chi tiết
+                                                </Button>
+                                                {form.consent === null && (
+                                                    <>
+                                                        <Button
+                                                            size="small"
+                                                            type="primary"
+                                                            icon={
+                                                                <CheckOutlined />
+                                                            }
+                                                            onClick={() =>
+                                                                openConsentModal(
+                                                                    form,
+                                                                    true
+                                                                )
+                                                            }
+                                                        >
+                                                            Đồng ý
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            danger
+                                                            icon={
+                                                                <CloseOutlined />
+                                                            }
+                                                            onClick={() =>
+                                                                openConsentModal(
+                                                                    form,
+                                                                    false
+                                                                )
+                                                            }
+                                                        >
+                                                            Từ chối
+                                                        </Button>
+                                                    </>
+                                                )}
+                                            </div>
+                                        </Card>
                                     </div>
-                                )}
-                                {form.reason && (
-                                    <div className="mb-2 text-xs text-red-500">
-                                        Lý do từ chối: {form.reason}
-                                    </div>
-                                )}
-                                <div className="flex gap-2 mt-4">
-                                    <Button
-                                        onClick={() =>
-                                            openConsentModal(form, null)
-                                        }
-                                        icon={<FileTextOutlined />}
-                                    >
-                                        Xem chi tiết
-                                    </Button>
-                                    {form.consent === null && (
-                                        <>
-                                            <Button
-                                                type="primary"
-                                                icon={<CheckOutlined />}
-                                                onClick={() =>
-                                                    openConsentModal(form, true)
-                                                }
-                                            >
-                                                Đồng ý
-                                            </Button>
-                                            <Button
-                                                danger
-                                                icon={<CloseOutlined />}
-                                                onClick={() =>
-                                                    openConsentModal(
-                                                        form,
-                                                        false
-                                                    )
-                                                }
-                                            >
-                                                Từ chối
-                                            </Button>
-                                        </>
-                                    )}
-                                </div>
-                            </Card>
-                        ))}
+                                ),
+                            }))}
+                        />
                     </div>
                 ) : (
                     <Card className="rounded-xl shadow border-0">
