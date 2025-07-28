@@ -266,7 +266,13 @@ const NotificationBell = () => {
     // Tạo notificationItems mới với phần scroll chỉ ở danh sách
     const notificationList =
         notifications.length > 0 ? (
-            <div style={{ maxHeight: "350px", overflowY: "auto" }}>
+            <div
+                style={{
+                    maxHeight: "280px",
+                    overflowY: "auto",
+                    padding: "8px 0",
+                }}
+            >
                 {notifications.map((notification) => (
                     <NotificationItem
                         key={notification.id}
@@ -292,8 +298,9 @@ const NotificationBell = () => {
             label: (
                 <div
                     style={{
-                        padding: "8px 16px",
+                        padding: "6px 12px",
                         borderBottom: "1px solid #f0f0f0",
+                        fontSize: "13px",
                     }}
                 >
                     <strong>Thông báo gần đây</strong>
@@ -301,8 +308,9 @@ const NotificationBell = () => {
                         <Badge
                             count={unreadCount}
                             style={{
-                                marginLeft: 8,
+                                marginLeft: 6,
                                 backgroundColor: "#52c41a",
+                                fontSize: "10px",
                             }}
                         />
                     )}
@@ -321,9 +329,10 @@ const NotificationBell = () => {
                 notifications.length === 0 ? (
                     <div
                         style={{
-                            padding: "16px",
+                            padding: "12px",
                             textAlign: "center",
                             color: "#999",
+                            fontSize: "12px",
                         }}
                     >
                         {loading ? (

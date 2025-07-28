@@ -36,7 +36,7 @@ const frequencyMap = {
   once: "1 lần/ngày",
   twice: "2 lần/ngày",
   three: "3 lần/ngày",
-  "as-needed": "Khi cần thiết",
+  "as-needed": "Khi cần",
 };
 const usageNoteMap = {
   "after-meal": "Sau ăn",
@@ -186,8 +186,8 @@ const MedicalInventory = () => {
             },
             {
               title: "Học sinh",
-              dataIndex: "studentName",
-              key: "studentName",
+              dataIndex: ["student", "fullName"],
+              key: "fullName",
             },
             {
               title: "Phụ huynh",
@@ -297,9 +297,9 @@ const MedicalInventory = () => {
               <Typography.Title level={5}>
                 Thông tin học sinh & phụ huynh
               </Typography.Title>
-              <Descriptions column={1} size="small" bordered>
+              <Descriptions column={2} size="small" bordered>
                 <Descriptions.Item label="Tên học sinh">
-                  {selected.student?.user?.fullName || "-"}
+                  {selected.student?.fullName || "-"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Mã học sinh">
                   {selected.student?.studentCode || "-"}
@@ -314,7 +314,7 @@ const MedicalInventory = () => {
               <Typography.Title level={5} style={{ marginTop: 24 }}>
                 Thông tin thuốc
               </Typography.Title>
-              <Descriptions column={1} size="small" bordered>
+              <Descriptions column={2} size="small" bordered>
                 <Descriptions.Item label="Loại thuốc">
                   {typeMap[selected.type] || selected.type || "-"}
                 </Descriptions.Item>

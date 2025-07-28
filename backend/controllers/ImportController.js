@@ -8,7 +8,33 @@ const validateGender = (gender) =>
     ["Nam", "Nữ", "nam", "nữ", "male", "female"].includes(
         (gender || "").toLowerCase()
     );
-const validatePhone = (phone) => /^\d{8,15}$/.test(phone || "");
+const validatePhone = (phone) => /^0\d{8,14}$/.test(phone || "");
+
+// Hàm tự động thêm số 0 ở đầu số điện thoại nếu chưa có
+const normalizePhoneNumber = (phone) => {
+    if (!phone) return phone;
+    const cleanPhone = phone.toString().replace(/\D/g, ""); // Chỉ giữ lại số
+    if (cleanPhone.length >= 9 && cleanPhone.length <= 15) {
+        return cleanPhone.startsWith("0") ? cleanPhone : `0${cleanPhone}`;
+    }
+    return phone; // Trả về nguyên bản nếu không hợp lệ
+};
+
+const validateSchoolYear = (schoolYear) => {
+    if (!schoolYear) return false;
+    const pattern = /^\d{4}-\d{4}$/;
+    if (!pattern.test(schoolYear)) return false;
+
+    const [startYear, endYear] = schoolYear.split("-");
+    const start = parseInt(startYear);
+    const end = parseInt(endYear);
+
+    // Kiểm tra năm học hợp lý:
+    // 1. Năm bắt đầu phải là số hợp lệ
+    // 2. Năm kết thúc phải lớn hơn năm bắt đầu
+    // 3. Cho phép khoảng thời gian hợp lý (ví dụ: 2020-2025, 2024-2025, etc.)
+    return start > 1900 && end > start && end <= start + 10;
+};
 
 // Hàm tìm key gần đúng theo tên cột (bỏ qua khoảng trắng, không phân biệt hoa thường)
 function getColKey(row, colName) {
@@ -20,10 +46,13 @@ function getColKey(row, colName) {
 }
 // Hàm làm sạch chuỗi: loại bỏ dấu phẩy, dấu cách, dấu /, ký tự xuống dòng ở đầu/cuối
 function cleanString(str) {
-    return String(str || "")
-        .replace(/[\s,\/\n\r]+$/g, "") // Xóa ở cuối
-        .replace(/^[\s,\/\n\r]+/g, "") // Xóa ở đầu
-        .trim();
+    return (
+        String(str || "")
+            .replace(/[\s,\/\n\r]+$/g, "") // Xóa ở cuối
+            .replace(/^[\s,\/\n\r]+/g, "") // Xóa ở đầu
+            // Không cần xóa dấu ' nữa vì cột đã được format thành text
+            .trim()
+    );
 }
 
 // Hàm chuẩn hóa chuỗi ngày về yyyy-MM-dd
@@ -87,8 +116,9 @@ export const importParentsStudents = async (req, res) => {
             let rawParentDOB = getVal("Ngày sinh phụ huynh");
             let parentDOB = normalizeDateString(rawParentDOB);
             const parentName = cleanString(getVal("Tên phụ huynh"));
+            const rawParentPhone = cleanString(getVal("SĐT phụ huynh"));
+            const parentPhone = normalizePhoneNumber(rawParentPhone);
             const parentEmail = cleanString(getVal("Email phụ huynh"));
-            const parentPhone = cleanString(getVal("SĐT phụ huynh"));
             const parentAddress = cleanString(getVal("Địa chỉ phụ huynh"));
             const parentGender = cleanString(getVal("Giới tính phụ huynh"));
             const studentName = cleanString(getVal("Họ và tên"));
@@ -96,8 +126,8 @@ export const importParentsStudents = async (req, res) => {
             const studentGender = cleanString(getVal("Giới tính"));
             const studentClass = cleanString(getVal("Lớp"));
             const studentGrade = cleanString(getVal("Khối"));
+            const studentAcademicYear = cleanString(getVal("Năm học"));
             const studentAddress = cleanString(getVal("Địa chỉ"));
-            const studentEmail = cleanString(getVal("Email"));
 
             // Validate bắt buộc
             if (
@@ -109,7 +139,8 @@ export const importParentsStudents = async (req, res) => {
                 !studentDOB ||
                 !studentGender ||
                 !studentClass ||
-                !studentGrade
+                !studentGrade ||
+                !studentAcademicYear
             ) {
                 errors.push(`Dòng ${rowNum}: Thiếu trường bắt buộc.`);
                 continue;
@@ -120,7 +151,7 @@ export const importParentsStudents = async (req, res) => {
             }
             if (!validatePhone(parentPhone)) {
                 errors.push(
-                    `Dòng ${rowNum}: Số điện thoại phụ huynh không hợp lệ.`
+                    `Dòng ${rowNum}: Số điện thoại phụ huynh không hợp lệ. Hệ thống đã tự động thêm số 0 ở đầu nếu cần.`
                 );
                 continue;
             }
@@ -144,9 +175,11 @@ export const importParentsStudents = async (req, res) => {
                 errors.push(`Dòng ${rowNum}: Ngày sinh học sinh không hợp lệ.`);
                 continue;
             }
-            if (!studentEmail) {
+
+            // Validate năm học
+            if (!validateSchoolYear(studentAcademicYear)) {
                 errors.push(
-                    `Dòng ${rowNum}: Thiếu email học sinh và không thể tự sinh.`
+                    `Dòng ${rowNum}: Năm học không đúng định dạng (VD: 2020-2025, 2024-2025)`
                 );
                 continue;
             }
@@ -211,37 +244,43 @@ export const importParentsStudents = async (req, res) => {
                 }
             }
             const studentCode = `STU${String(nextNumber).padStart(4, "0")}`;
-            // Kiểm tra email học sinh đã tồn tại chưa
-            const existingStudentUser = await prisma.users.findUnique({
-                where: { email: studentEmail },
+
+            // Tạo email tự động cho học sinh
+            const generateStudentEmail = (fullName) => {
+                const normalizedName = fullName
+                    .normalize("NFD")
+                    .replace(/[\u0300-\u036f]/g, "")
+                    .toLowerCase()
+                    .replace(/\s+/g, ".");
+                const randomNum = Math.floor(Math.random() * 1000);
+                return `${normalizedName}${randomNum}@school.edu.vn`;
+            };
+
+            const studentEmail = generateStudentEmail(studentName);
+
+            // Tạo user học sinh mới
+            const newStudentUser = await prisma.users.create({
+                data: {
+                    fullName: studentName,
+                    email: studentEmail,
+                    phone: null,
+                    address: studentAddress,
+                    password: "12345678", // default
+                    role: "STUDENT",
+                    isActive: true,
+                },
             });
-            let studentUserId;
-            if (!existingStudentUser) {
-                // Tạo user học sinh mới
-                const newStudentUser = await prisma.users.create({
-                    data: {
-                        fullName: studentName,
-                        email: studentEmail,
-                        phone: null,
-                        address: studentAddress,
-                        password: "12345678", // default
-                        role: "STUDENT",
-                        isActive: true,
-                    },
-                });
-                studentUserId = newStudentUser.id;
-            } else {
-                studentUserId = existingStudentUser.id;
-            }
-            // Khi tạo student, truyền thêm userId: studentUserId đúng với schema.
+            const studentUserId = newStudentUser.id;
+            // Tạo student record (không có userId vì Student model không có userId field)
             const newStudent = await prisma.student.create({
                 data: {
-                    userId: studentUserId,
                     studentCode,
+                    fullName: studentName,
                     dateOfBirth: new Date(studentDOB),
                     gender: studentGender,
                     class: studentClass,
                     grade: studentGrade,
+                    academicYear: studentAcademicYear,
                     // bloodType: ... (nếu có)
                 },
             });

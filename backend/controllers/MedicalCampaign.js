@@ -1,6 +1,34 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+// Helper function để tính toán năm học từ ngày
+const getAcademicYearFromDate = (date) => {
+    const targetDate = new Date(date);
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth() + 1; // 0-based
+
+    // Năm học bắt đầu từ tháng 9 (tháng 9-12 thuộc năm học mới)
+    if (month >= 9) {
+        return `${year}-${year + 1}`;
+    } else {
+        return `${year - 1}-${year}`;
+    }
+};
+
+// Helper function để lấy năm học hiện tại
+const getCurrentAcademicYear = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1; // 0-based
+
+    // Năm học bắt đầu từ tháng 9 (tháng 9-12 thuộc năm học mới)
+    if (month >= 9) {
+        return `${year}-${year + 1}`;
+    } else {
+        return `${year - 1}-${year}`;
+    }
+};
+
 // Tạo campaign mới
 export const createMedicalCampaign = async (req, res) => {
     const { name, scheduledDate, deadline, description, targetGrades } =
@@ -94,15 +122,45 @@ export const createMedicalCampaign = async (req, res) => {
     }
 };
 
-// Lấy tất cả campaign
+// Lấy tất cả campaign với filter theo năm học
 export const getAllMedicalCampaigns = async (req, res) => {
     try {
+        const { academicYear } = req.query;
+        let whereClause = {};
+
+        // Nếu có filter theo năm học, tính toán từ scheduledDate
+        if (academicYear) {
+            const [startYear, endYear] = academicYear.split("-");
+            const startDate = new Date(parseInt(startYear), 8, 1); // Tháng 9
+            const endDate = new Date(parseInt(endYear), 7, 31); // Tháng 8 năm sau
+
+            whereClause = {
+                scheduledDate: {
+                    gte: startDate,
+                    lte: endDate,
+                },
+            };
+        }
+
         const campaigns = await prisma.medicalCheckCampaign.findMany({
+            where: whereClause,
             orderBy: {
                 createdAt: "desc",
             },
         });
-        res.status(200).json({ success: true, data: campaigns });
+
+        // Thêm thông tin năm học được tính toán
+        const campaignsWithAcademicYear = campaigns.map((campaign) => ({
+            ...campaign,
+            calculatedAcademicYear: getAcademicYearFromDate(
+                campaign.scheduledDate
+            ),
+        }));
+
+        res.status(200).json({
+            success: true,
+            data: campaignsWithAcademicYear,
+        });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -335,7 +393,13 @@ export const notifyParentsAboutCampaign = async (req, res) => {
             where: {
                 grade: { in: campaign.targetGrades },
             },
-            select: { id: true, user: { select: { fullName: true } } },
+            select: {
+                id: true,
+                studentCode: true,
+                fullName: true,
+                grade: true,
+                class: true,
+            },
         });
         if (!students.length) {
             return res.status(404).json({
@@ -403,18 +467,30 @@ export const notifyParentsAboutCampaign = async (req, res) => {
 };
 
 export const getStudentsForMedicalCampaign = async (req, res) => {
-  const { id } = req.params;
-  try {
-    const campaign = await prisma.medicalCheckCampaign.findUnique({ where: { id } });
-    if (!campaign) {
-      return res.status(404).json({ success: false, error: "Không tìm thấy chiến dịch" });
+    const { id } = req.params;
+    try {
+        const campaign = await prisma.medicalCheckCampaign.findUnique({
+            where: { id },
+        });
+        if (!campaign) {
+            return res
+                .status(404)
+                .json({ success: false, error: "Không tìm thấy chiến dịch" });
+        }
+        const students = await prisma.student.findMany({
+            where: { grade: { in: campaign.targetGrades } },
+            select: {
+                id: true,
+                studentCode: true,
+                fullName: true,
+                grade: true,
+                class: true,
+                dateOfBirth: true,
+                gender: true,
+            },
+        });
+        res.json({ success: true, data: students });
+    } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
     }
-    const students = await prisma.student.findMany({
-      where: { grade: { in: campaign.targetGrades } },
-      select: { id: true, user: { select: { fullName: true } } },
-    });
-    res.json({ success: true, data: students });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
 };

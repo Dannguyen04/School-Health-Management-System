@@ -465,6 +465,8 @@ const VaccinationCampaigns = () => {
   };
 
   const handleSearch = (values) => {
+    console.log(values);
+
     let filtered = allCampaigns;
     if (values.name?.trim()) {
       filtered = filtered.filter((c) =>
@@ -473,7 +475,7 @@ const VaccinationCampaigns = () => {
     }
     if (values.vaccinationName) {
       filtered = filtered.filter(
-        (c) => c.vaccination?.name === values.vaccinationName
+        (c) => c.vaccine?.name === values.vaccinationName
       );
     }
     if (values.status) {
@@ -794,8 +796,15 @@ const VaccinationCampaigns = () => {
                       <Descriptions.Item label="Chống chỉ định">
                         {selectedVaccination.contraindications || "Không có"}
                       </Descriptions.Item>
-                      <Descriptions.Item label="Độ tuổi khuyến nghị">
-                        {selectedVaccination.recommendedAge || "Không có"}
+                      <Descriptions.Item label="Độ tuổi chỉ định">
+                        {selectedVaccination.minAge &&
+                        selectedVaccination.maxAge
+                          ? `${selectedVaccination.minAge} - ${selectedVaccination.maxAge} tuổi`
+                          : selectedVaccination.minAge
+                          ? `Từ ${selectedVaccination.minAge} tuổi trở lên`
+                          : selectedVaccination.maxAge
+                          ? `Dưới ${selectedVaccination.maxAge} tuổi`
+                          : "Không có"}
                       </Descriptions.Item>
                       <Descriptions.Item label="Mô tả">
                         {selectedVaccination.description || "Không có"}
@@ -952,6 +961,39 @@ const VaccinationCampaigns = () => {
           <p style={{ marginTop: 16 }}>
             Bạn có chắc chắn muốn gửi phiếu cho các khối đã chọn không?
           </p>
+
+          {/* Hiển thị kết quả gửi phiếu đồng ý */}
+          {consentResult && (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 12,
+                background: "#f6ffed",
+                borderRadius: 4,
+                border: "1px solid #b7eb8f",
+              }}
+            >
+              <h4 style={{ margin: "0 0 8px 0", color: "#52c41a" }}>
+                Kết quả gửi phiếu:
+              </h4>
+              <p style={{ margin: "4px 0" }}>
+                <strong>Số thông báo đã gửi:</strong>{" "}
+                {consentResult.notificationsCount}
+              </p>
+              {consentResult.ineligibleGrades &&
+                consentResult.ineligibleGrades.length > 0 && (
+                  <p style={{ margin: "4px 0", color: "#fa8c16" }}>
+                    <strong>Khối có học sinh không đủ tuổi:</strong>{" "}
+                    {consentResult.ineligibleGrades.join(", ")}
+                  </p>
+                )}
+              {consentResult.message && (
+                <p style={{ margin: "4px 0", fontSize: "12px", color: "#666" }}>
+                  {consentResult.message}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </Modal>
 
@@ -1061,7 +1103,7 @@ const VaccinationCampaigns = () => {
           columns={[
             {
               title: "Học sinh",
-              dataIndex: ["student", "user", "fullName"],
+              dataIndex: ["student", "fullName"],
               key: "studentName",
             },
             {

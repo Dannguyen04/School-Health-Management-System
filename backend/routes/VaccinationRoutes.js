@@ -14,7 +14,7 @@ import {
 
 const router = express.Router();
 
-router.post("/", createVaccination);
+router.post("/", authenticateToken, verifyManager, createVaccination);
 
 router.get("/", authenticateToken, verifyManager, getVaccinations);
 

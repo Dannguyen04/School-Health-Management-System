@@ -3,7 +3,7 @@ import {
   MedicineBoxOutlined,
   ScheduleOutlined,
 } from "@ant-design/icons";
-import { Button, Select, Space, Spin, Table, Tabs, Typography } from "antd";
+import { Select, Space, Spin, Table, Tabs, Tag, Typography } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -22,7 +22,7 @@ const MedicalSchedule = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [children, setChildren] = useState([]);
   const [selectedChild, setSelectedChild] = useState(null);
-  const [selectedMedicalCampaign, setSelectedMedicalCampaign] = useState(null);
+  // const [selectedMedicalCampaign, setSelectedMedicalCampaign] = useState(null);
   const [medicalModalVisible, setMedicalModalVisible] = useState(false);
   const [medicalDetail, setMedicalDetail] = useState(null);
 
@@ -38,15 +38,26 @@ const MedicalSchedule = () => {
           class: child.class,
         }));
         setChildren(options);
-        if (options.length > 0) setSelectedChild(options[0].value);
+
+        // Lưu danh sách children vào localStorage để sử dụng cho notification navigation
+        localStorage.setItem("children", JSON.stringify(res.data.data));
+
+        // Chỉ set học sinh đầu tiên nếu không có selectedStudentId từ state
+        if (options.length > 0 && !location.state?.selectedStudentId) {
+          setSelectedChild(options[0].value);
+        }
       }
     });
-  }, []);
+  }, [location.state?.selectedStudentId]);
 
   // Nếu nhận state scrollToMedicalTab, tự động chuyển tab
   useEffect(() => {
     if (location.state && location.state.scrollToMedicalTab) {
       setTab("medical");
+    }
+    // Nếu có selectedStudentId thì tự động chọn học sinh đó
+    if (location.state && location.state.selectedStudentId) {
+      setSelectedChild(location.state.selectedStudentId);
     }
   }, [location.state]);
 
@@ -85,7 +96,7 @@ const MedicalSchedule = () => {
         setSelected(res.data.data);
         setModalVisible(true);
       }
-    } catch (e) {
+    } catch {
       // Không mở modal nếu không có dữ liệu
       setSelected(null);
       setModalVisible(false);
@@ -103,7 +114,7 @@ const MedicalSchedule = () => {
         setMedicalDetail(res.data.data);
         setMedicalModalVisible(true);
       }
-    } catch (e) {
+    } catch {
       setMedicalDetail(null);
       setMedicalModalVisible(false);
     } finally {
@@ -122,9 +133,10 @@ const MedicalSchedule = () => {
     },
     {
       title: "Loại vắc xin",
+      dataIndex: ["vaccine", "name"],
       key: "vaccineName",
       width: 180,
-      render: (record) => record.vaccineName || "-",
+      render: (vaccineName) => vaccineName || "-",
     },
     {
       title: "Ngày bắt đầu",
@@ -151,51 +163,59 @@ const MedicalSchedule = () => {
       render: (status) => {
         switch (status) {
           case "ACTIVE":
-            return "Đang diễn ra";
+            return <Tag color="blue">Đang diễn ra</Tag>;
           case "FINISHED":
-            return "Đã kết thúc";
+            return <Tag color="green">Đã kết thúc</Tag>;
           case "CANCELLED":
-            return "Đã hủy";
+            return <Tag color="red">Đã hủy</Tag>;
           case "SCHEDULED":
-            return "Đã lên lịch";
+            return <Tag color="orange">Đã lên lịch</Tag>;
           default:
-            return status || "-";
+            return <Tag color="default">{status || "-"}</Tag>;
         }
       },
     },
-    {
-      title: "Chi tiết",
-      key: "action",
-      align: "center",
-      width: 100,
-      render: (record) => (
-        <Button
-          type="link"
-          onClick={() => fetchVaccinationDetail(record.id, selectedChild)}
-          style={{ color: "#36ae9a" }}
-        >
-          Chi tiết
-        </Button>
-      ),
-    },
+    // {
+    //   title: "Chi tiết",
+    //   key: "action",
+    //   align: "center",
+    //   width: 100,
+    //   render: (record) => (
+    //     <Button
+    //       type="link"
+    //       onClick={() => fetchVaccinationDetail(record.id, selectedChild)}
+    //       style={{ color: "#36ae9a" }}
+    //     >
+    //       Chi tiết
+    //     </Button>
+    //   ),
+    // },
   ];
 
   // Cột bảng cho lịch khám sức khỏe
   const medicalColumns = [
-    {
-      title: "Ngày dự kiến",
-      dataIndex: "scheduledDate",
-      key: "scheduledDate",
-      align: "center",
-      width: 120,
-      render: (date) => dayjs(date).format("DD/MM/YYYY"),
-    },
     {
       title: "Tên chiến dịch",
       dataIndex: "name",
       key: "name",
       width: 200,
       ellipsis: true,
+    },
+    {
+      title: "Ngày bắt đầu",
+      dataIndex: "scheduledDate",
+      key: "scheduledDate",
+      align: "center",
+      width: 120,
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Ngày kết thúc",
+      dataIndex: "deadline",
+      key: "deadline",
+      align: "center",
+      width: 120,
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
       title: "Trạng thái",
@@ -206,33 +226,33 @@ const MedicalSchedule = () => {
       render: (status) => {
         switch (status) {
           case "ACTIVE":
-            return "Đang diễn ra";
+            return <Tag color="blue">Đang diễn ra</Tag>;
           case "FINISHED":
-            return "Đã kết thúc";
+            return <Tag color="green">Đã kết thúc</Tag>;
           case "CANCELLED":
-            return "Đã hủy";
+            return <Tag color="red">Đã hủy</Tag>;
           case "SCHEDULED":
-            return "Đã lên lịch";
+            return <Tag color="orange">Đã lên lịch</Tag>;
           default:
-            return status || "-";
+            return <Tag color="default">{status || "-"}</Tag>;
         }
       },
     },
-    {
-      title: "Chi tiết",
-      key: "action",
-      align: "center",
-      width: 100,
-      render: (record) => (
-        <Button
-          type="link"
-          onClick={() => fetchMedicalCampaignDetail(record.id)}
-          style={{ color: "#36ae9a" }}
-        >
-          Chi tiết
-        </Button>
-      ),
-    },
+    // {
+    //   title: "Chi tiết",
+    //   key: "action",
+    //   align: "center",
+    //   width: 100,
+    //   render: (record) => (
+    //     <Button
+    //       type="link"
+    //       onClick={() => fetchMedicalCampaignDetail(record.id)}
+    //       style={{ color: "#36ae9a" }}
+    //     >
+    //       Chi tiết
+    //     </Button>
+    //   ),
+    // },
   ];
 
   return (
@@ -273,7 +293,10 @@ const MedicalSchedule = () => {
                     </Title>
                     <Space>
                       <Select
-                        style={{ width: 320, minWidth: 220 }}
+                        style={{
+                          width: 320,
+                          minWidth: 220,
+                        }}
                         dropdownStyle={{
                           borderRadius: 18,
                           boxShadow: "0 8px 32px rgba(54, 174, 154, 0.15)",

@@ -989,7 +989,7 @@ const AlertsAndEvents = () => {
           <div className="space-y-4">
             <Descriptions bordered column={2}>
               <Descriptions.Item label="Học sinh" span={2}>
-                {selectedEvent.studentName} - {selectedEvent.grade}
+                {selectedEvent.studentName} - {selectedEvent.class}
               </Descriptions.Item>
               <Descriptions.Item label="Tiêu đề" span={2}>
                 {selectedEvent.title}

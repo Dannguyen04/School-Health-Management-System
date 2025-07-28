@@ -15,6 +15,8 @@ import {
     Skeleton,
     Empty,
     Divider,
+    Timeline,
+    Alert,
 } from "antd";
 import {
     ExclamationCircleOutlined,
@@ -23,6 +25,7 @@ import {
     FieldTimeOutlined,
     HeartFilled,
     HeartOutlined,
+    EyeOutlined,
 } from "@ant-design/icons";
 import moment from "moment";
 
@@ -122,6 +125,7 @@ const MedicalEvents = () => {
     const [detailModalVisible, setDetailModalVisible] = useState(false);
     const [loadingDetail, setLoadingDetail] = useState(false);
     const [eventDetail, setEventDetail] = useState(null);
+    const [viewMode, setViewMode] = useState("timeline"); // timeline or grid
 
     useEffect(() => {
         if (user?.id) {
@@ -204,7 +208,17 @@ const MedicalEvents = () => {
                         bạn
                     </p>
                 </div>
-                {/* Danh sách sự kiện */}
+
+                {/* View Mode Toggle */}
+                <div className="flex justify-between items-center mb-6">
+                    <div>
+                        <Text strong>
+                            Tổng sự kiện: {events.length} sự kiện
+                        </Text>
+                    </div>
+                </div>
+
+                {/* Content */}
                 {loading ? (
                     <Row gutter={[24, 24]}>
                         {[...Array(6)].map((_, idx) => (
@@ -214,76 +228,148 @@ const MedicalEvents = () => {
                         ))}
                     </Row>
                 ) : events.length === 0 ? (
-                    <Empty description="Không có sự kiện y tế nào" />
-                ) : (
-                    <Row gutter={[24, 24]}>
-                        {events
-                            .slice()
-                            .sort((a, b) => {
-                                const dateA = a.occurredAt
-                                    ? new Date(a.occurredAt)
-                                    : new Date(a.createdAt);
-                                const dateB = b.occurredAt
-                                    ? new Date(b.occurredAt)
-                                    : new Date(b.createdAt);
-                                return dateB - dateA;
-                            })
-                            .map((item) => (
-                                <Col xs={24} sm={12} md={8} key={item.id}>
-                                    <Card
-                                        hoverable
-                                        className="rounded-2xl shadow border-0 mb-6 transition-all duration-200 bg-white group"
-                                        onClick={() => handleEventClick(item)}
-                                        style={{
-                                            minHeight: 160,
-                                            padding: 0,
-                                            borderColor: "#e6f7f2",
-                                        }}
-                                        bodyStyle={{ padding: 0 }}
-                                    >
-                                        <div className="flex items-center gap-4 p-6">
-                                            <div className="flex-shrink-0">
-                                                {typeIcon[item.eventType] || (
-                                                    <ExclamationCircleOutlined
-                                                        style={{
-                                                            fontSize: 32,
-                                                            color: "#36ae9a",
-                                                        }}
-                                                    />
+                    <Empty
+                        description="Không có sự kiện y tế nào"
+                        image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    />
+                ) : viewMode === "timeline" ? (
+                    // Timeline View
+                    <Timeline
+                        mode="left"
+                        items={events.map((item) => ({
+                            color:
+                                item.severity === "critical"
+                                    ? "red"
+                                    : item.severity === "high"
+                                    ? "orange"
+                                    : item.severity === "medium"
+                                    ? "gold"
+                                    : "green",
+                            children: (
+                                <Card
+                                    hoverable
+                                    className="rounded-2xl shadow border-0 mb-4 transition-all duration-200 bg-white"
+                                    onClick={() => handleEventClick(item)}
+                                    style={{ borderColor: "#e6f7f2" }}
+                                >
+                                    <div className="flex items-center gap-4 p-4">
+                                        <div className="flex-shrink-0">
+                                            {typeIcon[item.eventType] || (
+                                                <ExclamationCircleOutlined
+                                                    style={{
+                                                        fontSize: 24,
+                                                        color: "#36ae9a",
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <Text
+                                                    strong
+                                                    className="text-base text-[#36ae9a]"
+                                                >
+                                                    {item.title ||
+                                                        "Sự kiện y tế"}
+                                                </Text>
+                                            </div>
+                                            <div className="text-gray-400 text-xs mb-2">
+                                                <FieldTimeOutlined className="mr-1" />
+                                                {moment(item.createdAt).format(
+                                                    "DD/MM/YYYY HH:mm"
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <Text
-                                                        strong
-                                                        className="text-lg text-[#36ae9a] truncate"
-                                                    >
-                                                        {item.title ||
-                                                            "Sự kiện y tế"}
-                                                    </Text>
-                                                </div>
-                                                <div className="text-gray-400 text-xs mb-2">
-                                                    <FieldTimeOutlined className="mr-1" />
-                                                    {moment(
-                                                        item.createdAt
-                                                    ).format(
-                                                        "DD/MM/YYYY HH:mm"
-                                                    )}
-                                                </div>
-                                                <div className="text-gray-600 text-sm line-clamp-2 truncate">
-                                                    <Tooltip
-                                                        title={item.message}
-                                                    >
-                                                        {item.message}
-                                                    </Tooltip>
-                                                </div>
+                                            <div className="text-gray-600 text-sm line-clamp-2">
+                                                {item.message}
                                             </div>
                                         </div>
-                                    </Card>
-                                </Col>
-                            ))}
+                                    </div>
+                                </Card>
+                            ),
+                        }))}
+                    />
+                ) : (
+                    // Grid View
+                    <Row gutter={[24, 24]}>
+                        {events.map((item) => (
+                            <Col xs={24} sm={12} md={8} lg={6} key={item.id}>
+                                <Card
+                                    hoverable
+                                    className="rounded-2xl shadow border-0 mb-6 transition-all duration-200 bg-white group hover:shadow-lg"
+                                    onClick={() => handleEventClick(item)}
+                                    style={{
+                                        minHeight: 180,
+                                        padding: 0,
+                                        borderColor: "#e6f7f2",
+                                    }}
+                                    bodyStyle={{ padding: 0 }}
+                                >
+                                    <div className="flex items-center gap-4 p-6">
+                                        <div className="flex-shrink-0">
+                                            {typeIcon[item.eventType] || (
+                                                <ExclamationCircleOutlined
+                                                    style={{
+                                                        fontSize: 32,
+                                                        color: "#36ae9a",
+                                                    }}
+                                                />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <Text
+                                                    strong
+                                                    className="text-lg text-[#36ae9a] truncate"
+                                                >
+                                                    {item.title ||
+                                                        "Sự kiện y tế"}
+                                                </Text>
+                                            </div>
+                                            <div className="text-gray-400 text-xs mb-2">
+                                                <FieldTimeOutlined className="mr-1" />
+                                                {moment(item.createdAt).format(
+                                                    "DD/MM/YYYY HH:mm"
+                                                )}
+                                            </div>
+                                            <div className="text-gray-600 text-sm line-clamp-2 mb-3">
+                                                <Tooltip title={item.message}>
+                                                    {item.message}
+                                                </Tooltip>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1">
+                                                <Tag
+                                                    color={
+                                                        severityColor[
+                                                            item.severity
+                                                        ] || "default"
+                                                    }
+                                                    size="small"
+                                                >
+                                                    {getSeverityLabel(
+                                                        item.severity
+                                                    )}
+                                                </Tag>
+                                                <Tag
+                                                    color={
+                                                        statusColor[
+                                                            item.status
+                                                        ] || "default"
+                                                    }
+                                                    size="small"
+                                                >
+                                                    {getStatusLabel(
+                                                        item.status
+                                                    )}
+                                                </Tag>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </Col>
+                        ))}
                     </Row>
                 )}
+
                 {/* Modal chi tiết */}
                 <Modal
                     open={detailModalVisible}
@@ -310,6 +396,18 @@ const MedicalEvents = () => {
                             <Skeleton active paragraph={{ rows: 8 }} />
                         ) : eventDetail ? (
                             <>
+                                {/* Alert for critical events */}
+                                {(eventDetail.severity === "critical" ||
+                                    eventDetail.status === "REFERRED") && (
+                                    <Alert
+                                        message="Sự kiện quan trọng"
+                                        description="Sự kiện này cần được chú ý đặc biệt. Vui lòng click vào hoặc liên hệ với nhà trường để biết thêm chi tiết."
+                                        type="warning"
+                                        showIcon
+                                        className="mb-4"
+                                    />
+                                )}
+
                                 <Row gutter={[16, 16]}>
                                     <Col xs={24} md={12}>
                                         <div className="mb-4 flex items-center">
@@ -412,12 +510,6 @@ const MedicalEvents = () => {
                                                     eventDetail.status
                                                 )}
                                             </Tag>
-                                            {(eventDetail.severity ===
-                                                "critical" ||
-                                                eventDetail.status ===
-                                                    "REFERRED") && (
-                                                <ExclamationCircleOutlined className="ml-2 text-red-500" />
-                                            )}
                                         </div>
                                     </Col>
                                 </Row>

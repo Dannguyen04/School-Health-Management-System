@@ -70,14 +70,40 @@ const validationSchema = Yup.object().shape({
     otherwise: (schema) => schema,
   }),
   medications: Yup.array().of(Yup.string().required("Nhập tên thuốc")),
-  vision: Yup.string().required("Vui lòng nhập thị lực"),
-  hearing: Yup.string().required("Vui lòng nhập thính lực"),
+  vision: Yup.mixed()
+    .test("vision-format", "Định dạng thị lực không hợp lệ", (value) => {
+      if (!value) return false;
+      // Hỗ trợ: "10/10", "6/6", số từ 0.1-20
+      const validFormats = /^(\d+\/\d+|\d+\.?\d*)$/;
+      if (validFormats.test(value)) {
+        const num = parseFloat(value);
+        return num >= 0.1 && num <= 20;
+      }
+      return /^(Bình thường|Tốt|Kém|Cận thị|Viễn thị|Loạn thị|Mù màu|Khác)$/i.test(
+        value
+      );
+    })
+    .required("Bắt buộc điền"),
+  hearing: Yup.mixed()
+    .test("hearing-format", "Định dạng thính lực không hợp lệ", (value) => {
+      if (!value) return false;
+      // Nếu là số: 0-100
+      if (!isNaN(value)) {
+        const num = parseFloat(value);
+        return num >= 0 && num <= 100;
+      }
+      // Nếu là text
+      return /^(Bình thường|Tốt|Kém|Điếc|Một bên|Hai bên|Khác)$/i.test(value);
+    })
+    .required("Bắt buộc điền"),
   height: Yup.number()
-    .typeError("Vui lòng nhập chiều cao")
-    .required("Vui lòng nhập chiều cao"),
+    .min(50, "Chiều cao quá thấp (tối thiểu 50cm)")
+    .max(250, "Chiều cao quá cao (tối đa 250cm)")
+    .required("Bắt buộc điền"),
   weight: Yup.number()
-    .typeError("Vui lòng nhập cân nặng")
-    .required("Vui lòng nhập cân nặng"),
+    .min(5, "Cân nặng quá thấp (tối thiểu 5kg)")
+    .max(150, "Cân nặng quá cao (tối đa 150kg)")
+    .required("Bắt buộc điền"),
 });
 
 const HealthProfile = () => {

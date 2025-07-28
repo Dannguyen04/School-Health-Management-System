@@ -30,7 +30,6 @@ const authenticateToken = async (req, res, next) => {
             // Use either select or include, not both
             include: {
                 parentProfile: true,
-                studentProfile: true,
                 nurseProfile: true,
                 managerProfile: true,
                 adminProfile: true,

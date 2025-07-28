@@ -165,22 +165,22 @@ const Blogs = () => {
     };
 
     return (
-        <div className="min-h-[60vh] bg-gradient-to-br from-[#f6fcfa] to-[#e8f5f2] py-16 px-5 lg:px-32">
-            <div className="text-center max-w-4xl mx-auto mb-10">
-                <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-6">
+        <section className="min-h-[60vh] bg-gradient-to-br from-[#f6fcfa] to-[#e8f5f2] py-24 px-5 lg:px-32 animate-fade-in-up animate-delay-200">
+            <div className="text-center max-w-4xl mx-auto mb-14">
+                <div className="inline-flex items-center gap-2 bg-[#d5f2ec] text-[#36ae9a] px-4 py-2 rounded-full text-sm font-medium mb-6 animate-fade-in-down animate-delay-300 shadow-md">
                     <BookOutlined className="text-[#36ae9a]" />
                     <span>Kiến thức sức khỏe</span>
                 </div>
-                <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-4 leading-tight">
+                <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#36ae9a] to-[#4fd1c5] mb-4 leading-tight animate-fade-in-up animate-delay-400">
                     Blog sức khỏe
                 </h2>
-                <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto">
+                <p className="text-lg text-gray-600 mb-8 max-w-2xl mx-auto animate-fade-in-up animate-delay-500">
                     Cập nhật kiến thức, chia sẻ kinh nghiệm và thông tin hữu ích
                     về sức khỏe học đường từ các chuyên gia y tế.
                 </p>
 
                 {/* Search and Filter */}
-                <div className="flex flex-col lg:flex-row gap-4 max-w-2xl mx-auto">
+                <div className="flex flex-col lg:flex-row gap-4 max-w-2xl mx-auto animate-fade-in-up animate-delay-600">
                     <Search
                         placeholder="Tìm kiếm bài viết..."
                         allowClear
@@ -188,26 +188,28 @@ const Blogs = () => {
                         size="large"
                         onSearch={handleSearch}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="flex-1"
+                        className="flex-1 rounded-full shadow-md focus:shadow-lg transition-all duration-300"
+                        style={{ borderRadius: 999 }}
                     />
                     <Select
                         value={selectedCategory}
                         onChange={handleCategoryChange}
                         size="large"
-                        className="min-w-[150px]"
+                        className="min-w-[150px] rounded-full shadow-md focus:shadow-lg transition-all duration-300"
                         placeholder="Chọn danh mục"
                         options={categories}
+                        style={{ borderRadius: 999 }}
                     />
                 </div>
             </div>
 
             {/* Blog Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
                 {loading ? (
                     Array.from({ length: 6 }).map((_, index) => (
                         <div
                             key={index}
-                            className="bg-white rounded-2xl p-6 space-y-4 animate-pulse"
+                            className="bg-white rounded-2xl p-6 space-y-4 animate-pulse shadow-md"
                         >
                             <div className="h-48 w-full rounded-xl bg-gray-300"></div>
                             <div className="h-6 bg-gray-300 rounded w-3/4"></div>
@@ -216,10 +218,12 @@ const Blogs = () => {
                         </div>
                     ))
                 ) : filteredBlogs.length > 0 ? (
-                    filteredBlogs.map((blog) => (
+                    filteredBlogs.map((blog, idx) => (
                         <div
                             key={blog.id}
-                            className="transition-transform hover:-translate-y-2 hover:shadow-xl"
+                            className={`animate-fade-in-up animate-delay-${
+                                700 + idx * 100
+                            }`}
                         >
                             <BlogCard
                                 id={blog.id}
@@ -234,12 +238,12 @@ const Blogs = () => {
                         </div>
                     ))
                 ) : (
-                    <div className="col-span-full text-center text-gray-500 py-10">
+                    <div className="col-span-full text-center text-gray-500 py-10 animate-fade-in-up animate-delay-800">
                         Không tìm thấy bài viết phù hợp.
                     </div>
                 )}
             </div>
-        </div>
+        </section>
     );
 };
 

@@ -3,22 +3,18 @@ import {
     Avatar,
     Button,
     Card,
-    Col,
     Divider,
     Form,
     Input,
     message,
-    Row,
-    Space,
+    Modal,
     Spin,
     Typography,
-    Modal,
 } from "antd";
 import React, { useState } from "react";
-import { useAuth } from "../../context/authContext";
-import { userAPI } from "../../utils/api";
-import axios from "../../utils/api";
 import { useOutletContext } from "react-router-dom";
+import { useAuth } from "../../context/authContext";
+import axios, { userAPI } from "../../utils/api";
 
 const { Title, Text } = Typography;
 
@@ -380,6 +376,31 @@ const UserProfile = () => {
                                     name="avatar"
                                     label="Avatar URL"
                                     className="md:col-span-2"
+                                    rules={[
+                                        {
+                                            validator: (_, value) => {
+                                                if (!value)
+                                                    return Promise.resolve(); // Optional field
+
+                                                // Basic URL format check - relaxed validation
+                                                if (
+                                                    value.includes("http") ||
+                                                    value.includes("www.") ||
+                                                    value.includes(".com") ||
+                                                    value.includes(".jpg") ||
+                                                    value.includes(".png")
+                                                ) {
+                                                    return Promise.resolve();
+                                                }
+
+                                                return Promise.reject(
+                                                    new Error(
+                                                        "Vui lòng nhập URL hợp lệ"
+                                                    )
+                                                );
+                                            },
+                                        },
+                                    ]}
                                 >
                                     <Input
                                         size="large"

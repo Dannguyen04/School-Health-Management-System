@@ -43,6 +43,8 @@ const ParentManagement = () => {
       errors.name = "Tên phải có ít nhất 2 ký tự";
     } else if (values.name.length > 50) {
       errors.name = "Tên không được quá 50 ký tự";
+    } else if (!/^[\p{L}\s]+$/u.test(values.name)) {
+      errors.name = "Tên chỉ được chứa chữ cái và khoảng trắng";
     }
     if (!values.email) {
       errors.email = "Vui lòng nhập email";
@@ -51,8 +53,17 @@ const ParentManagement = () => {
     }
     if (!values.phone) {
       errors.phone = "Vui lòng nhập số điện thoại";
-    } else if (!/^[0-9]{10,11}$/.test(values.phone)) {
-      errors.phone = "Số điện thoại không hợp lệ";
+    } else {
+      // Loại bỏ tất cả ký tự không phải số
+      const cleanPhone = values.phone.replace(/\D/g, "");
+
+      // Kiểm tra format số điện thoại Việt Nam
+      const vietnamPhoneRegex =
+        /^(0|\+84)(3[2-9]|5[689]|7[06-9]|8[1-689]|9[0-46-9])[0-9]{7}$/;
+
+      if (!vietnamPhoneRegex.test(cleanPhone)) {
+        errors.phone = "Số điện thoại không đúng định dạng Việt Nam";
+      }
     }
     return errors;
   };
@@ -82,9 +93,12 @@ const ParentManagement = () => {
       setParents(formattedParents);
       setFilteredParents(formattedParents);
     } catch (error) {
-      message.error(
-        error.response?.data?.message || "Không thể tải danh sách phụ huynh"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể tải danh sách phụ huynh";
+      message.error(`Lỗi khi tải danh sách phụ huynh: ${errorMessage}`);
       console.error("Lỗi khi tải danh sách phụ huynh:", error);
     } finally {
       setTableLoading(false);
@@ -205,7 +219,13 @@ const ParentManagement = () => {
       message.success("Xóa phụ huynh thành công");
       fetchParents();
     } catch (error) {
-      message.error(error.response?.data?.message || "Không thể xóa phụ huynh");
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể xóa phụ huynh";
+      message.error(`Lỗi khi xóa phụ huynh: ${errorMessage}`);
+      console.error("Lỗi khi xóa phụ huynh:", error);
     } finally {
       setTableLoading(false);
     }
@@ -237,9 +257,14 @@ const ParentManagement = () => {
       resetForm();
       fetchParents();
     } catch (error) {
-      message.error(
-        error.response?.data?.message || "Không thể lưu thông tin phụ huynh"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể lưu thông tin phụ huynh";
+      const action = editingParent ? "cập nhật" : "thêm";
+      message.error(`Lỗi khi ${action} phụ huynh: ${errorMessage}`);
+      console.error("Lỗi khi lưu thông tin phụ huynh:", error);
     } finally {
       setSubmitting(false);
     }
@@ -370,7 +395,8 @@ const ParentManagement = () => {
                   value={values.name}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  placeholder="Nhập tên phụ huynh"
+                  placeholder="Nhập tên (chỉ chữ cái và khoảng trắng)"
+                  maxLength={50}
                 />
               </Form.Item>
               <Form.Item
@@ -396,7 +422,15 @@ const ParentManagement = () => {
                   value={values.phone}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  placeholder="Nhập số điện thoại"
+                  placeholder="VD: 0901234567 hoặc +84901234567"
+                  maxLength={12}
+                  onKeyPress={(e) => {
+                    // Chỉ cho phép nhập số, dấu + và dấu cách
+                    const allowedChars = /[0-9+\s]/;
+                    if (!allowedChars.test(e.key)) {
+                      e.preventDefault();
+                    }
+                  }}
                 />
               </Form.Item>
               <div style={{ textAlign: "right", marginTop: 24 }}>

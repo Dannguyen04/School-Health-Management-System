@@ -7,1860 +7,1223 @@ const VALID_ROLES = ["PARENT", "SCHOOL_NURSE", "MANAGER", "ADMIN"];
 const VALID_GENDERS = ["NAM", "NỮ"];
 
 const roleToModel = {
-    STUDENT: "studentProfile",
-    PARENT: "parentProfile",
-    SCHOOL_NURSE: "nurseProfile",
-    MANAGER: "managerProfile",
-    ADMIN: "adminProfile",
+  STUDENT: "studentProfile",
+  PARENT: "parentProfile",
+  SCHOOL_NURSE: "nurseProfile",
+  MANAGER: "managerProfile",
+  ADMIN: "adminProfile",
 };
 
 const roleToTable = {
-    STUDENT: "student",
-    PARENT: "parent",
-    SCHOOL_NURSE: "schoolNurse",
-    MANAGER: "manager",
-    ADMIN: "admin",
+  STUDENT: "student",
+  PARENT: "parent",
+  SCHOOL_NURSE: "schoolNurse",
+  MANAGER: "manager",
+  ADMIN: "admin",
 };
 
 const normalizeRole = (role) => {
-    return role.toUpperCase().trim().replace(/\s+/g, "_");
+  return role.toUpperCase().trim().replace(/\s+/g, "_");
 };
 
 const validateEmail = (email) => {
-    return validator.isEmail(email);
+  return validator.isEmail(email);
 };
 
 const validatePassword = (password) => {
-    return password && password.length >= 8;
+  return password && password.length >= 8;
 };
 
 const validateGrade = (grade) => {
-    const gradeNum = parseInt(grade);
-    return !isNaN(gradeNum) && gradeNum >= 1 && gradeNum <= 5;
+  const gradeNum = parseInt(grade);
+  return !isNaN(gradeNum) && gradeNum >= 1 && gradeNum <= 5;
 };
 
 const validateDateOfBirth = (dateOfBirth) => {
-    const dob = new Date(dateOfBirth);
-    const now = new Date();
-    const minDate = new Date(now.getFullYear() - 100, 0, 1);
-    const maxDate = new Date(now.getFullYear() - 6, 11, 31);
+  const dob = new Date(dateOfBirth);
+  const now = new Date();
+  const minDate = new Date(now.getFullYear() - 100, 0, 1);
+  const maxDate = new Date(now.getFullYear() - 6, 11, 31);
 
-    return !isNaN(dob.getTime()) && dob >= minDate && dob <= maxDate;
+  return !isNaN(dob.getTime()) && dob >= minDate && dob <= maxDate;
 };
 
 const findUserByEmail = async (email) => {
-    try {
-        return await prisma.users.findUnique({
-            where: { email },
-        });
-    } catch (error) {
-        throw new Error(`Error finding user by email: ${error.message}`);
-    }
+  try {
+    return await prisma.users.findUnique({
+      where: { email },
+    });
+  } catch (error) {
+    throw new Error(`Error finding user by email: ${error.message}`);
+  }
 };
 
 const findParentByName = async (parentName, tx = prisma) => {
-    try {
-        return await tx.parent.findFirst({
-            where: {
-                user: {
-                    fullName: {
-                        contains: parentName,
-                        mode: "insensitive",
-                    },
-                    role: "PARENT",
-                    isActive: true,
-                },
-            },
-            include: {
-                user: true,
-            },
-        });
-    } catch (error) {
-        throw new Error(`Error finding parent: ${error.message}`);
-    }
+  try {
+    return await tx.parent.findFirst({
+      where: {
+        user: {
+          fullName: {
+            contains: parentName,
+            mode: "insensitive",
+          },
+          role: "PARENT",
+          isActive: true,
+        },
+      },
+      include: {
+        user: true,
+      },
+    });
+  } catch (error) {
+    throw new Error(`Error finding parent: ${error.message}`);
+  }
 };
 // Hàm loại bỏ các trường profile null khỏi user
 function cleanUserProfiles(user) {
-    const cleaned = { ...user };
-    if (cleaned.parentProfile === null) delete cleaned.parentProfile;
-    if (cleaned.nurseProfile === null) delete cleaned.nurseProfile;
-    if (cleaned.managerProfile === null) delete cleaned.managerProfile;
-    if (cleaned.adminProfile === null) delete cleaned.adminProfile;
-    if (cleaned.studentProfile === null) delete cleaned.studentProfile;
-    return cleaned;
+  const cleaned = { ...user };
+  if (cleaned.parentProfile === null) delete cleaned.parentProfile;
+  if (cleaned.nurseProfile === null) delete cleaned.nurseProfile;
+  if (cleaned.managerProfile === null) delete cleaned.managerProfile;
+  if (cleaned.adminProfile === null) delete cleaned.adminProfile;
+  if (cleaned.studentProfile === null) delete cleaned.studentProfile;
+  return cleaned;
 }
 
 const assignParentToStudent = async (
-    studentId,
-    parentName,
-    relationship = "guardian",
-    isPrimary = false,
-    tx
+  studentId,
+  parentName,
+  relationship = "guardian",
+  isPrimary = false,
+  tx
 ) => {
-    try {
-        const parent = await findParentByName(parentName, tx);
-        if (!parent) {
-            return { success: false, error: "Không tìm thấy phụ huynh" };
-        }
-
-        const existingRelationship = await tx.studentParent.findFirst({
-            where: { studentId, parentId: parent.id },
-        });
-
-        if (existingRelationship) {
-            return {
-                success: false,
-                error: "Phụ huynh đã được gán cho học sinh này",
-            };
-        }
-
-        if (isPrimary) {
-            await tx.studentParent.updateMany({
-                where: { studentId, isPrimary: true },
-                data: { isPrimary: false },
-            });
-        }
-
-        const studentParent = await tx.studentParent.create({
-            data: {
-                studentId,
-                parentId: parent.id,
-                relationship,
-                isPrimary,
-            },
-            include: {
-                parent: {
-                    include: {
-                        user: {
-                            select: {
-                                fullName: true,
-                                email: true,
-                                phone: true,
-                            },
-                        },
-                    },
-                },
-                student: {
-                    include: {
-                        user: {
-                            select: { fullName: true },
-                        },
-                    },
-                },
-            },
-        });
-
-        return {
-            success: true,
-            message: `Đã gán phụ huynh ${parent.user.fullName} cho học sinh ${studentParent.student.user.fullName}`,
-            data: {
-                studentName: studentParent.student.user.fullName,
-                parentName: studentParent.parent.user.fullName,
-                parentEmail: studentParent.parent.user.email,
-                parentPhone: studentParent.parent.user.phone,
-                relationship: studentParent.relationship,
-                isPrimary: studentParent.isPrimary,
-            },
-        };
-    } catch (error) {
-        throw new Error(`Lỗi khi gán phụ huynh cho học sinh: ${error.message}`);
+  try {
+    const parent = await findParentByName(parentName, tx);
+    if (!parent) {
+      return { success: false, error: "Không tìm thấy phụ huynh" };
     }
+
+    const existingRelationship = await tx.studentParent.findFirst({
+      where: { studentId, parentId: parent.id },
+    });
+
+    if (existingRelationship) {
+      return {
+        success: false,
+        error: "Phụ huynh đã được gán cho học sinh này",
+      };
+    }
+
+    if (isPrimary) {
+      await tx.studentParent.updateMany({
+        where: { studentId, isPrimary: true },
+        data: { isPrimary: false },
+      });
+    }
+
+    const studentParent = await tx.studentParent.create({
+      data: {
+        studentId,
+        parentId: parent.id,
+        relationship,
+        isPrimary,
+      },
+      include: {
+        parent: {
+          include: {
+            user: {
+              select: {
+                fullName: true,
+                email: true,
+                phone: true,
+              },
+            },
+          },
+        },
+        student: {
+          include: {
+            user: {
+              select: { fullName: true },
+            },
+          },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      message: `Đã gán phụ huynh ${parent.user.fullName} cho học sinh ${studentParent.student.fullName}`,
+      data: {
+        studentName: studentParent.student.fullName,
+        parentName: studentParent.parent.user.fullName,
+        parentEmail: studentParent.parent.user.email,
+        parentPhone: studentParent.parent.user.phone,
+        relationship: studentParent.relationship,
+        isPrimary: studentParent.isPrimary,
+      },
+    };
+  } catch (error) {
+    throw new Error(`Lỗi khi gán phụ huynh cho học sinh: ${error.message}`);
+  }
 };
 
 const generateStudentCode = async () => {
-    // Lấy học sinh mới nhất
-    const student = await prisma.student.findFirst({
-        orderBy: { createdAt: "desc" },
-        take: 1,
-    });
-    let count = 0;
-    if (student && student.studentCode) {
-        count = parseInt(student.studentCode.slice(3)) || 0;
-    }
-    const nextNumber = count + 1;
-    return `STU${nextNumber.toString().padStart(4, "0")}`;
+  // Lấy học sinh mới nhất
+  const student = await prisma.student.findFirst({
+    orderBy: { createdAt: "desc" },
+    take: 1,
+  });
+  let count = 0;
+  if (student && student.studentCode) {
+    count = parseInt(student.studentCode.slice(3)) || 0;
+  }
+  const nextNumber = count + 1;
+  return `STU${nextNumber.toString().padStart(4, "0")}`;
 };
 
 const createAuditLog = async (
-    tx,
-    userId,
-    action,
-    resource,
-    resourceId,
-    details,
-    req
+  tx,
+  userId,
+  action,
+  resource,
+  resourceId,
+  details,
+  req
 ) => {
-    return await tx.auditLog.create({
-        data: {
-            userId,
-            action,
-            resource,
-            resourceId,
-            details,
-            ipAddress: req.ip || req.connection.remoteAddress,
-            userAgent: req.get("User-Agent") || "Unknown",
-            createdAt: new Date(),
-        },
-    });
-};
-
-const addStudent = async (req, res) => {
-    try {
-        console.log("📝 Bắt đầu tạo học sinh mới...");
-        console.log("📋 Dữ liệu nhận được:", req.body);
-
-        const {
-            fullName,
-            password,
-            email,
-            phone,
-            dateOfBirth,
-            gender,
-            grade,
-            class: studentClass,
-            bloodType,
-            parentName,
-            parentId,
-            newParentData,
-        } = req.body;
-
-        const requiredFields = [
-            "fullName",
-            "email",
-            "password",
-            "dateOfBirth",
-            "gender",
-            "studentClass",
-            "grade",
-        ];
-
-        const missingFields = requiredFields.filter((field) => {
-            const value = req.body[field === "studentClass" ? "class" : field];
-            return !value || value.toString().trim() === "";
-        });
-
-        if (missingFields.length > 0) {
-            return res.status(422).json({
-                success: false,
-                error: `Thiếu trường bắt buộc: ${missingFields.join(", ")}`,
-            });
-        }
-
-        if (!parentId && !newParentData && !parentName) {
-            return res.status(422).json({
-                success: false,
-                error: "Phải chọn phụ huynh hiện có hoặc tạo phụ huynh mới",
-            });
-        }
-
-        if (!validateEmail(email)) {
-            return res.status(422).json({
-                success: false,
-                error: "Email không hợp lệ",
-            });
-        }
-
-        if (!validatePassword(password)) {
-            return res.status(422).json({
-                success: false,
-                error: "Mật khẩu phải có ít nhất 8 ký tự",
-            });
-        }
-
-        if (!validateDateOfBirth(dateOfBirth)) {
-            return res.status(422).json({
-                success: false,
-                error: "Ngày sinh không hợp lệ",
-            });
-        }
-
-        if (!validateGrade(grade)) {
-            return res.status(422).json({
-                success: false,
-                error: "Khối lớp phải từ 1 đến 5",
-            });
-        }
-
-        const validGenders = ["male", "female", "other", "nam", "nu"];
-        if (!validGenders.includes(gender.toLowerCase())) {
-            return res.status(422).json({
-                success: false,
-                error: `Giới tính phải là: ${validGenders.join(", ")}`,
-            });
-        }
-
-        const existingUser = await findUserByEmail(email);
-
-        if (existingUser) {
-            return res.status(422).json({
-                success: false,
-                error: `Email đã tồn tại cho người dùng ${existingUser.fullName}`,
-            });
-        }
-
-        console.log("✅ Validation thành công, bắt đầu tạo học sinh...");
-
-        const result = await prisma.$transaction(async (tx) => {
-            const user = await tx.users.create({
-                data: {
-                    fullName: fullName.trim(),
-                    email: email.toLowerCase().trim(),
-                    password: password,
-                    role: "STUDENT",
-                    phone: phone?.trim(),
-                    isActive: true,
-                },
-            });
-
-            console.log("✅ Tạo user thành công:", user.id);
-
-            const student = await tx.student.create({
-                data: {
-                    userId: user.id,
-                    studentCode: await generateStudentCode(),
-                    dateOfBirth: new Date(dateOfBirth),
-                    gender: gender.toLowerCase(),
-                    grade: grade.toString(),
-                    class: studentClass.trim(),
-                    ...(bloodType && { bloodType: bloodType.trim() }),
-                },
-            });
-
-            console.log("✅ Tạo student profile thành công:", student.id);
-
-            let parentResult = null;
-
-            if (parentId) {
-                const existingParent = await tx.parent.findUnique({
-                    where: { id: parentId },
-                    include: { user: true },
-                });
-
-                if (!existingParent) {
-                    throw new Error("Không tìm thấy phụ huynh được chọn");
-                }
-
-                await tx.studentParent.create({
-                    data: {
-                        studentId: student.id,
-                        parentId: parentId,
-                        relationship: "guardian",
-                        isPrimary: true,
-                    },
-                });
-
-                parentResult = {
-                    success: true,
-                    data: {
-                        parentName: existingParent.user.fullName,
-                        parentEmail: existingParent.user.email,
-                        parentPhone: existingParent.user.phone,
-                        relationship: "guardian",
-                        isPrimary: true,
-                    },
-                };
-            } else if (newParentData) {
-                const { name, email, phone } = newParentData;
-
-                if (!name || !email || !phone) {
-                    throw new Error("Thiếu thông tin phụ huynh mới");
-                }
-
-                if (!validateEmail(email)) {
-                    throw new Error("Email phụ huynh không hợp lệ");
-                }
-
-                const existingParentUser = await tx.users.findUnique({
-                    where: { email: email.toLowerCase().trim() },
-                });
-
-                if (existingParentUser) {
-                    throw new Error("Email phụ huynh đã tồn tại");
-                }
-
-                const parentUser = await tx.users.create({
-                    data: {
-                        fullName: name.trim(),
-                        email: email.toLowerCase().trim(),
-                        phone: phone.trim(),
-                        password: "12345678",
-                        role: "PARENT",
-                        isActive: true,
-                    },
-                });
-
-                const parent = await tx.parent.create({
-                    data: {
-                        userId: parentUser.id,
-                    },
-                });
-
-                await tx.studentParent.create({
-                    data: {
-                        studentId: student.id,
-                        parentId: parent.id,
-                        relationship: "guardian",
-                        isPrimary: true,
-                    },
-                });
-
-                parentResult = {
-                    success: true,
-                    data: {
-                        parentName: parentUser.fullName,
-                        parentEmail: parentUser.email,
-                        parentPhone: parentUser.phone,
-                        relationship: "guardian",
-                        isPrimary: true,
-                    },
-                };
-            } else if (parentName) {
-                parentResult = await assignParentToStudent(
-                    student.id,
-                    parentName,
-                    "guardian",
-                    true,
-                    tx
-                );
-            }
-
-            if (!parentResult?.success) {
-                console.log("⚠️ Không thể gán phụ huynh:", parentResult?.error);
-            }
-
-            await createAuditLog(
-                tx,
-                user.id,
-                "create",
-                "student",
-                student.id,
-                {
-                    Name: fullName,
-                    Email: email,
-                    "Mã học sinh": student.studentCode,
-                    "Khối lớp": grade,
-                    Lớp: studentClass,
-                    "Phụ huynh": parentResult?.data?.parentName || null,
-                },
-                req
-            );
-
-            return { user, student, parent: parentResult?.data };
-        });
-
-        console.log("✅ Tạo học sinh thành công!");
-
-        return res.status(201).json({
-            success: true,
-            message: "Tạo học sinh thành công",
-            data: {
-                id: result.student.id,
-                fullName: result.user.fullName,
-                email: result.user.email,
-                studentCode: result.student.studentCode,
-                parent: result.parent,
-            },
-        });
-    } catch (error) {
-        console.error("❌ Lỗi khi tạo học sinh:", error);
-        res.status(500).json({
-            success: false,
-            error: error.message || "Lỗi máy chủ nội bộ",
-        });
-    }
+  return await tx.auditLog.create({
+    data: {
+      userId,
+      action,
+      resource,
+      resourceId,
+      details,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.get("User-Agent") || "Unknown",
+      createdAt: new Date(),
+    },
+  });
 };
 
 const addRole = async (req, res) => {
-    try {
-        const { name, email, password, role } = req.body;
+  try {
+    const { name, email, password, role } = req.body;
 
-        if (!name || !email || !password || !role) {
-            return res.status(422).json({
-                success: false,
-                error: "Thiếu trường bắt buộc",
-            });
-        }
-
-        if (!validateEmail(email)) {
-            return res.status(422).json({
-                success: false,
-                error: "Email không hợp lệ",
-            });
-        }
-
-        if (!validatePassword(password)) {
-            return res.status(422).json({
-                success: false,
-                error: "Mật khẩu phải có ít nhất 8 ký tự",
-            });
-        }
-
-        const normalizedRole = normalizeRole(role);
-        if (!VALID_ROLES.includes(normalizedRole)) {
-            return res.status(422).json({
-                success: false,
-                error: `Vai trò không hợp lệ. Phải là một trong: ${VALID_ROLES.join(
-                    ", "
-                )}`,
-            });
-        }
-
-        const existingUser = await findUserByEmail(email);
-        if (existingUser) {
-            return res.status(422).json({
-                success: false,
-                error: "Email đã tồn tại",
-            });
-        }
-
-        const result = await prisma.$transaction(async (tx) => {
-            const user = await tx.users.create({
-                data: {
-                    fullName: name.trim(),
-                    email: email.toLowerCase().trim(),
-                    password: password,
-                    role: normalizedRole,
-                    isActive: true,
-                },
-            });
-
-            const tableName = roleToTable[normalizedRole];
-            const roleProfile = await tx[tableName].create({
-                data: {
-                    userId: user.id,
-                },
-            });
-
-            await createAuditLog(
-                tx,
-                user.id,
-                "create",
-                "user",
-                user.id,
-                { role: normalizedRole, email, fullName: name },
-                req
-            );
-
-            return { user, roleProfile };
-        });
-
-        const { user, roleProfile } = result;
-
-        res.status(201).json({
-            success: true,
-            message: `${normalizedRole.toLowerCase()} tạo thành công`,
-            data: {
-                id: user.id,
-                fullName: user.fullName,
-                email: user.email,
-                role: user.role,
-                [`${normalizedRole.toLowerCase()}Profile`]: roleProfile,
-            },
-        });
-    } catch (error) {
-        console.error("Lỗi khi tạo vai trò:", error);
-
-        if (error.code === "P2002") {
-            return res.status(422).json({
-                success: false,
-                error: "Trùng giá trị cho trường duy nhất",
-            });
-        }
-
-        res.status(500).json({
-            success: false,
-            error: "Lỗi máy chủ nội bộ",
-        });
+    if (!name || !email || !password || !role) {
+      return res.status(422).json({
+        success: false,
+        error: "Thiếu trường bắt buộc",
+      });
     }
+
+    if (!validateEmail(email)) {
+      return res.status(422).json({
+        success: false,
+        error: "Email không hợp lệ",
+      });
+    }
+
+    if (!validatePassword(password)) {
+      return res.status(422).json({
+        success: false,
+        error: "Mật khẩu phải có ít nhất 8 ký tự",
+      });
+    }
+
+    const normalizedRole = normalizeRole(role);
+    if (!VALID_ROLES.includes(normalizedRole)) {
+      return res.status(422).json({
+        success: false,
+        error: `Vai trò không hợp lệ. Phải là một trong: ${VALID_ROLES.join(
+          ", "
+        )}`,
+      });
+    }
+
+    const existingUser = await findUserByEmail(email);
+    if (existingUser) {
+      return res.status(422).json({
+        success: false,
+        error: "Email đã tồn tại",
+      });
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.users.create({
+        data: {
+          fullName: name.trim(),
+          email: email.toLowerCase().trim(),
+          password: password,
+          role: normalizedRole,
+          isActive: true,
+        },
+      });
+
+      const tableName = roleToTable[normalizedRole];
+      const roleProfile = await tx[tableName].create({
+        data: {
+          userId: user.id,
+        },
+      });
+
+      await createAuditLog(
+        tx,
+        user.id,
+        "create",
+        "user",
+        user.id,
+        { role: normalizedRole, email, fullName: name },
+        req
+      );
+
+      return { user, roleProfile };
+    });
+
+    const { user, roleProfile } = result;
+
+    res.status(201).json({
+      success: true,
+      message: `${normalizedRole.toLowerCase()} tạo thành công`,
+      data: {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+        [`${normalizedRole.toLowerCase()}Profile`]: roleProfile,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi khi tạo vai trò:", error);
+
+    if (error.code === "P2002") {
+      return res.status(422).json({
+        success: false,
+        error: "Trùng giá trị cho trường duy nhất",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Lỗi máy chủ nội bộ",
+    });
+  }
 };
 
 //get all user
 const getAllUsers = async (req, res) => {
-    try {
-        const users = await prisma.users.findMany({
-            where: {
-                role: {
-                    notIn: ["STUDENT", "PARENT"],
-                },
-            },
-            include: {
-                parentProfile: true,
-                nurseProfile: true,
-                managerProfile: true,
-                adminProfile: true,
-            },
-        });
-        const cleanedUsers = users.map(cleanUserProfiles);
-        res.status(200).json({ success: true, data: cleanedUsers });
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, error: error.message });
-    }
-};
-const getAllStudents = async (req, res) => {
-    try {
-        console.log("🔍 Đang tìm tất cả học sinh...");
-
-        const students = await prisma.users.findMany({
-            where: {
-                role: "STUDENT",
-            },
-            include: {
-                studentProfile: {
-                    include: {
-                        parents: {
-                            where: { isPrimary: true },
-                            select: { parentId: true },
-                        },
-                    },
-                },
-            },
-        });
-
-        console.log(`📊 Tìm thấy ${students.length} học sinh`);
-
-        if (!students || students.length === 0) {
-            return res.status(404).json({
-                success: false,
-                error: "Không có học sinh nào trong hệ thống",
-            });
-        }
-
-        const cleanedStudents = students.map((user) => {
-            // Lấy parentId của phụ huynh chính (nếu có)
-            const parentId = user.studentProfile?.parents?.[0]?.parentId;
-            // Gọi hàm cleanUserProfiles như cũ, nhưng thêm parentId vào studentProfile
-            const cleaned = cleanUserProfiles(user);
-            if (cleaned.studentProfile) {
-                cleaned.studentProfile.parentId = parentId;
-            }
-            return cleaned;
-        });
-        console.log("✅ Dữ liệu học sinh đã được xử lý");
-
-        res.status(200).json({ success: true, data: cleanedStudents });
-    } catch (error) {
-        console.error("❌ Lỗi khi lấy danh sách học sinh:", error);
-        return res.status(500).json({ success: false, error: error.message });
-    }
+  try {
+    const users = await prisma.users.findMany({
+      where: {
+        role: {
+          notIn: ["STUDENT"],
+        },
+      },
+      include: {
+        parentProfile: true,
+        nurseProfile: true,
+        managerProfile: true,
+        adminProfile: true,
+      },
+    });
+    const cleanedUsers = users.map(cleanUserProfiles);
+    res.status(200).json({ success: true, data: cleanedUsers });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 const updateRole = async (req, res) => {
-    const { id } = req.params;
-    const { role, email, password, fullName } = req.body;
-    try {
-        if (!email || !fullName || !role) {
-            return res.status(400).json({
-                success: false,
-                error: "Email, họ tên và vai trò là bắt buộc",
-            });
-        }
-        if (password && !validatePassword(password)) {
-            return res.status(422).json({
-                success: false,
-                error: "Mật khẩu phải có ít nhất 8 ký tự nếu cung cấp",
-            });
-        }
-        if (!validateEmail(email)) {
-            return res.status(422).json({
-                success: false,
-                error: "Email không hợp lệ",
-            });
-        }
-        const normalizedRole = normalizeRole(role);
-        if (!VALID_ROLES.includes(normalizedRole)) {
-            return res.status(422).json({
-                success: false,
-                error: `Vai trò không hợp lệ. Phải là một trong: ${VALID_ROLES.join(
-                    ", "
-                )}`,
-            });
-        }
-        const existingUser = await findUserByEmail(email);
-        if (existingUser && existingUser.id !== id) {
-            return res.status(400).json({
-                success: false,
-                error: "Email đã được sử dụng",
-            });
-        }
-        const updatedUser = await prisma.$transaction(async (tx) => {
-            const currentUser = await tx.users.findUnique({
-                where: { id },
-                include: {
-                    parentProfile: true,
-                    nurseProfile: true,
-                    managerProfile: true,
-                    adminProfile: true,
-                },
-            });
-            if (!currentUser) {
-                throw new Error("User not found");
-            }
-            if (currentUser.role !== normalizedRole) {
-                const oldTableName = roleToTable[currentUser.role];
-                if (
-                    oldTableName &&
-                    currentUser[roleToModel[currentUser.role]]
-                ) {
-                    await tx[oldTableName].delete({ where: { userId: id } });
-                }
-                const newTableName = roleToTable[normalizedRole];
-                if (newTableName) {
-                    await tx[newTableName].create({
-                        data: { userId: id },
-                    });
-                }
-            }
-            const updateData = {
-                role: normalizedRole,
-                email: email.toLowerCase().trim(),
-                fullName: fullName.trim(),
-                updatedAt: new Date(),
-            };
-            if (password) {
-                updateData.password = password;
-            }
-            const user = await tx.users.update({
-                where: { id },
-                data: updateData,
-                select: {
-                    id: true,
-                    fullName: true,
-                    email: true,
-                    role: true,
-                    createdAt: true,
-                    updatedAt: true,
-                    parentProfile: true,
-                    nurseProfile: true,
-                    managerProfile: true,
-                    adminProfile: true,
-                },
-            });
-            await createAuditLog(
-                tx,
-                id,
-                "update",
-                "user",
-                id,
-                {
-                    changes: { role: normalizedRole, email, fullName },
-                    oldRole: currentUser.role,
-                    passwordChanged: !!password,
-                },
-                req
-            );
-            return user;
-        });
-        const cleanedUser = cleanUserProfiles(updatedUser);
-        res.status(200).json({
-            success: true,
-            message: "Cập nhật người dùng thành công",
-            data: cleanedUser,
-        });
-    } catch (error) {
-        console.error("Lỗi khi cập nhật người dùng:", error);
-        if (error.code === "P2025") {
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy người dùng hoặc hồ sơ",
-            });
-        }
-        res.status(500).json({
-            success: false,
-            error: "Lỗi máy chủ nội bộ",
-        });
+  const { id } = req.params;
+  const { role, email, password, fullName } = req.body;
+  try {
+    if (!email || !fullName || !role) {
+      return res.status(400).json({
+        success: false,
+        error: "Email, họ tên và vai trò là bắt buộc",
+      });
     }
+    if (password && !validatePassword(password)) {
+      return res.status(422).json({
+        success: false,
+        error: "Mật khẩu phải có ít nhất 8 ký tự nếu cung cấp",
+      });
+    }
+    if (!validateEmail(email)) {
+      return res.status(422).json({
+        success: false,
+        error: "Email không hợp lệ",
+      });
+    }
+    const normalizedRole = normalizeRole(role);
+    if (!VALID_ROLES.includes(normalizedRole)) {
+      return res.status(422).json({
+        success: false,
+        error: `Vai trò không hợp lệ. Phải là một trong: ${VALID_ROLES.join(
+          ", "
+        )}`,
+      });
+    }
+    const existingUser = await findUserByEmail(email);
+    if (existingUser && existingUser.id !== id) {
+      return res.status(400).json({
+        success: false,
+        error: "Email đã được sử dụng",
+      });
+    }
+    const updatedUser = await prisma.$transaction(async (tx) => {
+      const currentUser = await tx.users.findUnique({
+        where: { id },
+        include: {
+          parentProfile: true,
+          nurseProfile: true,
+          managerProfile: true,
+          adminProfile: true,
+        },
+      });
+      if (!currentUser) {
+        throw new Error("User not found");
+      }
+      if (currentUser.role !== normalizedRole) {
+        const oldTableName = roleToTable[currentUser.role];
+        if (oldTableName && currentUser[roleToModel[currentUser.role]]) {
+          await tx[oldTableName].delete({ where: { userId: id } });
+        }
+        const newTableName = roleToTable[normalizedRole];
+        if (newTableName) {
+          await tx[newTableName].create({
+            data: { userId: id },
+          });
+        }
+      }
+      const updateData = {
+        role: normalizedRole,
+        email: email.toLowerCase().trim(),
+        fullName: fullName.trim(),
+        updatedAt: new Date(),
+      };
+      if (password) {
+        updateData.password = password;
+      }
+      const user = await tx.users.update({
+        where: { id },
+        data: updateData,
+        select: {
+          id: true,
+          fullName: true,
+          email: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+          parentProfile: true,
+          nurseProfile: true,
+          managerProfile: true,
+          adminProfile: true,
+        },
+      });
+      await createAuditLog(
+        tx,
+        id,
+        "update",
+        "user",
+        id,
+        {
+          changes: { role: normalizedRole, email, fullName },
+          oldRole: currentUser.role,
+          passwordChanged: !!password,
+        },
+        req
+      );
+      return user;
+    });
+    const cleanedUser = cleanUserProfiles(updatedUser);
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật người dùng thành công",
+      data: cleanedUser,
+    });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật người dùng:", error);
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng hoặc hồ sơ",
+      });
+    }
+    res.status(500).json({
+      success: false,
+      error: "Lỗi máy chủ nội bộ",
+    });
+  }
 };
 
-const updateStudent = async (req, res) => {
-    const { id } = req.params;
-    const {
-        fullName,
-        email,
-        phone,
-        dateOfBirth,
-        gender,
-        class: studentClass,
-        grade,
-        bloodType,
-        emergencyContact,
-        emergencyPhone,
-        parentId,
-        newParentData,
-    } = req.body;
-
-    try {
-        const requiredFields = [
-            "fullName",
-            "email",
-            "dateOfBirth",
-            "gender",
-            "studentClass",
-            "grade",
-        ];
-
-        const missingFields = requiredFields.filter((field) => {
-            const value = req.body[field === "studentClass" ? "class" : field];
-            return !value || value.toString().trim() === "";
-        });
-
-        if (missingFields.length > 0) {
-            return res.status(422).json({
-                success: false,
-                error: `Thiếu trường bắt buộc: ${missingFields.join(", ")}`,
-            });
-        }
-
-        if (!validateEmail(email)) {
-            return res.status(422).json({
-                success: false,
-                error: "Email không hợp lệ",
-            });
-        }
-
-        if (!validateDateOfBirth(dateOfBirth)) {
-            return res.status(422).json({
-                success: false,
-                error: "Ngày sinh không hợp lệ",
-            });
-        }
-
-        if (!validateGrade(grade)) {
-            return res.status(422).json({
-                success: false,
-                error: "Khối lớp phải từ 1 đến 5",
-            });
-        }
-
-        // Validate gender
-        const validGenders = ["male", "female", "other"];
-        if (!validGenders.includes(gender.toLowerCase())) {
-            return res.status(422).json({
-                success: false,
-                error: `Giới tính phải là: ${validGenders.join(", ")}`,
-            });
-        }
-
-        const user = await prisma.users.findUnique({
-            where: { id },
-            include: { studentProfile: true },
-        });
-
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy người dùng",
-            });
-        }
-
-        if (user.role !== "STUDENT") {
-            return res.status(400).json({
-                success: false,
-                error: "Người dùng không phải là học sinh",
-            });
-        }
-
-        if (!user.studentProfile) {
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy hồ sơ học sinh",
-            });
-        }
-
-        const existingEmailUser = await findUserByEmail(email);
-        if (existingEmailUser && existingEmailUser.id !== id) {
-            return res.status(400).json({
-                success: false,
-                error: "Email đã được đăng ký bởi người dùng khác",
-            });
-        }
-
-        const updatedUser = await prisma.$transaction(async (tx) => {
-            const userUpdate = await tx.users.update({
-                where: { id },
-                data: {
-                    email: email.toLowerCase().trim(),
-                    fullName: fullName.trim(),
-                    ...(phone && { phone: phone.trim() }),
-                    updatedAt: new Date(),
-                },
-                select: {
-                    id: true,
-                    fullName: true,
-                    email: true,
-                    phone: true,
-                    role: true,
-                    createdAt: true,
-                    updatedAt: true,
-                },
-            });
-
-            await tx.student.update({
-                where: { userId: id },
-                data: {
-                    dateOfBirth: new Date(dateOfBirth),
-                    gender: gender.toLowerCase(),
-                    class: studentClass.trim(),
-                    grade: grade.toString(),
-                    ...(emergencyContact && {
-                        emergencyContact: emergencyContact.trim(),
-                    }),
-                    ...(emergencyPhone && {
-                        emergencyPhone: emergencyPhone.trim(),
-                    }),
-                    ...(bloodType && { bloodType: bloodType.trim() }),
-                    updatedAt: new Date(),
-                },
-            });
-
-            // Handle parent update if provided
-            if (parentId || newParentData) {
-                const studentId = user.studentProfile.id;
-
-                // Remove existing primary parent relationship
-                await tx.studentParent.updateMany({
-                    where: {
-                        studentId: studentId,
-                        isPrimary: true,
-                    },
-                    data: { isPrimary: false },
-                });
-
-                if (parentId) {
-                    // Use existing parent
-                    const existingParent = await tx.parent.findUnique({
-                        where: { id: parentId },
-                        include: { user: true },
-                    });
-
-                    if (!existingParent) {
-                        throw new Error("Không tìm thấy phụ huynh được chọn");
-                    }
-
-                    // Create or update student-parent relationship
-                    await tx.studentParent.upsert({
-                        where: {
-                            studentId_parentId: {
-                                studentId: studentId,
-                                parentId: parentId,
-                            },
-                        },
-                        update: {
-                            isPrimary: true,
-                        },
-                        create: {
-                            studentId: studentId,
-                            parentId: parentId,
-                            relationship: "guardian",
-                            isPrimary: true,
-                        },
-                    });
-                } else if (newParentData) {
-                    // Create new parent
-                    const { name, email, phone } = newParentData;
-
-                    if (!name || !email || !phone) {
-                        throw new Error("Thiếu thông tin phụ huynh mới");
-                    }
-
-                    if (!validateEmail(email)) {
-                        throw new Error("Email phụ huynh không hợp lệ");
-                    }
-
-                    // Check if parent email already exists
-                    const existingParentUser = await tx.users.findUnique({
-                        where: { email: email.toLowerCase().trim() },
-                    });
-
-                    if (existingParentUser) {
-                        throw new Error("Email phụ huynh đã tồn tại");
-                    }
-
-                    // Create parent user and profile
-                    const parentUser = await tx.users.create({
-                        data: {
-                            fullName: name.trim(),
-                            email: email.toLowerCase().trim(),
-                            phone: phone.trim(),
-                            password: "12345678", // Default password
-                            role: "PARENT",
-                            isActive: true,
-                        },
-                    });
-
-                    const parent = await tx.parent.create({
-                        data: {
-                            userId: parentUser.id,
-                        },
-                    });
-
-                    // Create student-parent relationship
-                    await tx.studentParent.create({
-                        data: {
-                            studentId: studentId,
-                            parentId: parent.id,
-                            relationship: "guardian",
-                            isPrimary: true,
-                        },
-                    });
-                }
-            }
-
-            await createAuditLog(
-                tx,
-                id,
-                "update",
-                "student",
-                id,
-                {
-                    changes: {
-                        fullName,
-                        email,
-                        dateOfBirth,
-                        gender,
-                        class: studentClass,
-                        grade,
-                        bloodType,
-                        emergencyContact,
-                        emergencyPhone,
-                        parentUpdated: !!(parentId || newParentData),
-                    },
-                },
-                req
-            );
-
-            return userUpdate;
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: "Cập nhật học sinh thành công",
-            data: updatedUser,
-        });
-    } catch (error) {
-        console.error("Lỗi khi cập nhật học sinh:", error);
-        if (error.code === "P2002") {
-            return res.status(422).json({
-                success: false,
-                error: "Vi phạm ràng buộc duy nhất (giá trị trùng lặp)",
-            });
-        }
-        return res.status(500).json({
-            success: false,
-            error: error.message || "Lỗi máy chủ nội bộ",
-        });
-    }
-};
-
+// Xóa người dùng
 const deleteUser = async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    try {
-        console.log(`🗑️ Bắt đầu xóa user với ID: ${id}`);
+  try {
+    // Kiểm tra user có tồn tại không
+    const user = await prisma.users.findUnique({
+      where: { id },
+      include: {
+        parentProfile: true,
+        nurseProfile: true,
+        managerProfile: true,
+        adminProfile: true,
+      },
+    });
 
-        const user = await prisma.users.findUnique({
-            where: { id },
-            include: {
-                studentProfile: true,
-                parentProfile: true,
-                nurseProfile: true,
-                managerProfile: true,
-                adminProfile: true,
-            },
-        });
-
-        if (!user) {
-            console.log(`❌ Không tìm thấy user với ID: ${id}`);
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy người dùng",
-            });
-        }
-
-        console.log(`📋 Tìm thấy user: ${user.fullName} (${user.role})`);
-
-        // Nếu là student, xóa tất cả dữ liệu liên quan trước
-        if (user.role === "STUDENT" && user.studentProfile) {
-            console.log(
-                `🎓 Xóa tất cả dữ liệu liên quan đến student: ${user.studentProfile.studentCode}`
-            );
-
-            const studentId = user.studentProfile.id;
-
-            try {
-                // Xóa tất cả dữ liệu liên quan đến student
-                await prisma.$transaction(async (tx) => {
-                    // Xóa StudentParent relationships
-                    await tx.studentParent.deleteMany({
-                        where: { studentId: studentId },
-                    });
-                    console.log("✅ Đã xóa StudentParent relationships");
-
-                    // Lấy tất cả studentMedicationId liên quan đến student
-                    const studentMedications =
-                        await tx.studentMedication.findMany({
-                            where: { studentId },
-                            select: { id: true },
-                        });
-                    const studentMedicationIds = studentMedications.map(
-                        (med) => med.id
-                    );
-
-                    // Xóa MedicationAdministrationLog liên quan đến các studentMedication này
-                    if (
-                        studentMedicationIds.length > 0 &&
-                        tx.medicationAdministrationLog
-                    ) {
-                        await tx.medicationAdministrationLog.deleteMany({
-                            where: {
-                                studentMedicationId: {
-                                    in: studentMedicationIds,
-                                },
-                            },
-                        });
-                        console.log(
-                            "✅ Đã xóa MedicationAdministrationLog liên quan StudentMedication"
-                        );
-                    }
-
-                    // Xóa StudentMedication
-                    await tx.studentMedication.deleteMany({
-                        where: { studentId },
-                    });
-
-                    // Kiểm tra còn StudentMedication không
-                    const count = await tx.studentMedication.count({
-                        where: { studentId },
-                    });
-                    console.log(
-                        "Số bản ghi StudentMedication còn lại sau khi xóa:",
-                        count
-                    );
-
-                    // Xóa MedicalEvent
-                    await tx.medicalEvent.deleteMany({
-                        where: { studentId: studentId },
-                    });
-                    console.log("✅ Đã xóa MedicalEvent");
-
-                    // Xóa MedicalCheck
-                    await tx.medicalCheck.deleteMany({
-                        where: { studentId: studentId },
-                    });
-                    console.log("✅ Đã xóa MedicalCheck");
-
-                    // Xóa HealthProfile
-                    await tx.healthProfile.deleteMany({
-                        where: { studentId: studentId },
-                    });
-                    console.log("✅ Đã xóa HealthProfile");
-
-                    // Xóa VaccinationRecord
-                    await tx.vaccinationRecord.deleteMany({
-                        where: { studentId: studentId },
-                    });
-                    console.log("✅ Đã xóa VaccinationRecord");
-
-                    // Xóa VaccinationConsent
-                    await tx.vaccinationConsent.deleteMany({
-                        where: { studentId: studentId },
-                    });
-                    console.log("✅ Đã xóa VaccinationConsent");
-                });
-            } catch (studentError) {
-                console.log(
-                    "⚠️ Lỗi khi xóa dữ liệu student, tiếp tục xóa user:",
-                    studentError.message
-                );
-            }
-        }
-
-        // Xóa user và profile
-        await prisma.$transaction(async (tx) => {
-            // Tạo audit log trước khi xóa user
-            try {
-                await createAuditLog(
-                    tx,
-                    req.user.id, // Sử dụng ID của admin đang thực hiện xóa
-                    "delete",
-                    "user",
-                    id,
-                    {
-                        role: user.role,
-                        email: user.email,
-                        fullName: user.fullName,
-                    },
-                    req
-                );
-                console.log("✅ Đã tạo audit log");
-            } catch (auditError) {
-                console.log("⚠️ Lỗi khi tạo audit log:", auditError.message);
-                // Không throw error vì vẫn tiếp tục xóa user
-            }
-
-            // Xóa tất cả audit logs liên quan đến user này trước
-            try {
-                console.log("🗑️ Xóa audit logs liên quan");
-                await tx.auditLog.deleteMany({
-                    where: { userId: id },
-                });
-                console.log("✅ Đã xóa audit logs");
-            } catch (auditDeleteError) {
-                console.log(
-                    "⚠️ Lỗi khi xóa audit logs:",
-                    auditDeleteError.message
-                );
-                // Tiếp tục xóa user
-            }
-
-            // Xóa profile tương ứng với role
-            const tableName = roleToTable[user.role];
-            if (user.role === "STUDENT" && user.studentProfile) {
-                await tx.student.delete({
-                    where: { id: user.studentProfile.id },
-                });
-                console.log("✅ Đã xóa student profile");
-            } else if (tableName && user[roleToModel[user.role]]) {
-                await tx[tableName].delete({ where: { userId: id } });
-                console.log(`✅ Đã xóa ${tableName} profile`);
-            }
-
-            // Xóa user cuối cùng
-            console.log("🗑️ Xóa user record");
-            await tx.users.delete({
-                where: { id: id },
-            });
-            console.log("✅ Đã xóa user record");
-        });
-
-        console.log(`✅ Xóa user ${user.fullName} thành công`);
-
-        res.status(200).json({
-            success: true,
-            message: "Xóa người dùng thành công",
-        });
-    } catch (error) {
-        console.error("❌ Lỗi khi xóa người dùng:", error);
-        console.error("❌ Error details:", {
-            code: error.code,
-            message: error.message,
-            meta: error.meta,
-        });
-
-        // Xử lý các lỗi cụ thể
-        if (error.code === "P2025") {
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy bản ghi cần xóa",
-                code: error.code,
-            });
-        } else if (error.code === "P2003") {
-            return res.status(400).json({
-                success: false,
-                error: "Không thể xóa do có dữ liệu liên quan",
-                code: error.code,
-            });
-        } else if (error.code === "P2014") {
-            return res.status(400).json({
-                success: false,
-                error: "Không thể xóa do vi phạm ràng buộc quan hệ bắt buộc",
-                code: error.code,
-            });
-        } else if (error.code === "P2034") {
-            return res.status(409).json({
-                success: false,
-                error: "Xung đột dữ liệu. Vui lòng thử lại sau.",
-                code: error.code,
-            });
-        }
-
-        res.status(500).json({
-            success: false,
-            error: "Lỗi máy chủ nội bộ",
-            code: error.code || "UNKNOWN",
-        });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
     }
+
+    // Không cho phép xóa chính mình
+    if (user.id === req.user.id) {
+      return res.status(403).json({
+        success: false,
+        error: "Không thể xóa tài khoản của chính mình",
+      });
+    }
+
+    // Xóa user trong transaction để đảm bảo tính nhất quán
+    await prisma.$transaction(async (tx) => {
+      // Lưu thông tin user trước khi xóa để audit log
+      const userInfo = {
+        id: user.id,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      };
+
+      if (user.role === "SCHOOL_NURSE") {
+        // Xóa các bản ghi tiêm chủng của nurse
+        await tx.vaccinationRecord.updateMany({
+          where: { nurseId: user.nurseProfile?.id },
+          data: { nurseId: null },
+        });
+
+        // Xóa các sự kiện y tế của nurse
+        await tx.medicalEvent.deleteMany({
+          where: { createdById: user.id },
+        });
+      }
+
+      // Xóa các notification của user
+      await tx.notification.deleteMany({
+        where: { userId: user.id },
+      });
+
+      // Xóa các audit log của user
+      await tx.auditLog.deleteMany({
+        where: { userId: user.id },
+      });
+
+      // Xóa user (các profile sẽ tự động bị xóa do onDelete: Cascade)
+      await tx.users.delete({
+        where: { id },
+      });
+
+      // Tạo audit log cho việc xóa user
+      await createAuditLog(
+        tx,
+        req.user.id,
+        "delete",
+        "user",
+        user.id,
+        {
+          deletedUser: userInfo,
+          deletedBy: {
+            id: req.user.id,
+            fullName: req.user.fullName,
+            role: req.user.role,
+          },
+        },
+        req
+      );
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Đã xóa người dùng ${user.fullName} thành công`,
+      data: {
+        deletedUserId: user.id,
+        deletedUserName: user.fullName,
+        deletedUserRole: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi khi xóa người dùng:", error);
+
+    if (error.code === "P2025") {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
+    }
+
+    if (error.code === "P2003") {
+      return res.status(400).json({
+        success: false,
+        error: "Không thể xóa người dùng do có dữ liệu liên quan",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: "Lỗi máy chủ nội bộ",
+    });
+  }
 };
+
+// Xóa toàn bộ các hàm liên quan đến Student (addStudent, updateStudent, deleteStudent, getAllStudents, filterStudents, và các hàm helper liên quan student)
 
 const filterUsers = async (req, res) => {
-    try {
-        const { name, email, role } = req.query;
-        const where = {};
-        if (name && name.trim() !== "") {
-            where.fullName = { contains: name.trim(), mode: "insensitive" };
-        }
-        if (email && email.trim() !== "") {
-            where.email = { contains: email.trim(), mode: "insensitive" };
-        }
-        if (role && role.trim() !== "") {
-            where.role = normalizeRole(role);
-        } else {
-            where.role = { not: "STUDENT" };
-        }
-        const users = await prisma.users.findMany({
-            where,
-            include: {
-                parentProfile: true,
-                nurseProfile: true,
-                managerProfile: true,
-                adminProfile: true,
-            },
-        });
-        const cleanedUsers = users.map(cleanUserProfiles);
-        res.status(200).json({ success: true, data: cleanedUsers });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+  try {
+    const { name, email, role } = req.query;
+    const where = {};
+    if (name && name.trim() !== "") {
+      where.fullName = { contains: name.trim(), mode: "insensitive" };
     }
-};
-
-const filterStudents = async (req, res) => {
-    try {
-        const { studentCode, name, class: studentClass } = req.query;
-        const where = {
-            role: "STUDENT",
-        };
-
-        if (studentCode && studentCode.trim() !== "") {
-            where.studentProfile = {
-                studentCode: {
-                    contains: studentCode.trim(),
-                    mode: "insensitive",
-                },
-            };
-        }
-        if (name && name.trim() !== "") {
-            where.fullName = { contains: name.trim(), mode: "insensitive" };
-        }
-        if (studentClass && studentClass.trim() !== "") {
-            if (!where.studentProfile) where.studentProfile = {};
-            where.studentProfile.class = {
-                contains: studentClass.trim(),
-                mode: "insensitive",
-            };
-        }
-
-        const students = await prisma.users.findMany({
-            where,
-            include: {
-                studentProfile: true,
-            },
-        });
-
-        const cleanedStudents = students.map(cleanUserProfiles);
-        res.status(200).json({ success: true, data: cleanedStudents });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+    if (email && email.trim() !== "") {
+      where.email = { contains: email.trim(), mode: "insensitive" };
     }
+    if (role && role.trim() !== "") {
+      where.role = normalizeRole(role);
+    } else {
+      where.role = { not: "STUDENT" };
+    }
+    const users = await prisma.users.findMany({
+      where,
+      include: {
+        parentProfile: true,
+        nurseProfile: true,
+        managerProfile: true,
+        adminProfile: true,
+      },
+    });
+    const cleanedUsers = users.map(cleanUserProfiles);
+    res.status(200).json({ success: true, data: cleanedUsers });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 // Dashboard statistics functions
 const getDashboardStats = async (req, res) => {
-    try {
-        // Get user statistics
-        const totalUsers = await prisma.users.count({
-            where: { isActive: true },
-        });
+  try {
+    // Get user statistics
+    const totalUsers = await prisma.users.count({
+      where: { isActive: true },
+    });
 
-        const activeUsers = await prisma.users.count({
-            where: { isActive: true },
-        });
+    const activeUsers = await prisma.users.count({
+      where: { isActive: true },
+    });
 
-        const nurses = await prisma.users.count({
-            where: {
-                role: "SCHOOL_NURSE",
-                isActive: true,
-            },
-        });
+    const nurses = await prisma.users.count({
+      where: {
+        role: "SCHOOL_NURSE",
+        isActive: true,
+      },
+    });
 
-        const parents = await prisma.users.count({
-            where: {
-                role: "PARENT",
-                isActive: true,
-            },
-        });
+    const parents = await prisma.users.count({
+      where: {
+        role: "PARENT",
+        isActive: true,
+      },
+    });
 
-        const students = await prisma.users.count({
-            where: {
-                role: "STUDENT",
-                isActive: true,
-            },
-        });
+    const students = await prisma.student.count({
+      where: {
+        isActive: true,
+      },
+    });
 
-        // Get medication statistics from StudentMedication table
-        const totalMedications = await prisma.studentMedication.count();
-        const activeMedications = await prisma.studentMedication.count({
-            where: {
-                status: "ACTIVE",
-                endDate: {
-                    gte: new Date(),
-                },
-            },
-        });
-        const completedMedications = await prisma.studentMedication.count({
-            where: {
-                status: "ACTIVE",
-                endDate: {
-                    lt: new Date(),
-                },
-            },
-        });
+    // Get medication statistics from StudentMedication table
+    const totalMedications = await prisma.studentMedication.count();
+    const activeMedications = await prisma.studentMedication.count({
+      where: {
+        status: "ACTIVE",
+        endDate: {
+          gte: new Date(),
+        },
+      },
+    });
+    const completedMedications = await prisma.studentMedication.count({
+      where: {
+        status: "ACTIVE",
+        endDate: {
+          lt: new Date(),
+        },
+      },
+    });
 
-        // Get medical events statistics
-        const totalMedicalEvents = await prisma.medicalEvent.count();
-        const resolvedMedicalEvents = await prisma.medicalEvent.count({
-            where: { status: "RESOLVED" },
-        });
-        const pendingMedicalEvents = await prisma.medicalEvent.count({
-            where: { status: "PENDING" },
-        });
-        const inProgressMedicalEvents = await prisma.medicalEvent.count({
-            where: { status: "IN_PROGRESS" },
-        });
+    // Get medical events statistics
+    const totalMedicalEvents = await prisma.medicalEvent.count();
+    const resolvedMedicalEvents = await prisma.medicalEvent.count({
+      where: { status: "RESOLVED" },
+    });
+    const pendingMedicalEvents = await prisma.medicalEvent.count({
+      where: { status: "PENDING" },
+    });
+    const inProgressMedicalEvents = await prisma.medicalEvent.count({
+      where: { status: "IN_PROGRESS" },
+    });
 
-        // Get vaccination campaign statistics
-        const totalVaccinationCampaigns =
-            await prisma.vaccinationCampaign.count({
-                where: { isActive: true },
-            });
-        const upcomingVaccinationCampaigns =
-            await prisma.vaccinationCampaign.count({
-                where: {
-                    isActive: true,
-                    scheduledDate: {
-                        gte: new Date(),
-                    },
-                },
-            });
+    // Get vaccination campaign statistics
+    const totalVaccinationCampaigns = await prisma.vaccinationCampaign.count({
+      where: { isActive: true },
+    });
+    const upcomingVaccinationCampaigns = await prisma.vaccinationCampaign.count(
+      {
+        where: {
+          isActive: true,
+          scheduledDate: {
+            gte: new Date(),
+          },
+        },
+      }
+    );
 
-        // Get form statistics (using StudentMedication as forms for now)
-        const totalForms = await prisma.studentMedication.count();
-        const approvedForms = await prisma.studentMedication.count({
-            where: { status: "APPROVED" },
-        });
-        const pendingForms = await prisma.studentMedication.count({
-            where: { status: "PENDING_APPROVAL" },
-        });
-        const rejectedForms = await prisma.studentMedication.count({
-            where: { status: "REJECTED" },
-        });
+    // Get form statistics (using StudentMedication as forms for now)
+    const totalForms = await prisma.studentMedication.count();
+    const approvedForms = await prisma.studentMedication.count({
+      where: { status: "APPROVED" },
+    });
+    const pendingForms = await prisma.studentMedication.count({
+      where: { status: "PENDING_APPROVAL" },
+    });
+    const rejectedForms = await prisma.studentMedication.count({
+      where: { status: "REJECTED" },
+    });
 
-        // Get user growth trend (last 6 months)
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // Get user growth trend (last 6 months)
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-        const userGrowthData = [];
-        for (let i = 0; i < 6; i++) {
-            const date = new Date();
-            date.setMonth(date.getMonth() - (5 - i));
-            const monthYear = date.toISOString().slice(0, 7); // YYYY-MM format
+    const userGrowthData = [];
+    for (let i = 0; i < 6; i++) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - (5 - i));
+      const monthYear = date.toISOString().slice(0, 7); // YYYY-MM format
 
-            const userCount = await prisma.users.count({
-                where: {
-                    createdAt: {
-                        lte: date,
-                    },
-                    isActive: true,
-                },
-            });
+      const userCount = await prisma.users.count({
+        where: {
+          createdAt: {
+            lte: date,
+          },
+          isActive: true,
+        },
+      });
 
-            userGrowthData.push({
-                date: monthYear,
-                users: userCount,
-            });
-        }
-
-        // Get form status distribution
-        const formStatusData = [
-            { status: "Đã duyệt", count: approvedForms },
-            { status: "Đang chờ", count: pendingForms },
-            { status: "Từ chối", count: rejectedForms },
-        ];
-
-        // Get medical event status distribution
-        const medicalEventStatusData = [
-            { status: "Đã giải quyết", count: resolvedMedicalEvents },
-            { status: "Đang chờ", count: pendingMedicalEvents },
-            { status: "Đang xử lý", count: inProgressMedicalEvents },
-        ];
-
-        const stats = {
-            userStats: {
-                total: totalUsers,
-                active: activeUsers,
-                nurses,
-                parents,
-                students,
-            },
-            formStats: {
-                total: totalForms,
-                approved: approvedForms,
-                pending: pendingForms,
-                rejected: rejectedForms,
-            },
-            medicationStats: {
-                total: totalMedications,
-                active: activeMedications,
-                completed: completedMedications,
-            },
-            medicalEventStats: {
-                total: totalMedicalEvents,
-                resolved: resolvedMedicalEvents,
-                pending: pendingMedicalEvents,
-                inProgress: inProgressMedicalEvents,
-            },
-            vaccinationCampaignStats: {
-                total: totalVaccinationCampaigns,
-                upcoming: upcomingVaccinationCampaigns,
-            },
-            userGrowthData,
-            formStatusData,
-            medicalEventStatusData,
-        };
-
-        res.status(200).json({
-            success: true,
-            data: stats,
-        });
-    } catch (error) {
-        console.error("Lỗi khi lấy thống kê dashboard:", error);
-        res.status(500).json({
-            success: false,
-            error: "Lỗi máy chủ nội bộ",
-        });
+      userGrowthData.push({
+        date: monthYear,
+        users: userCount,
+      });
     }
+
+    // Get form status distribution
+    const formStatusData = [
+      { status: "Đã duyệt", count: approvedForms },
+      { status: "Đang chờ", count: pendingForms },
+      { status: "Từ chối", count: rejectedForms },
+    ];
+
+    // Get medical event status distribution
+    const medicalEventStatusData = [
+      { status: "Đã giải quyết", count: resolvedMedicalEvents },
+      { status: "Đang chờ", count: pendingMedicalEvents },
+      { status: "Đang xử lý", count: inProgressMedicalEvents },
+    ];
+
+    const stats = {
+      userStats: {
+        total: totalUsers,
+        active: activeUsers,
+        nurses,
+        parents,
+        students,
+      },
+      formStats: {
+        total: totalForms,
+        approved: approvedForms,
+        pending: pendingForms,
+        rejected: rejectedForms,
+      },
+      medicationStats: {
+        total: totalMedications,
+        active: activeMedications,
+        completed: completedMedications,
+      },
+      medicalEventStats: {
+        total: totalMedicalEvents,
+        resolved: resolvedMedicalEvents,
+        pending: pendingMedicalEvents,
+        inProgress: inProgressMedicalEvents,
+      },
+      vaccinationCampaignStats: {
+        total: totalVaccinationCampaigns,
+        upcoming: upcomingVaccinationCampaigns,
+      },
+      userGrowthData,
+      formStatusData,
+      medicalEventStatusData,
+    };
+
+    res.status(200).json({
+      success: true,
+      data: stats,
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy thống kê dashboard:", error);
+    res.status(500).json({
+      success: false,
+      error: "Lỗi máy chủ nội bộ",
+    });
+  }
 };
 
 // Lấy tất cả học sinh cho y tá chọn
 const getAllStudentsForNurse = async (req, res) => {
-    try {
-        const students = await prisma.users.findMany({
-            where: {
-                role: "STUDENT",
-                isActive: true,
-            },
-            include: {
-                studentProfile: {
-                    include: {
-                        healthProfile: true,
-                    },
-                },
-            },
-            orderBy: {
-                fullName: "asc",
-            },
-        });
+  try {
+    const students = await prisma.student.findMany({
+      where: {
+        status: "active",
+      },
+      include: {
+        healthProfile: true,
+        parents: {
+          where: { isPrimary: true },
+          select: { parentId: true },
+        },
+      },
+      orderBy: {
+        fullName: "asc",
+      },
+    });
 
-        const formattedStudents = students
-            .filter((student) => student.studentProfile) // chỉ lấy user có studentProfile
-            .map((student) => ({
-                id: student.studentProfile.id,
-                studentCode: student.studentProfile.studentCode,
-                fullName: student.fullName,
-                grade: student.studentProfile.grade,
-                class: student.studentProfile.class,
-                gender: student.studentProfile.gender,
-                dateOfBirth: student.studentProfile.dateOfBirth,
-                bloodType: student.studentProfile.bloodType,
-                healthProfile: student.studentProfile.healthProfile,
-            }));
+    const formattedStudents = students.map((student) => ({
+      id: student.id,
+      studentCode: student.studentCode,
+      fullName: student.fullName,
+      grade: student.grade,
+      class: student.class,
+      gender: student.gender,
+      dateOfBirth: student.dateOfBirth,
+      healthProfile: student.healthProfile,
+      parentId: student.parents?.[0]?.parentId,
+    }));
 
-        res.json({
-            success: true,
-            data: formattedStudents,
-        });
-    } catch (error) {
-        console.error("Error getting students for nurse:", error);
-        res.status(500).json({
-            success: false,
-            error: "Error getting students",
-        });
-    }
+    res.json({
+      success: true,
+      data: formattedStudents,
+    });
+  } catch (error) {
+    console.error("Error getting students for nurse:", error);
+    res.status(500).json({
+      success: false,
+      error: "Error getting students",
+    });
+  }
 };
 
 // Lấy danh sách phụ huynh
 export const getAllParents = async (req, res) => {
-    try {
-        const parents = await prisma.parent.findMany({
-            include: {
-                user: true,
-            },
-        });
-        const data = parents.map((parent) => ({
-            id: parent.id,
-            userId: parent.userId, // Thêm userId để frontend lấy đúng user
-            fullName: parent.user.fullName,
-            email: parent.user.email,
-            phone: parent.user.phone,
-            isActive: parent.user.isActive,
-        }));
-        res.json({ success: true, data });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+  try {
+    const parents = await prisma.parent.findMany({
+      include: {
+        user: true,
+      },
+    });
+    const data = parents.map((parent) => ({
+      id: parent.id,
+      userId: parent.userId, // Thêm userId để frontend lấy đúng user
+      fullName: parent.user.fullName,
+      email: parent.user.email,
+      phone: parent.user.phone,
+      isActive: parent.user.isActive,
+    }));
+    res.json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 // Thêm phụ huynh mới
 export const addParent = async (req, res) => {
-    try {
-        const { name, email, phone } = req.body;
-        if (!name || !email || !phone) {
-            return res
-                .status(400)
-                .json({ success: false, error: "Thiếu thông tin bắt buộc" });
-        }
-        if (!validateEmail(email)) {
-            return res
-                .status(400)
-                .json({ success: false, error: "Email không hợp lệ" });
-        }
-        const existingUser = await prisma.users.findUnique({
-            where: { email },
-        });
-        if (existingUser) {
-            return res
-                .status(400)
-                .json({ success: false, error: "Email đã tồn tại" });
-        }
-        // Tạo user và parent profile
-        const user = await prisma.users.create({
-            data: {
-                fullName: name.trim(),
-                email: email.toLowerCase().trim(),
-                phone: phone.trim(),
-                password: "12345678", // Có thể random hoặc gửi mail sau
-                role: "PARENT",
-                isActive: true,
-            },
-        });
-        const parent = await prisma.parent.create({
-            data: {
-                userId: user.id,
-            },
-        });
-        res.status(201).json({
-            success: true,
-            data: {
-                id: parent.id,
-                fullName: user.fullName,
-                email: user.email,
-                phone: user.phone,
-                isActive: user.isActive,
-            },
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+  try {
+    const { name, email, phone } = req.body;
+    if (!name || !email || !phone) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Thiếu thông tin bắt buộc" });
     }
+    if (!validateEmail(email)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Email không hợp lệ" });
+    }
+    const existingUser = await prisma.users.findUnique({
+      where: { email },
+    });
+    if (existingUser) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Email đã tồn tại" });
+    }
+    // Tạo user và parent profile
+    const user = await prisma.users.create({
+      data: {
+        fullName: name.trim(),
+        email: email.toLowerCase().trim(),
+        phone: phone.trim(),
+        password: "12345678", // Có thể random hoặc gửi mail sau
+        role: "PARENT",
+        isActive: true,
+      },
+    });
+    const parent = await prisma.parent.create({
+      data: {
+        userId: user.id,
+      },
+    });
+    res.status(201).json({
+      success: true,
+      data: {
+        id: parent.id,
+        fullName: user.fullName,
+        email: user.email,
+        phone: user.phone,
+        isActive: user.isActive,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 // Sửa thông tin phụ huynh
 export const updateParent = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { name, email, phone } = req.body;
-        if (!name || !email || !phone) {
-            return res
-                .status(400)
-                .json({ success: false, error: "Thiếu thông tin bắt buộc" });
-        }
-        if (!validateEmail(email)) {
-            return res
-                .status(400)
-                .json({ success: false, error: "Email không hợp lệ" });
-        }
-        // Tìm parent và user liên quan
-        const parent = await prisma.parent.findUnique({
-            where: { id },
-            include: { user: true },
-        });
-        if (!parent) {
-            return res
-                .status(404)
-                .json({ success: false, error: "Không tìm thấy phụ huynh" });
-        }
-        // Kiểm tra email trùng
-        if (email !== parent.user.email) {
-            const existingUser = await prisma.users.findUnique({
-                where: { email },
-            });
-            if (existingUser) {
-                return res
-                    .status(400)
-                    .json({ success: false, error: "Email đã tồn tại" });
-            }
-        }
-        // Cập nhật user
-        const updatedUser = await prisma.users.update({
-            where: { id: parent.user.id },
-            data: {
-                fullName: name.trim(),
-                email: email.toLowerCase().trim(),
-                phone: phone.trim(),
-            },
-        });
-        res.json({
-            success: true,
-            data: {
-                id: parent.id,
-                fullName: updatedUser.fullName,
-                email: updatedUser.email,
-                phone: updatedUser.phone,
-                isActive: updatedUser.isActive,
-            },
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+  try {
+    const { id } = req.params;
+    const { name, email, phone } = req.body;
+    if (!name || !email || !phone) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Thiếu thông tin bắt buộc" });
     }
+    if (!validateEmail(email)) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Email không hợp lệ" });
+    }
+    // Tìm parent và user liên quan
+    const parent = await prisma.parent.findUnique({
+      where: { id },
+      include: { user: true },
+    });
+    if (!parent) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Không tìm thấy phụ huynh" });
+    }
+    // Kiểm tra email trùng
+    if (email !== parent.user.email) {
+      const existingUser = await prisma.users.findUnique({
+        where: { email },
+      });
+      if (existingUser) {
+        return res
+          .status(400)
+          .json({ success: false, error: "Email đã tồn tại" });
+      }
+    }
+    // Cập nhật user
+    const updatedUser = await prisma.users.update({
+      where: { id: parent.user.id },
+      data: {
+        fullName: name.trim(),
+        email: email.toLowerCase().trim(),
+        phone: phone.trim(),
+      },
+    });
+    res.json({
+      success: true,
+      data: {
+        id: parent.id,
+        fullName: updatedUser.fullName,
+        email: updatedUser.email,
+        phone: updatedUser.phone,
+        isActive: updatedUser.isActive,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 // Xóa phụ huynh
 export const deleteParent = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const parent = await prisma.parent.findUnique({ where: { id } });
-        if (!parent) {
-            return res
-                .status(404)
-                .json({ success: false, error: "Không tìm thấy phụ huynh" });
-        }
-        // Xóa user sẽ cascade xóa parent profile
-        await prisma.users.delete({ where: { id: parent.userId } });
-        res.json({ success: true, message: "Xóa phụ huynh thành công" });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
+  try {
+    const { id } = req.params;
+    const parent = await prisma.parent.findUnique({ where: { id } });
+    if (!parent) {
+      return res
+        .status(404)
+        .json({ success: false, error: "Không tìm thấy phụ huynh" });
     }
+    // Xóa các quan hệ liên quan trước
+    await prisma.studentParent.deleteMany({ where: { parentId: id } });
+    await prisma.studentMedication.deleteMany({ where: { parentId: id } });
+    await prisma.vaccinationConsent.deleteMany({ where: { parentId: id } });
+    // Xóa user, parent sẽ tự động bị xóa do onDelete: Cascade
+    await prisma.users.delete({ where: { id: parent.userId } });
+    res.json({ success: true, message: "Xóa phụ huynh thành công" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 // API: Lấy tất cả các khối và số lượng học sinh từng khối
 const getAllGradesWithStudentCount = async (req, res) => {
-    try {
-        const grades = ["1", "2", "3", "4", "5"];
-        const counts = await Promise.all(
-            grades.map(async (grade) => {
-                const count = await prisma.student.count({ where: { grade } });
-                return { grade, count };
-            })
-        );
-        res.json({ success: true, data: counts });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
+  try {
+    const grades = ["1", "2", "3", "4", "5"];
+    const counts = await Promise.all(
+      grades.map(async (grade) => {
+        const count = await prisma.student.count({ where: { grade } });
+        return { grade, count };
+      })
+    );
+    res.json({ success: true, data: counts });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
 };
 
 const getPassword = async (req, res) => {
-    try {
-        const { id } = req.params;
+  try {
+    const { id } = req.params;
 
-        if (!id)
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy người dùng",
-            });
+    if (!id)
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
 
-        const user = await prisma.users.findUnique({
-            where: { id: id },
-            select: {
-                password: true,
-            },
-        });
+    const user = await prisma.users.findUnique({
+      where: { id: id },
+      select: {
+        password: true,
+      },
+    });
 
-        if (!user)
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy người dùng",
-            });
+    if (!user)
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
 
-        return res.status(200).json({
-            success: true,
-            password: user.password,
-            message: "Lấy mật khẩu thành công",
-        });
-    } catch (error) {
-        console.log(error.message);
+    return res.status(200).json({
+      success: true,
+      password: user.password,
+      message: "Lấy mật khẩu thành công",
+    });
+  } catch (error) {
+    console.log(error.message);
 
-        return res.status(500).json({
-            success: false,
-            error: error.message,
-        });
-    }
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
 };
 
 const updatePassword = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const { password, cfPassword } = req.body;
+  try {
+    const { id } = req.params;
+    const { password, cfPassword } = req.body;
 
-        if (!id)
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy người dùng",
-            });
+    if (!id)
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
 
-        if (password !== cfPassword)
-            return res.status(404).json({
-                success: false,
-                error: "Mật khảu không khớp",
-            });
+    if (password !== cfPassword)
+      return res.status(404).json({
+        success: false,
+        error: "Mật khảu không khớp",
+      });
 
-        const user = await prisma.users.findUnique({
-            where: { id: id },
-        });
+    const user = await prisma.users.findUnique({
+      where: { id: id },
+    });
 
-        if (!user)
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy người dùng",
-            });
+    if (!user)
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
 
-        const updatePass = await prisma.users.update({
-            where: { id: id },
-            data: {
-                password: password,
-            },
-        });
+    const updatePass = await prisma.users.update({
+      where: { id: id },
+      data: {
+        password: password,
+      },
+    });
 
-        return res.status(200).json({
-            success: true,
-            data: {
-                user: updatePass,
-                newPassword: password,
-            },
-            message: "Cập nhật mật khẩu thành công",
-        });
-    } catch (error) {
-        console.log(error.message);
+    return res.status(200).json({
+      success: true,
+      data: {
+        user: updatePass,
+        newPassword: password,
+      },
+      message: "Cập nhật mật khẩu thành công",
+    });
+  } catch (error) {
+    console.log(error.message);
 
-        return res.status(500).json({
-            success: false,
-            error: error.message,
-        });
-    }
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    });
+  }
 };
 
 process.on("SIGTERM", async () => {
-    console.log("Shutting down AdminController...");
-    await prisma.$disconnect();
-    process.exit(0);
+  console.log("Shutting down AdminController...");
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
 process.on("SIGINT", async () => {
-    console.log("Received SIGINT, shutting down gracefully...");
-    await prisma.$disconnect();
-    process.exit(0);
+  console.log("Received SIGINT, shutting down gracefully...");
+  await prisma.$disconnect();
+  process.exit(0);
 });
 
+// Lấy password hiện tại của user (chỉ admin mới được phép)
+const getUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await prisma.users.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        password: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        password: user.password,
+        fullName: user.fullName,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (error) {
+    console.error("Lỗi khi lấy password:", error);
+    res.status(500).json({
+      success: false,
+      error: "Lỗi máy chủ khi lấy thông tin mật khẩu",
+    });
+  }
+};
+
+// Cập nhật password cho user (chỉ admin mới được phép)
+const updateUserPassword = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { password, cfPassword } = req.body;
+
+    if (!password || !cfPassword) {
+      return res.status(400).json({
+        success: false,
+        error: "Vui lòng nhập đầy đủ mật khẩu và xác nhận mật khẩu",
+      });
+    }
+
+    if (password !== cfPassword) {
+      return res.status(400).json({
+        success: false,
+        error: "Mật khẩu xác nhận không khớp",
+      });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        error: "Mật khẩu phải có ít nhất 8 ký tự",
+      });
+    }
+
+    const user = await prisma.users.findUnique({
+      where: { id },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy người dùng",
+      });
+    }
+
+    await prisma.users.update({
+      where: { id },
+      data: {
+        password: password,
+        updatedAt: new Date(),
+      },
+    });
+
+    await createAuditLog(
+      prisma,
+      req.user.id,
+      "update",
+      "password",
+      id,
+      { userId: id, passwordChanged: true },
+      req
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Cập nhật mật khẩu thành công",
+    });
+  } catch (error) {
+    console.error("Lỗi khi cập nhật password:", error);
+    res.status(500).json({
+      success: false,
+      error: "Lỗi máy chủ khi cập nhật mật khẩu",
+    });
+  }
+};
+
 export {
-    addRole,
-    addStudent,
-    deleteUser,
-    filterStudents,
-    filterUsers,
-    getAllGradesWithStudentCount,
-    getAllStudents,
-    getAllStudentsForNurse,
-    getAllUsers,
-    getDashboardStats,
-    updateRole,
-    updateStudent,
-    getPassword,
-    updatePassword,
+  addRole,
+  deleteUser,
+  filterUsers,
+  getAllGradesWithStudentCount,
+  getAllStudentsForNurse,
+  getAllUsers,
+  getDashboardStats,
+  getUserPassword,
+  updateRole,
+  updateUserPassword,
 };

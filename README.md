@@ -17,14 +17,13 @@
 
 ## 🚀 Công nghệ sử dụng
 
-| Thành phần     | Công nghệ/Thư viện chính                                             |
-| -------------- | -------------------------------------------------------------------- |
-| Backend        | Node.js, Express.js, Prisma ORM, JWT, Multer, dotenv                 |
-| Frontend       | ReactJS, Vite, React Router, Axios, Context API, React Hooks         |
-| Database       | MongoDB                                                              |
-| Authentication | JSON Web Token (JWT), Middleware xác thực                            |
-| Styling        | TailwindCSS, CSS Modules                                             |
-| Dev Tools      | Vercel (deploy), ESLint, Prettier, PowerShell (Windows), npm scripts |
+| Thành phần | Công nghệ/Thư viện chính |
+| ---------- | ------------------------ |
+| Backend    | Node.js, Express.js      |
+| Frontend   | ReactJS, Vite            |
+| Database   | MongoDB                  |
+| Styling    | TailwindCSS, CSS Modules |
+| Dev Tools  | Vercel (deploy)          |
 
 ---
 
@@ -52,35 +51,6 @@ npm run dev
 
 -   Frontend: [http://localhost:5173](http://localhost:5173)
 -   Backend (API): [http://localhost:3000](http://localhost:5000) (hoặc port bạn cấu hình)
-
----
-
-## 📁 Cấu trúc thư mục chính
-
-```
-School-Health-Management-System/
-├── backend/      # Server Node.js, API, xử lý logic, kết nối DB
-│   ├── controllers/   # Xử lý logic cho từng đối tượng (User, Student, Admin...)
-│   ├── routes/        # Định nghĩa các endpoint API
-│   ├── middleware/    # Các hàm trung gian (auth, upload...)
-│   ├── db/            # Kết nối và cấu hình database
-│   ├── prisma/        # Cấu hình Prisma ORM (schema, migration)
-│   ├── uploads/       # Lưu trữ file upload
-│   ├── seed/          # Dữ liệu mẫu để khởi tạo DB
-│   └── ...            # Các file cấu hình, khởi động server
-├── frontend/    # Ứng dụng React, giao diện người dùng
-│   ├── src/
-│   │   ├── components/    # Các component giao diện chia theo vai trò (admin, nurse, parent...)
-│   │   ├── pages/         # Các trang chính của ứng dụng
-│   │   ├── layouts/       # Layout tổng thể cho từng vai trò
-│   │   ├── context/       # Quản lý state toàn cục (auth...)
-│   │   ├── hooks/         # Custom hooks
-│   │   ├── utils/         # Hàm tiện ích, gọi API
-│   │   └── ...
-│   ├── public/        # Ảnh, favicon, file tĩnh
-│   └── ...            # Cấu hình, tài nguyên khác
-└── README.md      # Tài liệu dự án
-```
 
 ---
 

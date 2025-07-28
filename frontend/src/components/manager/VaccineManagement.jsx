@@ -48,6 +48,16 @@ const VaccineManagement = () => {
     vaccine: null,
   });
 
+  // State cho doseSchedules
+  const [doseSchedules, setDoseSchedules] = useState([
+    {
+      doseOrder: 1,
+      minInterval: 0,
+      recommendedInterval: 0,
+      description: "",
+    },
+  ]);
+
   // Get auth token
   const getAuthToken = () => {
     return localStorage.getItem("token");
@@ -58,6 +68,88 @@ const VaccineManagement = () => {
     "Content-Type": "application/json",
     Authorization: `Bearer ${getAuthToken()}`,
   });
+
+  // Cập nhật trường của mũi tiêm
+  const updateDose = (doseOrder, field, value) => {
+    setDoseSchedules((prev) => {
+      const newSchedules = [...prev];
+
+      // Tìm dose hiện tại
+      const existingIndex = newSchedules.findIndex(
+        (item) => item.doseOrder === doseOrder
+      );
+
+      if (existingIndex >= 0) {
+        // Cập nhật dose hiện tại
+        newSchedules[existingIndex] = {
+          ...newSchedules[existingIndex],
+          [field]: field.includes("Interval") ? Number(value) : value,
+        };
+      } else {
+        // Tạo dose mới nếu chưa tồn tại
+        newSchedules.push({
+          doseOrder,
+          minInterval: 0,
+          recommendedInterval: 0,
+          description: "",
+          [field]: field.includes("Interval") ? Number(value) : value,
+        });
+      }
+
+      return newSchedules;
+    });
+  };
+
+  // Cập nhật doseSchedules khi maxDoseCount thay đổi
+  const syncDoseSchedulesWithMaxDose = (maxDoseCount) => {
+    setDoseSchedules((prev) => {
+      const newSchedules = [];
+      for (let i = 0; i < maxDoseCount; i++) {
+        const doseOrder = i + 1;
+        const existingDose = prev.find((ds) => ds.doseOrder === doseOrder);
+        newSchedules.push(
+          existingDose || {
+            doseOrder,
+            minInterval: 0,
+            recommendedInterval: 0,
+            description: "",
+          }
+        );
+      }
+      return newSchedules;
+    });
+  };
+
+  // Load doseSchedules khi edit vaccine
+  const loadDoseSchedulesForEdit = (vaccine) => {
+    if (vaccine && vaccine.doseSchedules) {
+      setDoseSchedules(vaccine.doseSchedules);
+    } else {
+      setDoseSchedules([
+        {
+          doseOrder: 1,
+          minInterval: 0,
+          recommendedInterval: 0,
+          description: "",
+        },
+      ]);
+    }
+  };
+
+  // Effect để cập nhật doseSchedules khi maxDoseCount thay đổi
+  useEffect(() => {
+    if (selectedVaccine) {
+      loadDoseSchedulesForEdit(selectedVaccine);
+    }
+  }, [selectedVaccine]);
+
+  // Effect để sync doseSchedules với maxDoseCount
+  useEffect(() => {
+    const maxDoseCount = Number(vaccineForm.getFieldValue("maxDoseCount")) || 1;
+    if (maxDoseCount > 0) {
+      syncDoseSchedulesWithMaxDose(maxDoseCount);
+    }
+  }, [vaccineForm.getFieldValue("maxDoseCount")]);
 
   // Fetch all vaccines
   const fetchVaccines = async () => {
@@ -262,6 +354,7 @@ const VaccineManagement = () => {
       ...record,
     });
     setIsModalVisible(true);
+    loadDoseSchedulesForEdit(record);
   };
 
   const handleDelete = async (id) => {
@@ -292,6 +385,14 @@ const VaccineManagement = () => {
     setIsModalVisible(false);
     vaccineForm.resetFields();
     setSelectedVaccine(null);
+    setDoseSchedules([
+      {
+        doseOrder: 1,
+        minInterval: 0,
+        recommendedInterval: 0,
+        description: "",
+      },
+    ]);
   };
 
   return (
@@ -384,6 +485,7 @@ const VaccineManagement = () => {
                       ? selectedVaccine.maxAge
                       : "",
                   maxDoseCount: selectedVaccine.maxDoseCount || 1,
+                  doseSchedules: selectedVaccine.doseSchedules || [],
                 }
               : {
                   name: "",
@@ -397,6 +499,7 @@ const VaccineManagement = () => {
                   minAge: "",
                   maxAge: "",
                   maxDoseCount: 1,
+                  doseSchedules: [],
                 }
           }
           enableReinitialize
@@ -451,6 +554,7 @@ const VaccineManagement = () => {
               minAge: values.minAge !== "" ? Number(values.minAge) : undefined,
               maxAge: values.maxAge !== "" ? Number(values.maxAge) : undefined,
               maxDoseCount: values.maxDoseCount,
+              doseSchedules: values.doseSchedules || [], // Sử dụng values.doseSchedules
             };
             let success = false;
             if (selectedVaccine) {
@@ -463,6 +567,14 @@ const VaccineManagement = () => {
               setIsModalVisible(false);
               vaccineForm.resetFields && vaccineForm.resetFields();
               setSelectedVaccine(null);
+              setDoseSchedules([
+                {
+                  doseOrder: 1,
+                  minInterval: 0,
+                  recommendedInterval: 0,
+                  description: "",
+                },
+              ]);
             }
           }}
         >
@@ -475,193 +587,543 @@ const VaccineManagement = () => {
             handleSubmit,
             setFieldValue,
             isSubmitting,
-          }) => (
-            <Form layout="vertical" onFinish={handleSubmit}>
-              <Form.Item
-                label="Tên vaccine"
-                help={touched.name && errors.name ? errors.name : undefined}
-                validateStatus={
-                  touched.name && errors.name ? "error" : undefined
+          }) => {
+            // Validate trước khi submit
+            const customHandleSubmit = (e) => {
+              e.preventDefault && e.preventDefault();
+
+              console.log("Current doseSchedules state:", doseSchedules); // Debug log
+              console.log("Current values.maxDoseCount:", values.maxDoseCount); // Debug log
+
+              // Validate các trường bắt buộc trong doseSchedules
+              const maxDoseCount = Number(values.maxDoseCount) || 1;
+
+              // Tạo doseSchedules đầy đủ dựa trên maxDoseCount
+              const currentDoseSchedules = [];
+              for (let i = 1; i <= maxDoseCount; i++) {
+                const existingDose = doseSchedules.find(
+                  (ds) => ds.doseOrder === i
+                );
+                currentDoseSchedules.push(
+                  existingDose || {
+                    doseOrder: i,
+                    minInterval: 0,
+                    recommendedInterval: 0,
+                    description: "",
+                  }
+                );
+              }
+
+              console.log(
+                "Generated currentDoseSchedules:",
+                currentDoseSchedules
+              ); // Debug log
+
+              const hasError = currentDoseSchedules.some((ds) => {
+                if (ds.doseOrder === 1) return false; // Mũi 1 không cần validate
+
+                if (!ds.minInterval || ds.minInterval < 0) {
+                  message.error(
+                    `Mũi ${ds.doseOrder}: Khoảng cách tối thiểu không được để trống hoặc âm`
+                  );
+                  return true;
                 }
-                required
-              >
-                <Input
-                  name="name"
-                  value={values.name}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                />
-              </Form.Item>
-              <Form.Item
-                label="Yêu cầu"
-                help={
-                  touched.requirement && errors.requirement
-                    ? errors.requirement
-                    : undefined
+                if (
+                  !ds.recommendedInterval ||
+                  ds.recommendedInterval < ds.minInterval
+                ) {
+                  message.error(
+                    `Mũi ${ds.doseOrder}: Khoảng cách khuyến nghị phải lớn hơn hoặc bằng khoảng cách tối thiểu`
+                  );
+                  return true;
                 }
-                validateStatus={
-                  touched.requirement && errors.requirement
-                    ? "error"
-                    : undefined
-                }
-                required
-              >
-                <Select
-                  value={values.requirement}
-                  onChange={(val) => setFieldValue("requirement", val)}
-                  onBlur={handleBlur}
-                  placeholder="Chọn yêu cầu"
+                return false;
+              });
+
+              if (hasError) return;
+
+              // Cập nhật values với doseSchedules trước khi submit
+              setFieldValue("doseSchedules", currentDoseSchedules);
+
+              const updatedValues = {
+                ...values,
+                doseSchedules: currentDoseSchedules,
+              };
+
+              console.log("Submitting updatedValues:", updatedValues); // Debug log
+              handleSubmit(updatedValues);
+            };
+
+            return (
+              <Form layout="vertical" onFinish={customHandleSubmit}>
+                <Form.Item
+                  label="Tên vaccine"
+                  help={touched.name && errors.name ? errors.name : undefined}
+                  validateStatus={
+                    touched.name && errors.name ? "error" : undefined
+                  }
+                  required
                 >
-                  <Select.Option value="REQUIRED">Bắt buộc</Select.Option>
-                  <Select.Option value="OPTIONAL">Tùy chọn</Select.Option>
-                </Select>
-              </Form.Item>
-              <Form.Item
-                label="Nhà sản xuất"
-                help={
-                  touched.manufacturer && errors.manufacturer
-                    ? errors.manufacturer
-                    : undefined
-                }
-                validateStatus={
-                  touched.manufacturer && errors.manufacturer
-                    ? "error"
-                    : undefined
-                }
-                required
-              >
-                <Input
-                  name="manufacturer"
-                  value={values.manufacturer}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                />
-              </Form.Item>
-              <Form.Item
-                label="Nguồn gốc"
-                help={
-                  touched.origin && errors.origin ? errors.origin : undefined
-                }
-                validateStatus={
-                  touched.origin && errors.origin ? "error" : undefined
-                }
-                required
-              >
-                <Input
-                  name="origin"
-                  value={values.origin}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                />
-              </Form.Item>
-              <Form.Item label="Đường dẫn tham khảo">
-                <Input
-                  name="referenceUrl"
-                  value={values.referenceUrl}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="Nhập link tham khảo (nếu có)"
-                />
-              </Form.Item>
-              <Form.Item label="Mô tả">
-                <TextArea
-                  name="description"
-                  value={values.description}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  rows={2}
-                  placeholder="Nhập mô tả (nếu có)"
-                />
-              </Form.Item>
-              <Form.Item label="Tác dụng phụ">
-                <TextArea
-                  name="sideEffects"
-                  value={values.sideEffects}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  rows={2}
-                  placeholder="Nhập tác dụng phụ (nếu có)"
-                />
-              </Form.Item>
-              <Form.Item label="Chống chỉ định">
-                <TextArea
-                  name="contraindications"
-                  value={values.contraindications}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  rows={2}
-                  placeholder="Nhập chống chỉ định (nếu có)"
-                />
-              </Form.Item>
-              <Form.Item label="Độ tuổi khuyến nghị">
-                <div style={{ display: "flex", alignItems: "center", gap: 23 }}>
                   <Input
-                    style={{ width: "45%" }}
-                    name="minAge"
-                    type="number"
-                    min={0}
-                    value={values.minAge}
+                    name="name"
+                    value={values.name}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Tuổi tối thiểu"
                   />
-                  <span style={{ fontSize: 18, userSelect: "none" }}>-</span>
+                </Form.Item>
+                <Form.Item
+                  label="Yêu cầu"
+                  help={
+                    touched.requirement && errors.requirement
+                      ? errors.requirement
+                      : undefined
+                  }
+                  validateStatus={
+                    touched.requirement && errors.requirement
+                      ? "error"
+                      : undefined
+                  }
+                  required
+                >
+                  <Select
+                    value={values.requirement}
+                    onChange={(val) => setFieldValue("requirement", val)}
+                    onBlur={handleBlur}
+                    placeholder="Chọn yêu cầu"
+                  >
+                    <Select.Option value="REQUIRED">Bắt buộc</Select.Option>
+                    <Select.Option value="OPTIONAL">Tùy chọn</Select.Option>
+                  </Select>
+                </Form.Item>
+                <Form.Item
+                  label="Nhà sản xuất"
+                  help={
+                    touched.manufacturer && errors.manufacturer
+                      ? errors.manufacturer
+                      : undefined
+                  }
+                  validateStatus={
+                    touched.manufacturer && errors.manufacturer
+                      ? "error"
+                      : undefined
+                  }
+                  required
+                >
                   <Input
-                    style={{ width: "45%" }}
-                    name="maxAge"
-                    type="number"
-                    min={0}
-                    value={values.maxAge}
+                    name="manufacturer"
+                    value={values.manufacturer}
                     onChange={handleChange}
                     onBlur={handleBlur}
-                    placeholder="Tuổi tối đa"
                   />
-                </div>
-                {touched.minAge && errors.minAge && (
-                  <div style={{ color: "red", fontSize: 12 }}>
-                    {errors.minAge}
+                </Form.Item>
+                <Form.Item
+                  label="Nguồn gốc"
+                  help={
+                    touched.origin && errors.origin ? errors.origin : undefined
+                  }
+                  validateStatus={
+                    touched.origin && errors.origin ? "error" : undefined
+                  }
+                  required
+                >
+                  <Input
+                    name="origin"
+                    value={values.origin}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                  />
+                </Form.Item>
+                <Form.Item label="Đường dẫn tham khảo">
+                  <Input
+                    name="referenceUrl"
+                    value={values.referenceUrl}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Nhập link tham khảo (nếu có)"
+                  />
+                </Form.Item>
+                <Form.Item label="Mô tả">
+                  <TextArea
+                    name="description"
+                    value={values.description}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    rows={2}
+                    placeholder="Nhập mô tả (nếu có)"
+                  />
+                </Form.Item>
+                <Form.Item label="Tác dụng phụ">
+                  <TextArea
+                    name="sideEffects"
+                    value={values.sideEffects}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    rows={2}
+                    placeholder="Nhập tác dụng phụ (nếu có)"
+                  />
+                </Form.Item>
+                <Form.Item label="Chống chỉ định">
+                  <TextArea
+                    name="contraindications"
+                    value={values.contraindications}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    rows={2}
+                    placeholder="Nhập chống chỉ định (nếu có)"
+                  />
+                </Form.Item>
+                <Form.Item label="Độ tuổi khuyến nghị">
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 23,
+                    }}
+                  >
+                    <Input
+                      style={{ width: "45%" }}
+                      name="minAge"
+                      type="number"
+                      min={0}
+                      value={values.minAge}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="Tuổi tối thiểu"
+                    />
+                    <span
+                      style={{
+                        fontSize: 18,
+                        userSelect: "none",
+                      }}
+                    >
+                      -
+                    </span>
+                    <Input
+                      style={{ width: "45%" }}
+                      name="maxAge"
+                      type="number"
+                      min={0}
+                      value={values.maxAge}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      placeholder="Tuổi tối đa"
+                    />
                   </div>
-                )}
-                {touched.maxAge && errors.maxAge && (
-                  <div style={{ color: "red", fontSize: 12 }}>
-                    {errors.maxAge}
+                  {touched.minAge && errors.minAge && (
+                    <div
+                      style={{
+                        color: "red",
+                        fontSize: 12,
+                      }}
+                    >
+                      {errors.minAge}
+                    </div>
+                  )}
+                  {touched.maxAge && errors.maxAge && (
+                    <div
+                      style={{
+                        color: "red",
+                        fontSize: 12,
+                      }}
+                    >
+                      {errors.maxAge}
+                    </div>
+                  )}
+                </Form.Item>
+                <Form.Item
+                  label="Số liều tối đa"
+                  help={
+                    touched.maxDoseCount && errors.maxDoseCount
+                      ? errors.maxDoseCount
+                      : undefined
+                  }
+                  validateStatus={
+                    touched.maxDoseCount && errors.maxDoseCount
+                      ? "error"
+                      : undefined
+                  }
+                  required
+                >
+                  <Input
+                    name="maxDoseCount"
+                    type="number"
+                    min={1}
+                    value={values.maxDoseCount}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    placeholder="Nhập số liều tối đa cho vaccine"
+                  />
+                </Form.Item>
+                <Form.Item label="Phác đồ mũi tiêm">
+                  <div
+                    style={{
+                      background: "#f8f9fa",
+                      padding: "20px",
+                      borderRadius: "12px",
+                      border: "1px solid #e9ecef",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        marginBottom: "16px",
+                        color: "#495057",
+                        fontSize: "14px",
+                        lineHeight: "1.5",
+                      }}
+                    >
+                      <strong>Hướng dẫn:</strong> Thiết lập lịch tiêm vaccine
+                      theo từng mũi. Mũi 1 sẽ được tiêm ngay, các mũi tiếp theo
+                      cần nhập khoảng cách so với mũi trước đó.
+                    </div>
+
+                    {/* Header bảng */}
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "80px 1fr 1fr 1fr",
+                        gap: "12px",
+                        marginBottom: "12px",
+                        fontWeight: "600",
+                        fontSize: "13px",
+                        color: "#495057",
+                        padding: "0 4px",
+                      }}
+                    >
+                      <div>Mũi số</div>
+                      <div>Khoảng cách tối thiểu</div>
+                      <div>Khoảng cách khuyến nghị</div>
+                      <div>Ghi chú</div>
+                    </div>
+
+                    {Array.from(
+                      { length: Number(values.maxDoseCount) || 1 },
+                      (_, idx) => {
+                        const doseOrder = idx + 1;
+                        const dose = doseSchedules[doseOrder - 1] || {
+                          doseOrder,
+                          minInterval: 0,
+                          recommendedInterval: 0,
+                          description: "",
+                        };
+
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              display: "grid",
+                              gridTemplateColumns: "80px 1fr 1fr 1fr",
+                              gap: "12px",
+                              marginBottom: "12px",
+                              alignItems: "center",
+                              padding: "12px",
+                              background: "white",
+                              borderRadius: "8px",
+                              border: "1px solid #dee2e6",
+                              boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: idx === 0 ? "#e8f5e8" : "#e3f2fd",
+                                borderRadius: "20px",
+                                height: "36px",
+                                fontWeight: "600",
+                                color: idx === 0 ? "#2e7d32" : "#1976d2",
+                                fontSize: "13px",
+                                border: `2px solid ${
+                                  idx === 0 ? "#4caf50" : "#2196f3"
+                                }`,
+                              }}
+                            >
+                              Mũi {doseOrder}
+                            </div>
+
+                            <div style={{ minWidth: 0 }}>
+                              {idx === 0 ? (
+                                <div
+                                  style={{
+                                    textAlign: "center",
+                                    color: "#6c757d",
+                                    fontSize: "13px",
+                                    fontStyle: "italic",
+                                    padding: "8px",
+                                    background: "#f8f9fa",
+                                    borderRadius: "6px",
+                                    border: "1px dashed #dee2e6",
+                                  }}
+                                >
+                                  Tiêm ngay
+                                </div>
+                              ) : (
+                                <>
+                                  <Input
+                                    size="middle"
+                                    min={0}
+                                    type="number"
+                                    value={dose.minInterval || 0}
+                                    onChange={(e) =>
+                                      updateDose(
+                                        doseOrder,
+                                        "minInterval",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="0"
+                                    suffix="ngày"
+                                    style={{
+                                      textAlign: "center",
+                                      width: "100%",
+                                    }}
+                                  />
+                                  <div
+                                    style={{
+                                      fontSize: "11px",
+                                      color: "#6c757d",
+                                      marginTop: "4px",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    Tối thiểu sau mũi {idx}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            <div style={{ minWidth: 0 }}>
+                              {idx === 0 ? (
+                                <div
+                                  style={{
+                                    textAlign: "center",
+                                    color: "#6c757d",
+                                    fontSize: "13px",
+                                    fontStyle: "italic",
+                                    padding: "8px",
+                                    background: "#f8f9fa",
+                                    borderRadius: "6px",
+                                    border: "1px dashed #dee2e6",
+                                  }}
+                                >
+                                  Tiêm ngay
+                                </div>
+                              ) : (
+                                <>
+                                  <Input
+                                    size="middle"
+                                    min={0}
+                                    type="number"
+                                    value={dose.recommendedInterval || 0}
+                                    onChange={(e) =>
+                                      updateDose(
+                                        doseOrder,
+                                        "recommendedInterval",
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="0"
+                                    suffix="ngày"
+                                    style={{
+                                      textAlign: "center",
+                                      width: "100%",
+                                    }}
+                                  />
+                                  <div
+                                    style={{
+                                      fontSize: "11px",
+                                      color: "#6c757d",
+                                      marginTop: "4px",
+                                      textAlign: "center",
+                                    }}
+                                  >
+                                    Khuyến nghị sau mũi {idx}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+
+                            <div style={{ minWidth: 0 }}>
+                              <Input
+                                size="middle"
+                                value={dose.description || ""}
+                                onChange={(e) =>
+                                  updateDose(
+                                    doseOrder,
+                                    "description",
+                                    e.target.value
+                                  )
+                                }
+                                placeholder={
+                                  idx === 0
+                                    ? "Ghi chú mũi đầu tiên"
+                                    : `Ghi chú mũi ${doseOrder}`
+                                }
+                                style={{
+                                  width: "100%",
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      }
+                    )}
+
+                    {/* Ví dụ minh họa */}
+                    <div
+                      style={{
+                        marginTop: "20px",
+                        padding: "16px",
+                        background: "#fff3cd",
+                        borderRadius: "8px",
+                        border: "1px solid #ffeaa7",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontWeight: "600",
+                          marginBottom: "12px",
+                          color: "#856404",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "8px",
+                        }}
+                      >
+                        💡 <span>Ví dụ: Vaccine Hepatitis B</span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#856404",
+                          lineHeight: "1.6",
+                        }}
+                      >
+                        • <strong>Mũi 1:</strong> Tiêm ngay khi sinh
+                        <br />• <strong>Mũi 2:</strong> Tối thiểu 28 ngày,
+                        khuyến nghị 30 ngày sau mũi 1
+                        <br />• <strong>Mũi 3:</strong> Tối thiểu 60 ngày,
+                        khuyến nghị 180 ngày sau mũi 2
+                      </div>
+                    </div>
                   </div>
-                )}
-              </Form.Item>
-              <Form.Item
-                label="Số liều tối đa"
-                help={
-                  touched.maxDoseCount && errors.maxDoseCount
-                    ? errors.maxDoseCount
-                    : undefined
-                }
-                validateStatus={
-                  touched.maxDoseCount && errors.maxDoseCount
-                    ? "error"
-                    : undefined
-                }
-                required
-              >
-                <Input
-                  name="maxDoseCount"
-                  type="number"
-                  min={1}
-                  value={values.maxDoseCount}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="Nhập số liều tối đa cho vaccine"
-                />
-              </Form.Item>
-              <Form.Item>
-                <Button type="primary" htmlType="submit" loading={isSubmitting}>
-                  {selectedVaccine ? "Cập nhật" : "Thêm"}
-                </Button>
-                <Button style={{ marginLeft: 8 }} onClick={handleModalCancel}>
-                  Hủy
-                </Button>
-              </Form.Item>
-            </Form>
-          )}
+                </Form.Item>
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={isSubmitting}
+                    onClick={customHandleSubmit}
+                  >
+                    {selectedVaccine ? "Cập nhật" : "Thêm"}
+                  </Button>
+                  <Button style={{ marginLeft: 8 }} onClick={handleModalCancel}>
+                    Hủy
+                  </Button>
+                </Form.Item>
+              </Form>
+            );
+          }}
         </Formik>
       </Modal>
 
@@ -752,6 +1214,103 @@ const VaccineManagement = () => {
             <Typography.Paragraph style={{ whiteSpace: "pre-line" }}>
               {detailModal.vaccine.description || "Không có"}
             </Typography.Paragraph>
+            <Divider orientation="left" style={{ marginTop: 16 }}>
+              Phác đồ mũi tiêm
+            </Divider>
+            {Array.isArray(detailModal.vaccine.doseSchedules) &&
+            detailModal.vaccine.doseSchedules.length > 0 ? (
+              <table
+                style={{
+                  width: "100%",
+                  marginBottom: 16,
+                  borderCollapse: "collapse",
+                  background: "#f6fcfa",
+                  borderRadius: 6,
+                }}
+              >
+                <thead>
+                  <tr style={{ background: "#e6f7f1" }}>
+                    <th
+                      style={{
+                        padding: 6,
+                        border: "1px solid #e0e0e0",
+                      }}
+                    >
+                      Mũi số
+                    </th>
+                    <th
+                      style={{
+                        padding: 6,
+                        border: "1px solid #e0e0e0",
+                      }}
+                    >
+                      Khoảng cách tối thiểu (ngày)
+                    </th>
+                    <th
+                      style={{
+                        padding: 6,
+                        border: "1px solid #e0e0e0",
+                      }}
+                    >
+                      Khoảng cách khuyến nghị (ngày)
+                    </th>
+                    <th
+                      style={{
+                        padding: 6,
+                        border: "1px solid #e0e0e0",
+                      }}
+                    >
+                      Ghi chú
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {detailModal.vaccine.doseSchedules.map((ds, idx) => (
+                    <tr key={idx}>
+                      <td
+                        style={{
+                          padding: 6,
+                          border: "1px solid #e0e0e0",
+                          textAlign: "center",
+                        }}
+                      >
+                        {ds.doseOrder}
+                      </td>
+                      <td
+                        style={{
+                          padding: 6,
+                          border: "1px solid #e0e0e0",
+                          textAlign: "center",
+                        }}
+                      >
+                        {ds.minInterval}
+                      </td>
+                      <td
+                        style={{
+                          padding: 6,
+                          border: "1px solid #e0e0e0",
+                          textAlign: "center",
+                        }}
+                      >
+                        {ds.recommendedInterval}
+                      </td>
+                      <td
+                        style={{
+                          padding: 6,
+                          border: "1px solid #e0e0e0",
+                        }}
+                      >
+                        {ds.description || "-"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ color: "#888", marginBottom: 16 }}>
+                Không có phác đồ mũi tiêm.
+              </div>
+            )}
           </div>
         )}
       </Modal>

@@ -42,12 +42,13 @@ const UserManagement = () => {
 
   const [searchForm] = Form.useForm();
 
-  // Validation schema for user form
+  // Validation schema for user form - simplified validation
   const userValidationSchema = Yup.object().shape({
     name: Yup.string()
       .required("Vui lòng nhập tên")
       .min(2, "Tên phải có ít nhất 2 ký tự")
-      .max(50, "Tên không được quá 50 ký tự"),
+      .max(50, "Tên không được quá 50 ký tự")
+      .matches(/^[\p{L}\s]+$/u, "Tên chỉ được chứa chữ cái và khoảng trắng"),
     email: Yup.string()
       .required("Vui lòng nhập email")
       .email("Email không hợp lệ"),
@@ -119,9 +120,12 @@ const UserManagement = () => {
       setUsers(formattedUsers);
       setFilteredUsers(formattedUsers);
     } catch (error) {
-      message.error(
-        error.response?.data?.message || "Không thể tải danh sách người dùng"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể tải danh sách người dùng";
+      message.error(`Lỗi khi tải danh sách người dùng: ${errorMessage}`);
       console.error("Lỗi khi tải danh sách người dùng:", error);
     } finally {
       setTableLoading(false);
@@ -245,7 +249,12 @@ const UserManagement = () => {
       message.success("Xóa người dùng thành công");
       fetchUsers();
     } catch (error) {
-      message.error(error.response?.data?.error || "Không thể xóa người dùng");
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể xóa người dùng";
+      message.error(`Lỗi khi xóa người dùng: ${errorMessage}`);
       console.error("Lỗi khi xóa người dùng:", error);
     } finally {
       setTableLoading(false);
@@ -283,7 +292,7 @@ const UserManagement = () => {
       } else {
         // Add new user
         await axios.post(
-          "/api/admin/users",
+          "/api/admin/users/",
           {
             name: values.name,
             email: values.email,
@@ -302,9 +311,13 @@ const UserManagement = () => {
       setIsModalVisible(false);
       resetForm();
     } catch (error) {
-      message.error(
-        error.response?.data?.error || "Không thể thực hiện thao tác"
-      );
+      const errorMessage =
+        error.response?.data?.error ||
+        error.response?.data?.message ||
+        error.message ||
+        "Không thể thực hiện thao tác";
+      const action = editingUser ? "cập nhật" : "thêm";
+      message.error(`Lỗi khi ${action} người dùng: ${errorMessage}`);
       console.error("Lỗi:", error);
     } finally {
       setSubmitting(false);
@@ -411,6 +424,9 @@ const UserManagement = () => {
           onSubmit={handleSubmit}
           enableReinitialize
           context={{ isEditing: !!editingUser }}
+          validateOnMount={false}
+          validateOnChange={true}
+          validateOnBlur={true}
         >
           {({
             values,
@@ -433,7 +449,8 @@ const UserManagement = () => {
                   value={values.name}
                   onChange={handleChange}
                   onBlur={handleBlur}
-                  placeholder="Nhập tên"
+                  placeholder="Nhập tên (chỉ chữ cái và khoảng trắng)"
+                  maxLength={50}
                 />
               </Form.Item>
               <Form.Item

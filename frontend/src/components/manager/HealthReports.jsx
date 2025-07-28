@@ -234,7 +234,7 @@ const HealthReports = () => {
     },
     {
       title: "Họ tên",
-      dataIndex: ["student", "user", "fullName"],
+      dataIndex: ["student", "fullName"],
       key: "fullName",
     },
     {

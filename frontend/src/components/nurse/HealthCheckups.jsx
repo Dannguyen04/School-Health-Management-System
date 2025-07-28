@@ -1,5 +1,10 @@
-import { EyeOutlined, MailOutlined } from "@ant-design/icons";
 import {
+  EyeOutlined,
+  MessageOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
+import {
+  Alert,
   Button,
   Card,
   Col,
@@ -19,39 +24,576 @@ import {
   Tag,
   Typography,
 } from "antd";
-import axios from "axios";
 import dayjs from "dayjs";
 import { ErrorMessage, Formik } from "formik";
 import { useEffect, useState } from "react";
 import * as Yup from "yup";
+import { nurseAPI } from "../../utils/api";
 
-const { TextArea } = Input;
+const { Title, Text } = Typography;
 const { Option } = Select;
-const { Title } = Typography;
+const { TabPane } = Tabs;
+const { TextArea } = Input;
 const { RangePicker } = DatePicker;
 
-// Yup schema validate
+// Yup schema validate - nhất quán với backend
 const checkupSchema = Yup.object().shape({
   scheduledDate: Yup.date().required("Vui lòng chọn ngày khám"),
-  height: Yup.number().min(50).max(250).required("Chiều cao 50-250cm"),
-  weight: Yup.number().min(10).max(200).required("Cân nặng 10-200kg"),
-  pulse: Yup.number().min(40).max(200).required("Mạch 40-200"),
-  systolicBP: Yup.number().min(60).max(250).required("Tâm thu 60-250"),
-  diastolicBP: Yup.number().min(30).max(150).required("Tâm trương 30-150"),
+  height: Yup.number()
+    .positive("Chiều cao phải là số dương")
+    .min(50, "Chiều cao không hợp lệ (50-250cm)")
+    .max(250, "Chiều cao không hợp lệ (50-250cm)")
+    .required("Vui lòng nhập chiều cao"),
+  weight: Yup.number()
+    .positive("Cân nặng phải là số dương")
+    .min(10, "Cân nặng không hợp lệ (10-200kg)")
+    .max(200, "Cân nặng không hợp lệ (10-200kg)")
+    .required("Vui lòng nhập cân nặng"),
+  pulse: Yup.number()
+    .positive("Mạch phải là số dương")
+    .min(40, "Mạch không hợp lệ (40-200)")
+    .max(200, "Mạch không hợp lệ (40-200)")
+    .required("Vui lòng nhập mạch"),
+  systolicBP: Yup.number()
+    .positive("Huyết áp tâm thu phải là số dương")
+    .min(60, "Huyết áp tâm thu không hợp lệ (60-250)")
+    .max(250, "Huyết áp tâm thu không hợp lệ (60-250)")
+    .required("Vui lòng nhập huyết áp tâm thu"),
+  diastolicBP: Yup.number()
+    .positive("Huyết áp tâm trương phải là số dương")
+    .min(30, "Huyết áp tâm trương không hợp lệ (30-150)")
+    .max(150, "Huyết áp tâm trương không hợp lệ (30-150)")
+    .required("Vui lòng nhập huyết áp tâm trương"),
   physicalClassification: Yup.string()
     .oneOf(["EXCELLENT", "GOOD", "AVERAGE", "WEAK"])
     .required("Chọn phân loại"),
-  visionRightNoGlasses: Yup.number().required(),
-  visionLeftNoGlasses: Yup.number().required(),
-  visionRightWithGlasses: Yup.number().required(),
-  visionLeftWithGlasses: Yup.number().required(),
-  hearingLeftNormal: Yup.number().required(),
-  hearingLeftWhisper: Yup.number().required(),
-  hearingRightNormal: Yup.number().required(),
-  hearingRightWhisper: Yup.number().required(),
-  dentalUpperJaw: Yup.string().required("Nhập kết quả răng hàm trên"),
-  dentalLowerJaw: Yup.string().required("Nhập kết quả răng hàm dưới"),
-  clinicalNotes: Yup.string().required(),
+  visionRightNoGlasses: Yup.mixed()
+    .test("vision-validation", "Thị lực không được là số âm", function (value) {
+      if (typeof value === "number") {
+        return value >= 0;
+      }
+      return true;
+    })
+    .test(
+      "vision-validation",
+      "Thị lực không được chỉ chứa chữ cái",
+      function (value) {
+        if (typeof value === "string" && /^[a-zA-Z]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "vision-validation",
+      "Thị lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("vision-validation", "Thị lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thị lực mắt phải (không kính)"),
+  visionLeftNoGlasses: Yup.mixed()
+    .test("vision-validation", "Thị lực không được là số âm", function (value) {
+      if (typeof value === "number") {
+        return value >= 0;
+      }
+      return true;
+    })
+    .test(
+      "vision-validation",
+      "Thị lực không được chỉ chứa chữ cái",
+      function (value) {
+        if (typeof value === "string" && /^[a-zA-Z]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "vision-validation",
+      "Thị lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("vision-validation", "Thị lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thị lực mắt trái (không kính)"),
+  visionRightWithGlasses: Yup.mixed()
+    .test("vision-validation", "Thị lực không được là số âm", function (value) {
+      if (typeof value === "number") {
+        return value >= 0;
+      }
+      return true;
+    })
+    .test(
+      "vision-validation",
+      "Thị lực không được chỉ chứa chữ cái",
+      function (value) {
+        if (typeof value === "string" && /^[a-zA-Z]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "vision-validation",
+      "Thị lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("vision-validation", "Thị lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thị lực mắt phải (có kính)"),
+  visionLeftWithGlasses: Yup.mixed()
+    .test("vision-validation", "Thị lực không được là số âm", function (value) {
+      if (typeof value === "number") {
+        return value >= 0;
+      }
+      return true;
+    })
+    .test(
+      "vision-validation",
+      "Thị lực không được chỉ chứa chữ cái",
+      function (value) {
+        if (typeof value === "string" && /^[a-zA-Z]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "vision-validation",
+      "Thị lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("vision-validation", "Thị lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thị lực mắt trái (có kính)"),
+  hearingLeftNormal: Yup.mixed()
+    .test(
+      "hearing-validation",
+      "Thính lực không được là số âm",
+      function (value) {
+        if (typeof value === "number") {
+          return value >= 0;
+        }
+        return true;
+      }
+    )
+    .test(
+      "hearing-validation",
+      "Thính lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("hearing-validation", "Thính lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thính lực tai trái (bình thường)"),
+  hearingLeftWhisper: Yup.mixed()
+    .test(
+      "hearing-validation",
+      "Thính lực không được là số âm",
+      function (value) {
+        if (typeof value === "number") {
+          return value >= 0;
+        }
+        return true;
+      }
+    )
+    .test(
+      "hearing-validation",
+      "Thính lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("hearing-validation", "Thính lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thính lực tai trái (thì thầm)"),
+  hearingRightNormal: Yup.mixed()
+    .test(
+      "hearing-validation",
+      "Thính lực không được là số âm",
+      function (value) {
+        if (typeof value === "number") {
+          return value >= 0;
+        }
+        return true;
+      }
+    )
+    .test(
+      "hearing-validation",
+      "Thính lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("hearing-validation", "Thính lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thính lực tai phải (bình thường)"),
+  hearingRightWhisper: Yup.mixed()
+    .test(
+      "hearing-validation",
+      "Thính lực không được là số âm",
+      function (value) {
+        if (typeof value === "number") {
+          return value >= 0;
+        }
+        return true;
+      }
+    )
+    .test(
+      "hearing-validation",
+      "Thính lực không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test("hearing-validation", "Thính lực phải từ 0-10", function (value) {
+      if (typeof value === "number") {
+        return value >= 0 && value <= 10;
+      }
+      if (typeof value === "string") {
+        // Kiểm tra nếu là số thập phân (VD: 10/10, 1.5)
+        const numValue = parseFloat(value);
+        if (!isNaN(numValue)) {
+          return numValue >= 0 && numValue <= 10;
+        }
+        // Kiểm tra format 10/10
+        if (/^\d+\/\d+$/.test(value)) {
+          const parts = value.split("/");
+          const numerator = parseFloat(parts[0]);
+          const denominator = parseFloat(parts[1]);
+          if (!isNaN(numerator) && !isNaN(denominator) && denominator > 0) {
+            const ratio = numerator / denominator;
+            return ratio >= 0 && ratio <= 10;
+          }
+        }
+        // Cho phép text như "Bình thường", "Tốt", etc.
+        return true;
+      }
+      return true;
+    })
+    .required("Vui lòng nhập thính lực tai phải (thì thầm)"),
+  dentalUpperJaw: Yup.string()
+    .min(2, "Kết quả răng hàm trên phải có ít nhất 2 ký tự")
+    .max(100, "Kết quả răng hàm trên không được quá 100 ký tự")
+    .test(
+      "dental-validation",
+      "Kết quả răng hàm trên không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "dental-validation",
+      "Kết quả răng hàm trên phải là text, không được chỉ chứa số",
+      function (value) {
+        if (typeof value === "string" && /^[0-9\s]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .required("Vui lòng nhập kết quả răng hàm trên"),
+  dentalLowerJaw: Yup.string()
+    .min(2, "Kết quả răng hàm dưới phải có ít nhất 2 ký tự")
+    .max(100, "Kết quả răng hàm dưới không được quá 100 ký tự")
+    .test(
+      "dental-validation",
+      "Kết quả răng hàm dưới không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "dental-validation",
+      "Kết quả răng hàm dưới phải là text, không được chỉ chứa số",
+      function (value) {
+        if (typeof value === "string" && /^[0-9\s]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .required("Vui lòng nhập kết quả răng hàm dưới"),
+  clinicalNotes: Yup.string()
+    .min(3, "Ghi chú lâm sàng phải có ít nhất 3 ký tự")
+    .max(500, "Ghi chú lâm sàng không được quá 500 ký tự")
+    .test(
+      "clinical-validation",
+      "Ghi chú lâm sàng không được chứa emoji",
+      function (value) {
+        if (
+          typeof value === "string" &&
+          /[\u{1F600}-\u{1F64F}]|[\u{1F300}-\u{1F5FF}]|[\u{1F680}-\u{1F6FF}]|[\u{1F1E0}-\u{1F1FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(
+            value
+          )
+        ) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .test(
+      "clinical-validation",
+      "Ghi chú lâm sàng phải là text, không được chỉ chứa số",
+      function (value) {
+        if (typeof value === "string" && /^[0-9\s]+$/.test(value)) {
+          return false;
+        }
+        return true;
+      }
+    )
+    .required("Vui lòng nhập ghi chú lâm sàng"),
   overallHealth: Yup.string()
     .oneOf(["NORMAL", "NEEDS_ATTENTION", "REQUIRES_TREATMENT"])
     .required("Chọn trạng thái"),
@@ -60,6 +602,24 @@ const checkupSchema = Yup.object().shape({
   followUpDate: Yup.date().nullable(),
   notes: Yup.string(),
 });
+
+// Helper function để xác định trạng thái tư vấn
+const getConsultationStatus = (report) => {
+  if (report.consultationStart && report.consultationEnd) {
+    const now = dayjs();
+    const start = dayjs(report.consultationStart);
+    const end = dayjs(report.consultationEnd);
+
+    if (now.isBefore(start)) {
+      return { status: "SCHEDULED", text: "Đã đặt lịch", color: "blue" };
+    } else if (now.isAfter(end)) {
+      return { status: "COMPLETED", text: "Đã tư vấn", color: "green" };
+    } else {
+      return { status: "IN_PROGRESS", text: "Đang tư vấn", color: "orange" };
+    }
+  }
+  return { status: "NOT_SCHEDULED", text: "Chưa đặt", color: "default" };
+};
 
 const HealthCheckups = () => {
   const [campaigns, setCampaigns] = useState([]);
@@ -80,15 +640,9 @@ const HealthCheckups = () => {
   const [consultRange, setConsultRange] = useState([]);
   const [consultLoading, setConsultLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-
-  const stepTitles = [
-    "Thông tin cơ bản",
-    "Thị lực",
-    "Thính lực",
-    "Răng miệng",
-    "Đánh giá tổng thể",
-    "Xem lại thông tin",
-  ];
+  const [hasCompletedAllSteps, setHasCompletedAllSteps] = useState(false);
+  const [searchForm] = Form.useForm();
+  const [displayedStudents, setDisplayedStudents] = useState([]);
 
   const stepSchemas = [
     Yup.object({
@@ -127,19 +681,28 @@ const HealthCheckups = () => {
     checkupSchema,
   ];
 
+  // Step titles for the form wizard
+  const stepTitles = [
+    "Thông tin cơ bản",
+    "Khám thị lực",
+    "Khám thính lực",
+    "Khám răng hàm mặt",
+    "Kết luận & Khuyến nghị",
+    "Hoàn thành",
+  ];
+
   // Fetch danh sách campaign khi vào trang
   useEffect(() => {
     const fetchCampaigns = async () => {
       setLoading(true);
       try {
-        const res = await axios.get("/api/medical-campaigns", {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        });
-        setCampaigns(res.data.data || []);
-      } catch {
-        setCampaigns([]);
+        const response = await nurseAPI.getAllMedicalCampaigns();
+        if (response.data.success) {
+          setCampaigns(response.data.data || []);
+        }
+      } catch (error) {
+        console.error("Error fetching campaigns:", error);
+        message.error("Không thể tải danh sách chiến dịch");
       }
       setLoading(false);
     };
@@ -151,47 +714,40 @@ const HealthCheckups = () => {
     setLoading(true);
     try {
       // Lấy chi tiết campaign
-      const resCampaign = await axios.get(
-        `/api/medical-campaigns/${campaign.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const resCampaign = await nurseAPI.getMedicalCampaignById(campaign.id);
+      if (!resCampaign.data.success) {
+        throw new Error("Không thể tải chi tiết chiến dịch");
+      }
       const campaignDetail = resCampaign.data.data;
       setSelectedCampaign(campaignDetail);
 
-      // Lấy danh sách học sinh
-      const resStudents = await axios.get("/api/admin/students-for-nurse", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
-      // Lọc theo targetGrades từ campaign chi tiết (ép kiểu về string để tránh lỗi)
-      const filtered = (resStudents.data.data || []).filter((s) =>
-        (campaignDetail.targetGrades || [])
-          .map(String)
-          .includes(String(s.grade))
+      // Lấy danh sách học sinh cho campaign này
+      const studentsResponse = await nurseAPI.getStudentsForMedicalCampaign(
+        campaign.id
       );
-      setStudents(filtered);
+      if (!studentsResponse.data.success) {
+        throw new Error("Không thể tải danh sách học sinh");
+      }
+      const studentsData = studentsResponse.data.data || [];
+      setStudents(studentsData);
+      setDisplayedStudents(studentsData); // Reset displayed students
 
       // Lấy danh sách báo cáo khám sức khỏe của campaign này
-      const resReports = await axios.get(
-        `/api/medical-checks/campaign/${campaignDetail.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-      setReports(resReports.data.data || []);
+      const resReports = await nurseAPI.getMedicalChecksByCampaign(campaign.id);
+      if (resReports.data.success) {
+        setReports(resReports.data.data || []);
+      } else {
+        setReports([]);
+      }
       setActiveTab("students");
-    } catch {
+    } catch (error) {
+      console.error("Error selecting campaign:", error);
+      message.error(error.message || "Không thể tải dữ liệu chiến dịch");
       setStudents([]);
       setReports([]);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   // Khi bấm Khám sức khỏe
@@ -199,6 +755,8 @@ const HealthCheckups = () => {
     setCheckupStudent(student);
     setCheckupModal(true);
     checkupForm.resetFields();
+    setCurrentStep(0);
+    setHasCompletedAllSteps(false);
   };
 
   // Khi bấm xem chi tiết báo cáo
@@ -240,12 +798,35 @@ const HealthCheckups = () => {
 
   // Hàm mở modal gửi kết quả & đặt lịch tư vấn
   const handleOpenConsultModal = (report) => {
+    // Kiểm tra xem đã có lịch tư vấn chưa
+    if (report.consultationStart && report.consultationEnd) {
+      Modal.confirm({
+        title: "Lịch tư vấn đã tồn tại",
+        content: `Học sinh này đã có lịch tư vấn từ ${dayjs(
+          report.consultationStart
+        ).format("DD/MM/YYYY HH:mm")} đến ${dayjs(
+          report.consultationEnd
+        ).format("DD/MM/YYYY HH:mm")}. Bạn có muốn thay đổi lịch không?`,
+        okText: "Thay đổi lịch",
+        cancelText: "Hủy",
+        onOk: () => {
+          setConsultReport(report);
+          setConsultRange([
+            dayjs(report.consultationStart),
+            dayjs(report.consultationEnd),
+          ]);
+          setConsultModalVisible(true);
+        },
+      });
+      return;
+    }
+
     setConsultReport(report);
     setConsultRange([]);
     setConsultModalVisible(true);
   };
 
-  // Hàm gửi kết quả & lịch tư vấn (mock API)
+  // Hàm gửi kết quả & lịch tư vấn
   const handleSendConsult = async () => {
     if (!consultRange.length) {
       message.error("Vui lòng chọn khoảng thời gian tư vấn");
@@ -272,54 +853,167 @@ const HealthCheckups = () => {
       return;
     }
 
+    // Validate thời gian tư vấn tối thiểu (1 giờ)
+    const duration = end.diff(start, "minute");
+    if (duration < 60) {
+      message.error("Thời gian tư vấn phải ít nhất 1 giờ");
+      return;
+    }
+
+    // Validate dữ liệu trước khi gửi
+    if (!consultReport || !consultReport.id) {
+      message.error("Dữ liệu báo cáo không hợp lệ");
+      return;
+    }
+
+    console.log("Consult report:", consultReport); // Debug log
+
     setConsultLoading(true);
     try {
-      await axios.post(
-        `/api/report-medical-check/${consultReport.id}/schedule-consultation`,
-        {
-          consultationStart: start,
-          consultationEnd: end,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
+      // Format dữ liệu thời gian đúng định dạng ISO string
+      const consultationData = {
+        consultationStart: start.toISOString(),
+        consultationEnd: end.toISOString(),
+      };
+
+      console.log("Sending consultation data:", consultationData); // Debug log
+      console.log("Medical check ID:", consultReport.id); // Debug log
+
+      const response = await nurseAPI.scheduleMedicalCheckConsultation(
+        consultReport.id,
+        consultationData
       );
-      message.success("Đã đặt lịch tư vấn và gửi thông báo cho phụ huynh!");
-      setConsultModalVisible(false);
-      setConsultReport(null);
-      setConsultRange([]);
-      // Refetch lại danh sách báo cáo nếu cần
-      if (selectedCampaign) {
-        const resReports = await axios.get(
-          `/api/medical-checks/campaign/${selectedCampaign.id}`,
-          {
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-          }
+
+      console.log("Response:", response); // Debug log
+
+      if (response.data.success) {
+        // Cập nhật ngay lập tức trong state thay vì refetch
+        setReports((prevReports) =>
+          prevReports.map((report) =>
+            report.id === consultReport.id
+              ? {
+                  ...report,
+                  consultationStart: start.toDate(),
+                  consultationEnd: end.toDate(),
+                }
+              : report
+          )
         );
-        setReports(resReports.data.data || []);
+
+        message.success(
+          `Đã đặt lịch tư vấn thành công cho ${consultReport.student?.fullName}! 
+           Thông báo đã được gửi đến phụ huynh.`,
+          5
+        );
+
+        setConsultModalVisible(false);
+        setConsultReport(null);
+        setConsultRange([]);
+      } else {
+        // Xử lý trường hợp response.success = false
+        console.error("Response success false:", response.data); // Debug log
+        message.error(
+          response.data?.error || "Đặt lịch tư vấn thất bại, vui lòng thử lại"
+        );
       }
     } catch (err) {
-      message.error(
-        err.response?.data?.error ||
-          "Đặt lịch tư vấn thất bại, vui lòng thử lại"
-      );
+      console.error("Consultation error:", err); // Debug log
+      console.error("Error response:", err.response); // Debug log
+
+      // Xử lý các loại lỗi khác nhau
+      if (err.response?.status === 400) {
+        message.error(
+          err.response?.data?.error ||
+            "Dữ liệu không hợp lệ, vui lòng kiểm tra lại"
+        );
+      } else if (err.response?.status === 404) {
+        message.error("Không tìm thấy báo cáo khám sức khỏe");
+      } else if (err.response?.status === 500) {
+        message.error("Lỗi server, vui lòng thử lại sau");
+      } else {
+        message.error(
+          err.response?.data?.error ||
+            "Đặt lịch tư vấn thất bại, vui lòng thử lại"
+        );
+      }
     }
     setConsultLoading(false);
   };
 
+  // Hàm tìm kiếm học sinh
+  const handleSearch = (values) => {
+    let filteredStudents = [...students];
+
+    if (values.studentCode) {
+      filteredStudents = filteredStudents.filter((student) =>
+        student.studentCode
+          ?.toLowerCase()
+          .includes(values.studentCode.toLowerCase())
+      );
+    }
+
+    if (values.grade) {
+      filteredStudents = filteredStudents.filter(
+        (student) => student.grade === values.grade
+      );
+    }
+
+    if (values.status !== undefined) {
+      filteredStudents = filteredStudents.filter((student) => {
+        const report = reports.find((r) => r.studentId === student.id);
+        if (values.status === "completed") {
+          return report && report.status === "COMPLETED";
+        } else if (values.status === "pending") {
+          return !report || report.status !== "COMPLETED";
+        }
+        return true;
+      });
+    }
+
+    setDisplayedStudents(filteredStudents);
+  };
+
+  // Hàm reset search
+  const handleReset = () => {
+    searchForm.resetFields();
+    setDisplayedStudents(students);
+  };
+
   // Table columns chỉ cho students
   const studentColumns = [
-    { title: "Mã học sinh", dataIndex: "studentCode", key: "studentCode" },
-    { title: "Tên học sinh", dataIndex: "fullName", key: "fullName" },
-    { title: "Lớp", dataIndex: "class", key: "class" },
-    { title: "Khối", dataIndex: "grade", key: "grade" },
+    {
+      title: "Mã học sinh",
+      dataIndex: "studentCode",
+      key: "studentCode",
+      align: "center",
+      width: 110,
+    },
+    {
+      title: "Tên học sinh",
+      dataIndex: "fullName",
+      key: "fullName",
+      align: "left",
+      width: 140,
+    },
+    {
+      title: "Lớp",
+      dataIndex: "class",
+      key: "class",
+      align: "center",
+      width: 70,
+    },
+    {
+      title: "Khối",
+      dataIndex: "grade",
+      key: "grade",
+      align: "center",
+      width: 70,
+    },
     {
       title: "Trạng thái",
       key: "status",
+      align: "center",
+      width: 120,
       render: (_, record) => {
         const report = reports.find((r) => r.studentId === record.id);
         if (report) {
@@ -335,6 +1029,8 @@ const HealthCheckups = () => {
     {
       title: "Thao tác",
       key: "actions",
+      align: "center",
+      width: 150,
       render: (_, record) => {
         const report = reports.find((r) => r.studentId === record.id);
         if (report) {
@@ -406,32 +1102,37 @@ const HealthCheckups = () => {
       title: "Mã học sinh",
       dataIndex: ["student", "studentCode"],
       key: "studentCode",
+      align: "center",
+      width: 110,
     },
     {
       title: "Tên học sinh",
-      dataIndex: ["student", "user", "fullName"],
+      dataIndex: ["student", "fullName"],
       key: "fullName",
+      align: "left",
+      width: 140,
     },
     {
       title: "Lớp",
       dataIndex: ["student", "class"],
       key: "class",
-    },
-    {
-      title: "Khối",
-      dataIndex: ["student", "grade"],
-      key: "grade",
+      align: "center",
+      width: 70,
     },
     {
       title: "Ngày khám",
       dataIndex: "scheduledDate",
       key: "scheduledDate",
+      align: "center",
+      width: 120,
       render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
+      align: "center",
+      width: 120,
       render: (status) => (
         <Tag color={status === "COMPLETED" ? "green" : "orange"}>
           {status === "COMPLETED" ? "Hoàn thành" : "Đã lên lịch"}
@@ -442,6 +1143,8 @@ const HealthCheckups = () => {
       title: "Sức khỏe tổng thể",
       dataIndex: "overallHealth",
       key: "overallHealth",
+      align: "center",
+      width: 140,
       render: (health) => {
         const statusMap = {
           NORMAL: { text: "Bình thường", color: "green" },
@@ -456,14 +1159,26 @@ const HealthCheckups = () => {
       },
     },
     {
+      title: "Trạng thái tư vấn",
+      key: "consultationStatus",
+      align: "center",
+      width: 120,
+      render: (_, record) => {
+        const status = getConsultationStatus(record);
+        return <Tag color={status.color}>{status.text}</Tag>;
+      },
+    },
+    {
       title: "Thao tác",
       key: "actions",
+      align: "center",
+      width: 200,
       render: (_, record) => {
         const isNeedConsult =
           record.overallHealth === "NEEDS_ATTENTION" ||
           record.overallHealth === "REQUIRES_TREATMENT";
         return (
-          <>
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <Button
               type="default"
               icon={<EyeOutlined />}
@@ -473,7 +1188,6 @@ const HealthCheckups = () => {
                 color: "#1677ff",
                 borderColor: "#1677ff",
                 fontWeight: 500,
-                marginRight: 8,
               }}
               onClick={() => handleViewDetail(record)}
             >
@@ -482,32 +1196,44 @@ const HealthCheckups = () => {
             {isNeedConsult && (
               <Button
                 type="primary"
-                icon={<MailOutlined />}
+                icon={<MessageOutlined />}
                 shape="round"
                 size="small"
                 onClick={() => handleOpenConsultModal(record)}
+                disabled={record.consultationStart && record.consultationEnd}
+                style={{
+                  backgroundColor:
+                    record.consultationStart && record.consultationEnd
+                      ? "#d9d9d9"
+                      : undefined,
+                }}
               >
-                Đặt lịch tư vấn
+                {record.consultationStart && record.consultationEnd
+                  ? "Đã đặt lịch"
+                  : "Đặt lịch tư vấn"}
               </Button>
             )}
-          </>
+          </div>
         );
       },
     },
   ];
 
+  // Tabs items với styling cải thiện
   const items = [
     {
       key: "campaigns",
       label: "Chiến dịch khám sức khỏe",
       children: (
-        <Card title="Chọn chiến dịch kiểm tra sức khỏe">
+        <Card title="Chọn chiến dịch khám sức khỏe">
           <Table
-            dataSource={campaigns}
             columns={campaignColumns}
+            dataSource={campaigns}
             rowKey="id"
             loading={loading}
             pagination={false}
+            size="middle"
+            style={{ borderRadius: 8, overflow: "hidden" }}
           />
         </Card>
       ),
@@ -516,13 +1242,67 @@ const HealthCheckups = () => {
       key: "students",
       label: "Danh sách học sinh",
       children: selectedCampaign ? (
-        <Card title="Danh sách học sinh phù hợp">
+        <Card title="Danh sách học sinh">
+          {/* Search Form */}
+          <Form form={searchForm} onFinish={handleSearch} layout="vertical">
+            <Row gutter={16}>
+              <Col xs={24} sm={8}>
+                <Form.Item name="studentCode" label="Mã học sinh">
+                  <Input placeholder="Nhập mã học sinh" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item name="grade" label="Khối">
+                  <Select placeholder="Chọn khối" allowClear>
+                    <Select.Option value="1">Khối 1</Select.Option>
+                    <Select.Option value="2">Khối 2</Select.Option>
+                    <Select.Option value="3">Khối 3</Select.Option>
+                    <Select.Option value="4">Khối 4</Select.Option>
+                    <Select.Option value="5">Khối 5</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item name="status" label="Trạng thái khám">
+                  <Select placeholder="Chọn trạng thái" allowClear>
+                    <Select.Option value="completed">
+                      Đã hoàn thành
+                    </Select.Option>
+                    <Select.Option value="pending">
+                      Chưa hoàn thành
+                    </Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row>
+              <Col span={24} className="text-right">
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  htmlType="submit"
+                  style={{ marginRight: 8 }}
+                >
+                  Tìm kiếm
+                </Button>
+                <Button onClick={handleReset}>Xóa bộ lọc</Button>
+              </Col>
+            </Row>
+          </Form>
+          <Divider />
           <Table
-            dataSource={students}
             columns={studentColumns}
+            dataSource={
+              displayedStudents.length > 0 ? displayedStudents : students
+            }
             rowKey="id"
             loading={loading}
-            pagination={{ pageSize: 5 }}
+            pagination={{ pageSize: 10, showQuickJumper: true }}
+            size="middle"
+            style={{ borderRadius: 8, overflow: "hidden" }}
+            locale={{
+              emptyText: "Chưa có dữ liệu học sinh",
+            }}
           />
         </Card>
       ) : (
@@ -538,63 +1318,41 @@ const HealthCheckups = () => {
       label: "Báo cáo khám sức khỏe",
       children: selectedCampaign ? (
         <Card title="Danh sách báo cáo khám sức khỏe">
-          {/* Alert thống kê học sinh cần chú ý, cần điều trị */}
+          {/* Alert cho học sinh cần theo dõi */}
           {(() => {
-            const needsAttention = reports.filter(
-              (r) => r.overallHealth === "NEEDS_ATTENTION"
+            const followUpCount = reports.filter(
+              (r) => r.requiresFollowUp
             ).length;
-            const requiresTreatment = reports.filter(
-              (r) => r.overallHealth === "REQUIRES_TREATMENT"
-            ).length;
-            if (needsAttention + requiresTreatment === 0) return null;
-            return (
-              <div style={{ marginBottom: 16 }}>
-                <Row gutter={16}>
-                  {needsAttention > 0 && (
-                    <Col>
-                      <div
-                        style={{
-                          background: "#fffbe6",
-                          border: "1px solid #ffe58f",
-                          borderRadius: 4,
-                          padding: "8px 16px",
-                          color: "#faad14",
-                          fontWeight: 500,
-                          marginRight: 8,
-                        }}
-                      >
-                        {needsAttention} học sinh{" "}
-                        <span style={{ color: "#faad14" }}>cần chú ý</span>
-                      </div>
-                    </Col>
-                  )}
-                  {requiresTreatment > 0 && (
-                    <Col>
-                      <div
-                        style={{
-                          background: "#fff1f0",
-                          border: "1px solid #ffa39e",
-                          borderRadius: 4,
-                          padding: "8px 16px",
-                          color: "#cf1322",
-                          fontWeight: 500,
-                        }}
-                      >
-                        {requiresTreatment} học sinh{" "}
-                        <span style={{ color: "#cf1322" }}>cần điều trị</span>
-                      </div>
-                    </Col>
-                  )}
-                </Row>
-              </div>
-            );
+            return followUpCount > 0 ? (
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col>
+                  <div
+                    style={{
+                      background: "#fffbe6",
+                      border: "1px solid #ffe58f",
+                      borderRadius: 4,
+                      padding: "8px 16px",
+                      color: "#faad14",
+                      fontWeight: 500,
+                      marginRight: 8,
+                    }}
+                  >
+                    {followUpCount} học sinh cần theo dõi
+                  </div>
+                </Col>
+              </Row>
+            ) : null;
           })()}
           <Table
-            dataSource={reports}
             columns={reportColumns}
+            dataSource={reports}
             rowKey="id"
             loading={loading}
-            pagination={{ pageSize: 5 }}
+            locale={{
+              emptyText: "Chưa có dữ liệu báo cáo khám sức khỏe",
+            }}
+            pagination={{ pageSize: 10, showQuickJumper: true }}
+            style={{ borderRadius: 8, overflow: "hidden" }}
           />
         </Card>
       ) : (
@@ -626,12 +1384,10 @@ const HealthCheckups = () => {
               {selectedCampaign.description || "Không có"}
             </Descriptions.Item>
             <Descriptions.Item label="Ngày bắt đầu">
-              {selectedCampaign.scheduledDate &&
-                new Date(selectedCampaign.scheduledDate).toLocaleDateString()}
+              {dayjs(selectedCampaign.scheduledDate).format("DD/MM/YYYY")}
             </Descriptions.Item>
             <Descriptions.Item label="Ngày kết thúc">
-              {selectedCampaign.deadline &&
-                new Date(selectedCampaign.deadline).toLocaleDateString()}
+              {dayjs(selectedCampaign.deadline).format("DD/MM/YYYY")}
             </Descriptions.Item>
             <Descriptions.Item label="Trạng thái">
               <Tag
@@ -644,9 +1400,6 @@ const HealthCheckups = () => {
                   : "Đã kết thúc"}
               </Tag>
             </Descriptions.Item>
-            <Descriptions.Item label="Khối áp dụng">
-              {(selectedCampaign.targetGrades || []).join(", ")}
-            </Descriptions.Item>
           </Descriptions>
         </Card>
       )}
@@ -656,7 +1409,79 @@ const HealthCheckups = () => {
         items={items}
         size="large"
       />
-      {/* Các Modal giữ nguyên */}
+
+      {/* Modal tư vấn */}
+      <Modal
+        title={
+          <div>
+            <div>Đặt lịch tư vấn</div>
+            <div
+              style={{ fontSize: "14px", color: "#666", fontWeight: "normal" }}
+            >
+              {consultReport?.student?.fullName} -{" "}
+              {consultReport?.student?.studentCode}
+            </div>
+          </div>
+        }
+        open={consultModalVisible}
+        onOk={handleSendConsult}
+        onCancel={() => setConsultModalVisible(false)}
+        confirmLoading={consultLoading}
+        okText="Đặt lịch"
+        cancelText="Hủy"
+        width={600}
+      >
+        <div>
+          {/* Alert tình trạng sức khỏe */}
+          {consultReport && (
+            <Alert
+              message={`Tình trạng: ${
+                consultReport.overallHealth === "NEEDS_ATTENTION"
+                  ? "Cần chú ý"
+                  : "Cần điều trị"
+              }`}
+              type={
+                consultReport.overallHealth === "NEEDS_ATTENTION"
+                  ? "warning"
+                  : "error"
+              }
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
+
+          {/* Ghi chú lâm sàng */}
+          {consultReport?.clinicalNotes && (
+            <Form.Item label="Ghi chú lâm sàng">
+              <TextArea
+                value={consultReport.clinicalNotes}
+                readOnly
+                rows={2}
+                style={{ backgroundColor: "#f5f5f5" }}
+              />
+            </Form.Item>
+          )}
+
+          {/* Chọn thời gian tư vấn */}
+          <Form.Item label="Chọn khoảng thời gian tư vấn" required>
+            <RangePicker
+              value={consultRange}
+              onChange={setConsultRange}
+              showTime
+              format="DD/MM/YYYY HH:mm"
+              placeholder={["Từ ngày/giờ", "Đến ngày/giờ"]}
+              disabledDate={(current) =>
+                current && current < dayjs().startOf("day")
+              }
+              style={{ width: "100%" }}
+            />
+            <div style={{ fontSize: "12px", color: "#666", marginTop: 4 }}>
+              * Thời gian tư vấn tối thiểu 1 giờ
+            </div>
+          </Form.Item>
+        </div>
+      </Modal>
+
       {/* Modal nhập báo cáo khám sức khỏe */}
       <Modal
         title={`Khám sức khỏe: ${checkupStudent?.fullName || ""}`}
@@ -664,6 +1489,7 @@ const HealthCheckups = () => {
         onCancel={() => {
           setCheckupModal(false);
           setCheckupStudent(null);
+          setCurrentStep(0);
         }}
         footer={null}
         width={1100}
@@ -671,83 +1497,56 @@ const HealthCheckups = () => {
         <Formik
           initialValues={{
             scheduledDate: null,
-            height: undefined,
-            weight: undefined,
-            pulse: undefined,
-            systolicBP: undefined,
-            diastolicBP: undefined,
-            physicalClassification: undefined,
-            visionRightNoGlasses: undefined,
-            visionLeftNoGlasses: undefined,
-            visionRightWithGlasses: undefined,
-            visionLeftWithGlasses: undefined,
-            hearingLeftNormal: undefined,
-            hearingLeftWhisper: undefined,
-            hearingRightNormal: undefined,
-            hearingRightWhisper: undefined,
+            height: null,
+            weight: null,
+            pulse: null,
+            systolicBP: null,
+            diastolicBP: null,
+            physicalClassification: "",
+            visionRightNoGlasses: null,
+            visionLeftNoGlasses: null,
+            visionRightWithGlasses: null,
+            visionLeftWithGlasses: null,
+            hearingLeftNormal: null,
+            hearingLeftWhisper: null,
+            hearingRightNormal: null,
+            hearingRightWhisper: null,
             dentalUpperJaw: "",
             dentalLowerJaw: "",
             clinicalNotes: "",
-            overallHealth: undefined,
+            overallHealth: "",
             recommendations: "",
             requiresFollowUp: false,
             followUpDate: null,
             notes: "",
           }}
           validationSchema={stepSchemas[currentStep]}
-          validateOnChange={false}
-          validateOnBlur={false}
+          validateOnChange={true}
+          validateOnBlur={true}
           onSubmit={async (
             values,
             { setSubmitting, resetForm, setFieldError }
           ) => {
-            if (currentStep < 5) {
-              // Nếu đang ở bước 0 và có lỗi ngày khám, không cho tiếp tục
-              if (currentStep === 0 && values.scheduledDate) {
-                // Kiểm tra lỗi đã được setFieldError chưa
-                const scheduledDateError =
-                  await checkupSchema.fields.scheduledDate
-                    .validate(values.scheduledDate)
-                    .catch((e) => e.message);
-                if (scheduledDateError) {
-                  setFieldError("scheduledDate", scheduledDateError);
-                  message.error(scheduledDateError);
-                  setSubmitting(false);
-                  return;
-                }
-              }
-              setCurrentStep(5);
+            // Chỉ submit khi ở step cuối (step 5)
+            if (currentStep !== 5) {
               setSubmitting(false);
               return;
             }
             // Submit cuối cùng
             if (!selectedCampaign || !checkupStudent) return;
             try {
-              await axios.post(
-                "/api/medical-checks/create",
-                {
-                  ...values,
-                  studentId: checkupStudent.id,
-                  campaignId: selectedCampaign.id,
-                },
-                {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                  },
-                }
-              );
+              await nurseAPI.createMedicalCheck({
+                ...values,
+                studentId: checkupStudent.id,
+                campaignId: selectedCampaign.id,
+              });
               message.success("Tạo báo cáo khám sức khỏe thành công");
               setCheckupModal(false);
               setCheckupStudent(null);
               setCurrentStep(0);
               // Refetch lại danh sách báo cáo
-              const resReports = await axios.get(
-                `/api/medical-checks/campaign/${selectedCampaign.id}`,
-                {
-                  headers: {
-                    Authorization: `Bearer ${localStorage.getItem("token")}`,
-                  },
-                }
+              const resReports = await nurseAPI.getMedicalChecksByCampaign(
+                selectedCampaign.id
               );
               setReports(resReports.data.data || []);
               resetForm();
@@ -775,6 +1574,7 @@ const HealthCheckups = () => {
             handleSubmit,
             validateForm,
             setFieldError,
+            setFieldTouched,
           }) => (
             <form onSubmit={handleSubmit}>
               <Steps
@@ -814,8 +1614,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={50}
-                      max={250}
                       style={{ width: "100%" }}
                       value={values.height}
                       onChange={(v) => setFieldValue("height", v)}
@@ -833,8 +1631,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={10}
-                      max={200}
                       style={{ width: "100%" }}
                       value={values.weight}
                       onChange={(v) => setFieldValue("weight", v)}
@@ -852,8 +1648,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={40}
-                      max={200}
                       style={{ width: "100%" }}
                       value={values.pulse}
                       onChange={(v) => setFieldValue("pulse", v)}
@@ -871,8 +1665,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={60}
-                      max={250}
                       style={{ width: "100%" }}
                       value={values.systolicBP}
                       onChange={(v) => setFieldValue("systolicBP", v)}
@@ -890,8 +1682,6 @@ const HealthCheckups = () => {
                     required
                   >
                     <InputNumber
-                      min={30}
-                      max={150}
                       style={{ width: "100%" }}
                       value={values.diastolicBP}
                       onChange={(v) => setFieldValue("diastolicBP", v)}
@@ -914,13 +1704,13 @@ const HealthCheckups = () => {
                     label="Phải (không kính)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thị lực (VD: 10/10, 1.5, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.visionRightNoGlasses}
-                      onChange={(v) => setFieldValue("visionRightNoGlasses", v)}
+                      onChange={(e) =>
+                        setFieldValue("visionRightNoGlasses", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="visionRightNoGlasses"
@@ -934,13 +1724,13 @@ const HealthCheckups = () => {
                     label="Trái (không kính)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thị lực (VD: 10/10, 1.5, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.visionLeftNoGlasses}
-                      onChange={(v) => setFieldValue("visionLeftNoGlasses", v)}
+                      onChange={(e) =>
+                        setFieldValue("visionLeftNoGlasses", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="visionLeftNoGlasses"
@@ -954,14 +1744,12 @@ const HealthCheckups = () => {
                     label="Phải (có kính)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thị lực (VD: 10/10, 1.5, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.visionRightWithGlasses}
-                      onChange={(v) =>
-                        setFieldValue("visionRightWithGlasses", v)
+                      onChange={(e) =>
+                        setFieldValue("visionRightWithGlasses", e.target.value)
                       }
                     />
                     <ErrorMessage
@@ -976,14 +1764,12 @@ const HealthCheckups = () => {
                     label="Trái (có kính)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thị lực (VD: 10/10, 1.5, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.visionLeftWithGlasses}
-                      onChange={(v) =>
-                        setFieldValue("visionLeftWithGlasses", v)
+                      onChange={(e) =>
+                        setFieldValue("visionLeftWithGlasses", e.target.value)
                       }
                     />
                     <ErrorMessage
@@ -1004,13 +1790,13 @@ const HealthCheckups = () => {
                     label="Trái (bình thường)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thính lực (VD: 8, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.hearingLeftNormal}
-                      onChange={(v) => setFieldValue("hearingLeftNormal", v)}
+                      onChange={(e) =>
+                        setFieldValue("hearingLeftNormal", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="hearingLeftNormal"
@@ -1024,13 +1810,13 @@ const HealthCheckups = () => {
                     label="Trái (thì thầm)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thính lực (VD: 8, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.hearingLeftWhisper}
-                      onChange={(v) => setFieldValue("hearingLeftWhisper", v)}
+                      onChange={(e) =>
+                        setFieldValue("hearingLeftWhisper", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="hearingLeftWhisper"
@@ -1044,13 +1830,13 @@ const HealthCheckups = () => {
                     label="Phải (bình thường)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thính lực (VD: 8, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.hearingRightNormal}
-                      onChange={(v) => setFieldValue("hearingRightNormal", v)}
+                      onChange={(e) =>
+                        setFieldValue("hearingRightNormal", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="hearingRightNormal"
@@ -1064,13 +1850,13 @@ const HealthCheckups = () => {
                     label="Phải (thì thầm)"
                     required
                   >
-                    <InputNumber
-                      min={0}
-                      max={10}
-                      step={0.1}
+                    <Input
+                      placeholder="Nhập thính lực (VD: 8, Bình thường)"
                       style={{ width: "100%" }}
                       value={values.hearingRightWhisper}
-                      onChange={(v) => setFieldValue("hearingRightWhisper", v)}
+                      onChange={(e) =>
+                        setFieldValue("hearingRightWhisper", e.target.value)
+                      }
                     />
                     <ErrorMessage
                       name="hearingRightWhisper"
@@ -1091,6 +1877,7 @@ const HealthCheckups = () => {
                     required
                   >
                     <Input
+                      placeholder="Nhập kết quả khám răng hàm trên (VD: Tốt, Sâu răng, Cần điều trị)"
                       value={values.dentalUpperJaw}
                       onChange={(e) =>
                         setFieldValue("dentalUpperJaw", e.target.value)
@@ -1109,6 +1896,7 @@ const HealthCheckups = () => {
                     required
                   >
                     <Input
+                      placeholder="Nhập kết quả khám răng hàm dưới (VD: Tốt, Sâu răng, Cần điều trị)"
                       value={values.dentalLowerJaw}
                       onChange={(e) =>
                         setFieldValue("dentalLowerJaw", e.target.value)
@@ -1229,6 +2017,7 @@ const HealthCheckups = () => {
                     required
                   >
                     <Input.TextArea
+                      placeholder="Nhập ghi chú lâm sàng chi tiết về tình trạng sức khỏe của học sinh"
                       rows={2}
                       value={values.clinicalNotes}
                       onChange={(e) =>
@@ -1497,14 +2286,24 @@ const HealthCheckups = () => {
                           return;
                         }
                       }
-                      // Validate bằng Yup như cũ
+                      // Validate bằng Yup và để Formik tự động hiển thị lỗi
                       const stepErrs = await validateForm();
                       if (Object.keys(stepErrs).length === 0) {
-                        setCurrentStep(currentStep + 1); // Sửa: chuyển sang bước tiếp theo
+                        // Nếu đã hoàn thành tất cả steps trước đó và đang edit từ step cuối
+                        if (hasCompletedAllSteps && currentStep < 4) {
+                          setCurrentStep(5); // Nhảy thẳng về step cuối
+                        } else {
+                          setCurrentStep(currentStep + 1);
+                          // Đánh dấu đã hoàn thành tất cả steps khi đến step cuối
+                          if (currentStep === 4) {
+                            setHasCompletedAllSteps(true);
+                          }
+                        }
                       } else {
-                        message.error(
-                          "Vui lòng kiểm tra lại các trường bắt buộc!"
-                        );
+                        // Đánh dấu tất cả các trường có lỗi là "touched" để hiển thị lỗi
+                        Object.keys(stepErrs).forEach((fieldName) => {
+                          setFieldTouched(fieldName, true, false);
+                        });
                       }
                     }}
                     loading={isSubmitting}
@@ -1526,6 +2325,7 @@ const HealthCheckups = () => {
           )}
         </Formik>
       </Modal>
+
       {/* Modal xem chi tiết báo cáo khám sức khỏe */}
       <Modal
         title="Chi tiết báo cáo khám sức khỏe"
@@ -1546,32 +2346,39 @@ const HealthCheckups = () => {
         {detailReport && (
           <div>
             <Typography.Title level={4} style={{ marginBottom: 0 }}>
-              {detailReport.student?.user?.fullName ||
-                detailReport.student?.fullName ||
-                ""}
+              {detailReport.student?.fullName || ""}
             </Typography.Title>
-            <Typography.Text type="secondary">
+            <Typography.Text
+              type="secondary"
+              style={{ display: "block", marginBottom: 4 }}
+            >
+              {detailReport.campaign?.name && (
+                <>
+                  Chiến dịch: <b>{detailReport.campaign.name}</b>
+                  <br />
+                </>
+              )}
               Ngày khám:{" "}
               {detailReport.scheduledDate
                 ? dayjs(detailReport.scheduledDate).format("DD/MM/YYYY")
-                : ""}
+                : "N/A"}
             </Typography.Text>
             <Divider orientation="left">Thông tin cơ bản</Divider>
             <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Chiều cao">
-                {detailReport.height} cm
+                {detailReport.height ? `${detailReport.height} cm` : "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Cân nặng">
-                {detailReport.weight} kg
+                {detailReport.weight ? `${detailReport.weight} kg` : "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Mạch">
-                {detailReport.pulse}
+                {detailReport.pulse || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Huyết áp tâm thu">
-                {detailReport.systolicBP}
+                {detailReport.systolicBP || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Huyết áp tâm trương">
-                {detailReport.diastolicBP}
+                {detailReport.diastolicBP || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Phân loại thể lực">
                 {(() => {
@@ -1583,7 +2390,8 @@ const HealthCheckups = () => {
                   };
                   return (
                     map[detailReport.physicalClassification] ||
-                    detailReport.physicalClassification
+                    detailReport.physicalClassification ||
+                    "N/A"
                   );
                 })()}
               </Descriptions.Item>
@@ -1591,40 +2399,40 @@ const HealthCheckups = () => {
             <Divider orientation="left">Thị lực</Divider>
             <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Phải (không kính)">
-                {detailReport.visionRightNoGlasses}
+                {detailReport.visionRightNoGlasses || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Trái (không kính)">
-                {detailReport.visionLeftNoGlasses}
+                {detailReport.visionLeftNoGlasses || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Phải (có kính)">
-                {detailReport.visionRightWithGlasses}
+                {detailReport.visionRightWithGlasses || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Trái (có kính)">
-                {detailReport.visionLeftWithGlasses}
+                {detailReport.visionLeftWithGlasses || "N/A"}
               </Descriptions.Item>
             </Descriptions>
             <Divider orientation="left">Thính lực</Divider>
             <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Trái (bình thường)">
-                {detailReport.hearingLeftNormal}
+                {detailReport.hearingLeftNormal || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Trái (thì thầm)">
-                {detailReport.hearingLeftWhisper}
+                {detailReport.hearingLeftWhisper || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Phải (bình thường)">
-                {detailReport.hearingRightNormal}
+                {detailReport.hearingRightNormal || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Phải (thì thầm)">
-                {detailReport.hearingRightWhisper}
+                {detailReport.hearingRightWhisper || "N/A"}
               </Descriptions.Item>
             </Descriptions>
             <Divider orientation="left">Răng miệng</Divider>
             <Descriptions column={2} size="small" bordered>
               <Descriptions.Item label="Răng hàm trên">
-                {detailReport.dentalUpperJaw}
+                {detailReport.dentalUpperJaw || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Răng hàm dưới">
-                {detailReport.dentalLowerJaw}
+                {detailReport.dentalLowerJaw || "N/A"}
               </Descriptions.Item>
             </Descriptions>
             <Divider orientation="left">Đánh giá tổng thể</Divider>
@@ -1647,7 +2455,8 @@ const HealthCheckups = () => {
                     };
                     return (
                       map[detailReport.overallHealth] ||
-                      detailReport.overallHealth
+                      detailReport.overallHealth ||
+                      "N/A"
                     );
                   })()}
                 </Tag>
@@ -1662,19 +2471,20 @@ const HealthCheckups = () => {
               </Descriptions.Item>
               <Descriptions.Item label="Khuyến nghị">
                 <Typography.Text strong>
-                  {detailReport.recommendations}
+                  {detailReport.recommendations || "N/A"}
                 </Typography.Text>
               </Descriptions.Item>
               <Descriptions.Item label="Ghi chú lâm sàng" span={2}>
-                {detailReport.clinicalNotes}
+                {detailReport.clinicalNotes || "N/A"}
               </Descriptions.Item>
               <Descriptions.Item label="Ghi chú thêm" span={2}>
-                {detailReport.notes}
+                {detailReport.notes || "N/A"}
               </Descriptions.Item>
             </Descriptions>
           </div>
         )}
       </Modal>
+
       {/* Modal cập nhật báo cáo khám sức khỏe */}
       <Modal
         title="Cập nhật báo cáo khám sức khỏe"
@@ -1690,25 +2500,15 @@ const HealthCheckups = () => {
             enableReinitialize
             onSubmit={async (values, { setSubmitting, resetForm }) => {
               try {
-                await axios.put(
-                  `/api/medical-checks/${detailReport.id}`,
-                  values,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                  }
+                await nurseAPI.updateMedicalCheckResults(
+                  detailReport.id,
+                  values
                 );
                 message.success("Cập nhật báo cáo thành công");
                 setEditModalVisible(false);
                 // Refetch lại danh sách báo cáo
-                const resReports = await axios.get(
-                  `/api/medical-checks/campaign/${selectedCampaign.id}`,
-                  {
-                    headers: {
-                      Authorization: `Bearer ${localStorage.getItem("token")}`,
-                    },
-                  }
+                const resReports = await nurseAPI.getMedicalChecksByCampaign(
+                  selectedCampaign.id
                 );
                 setReports(resReports.data.data || []);
                 resetForm();
@@ -1722,357 +2522,7 @@ const HealthCheckups = () => {
           >
             {({ values, setFieldValue, isSubmitting, handleSubmit }) => (
               <form onSubmit={handleSubmit}>
-                <Divider orientation="left">Thông tin cơ bản</Divider>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Ngày khám"
-                  required
-                >
-                  <DatePicker
-                    style={{ width: "100%" }}
-                    value={values.scheduledDate}
-                    onChange={(date) => setFieldValue("scheduledDate", date)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="scheduledDate"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Chiều cao (cm)"
-                  required
-                >
-                  <InputNumber
-                    min={50}
-                    max={250}
-                    style={{ width: "100%" }}
-                    value={values.height}
-                    onChange={(v) => setFieldValue("height", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="height"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Cân nặng (kg)"
-                  required
-                >
-                  <InputNumber
-                    min={10}
-                    max={200}
-                    style={{ width: "100%" }}
-                    value={values.weight}
-                    onChange={(v) => setFieldValue("weight", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="weight"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Mạch"
-                  required
-                >
-                  <InputNumber
-                    min={40}
-                    max={200}
-                    style={{ width: "100%" }}
-                    value={values.pulse}
-                    onChange={(v) => setFieldValue("pulse", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="pulse"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Huyết áp tâm thu"
-                  required
-                >
-                  <InputNumber
-                    min={60}
-                    max={250}
-                    style={{ width: "100%" }}
-                    value={values.systolicBP}
-                    onChange={(v) => setFieldValue("systolicBP", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="systolicBP"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Huyết áp tâm trương"
-                  required
-                >
-                  <InputNumber
-                    min={30}
-                    max={150}
-                    style={{ width: "100%" }}
-                    value={values.diastolicBP}
-                    onChange={(v) => setFieldValue("diastolicBP", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="diastolicBP"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Divider orientation="left">Thị lực</Divider>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Phải (không kính)"
-                  required
-                >
-                  <InputNumber
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    style={{ width: "100%" }}
-                    value={values.visionRightNoGlasses}
-                    onChange={(v) => setFieldValue("visionRightNoGlasses", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="visionRightNoGlasses"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Trái (không kính)"
-                  required
-                >
-                  <InputNumber
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    style={{ width: "100%" }}
-                    value={values.visionLeftNoGlasses}
-                    onChange={(v) => setFieldValue("visionLeftNoGlasses", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="visionLeftNoGlasses"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Phải (có kính)"
-                  required
-                >
-                  <InputNumber
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    style={{ width: "100%" }}
-                    value={values.visionRightWithGlasses}
-                    onChange={(v) => setFieldValue("visionRightWithGlasses", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="visionRightWithGlasses"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Trái (có kính)"
-                  required
-                >
-                  <InputNumber
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    style={{ width: "100%" }}
-                    value={values.visionLeftWithGlasses}
-                    onChange={(v) => setFieldValue("visionLeftWithGlasses", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="visionLeftWithGlasses"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Divider orientation="left">Thính lực</Divider>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Trái (bình thường)"
-                  required
-                >
-                  <InputNumber
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    style={{ width: "100%" }}
-                    value={values.hearingLeftNormal}
-                    onChange={(v) => setFieldValue("hearingLeftNormal", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="hearingLeftNormal"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Trái (thì thầm)"
-                  required
-                >
-                  <InputNumber
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    style={{ width: "100%" }}
-                    value={values.hearingLeftWhisper}
-                    onChange={(v) => setFieldValue("hearingLeftWhisper", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="hearingLeftWhisper"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Phải (bình thường)"
-                  required
-                >
-                  <InputNumber
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    style={{ width: "100%" }}
-                    value={values.hearingRightNormal}
-                    onChange={(v) => setFieldValue("hearingRightNormal", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="hearingRightNormal"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Phải (thì thầm)"
-                  required
-                >
-                  <InputNumber
-                    min={0}
-                    max={10}
-                    step={0.1}
-                    style={{ width: "100%" }}
-                    value={values.hearingRightWhisper}
-                    onChange={(v) => setFieldValue("hearingRightWhisper", v)}
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="hearingRightWhisper"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Divider orientation="left">Răng miệng</Divider>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Răng hàm trên"
-                  required
-                >
-                  <Input
-                    value={values.dentalUpperJaw}
-                    onChange={(e) =>
-                      setFieldValue("dentalUpperJaw", e.target.value)
-                    }
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="dentalUpperJaw"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Răng hàm dưới"
-                  required
-                >
-                  <Input
-                    value={values.dentalLowerJaw}
-                    onChange={(e) =>
-                      setFieldValue("dentalLowerJaw", e.target.value)
-                    }
-                    disabled={true}
-                  />
-                  <ErrorMessage
-                    name="dentalLowerJaw"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
                 <Divider orientation="left">Đánh giá tổng thể</Divider>
-                <Form.Item
-                  labelCol={{ span: 6 }}
-                  wrapperCol={{ span: 18 }}
-                  label="Phân loại thể lực"
-                  required
-                >
-                  <Select
-                    value={values.physicalClassification}
-                    onChange={(v) => setFieldValue("physicalClassification", v)}
-                    disabled={true}
-                  >
-                    <Option value="EXCELLENT">Xuất sắc</Option>
-                    <Option value="GOOD">Tốt</Option>
-                    <Option value="AVERAGE">Trung bình</Option>
-                    <Option value="WEAK">Yếu</Option>
-                  </Select>
-                  <ErrorMessage
-                    name="physicalClassification"
-                    component="div"
-                    className="text-red-500 text-xs"
-                  />
-                </Form.Item>
                 <Form.Item
                   labelCol={{ span: 6 }}
                   wrapperCol={{ span: 18 }}
@@ -2197,67 +2647,6 @@ const HealthCheckups = () => {
             )}
           </Formik>
         )}
-      </Modal>
-      {/* Modal gửi kết quả & đặt lịch tư vấn */}
-      <Modal
-        title={`Đặt lịch tư vấn: ${
-          consultReport?.student?.user?.fullName || ""
-        }`}
-        open={consultModalVisible}
-        onCancel={() => setConsultModalVisible(false)}
-        onOk={handleSendConsult}
-        okText="Đặt lịch"
-        confirmLoading={consultLoading}
-      >
-        {consultReport && (
-          <Card
-            type="inner"
-            title="Kết quả khám sức khỏe"
-            style={{ marginBottom: 16 }}
-          >
-            <div>
-              <b>Chiều cao:</b>{" "}
-              {consultReport.height ? consultReport.height + " cm" : "-"}
-            </div>
-            <div>
-              <b>Cân nặng:</b>{" "}
-              {consultReport.weight ? consultReport.weight + " kg" : "-"}
-            </div>
-            <div>
-              <b>Huyết áp:</b>{" "}
-              {consultReport.systolicBP && consultReport.diastolicBP
-                ? `${consultReport.systolicBP}/${consultReport.diastolicBP} mmHg`
-                : "-"}
-            </div>
-            <div>
-              <b>Sức khỏe tổng thể:</b>{" "}
-              {consultReport.overallHealth === "NORMAL"
-                ? "Bình thường"
-                : consultReport.overallHealth === "NEEDS_ATTENTION"
-                ? "Cần chú ý"
-                : consultReport.overallHealth === "REQUIRES_TREATMENT"
-                ? "Cần điều trị"
-                : consultReport.overallHealth}
-            </div>
-            {consultReport.notes && (
-              <div>
-                <b>Ghi chú:</b> {consultReport.notes}
-              </div>
-            )}
-          </Card>
-        )}
-        <Form layout="vertical">
-          <Form.Item label="Khoảng thời gian tư vấn" required>
-            <RangePicker
-              style={{ width: "100%" }}
-              value={consultRange}
-              onChange={setConsultRange}
-              showTime
-              format="DD/MM/YYYY HH:mm"
-              placeholder={["Từ ngày/giờ", "Đến ngày/giờ"]}
-            />
-          </Form.Item>
-        </Form>
       </Modal>
     </div>
   );

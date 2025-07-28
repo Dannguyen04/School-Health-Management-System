@@ -1,67 +1,226 @@
 import { PrismaClient } from "@prisma/client";
-import cors from "cors";
-import dotenv from "dotenv";
-import express from "express";
-dotenv.config();
 
-const app = express();
 const prisma = new PrismaClient();
 
-app.use(
-    cors({
-        origin: "http://localhost:5173",
-        credentials: true,
-    })
-);
+// Thêm hàm sinh mã studentCode tự động
+async function generateStudentCode() {
+  const count = await prisma.student.count();
+  const nextNumber = count + 1;
+  return `STU${nextNumber.toString().padStart(4, "0")}`;
+}
 
-const findAllStudent = async () => {
-    try {
-        const users = await prisma.users.findMany({
-            where: {
-                role: "STUDENT",
-            },
-            include: {
-                studentProfile: true,
-            },
-        });
-        return users;
-    } catch (error) {
-        console.log(error);
-        throw new Error(error.message);
+// Tạo học sinh mới
+export const createStudent = async (req, res) => {
+  try {
+    const {
+      fullName,
+      dateOfBirth,
+      gender,
+      class: studentClassFromClass,
+      studentClass: studentClassFromStudentClass,
+      grade,
+      academicYear,
+      // studentCode, // Không nhận từ FE nữa
+      address,
+      phone,
+      ethnicity,
+      religion,
+      parentId, // <-- Thêm dòng này để nhận parentId
+    } = req.body;
+    const studentClass = studentClassFromClass || studentClassFromStudentClass;
+
+    // Thêm log kiểm tra giá trị thực tế
+    console.log("DEBUG - Giá trị nhận được:", {
+      fullName,
+      dateOfBirth,
+      gender,
+      studentClass,
+      grade,
+      academicYear,
+      parentId, // log parentId
+    });
+
+    // Validate các trường bắt buộc (bỏ studentCode)
+    if (
+      !fullName ||
+      !dateOfBirth ||
+      !gender ||
+      !studentClass ||
+      !grade ||
+      !academicYear
+    ) {
+      return res
+        .status(400)
+        .json({ success: false, error: "Thiếu trường bắt buộc" });
     }
+
+    // Sinh mã studentCode tự động
+    const studentCode = await generateStudentCode();
+
+    // Kiểm tra trùng mã học sinh
+    const existing = await prisma.student.findUnique({
+      where: { studentCode },
+    });
+    if (existing) {
+      return res
+        .status(409)
+        .json({ success: false, error: "Mã học sinh đã tồn tại" });
+    }
+
+    const student = await prisma.student.create({
+      data: {
+        fullName,
+        dateOfBirth: new Date(dateOfBirth),
+        gender,
+        class: studentClass,
+        grade: String(grade),
+        academicYear,
+        studentCode,
+        // status sẽ mặc định là 'active', chỉ truyền nếu muốn override
+      },
+    });
+
+    // Nếu có parentId, tạo quan hệ StudentParent
+    if (parentId) {
+      await prisma.studentParent.create({
+        data: {
+          studentId: student.id,
+          parentId: parentId,
+          relationship: "guardian",
+          isPrimary: true,
+        },
+      });
+    }
+
+    return res.status(201).json({ success: true, data: student });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
 };
 
-const findStudentByCode = async (studentCode) => {
-    try {
-        const user = await prisma.users.findUnique({
-            where: {
-                studentProfile: {
-                    studentCode: studentCode,
-                },
-            },
-        });
-        return user ? user : "";
-    } catch (error) {
-        console.log(error);
-        throw new Error(error.message);
-    }
+// Lấy danh sách học sinh (có thể filter qua query)
+export const getAllStudents = async (req, res) => {
+  try {
+    const {
+      studentCode,
+      fullName,
+      class: studentClass,
+      grade,
+      academicYear,
+    } = req.query;
+    const where = {};
+    if (studentCode)
+      where.studentCode = { contains: studentCode, mode: "insensitive" };
+    if (fullName) where.fullName = { contains: fullName, mode: "insensitive" };
+    if (studentClass)
+      where.class = { contains: studentClass, mode: "insensitive" };
+    if (grade) where.grade = grade;
+    if (academicYear) where.academicYear = academicYear;
+
+    const students = await prisma.student.findMany({ where });
+    return res.status(200).json({ success: true, data: students });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
 };
 
-const findStudentbyName = async (studentName) => {
-    try {
-        const user = await prisma.users.findMany({
-            where: {
-                role: "STUDENT",
-                fullName: {
-                    contains: studentName,
-                    mode: "insensitive",
-                },
-            },
-        });
-        return user ? user : "";
-    } catch (error) {
-        throw new Error(error.message);
-    }
+// Lấy chi tiết học sinh theo id
+export const getStudentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const student = await prisma.student.findUnique({ where: { id } });
+    if (!student)
+      return res
+        .status(404)
+        .json({ success: false, error: "Không tìm thấy học sinh" });
+    return res.status(200).json({ success: true, data: student });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
 };
 
-export { findAllStudent, findStudentByCode, findStudentbyName };
+// Lấy phụ huynh chính của học sinh
+export const getStudentParent = async (req, res) => {
+  try {
+    const { id } = req.params; // id là studentId
+    const studentParent = await prisma.studentParent.findFirst({
+      where: {
+        studentId: id,
+        isPrimary: true,
+      },
+      include: {
+        parent: {
+          include: {
+            user: true,
+          },
+        },
+      },
+    });
+    if (!studentParent) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy phụ huynh cho học sinh này",
+      });
+    }
+    return res.status(200).json({
+      success: true,
+      data: {
+        id: studentParent.parent.id,
+        fullName: studentParent.parent.user.fullName,
+        email: studentParent.parent.user.email,
+        phone: studentParent.parent.user.phone,
+      },
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Cập nhật học sinh
+export const updateStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      fullName,
+      dateOfBirth,
+      gender,
+      class: studentClassFromClass,
+      studentClass: studentClassFromStudentClass,
+      grade,
+      academicYear,
+      status,
+    } = req.body;
+    const studentClass = studentClassFromClass || studentClassFromStudentClass;
+
+    // Không cho phép cập nhật mã học sinh trùng
+    // (nếu muốn cho phép thì giữ lại đoạn kiểm tra này)
+
+    const data = {
+      ...(fullName && { fullName }),
+      ...(dateOfBirth && { dateOfBirth: new Date(dateOfBirth) }),
+      ...(gender && { gender }),
+      ...(studentClass && { class: studentClass }),
+      ...(grade && { grade: String(grade) }),
+      ...(academicYear && { academicYear }),
+      ...(status && { status }),
+    };
+
+    const student = await prisma.student.update({ where: { id }, data });
+    return res.status(200).json({ success: true, data: student });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+// Xóa học sinh
+export const deleteStudent = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.student.delete({ where: { id } });
+    return res
+      .status(200)
+      .json({ success: true, message: "Xóa học sinh thành công" });
+  } catch (error) {
+    return res.status(500).json({ success: false, error: error.message });
+  }
+};

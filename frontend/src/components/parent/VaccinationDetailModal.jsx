@@ -177,6 +177,33 @@ const VaccinationDetailModal = ({ visible, vaccination, onClose }) => {
                             </Descriptions.Item>
                         )}
                     </Descriptions>
+                    <Typography.Title level={5} style={{ marginTop: 24, marginBottom: 8, color: '#36ae9a' }}>
+                        Phác đồ mũi tiêm
+                    </Typography.Title>
+                    {((vaccination?.vaccine && Array.isArray(vaccination.vaccine.doseSchedules)) || (campaign?.vaccine && Array.isArray(campaign.vaccine.doseSchedules))) ? (
+                        <table style={{ width: '100%', marginBottom: 16, borderCollapse: 'collapse', background: '#f6fcfa', borderRadius: 6 }}>
+                            <thead>
+                                <tr style={{ background: '#e6f7f1' }}>
+                                    <th style={{ padding: 6, border: '1px solid #e0e0e0' }}>Mũi số</th>
+                                    <th style={{ padding: 6, border: '1px solid #e0e0e0' }}>Khoảng cách tối thiểu (ngày)</th>
+                                    <th style={{ padding: 6, border: '1px solid #e0e0e0' }}>Khoảng cách khuyến nghị (ngày)</th>
+                                    <th style={{ padding: 6, border: '1px solid #e0e0e0' }}>Ghi chú</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {(vaccination?.vaccine?.doseSchedules || campaign?.vaccine?.doseSchedules || []).map((ds, idx) => (
+                                    <tr key={idx}>
+                                        <td style={{ padding: 6, border: '1px solid #e0e0e0', textAlign: 'center' }}>{ds.doseOrder}</td>
+                                        <td style={{ padding: 6, border: '1px solid #e0e0e0', textAlign: 'center' }}>{ds.minInterval}</td>
+                                        <td style={{ padding: 6, border: '1px solid #e0e0e0', textAlign: 'center' }}>{ds.recommendedInterval}</td>
+                                        <td style={{ padding: 6, border: '1px solid #e0e0e0' }}>{ds.description || '-'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    ) : (
+                        <div style={{ color: '#888', marginBottom: 16 }}>Không có phác đồ mũi tiêm.</div>
+                    )}
                     <Divider orientation="left">Thông tin tiêm chủng</Divider>
                     <Descriptions column={2} size="small" bordered>
                         <Descriptions.Item label="Loại vắc xin">

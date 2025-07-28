@@ -1,16 +1,19 @@
 import express from "express";
+
 import {
   addParent,
-  addStudent,
-  deleteUser,
-  filterStudents,
   getAllGradesWithStudentCount,
   getAllParents,
-  getAllStudents,
-  updateStudent,
 } from "../controllers/AdminController.js";
 import { getDashboardStats } from "../controllers/ManagerDashboardController.js";
 import { getVaccinationReport } from "../controllers/NurseController.js";
+import {
+  createStudent,
+  deleteStudent,
+  getAllStudents,
+  getStudentById,
+  updateStudent,
+} from "../controllers/StudentController.js";
 import {
   authenticateToken,
   verifyManager,
@@ -18,20 +21,12 @@ import {
 
 const router = express.Router();
 
-router.post("/", authenticateToken, verifyManager, addStudent);
-
+// Student CRUD routes for manager
+router.post("/", authenticateToken, verifyManager, createStudent);
 router.get("/", authenticateToken, verifyManager, getAllStudents);
 
-router.put("/:id", authenticateToken, verifyManager, updateStudent);
-
-router.delete("/:id", authenticateToken, verifyManager, deleteUser);
-
-router.get("/filter", authenticateToken, verifyManager, filterStudents);
-
-// Add route to get all parents for manager
+// Parent routes (must come before /:id routes)
 router.get("/parents", authenticateToken, verifyManager, getAllParents);
-
-// Add route for manager to create new parent
 router.post("/parents", authenticateToken, verifyManager, addParent);
 
 router.get(
@@ -50,5 +45,10 @@ router.get(
 );
 
 router.get("/vaccination-report/:campaignId", getVaccinationReport);
+
+// Student routes with ID (must come after specific routes)
+router.get("/:id", authenticateToken, verifyManager, getStudentById);
+router.put("/:id", authenticateToken, verifyManager, updateStudent);
+router.delete("/:id", authenticateToken, verifyManager, deleteStudent);
 
 export default router;

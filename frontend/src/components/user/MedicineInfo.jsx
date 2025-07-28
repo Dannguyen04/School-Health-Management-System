@@ -24,7 +24,6 @@ import {
   Progress,
   Radio,
   Select,
-  Space,
   Spin,
   Steps,
   Tag,
@@ -50,8 +49,12 @@ const { Step } = Steps;
 const step1Schema = Yup.object().shape({
   medicationName: Yup.string()
     .required("Vui lòng nhập tên thuốc")
-    .min(3, "Tên thuốc phải có ít nhất 3 ký tự"),
-  medicationType: Yup.string().required("Vui lòng chọn loại thuốc"),
+    .min(2, "Tên thuốc phải có ít nhất 2 ký tự")
+    .matches(/^[\p{L}\s]+$/u, "Tên chỉ được chứa chữ cái và khoảng trắng"),
+  medicationType: Yup.string()
+    .required("Vui lòng chọn loại thuốc")
+    .min(2, "Tên thuốc phải có ít nhất 2 ký tự")
+    .matches(/^[\p{L}\s]+$/u, "Tên chỉ được chứa chữ cái và khoảng trắng"),
   medicationTypeDetail: Yup.string().when("medicationType", {
     is: (val) => val === "khac",
     then: (schema) =>
@@ -67,15 +70,10 @@ const step1Schema = Yup.object().shape({
 });
 const step2Schema = Yup.object().shape({
   dosage: Yup.string().required("Vui lòng nhập liều lượng"),
-  unit: Yup.string().required("Vui lòng chọn đơn vị"),
-  unitDetail: Yup.string().when("unit", {
-    is: (val) => val === "khac",
-    then: (schema) =>
-      schema
-        .required("Vui lòng nhập đơn vị cụ thể")
-        .min(1, "Đơn vị phải có ít nhất 1 ký tự"),
-    otherwise: (schema) => schema,
-  }),
+  unit: Yup.string()
+    .required("Vui lòng chọn đơn vị")
+    .min(2, "Tên thuốc phải có ít nhất 2 ký tự")
+    .matches(/^[\p{L}\s]+$/u, "Tên chỉ được chứa chữ cái và khoảng trắng"),
   frequency: Yup.string().required("Vui lòng chọn tần suất sử dụng"),
   customTimes: Yup.array().when("frequency", {
     is: (val) => val !== "as-needed",
@@ -121,20 +119,9 @@ const step2Schema = Yup.object().shape({
     ),
 });
 const step3Schema = Yup.object().shape({
-  usageNote: Yup.string().required("Vui lòng chọn cách sử dụng"),
-  instructions: Yup.string(),
-  importantNotes: Yup.array(),
-  // Nếu tick 'Khác', phải nhập importantNotesDetail
-  importantNotesDetail: Yup.string().when("importantNotes", {
-    is: (val) => Array.isArray(val) && val.includes("other"),
-    then: (schema) => schema.required("Vui lòng nhập lưu ý quan trọng khác"),
-    otherwise: (schema) => schema,
-  }),
-  usageNoteDetail: Yup.string().when("usageNote", {
-    is: (val) => val === "other",
-    then: (schema) => schema.required("Vui lòng nhập cách sử dụng cụ thể"),
-    otherwise: (schema) => schema,
-  }),
+  instructions: Yup.string()
+    .min(2, "Tên thuốc phải có ít nhất 2 ký tự")
+    .matches(/^[\p{L}\s]+$/u, "Tên chỉ được chứa chữ cái và khoảng trắng"),
 });
 const step4Schema = Yup.object().shape({
   agreeConfirm: Yup.boolean().oneOf([true], "Bạn phải xác nhận thông tin"),
@@ -997,6 +984,8 @@ const MedicineInfo = () => {
                   borderRadius: 24,
                   fontSize: 17,
                   height: 48,
+                  background: "#36ae9a",
+                  borderColor: "#36ae9a",
                 }}
                 onClick={handleAddNewMedicine}
               >
@@ -1100,7 +1089,13 @@ const MedicineInfo = () => {
                   <Button
                     type="primary"
                     size="large"
-                    style={{ width: 220, fontWeight: 600 }}
+                    style={{
+                      width: 220,
+                      fontWeight: 600,
+                      background: "#36ae9a",
+                      borderColor: "#36ae9a",
+                      borderRadius: 8,
+                    }}
                     onClick={() => setCurrentStep(1)}
                   >
                     BẮT ĐẦU NGAY
@@ -1205,51 +1200,16 @@ const MedicineInfo = () => {
                       validateStatus={fieldErrors.medicationType ? "error" : ""}
                       help={fieldErrors.medicationType}
                     >
-                      <Select
+                      <Input
                         value={multiStepData.medicationType}
-                        onChange={(v) =>
+                        onChange={(e) =>
                           setMultiStepData((d) => ({
                             ...d,
-                            medicationType: v,
-                            medicationTypeDetail:
-                              v === "khac" ? d.medicationTypeDetail || "" : "",
+                            medicationType: e.target.value,
                           }))
                         }
-                        placeholder="Chọn loại"
-                      >
-                        <Select.Option value="giam-dau">
-                          Giảm đau, hạ sốt
-                        </Select.Option>
-                        <Select.Option value="khang-sinh">
-                          Kháng sinh
-                        </Select.Option>
-                        <Select.Option value="ho-hap">Hô hấp</Select.Option>
-                        <Select.Option value="tieu-hoa">Tiêu hóa</Select.Option>
-                        <Select.Option value="khac">Khác</Select.Option>
-                      </Select>
-                      {multiStepData.medicationType === "khac" && (
-                        <Form.Item
-                          style={{
-                            marginTop: 8,
-                            marginBottom: 0,
-                          }}
-                          validateStatus={
-                            fieldErrors.medicationTypeDetail ? "error" : ""
-                          }
-                          help={fieldErrors.medicationTypeDetail}
-                        >
-                          <Input
-                            value={multiStepData.medicationTypeDetail || ""}
-                            onChange={(e) =>
-                              setMultiStepData((d) => ({
-                                ...d,
-                                medicationTypeDetail: e.target.value,
-                              }))
-                            }
-                            placeholder="Nhập loại thuốc cụ thể"
-                          />
-                        </Form.Item>
-                      )}
+                        placeholder="Gợi ý: Thuốc giảm đau, thực phẩm bổ sung,..."
+                      />
                     </Form.Item>
                     <Form.Item
                       label="Số lượng thuốc sẽ gửi"
@@ -1270,7 +1230,20 @@ const MedicineInfo = () => {
                         style={{ width: "100%" }}
                       />
                     </Form.Item>
-                    <Button type="primary" block onClick={handleNextStep}>
+                    <Button
+                      type="primary"
+                      block
+                      onClick={handleNextStep}
+                      style={{
+                        height: 40,
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        background: "#36ae9a",
+                        borderColor: "#36ae9a",
+                        marginTop: 8,
+                      }}
+                    >
                       Tiếp theo →
                     </Button>
                   </Form>
@@ -1297,7 +1270,7 @@ const MedicineInfo = () => {
                       &larr;
                     </Button>
                     <b>Liều lượng & Thời gian</b>
-                    <Tooltip title="Nhập liều lượng, tần suất, thời gian">
+                    <Tooltip title="Thiết lập cách uống thuốc cho học sinh">
                       <span
                         style={{
                           marginLeft: 8,
@@ -1317,253 +1290,583 @@ const MedicineInfo = () => {
                       {currentStep}/4
                     </span>
                   </div>
+
                   <Progress
                     percent={50}
                     showInfo={false}
                     strokeColor="#36ae9a"
                     style={{ marginBottom: 16 }}
                   />
+
                   <Form layout="vertical">
-                    {/* Liều lượng & Đơn vị trên 1 dòng */}
-                    <Form.Item
-                      label="Liều lượng cho một lần sử dụng *"
-                      required
-                      validateStatus={fieldErrors.dosage ? "error" : ""}
-                      help={fieldErrors.dosage}
+                    {/* Liều lượng & Đơn vị */}
+                    <div
+                      style={{
+                        background: "#f8fffe",
+                        borderRadius: 12,
+                        padding: 20,
+                        marginBottom: 20,
+                        border: "1px solid #e8f5f2",
+                      }}
                     >
-                      <Space>
-                        <Input
-                          type="number"
-                          min={1}
-                          step={1}
-                          value={multiStepData.dosage}
-                          onChange={(e) => {
-                            const val = e.target.value.replace(/[^\d.]/g, "");
-                            setMultiStepData((d) => ({
-                              ...d,
-                              dosage: val,
-                            }));
-                          }}
-                          placeholder="Nhập liều lượng (vd: 250)"
-                          style={{ width: 120 }}
-                        />
-                        <Form.Item
-                          style={{ marginBottom: 0 }}
-                          validateStatus={fieldErrors.unit ? "error" : ""}
-                          help={fieldErrors.unit}
-                        >
-                          <Select
-                            value={multiStepData.unit}
-                            onChange={(v) =>
-                              setMultiStepData((d) => ({
-                                ...d,
-                                unit: v,
-                                unitDetail:
-                                  v === "khac" ? d.unitDetail || "" : "",
-                              }))
-                            }
-                            placeholder="Đơn vị"
-                            style={{ width: 100 }}
-                          >
-                            <Select.Option value="mg">mg</Select.Option>
-                            <Select.Option value="ml">ml</Select.Option>
-                            <Select.Option value="viên">viên</Select.Option>
-                            <Select.Option value="khac">Khác</Select.Option>
-                          </Select>
-                          {multiStepData.unit === "khac" && (
-                            <Form.Item
-                              style={{
-                                marginTop: 0,
-                                marginBottom: 0,
-                              }}
-                              validateStatus={
-                                fieldErrors.unitDetail ? "error" : ""
-                              }
-                              help={fieldErrors.unitDetail}
-                            >
-                              <Input
-                                value={multiStepData.unitDetail || ""}
-                                onChange={(e) =>
-                                  setMultiStepData((d) => ({
-                                    ...d,
-                                    unitDetail: e.target.value,
-                                  }))
-                                }
-                                placeholder="Nhập đơn vị cụ thể"
-                                style={{
-                                  width: 100,
-                                }}
-                              />
-                            </Form.Item>
-                          )}
-                        </Form.Item>
-                      </Space>
-                    </Form.Item>
-                    {/* Tần suất sử dụng */}
-                    <Form.Item
-                      label="Tần suất sử dụng *"
-                      required
-                      validateStatus={fieldErrors.frequency ? "error" : ""}
-                      help={fieldErrors.frequency}
-                    >
-                      <Radio.Group
-                        value={multiStepData.frequency}
-                        onChange={(e) => {
-                          const freq = e.target.value;
-                          let newTimes = multiStepData.customTimes || [];
-                          if (freq !== "custom" && freq !== "as-needed") {
-                            const n = frequencyToTimes[freq] || 1;
-                            newTimes = Array(n)
-                              .fill("")
-                              .map((_, i) => newTimes[i] || "");
-                          } else if (freq === "as-needed") {
-                            newTimes = [];
-                          }
-                          setMultiStepData((d) => ({
-                            ...d,
-                            frequency: freq,
-                            customTimes: newTimes,
-                          }));
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          marginBottom: 8,
                         }}
                       >
-                        <Space direction="vertical">
-                          <Radio value="once">Ngày 1 lần</Radio>
-                          <Radio value="twice">Ngày 2 lần</Radio>
-                          <Radio value="three">Ngày 3 lần</Radio>
-                          <Radio value="as-needed">Khi cần thiết</Radio>
-                          <Radio value="custom">Tùy chỉnh...</Radio>
-                        </Space>
-                      </Radio.Group>
-                    </Form.Item>
-                    {/* Giờ uống cụ thể: bắt buộc với mọi tần suất trừ 'Khi cần thiết' */}
-                    {multiStepData.frequency !== "as-needed" && (
+                        <div
+                          style={{
+                            background: "#36ae9a",
+                            color: "white",
+                            width: 20,
+                            height: 20,
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginRight: 6,
+                            fontSize: 10,
+                            fontWeight: 600,
+                          }}
+                        >
+                          1
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: "#333",
+                          }}
+                        >
+                          Liều lượng cho một lần sử dụng
+                        </div>
+                      </div>
+
                       <Form.Item
-                        label="Giờ uống cụ thể *"
                         required
-                        validateStatus={
-                          fieldErrors.customTimes
-                            ? "error"
-                            : (multiStepData.customTimes || []).some((t) => !t)
-                            ? "error"
-                            : ""
-                        }
-                        help={
-                          fieldErrors.customTimes ||
-                          ((multiStepData.customTimes || []).some((t) => !t)
-                            ? "Vui lòng nhập đủ giờ uống cho từng lần"
-                            : undefined)
-                        }
+                        validateStatus={fieldErrors.dosage ? "error" : ""}
+                        help={fieldErrors.dosage}
+                        style={{ marginBottom: 6 }}
                       >
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                          {(multiStepData.customTimes || []).map(
-                            (time, idx) => (
-                              <Space key={idx}>
-                                <TimePicker
-                                  format="HH:mm"
-                                  value={time ? dayjs(time, "HH:mm") : null}
-                                  onChange={(value) => {
-                                    const newTimes = [
-                                      ...multiStepData.customTimes,
-                                    ];
-                                    newTimes[idx] = value
-                                      ? value.format("HH:mm")
-                                      : "";
-                                    setMultiStepData((d) => ({
-                                      ...d,
-                                      customTimes: newTimes,
-                                    }));
-                                  }}
-                                  style={{
-                                    width: 120,
-                                  }}
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: 6,
+                            alignItems: "flex-end",
+                          }}
+                        >
+                          <div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#666",
+                                marginBottom: 2,
+                              }}
+                            >
+                              Số lượng
+                            </div>
+                            <Input
+                              type="number"
+                              min={1}
+                              step={0.1}
+                              value={multiStepData.dosage}
+                              onChange={(e) => {
+                                const val = e.target.value.replace(
+                                  /[^\d.]/g,
+                                  ""
+                                );
+                                setMultiStepData((d) => ({
+                                  ...d,
+                                  dosage: val,
+                                }));
+                              }}
+                              placeholder="VD: 250"
+                              style={{
+                                height: 32,
+                                borderRadius: 4,
+                                border: "1px solid #d9d9d9",
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <div
+                              style={{
+                                fontSize: 11,
+                                color: "#666",
+                                marginBottom: 2,
+                              }}
+                            >
+                              Đơn vị
+                            </div>
+                            <Input
+                              value={multiStepData.unit}
+                              onChange={(e) =>
+                                setMultiStepData((d) => ({
+                                  ...d,
+                                  unit: e.target.value,
+                                }))
+                              }
+                              placeholder="Gợi ý: viên, mg, ml,..."
+                            />
+                          </div>
+                        </div>
+
+                        {multiStepData.unit === "khac" && (
+                          <div style={{ marginTop: 6 }}>
+                            <Input
+                              value={multiStepData.unitDetail || ""}
+                              onChange={(e) =>
+                                setMultiStepData((d) => ({
+                                  ...d,
+                                  unitDetail: e.target.value,
+                                }))
+                              }
+                              placeholder="Nhập đơn vị cụ thể"
+                              style={{
+                                height: 32,
+                                borderRadius: 4,
+                                border: "1px solid #d9d9d9",
+                              }}
+                            />
+                          </div>
+                        )}
+                      </Form.Item>
+                    </div>
+
+                    {/* Tần suất sử dụng */}
+                    <div
+                      style={{
+                        background: "#f8fffe",
+                        borderRadius: 12,
+                        padding: 20,
+                        marginBottom: 20,
+                        border: "1px solid #e8f5f2",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          marginBottom: 8,
+                        }}
+                      >
+                        <div
+                          style={{
+                            background: "#36ae9a",
+                            color: "white",
+                            width: 20,
+                            height: 20,
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginRight: 6,
+                            fontSize: 10,
+                            fontWeight: 600,
+                          }}
+                        >
+                          2
+                        </div>
+                        <div
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: "#333",
+                          }}
+                        >
+                          Tần suất sử dụng
+                        </div>
+                      </div>
+
+                      <Form.Item
+                        required
+                        validateStatus={fieldErrors.frequency ? "error" : ""}
+                        help={fieldErrors.frequency}
+                        style={{ marginBottom: 0 }}
+                      >
+                        <Radio.Group
+                          value={multiStepData.frequency}
+                          onChange={(e) => {
+                            const freq = e.target.value;
+                            let newTimes = multiStepData.customTimes || [];
+                            if (freq !== "custom" && freq !== "as-needed") {
+                              const n = frequencyToTimes[freq] || 1;
+                              newTimes = Array(n)
+                                .fill("")
+                                .map((_, i) => newTimes[i] || "");
+                            } else if (freq === "as-needed") {
+                              newTimes = [];
+                            }
+                            setMultiStepData((d) => ({
+                              ...d,
+                              frequency: freq,
+                              customTimes: newTimes,
+                            }));
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 6,
+                              width: "100%",
+                            }}
+                          >
+                            {[
+                              { value: "once", label: "Ngày 1 lần" },
+                              { value: "twice", label: "Ngày 2 lần" },
+                              { value: "three", label: "Ngày 3 lần" },
+                              { value: "as-needed", label: "Khi cần" },
+                              { value: "custom", label: "Tùy chỉnh..." },
+                            ].map((option) => (
+                              <div
+                                key={option.value}
+                                style={{
+                                  border:
+                                    multiStepData.frequency === option.value
+                                      ? "2px solid #36ae9a"
+                                      : "1px solid #e8e8e8",
+                                  borderRadius: 6,
+                                  padding: "8px 6px",
+                                  cursor: "pointer",
+                                  background:
+                                    multiStepData.frequency === option.value
+                                      ? "#f0fdfa"
+                                      : "white",
+                                  transition: "all 0.2s ease",
+                                  textAlign: "center",
+                                  minHeight: "32px",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  flex: "1 1 0",
+                                  minWidth: "100px",
+                                }}
+                                onClick={() => {
+                                  const freq = option.value;
+                                  let newTimes =
+                                    multiStepData.customTimes || [];
+                                  if (
+                                    freq !== "custom" &&
+                                    freq !== "as-needed"
+                                  ) {
+                                    const n = frequencyToTimes[freq] || 1;
+                                    newTimes = Array(n)
+                                      .fill("")
+                                      .map((_, i) => newTimes[i] || "");
+                                  } else if (freq === "as-needed") {
+                                    newTimes = [];
+                                  }
+                                  setMultiStepData((d) => ({
+                                    ...d,
+                                    frequency: freq,
+                                    customTimes: newTimes,
+                                  }));
+                                }}
+                              >
+                                <Radio
+                                  value={option.value}
+                                  style={{ display: "none" }}
                                 />
-                                {multiStepData.frequency === "custom" && (
-                                  <Button
-                                    size="small"
-                                    danger
-                                    onClick={() => {
+                                <span
+                                  style={{
+                                    fontWeight:
+                                      multiStepData.frequency === option.value
+                                        ? 600
+                                        : 400,
+                                    color:
+                                      multiStepData.frequency === option.value
+                                        ? "#36ae9a"
+                                        : "#333",
+                                    fontSize: 11,
+                                    lineHeight: 1.2,
+                                  }}
+                                >
+                                  {option.label}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </Radio.Group>
+                      </Form.Item>
+                    </div>
+
+                    {/* Giờ uống cụ thể */}
+                    {multiStepData.frequency !== "as-needed" && (
+                      <div
+                        style={{
+                          background: "#f8fffe",
+                          borderRadius: 12,
+                          padding: 20,
+                          marginBottom: 20,
+                          border: "1px solid #e8f5f2",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            marginBottom: 12,
+                          }}
+                        >
+                          <div
+                            style={{
+                              background: "#36ae9a",
+                              color: "white",
+                              width: 20,
+                              height: 20,
+                              borderRadius: "50%",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              marginRight: 6,
+                              fontSize: 10,
+                              fontWeight: 600,
+                            }}
+                          >
+                            3
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 14,
+                              fontWeight: 600,
+                              color: "#333",
+                            }}
+                          >
+                            Giờ uống cụ thể
+                          </div>
+                        </div>
+
+                        <Form.Item
+                          required
+                          validateStatus={
+                            fieldErrors.customTimes
+                              ? "error"
+                              : (multiStepData.customTimes || []).some(
+                                  (t) => !t
+                                )
+                              ? "error"
+                              : ""
+                          }
+                          help={
+                            fieldErrors.customTimes ||
+                            ((multiStepData.customTimes || []).some((t) => !t)
+                              ? "Vui lòng nhập đủ giờ uống cho từng lần"
+                              : undefined)
+                          }
+                          style={{ marginBottom: 0 }}
+                        >
+                          <div style={{ display: "grid", gap: 4 }}>
+                            {(multiStepData.customTimes || []).map(
+                              (time, idx) => (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    padding: 6,
+                                    background: "white",
+                                    borderRadius: 4,
+                                    border: "1px solid #e8e8e8",
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      background: "#36ae9a",
+                                      color: "white",
+                                      width: 16,
+                                      height: 16,
+                                      borderRadius: "50%",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      fontSize: 9,
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {idx + 1}
+                                  </div>
+                                  <TimePicker
+                                    format="HH:mm"
+                                    value={time ? dayjs(time, "HH:mm") : null}
+                                    onChange={(value) => {
                                       const newTimes = [
                                         ...multiStepData.customTimes,
                                       ];
-                                      newTimes.splice(idx, 1);
+                                      newTimes[idx] = value
+                                        ? value.format("HH:mm")
+                                        : "";
                                       setMultiStepData((d) => ({
                                         ...d,
                                         customTimes: newTimes,
                                       }));
                                     }}
-                                  >
-                                    Xóa
-                                  </Button>
-                                )}
-                              </Space>
-                            )
-                          )}
-                          {multiStepData.frequency === "custom" && (
-                            <Button
-                              type="dashed"
-                              icon={<PlusOutlined />}
-                              onClick={() =>
-                                setMultiStepData((d) => ({
-                                  ...d,
-                                  customTimes: [...(d.customTimes || []), ""],
-                                }))
-                              }
-                              style={{
-                                width: 120,
-                              }}
-                            >
-                              Thêm lần uống
-                            </Button>
-                          )}
-                        </Space>
-                      </Form.Item>
+                                    placeholder="Chọn giờ"
+                                    style={{
+                                      width: 80,
+                                      borderRadius: 4,
+                                    }}
+                                  />
+                                  {multiStepData.frequency === "custom" && (
+                                    <Button
+                                      size="small"
+                                      danger
+                                      type="text"
+                                      icon={<DeleteOutlined />}
+                                      onClick={() => {
+                                        const newTimes = [
+                                          ...multiStepData.customTimes,
+                                        ];
+                                        newTimes.splice(idx, 1);
+                                        setMultiStepData((d) => ({
+                                          ...d,
+                                          customTimes: newTimes,
+                                        }));
+                                      }}
+                                      style={{
+                                        marginLeft: "auto",
+                                        padding: "0 4px",
+                                      }}
+                                    />
+                                  )}
+                                </div>
+                              )
+                            )}
+
+                            {multiStepData.frequency === "custom" && (
+                              <Button
+                                type="dashed"
+                                icon={<PlusOutlined />}
+                                onClick={() =>
+                                  setMultiStepData((d) => ({
+                                    ...d,
+                                    customTimes: [...(d.customTimes || []), ""],
+                                  }))
+                                }
+                                style={{
+                                  height: 28,
+                                  borderRadius: 4,
+                                  border: "1px dashed #d9d9d9",
+                                  color: "#666",
+                                  fontSize: 11,
+                                }}
+                              >
+                                Thêm lần uống
+                              </Button>
+                            )}
+                          </div>
+                        </Form.Item>
+                      </div>
                     )}
+
                     {/* Thời gian sử dụng */}
-                    <Form.Item
-                      label="Thời gian sử dụng *"
-                      required
-                      validateStatus={
-                        fieldErrors.startDate || fieldErrors.endDate
-                          ? "error"
-                          : ""
-                      }
-                      help={fieldErrors.startDate || fieldErrors.endDate}
+                    <div
+                      style={{
+                        background: "#f8fffe",
+                        borderRadius: 12,
+                        padding: 20,
+                        marginBottom: 20,
+                        border: "1px solid #e8f5f2",
+                      }}
                     >
-                      <DatePicker.RangePicker
-                        value={
-                          multiStepData.startDate && multiStepData.endDate
-                            ? [multiStepData.startDate, multiStepData.endDate]
-                            : []
-                        }
-                        onChange={(dates) => {
-                          setMultiStepData((d) => ({
-                            ...d,
-                            startDate: dates && dates[0] ? dates[0] : null,
-                            endDate: dates && dates[1] ? dates[1] : null,
-                          }));
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          marginBottom: 8,
                         }}
-                        style={{ width: "100%" }}
-                        format="DD/MM/YYYY"
-                      />
-                      {multiStepData.startDate && multiStepData.endDate && (
+                      >
                         <div
                           style={{
-                            marginTop: 8,
-                            color: "#888",
+                            background: "#36ae9a",
+                            color: "white",
+                            width: 20,
+                            height: 20,
+                            borderRadius: "50%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            marginRight: 6,
+                            fontSize: 10,
+                            fontWeight: 600,
                           }}
                         >
-                          (
-                          {multiStepData.endDate.diff(
-                            multiStepData.startDate,
-                            "day"
-                          ) + 1}{" "}
-                          ngày)
+                          {multiStepData.frequency === "as-needed" ? 3 : 4}
                         </div>
-                      )}
-                    </Form.Item>
+                        <div
+                          style={{
+                            fontSize: 14,
+                            fontWeight: 600,
+                            color: "#333",
+                          }}
+                        >
+                          Thời gian sử dụng
+                        </div>
+                      </div>
+
+                      <Form.Item
+                        required
+                        validateStatus={
+                          fieldErrors.startDate || fieldErrors.endDate
+                            ? "error"
+                            : ""
+                        }
+                        help={fieldErrors.startDate || fieldErrors.endDate}
+                        style={{ marginBottom: 0 }}
+                      >
+                        <DatePicker.RangePicker
+                          value={
+                            multiStepData.startDate && multiStepData.endDate
+                              ? [multiStepData.startDate, multiStepData.endDate]
+                              : []
+                          }
+                          onChange={(dates) => {
+                            setMultiStepData((d) => ({
+                              ...d,
+                              startDate: dates && dates[0] ? dates[0] : null,
+                              endDate: dates && dates[1] ? dates[1] : null,
+                            }));
+                          }}
+                          style={{
+                            width: "100%",
+                            height: 32,
+                            borderRadius: 4,
+                          }}
+                          format="DD/MM/YYYY"
+                          placeholder={["Ngày bắt đầu", "Ngày kết thúc"]}
+                        />
+
+                        {multiStepData.startDate && multiStepData.endDate && (
+                          <div
+                            style={{
+                              marginTop: 6,
+                              padding: 4,
+                              background: "#e8f5f2",
+                              borderRadius: 3,
+                              textAlign: "center",
+                              color: "#36ae9a",
+                              fontSize: 11,
+                              fontWeight: 500,
+                            }}
+                          >
+                            📅 Tổng cộng:{" "}
+                            {multiStepData.endDate.diff(
+                              multiStepData.startDate,
+                              "day"
+                            ) + 1}{" "}
+                            ngày
+                          </div>
+                        )}
+                      </Form.Item>
+                    </div>
+
                     <Button
                       type="primary"
                       block
+                      size="large"
                       onClick={handleNextStep2}
                       disabled={
                         !(
@@ -1579,6 +1882,15 @@ const MedicineInfo = () => {
                               )))
                         )
                       }
+                      style={{
+                        height: 40,
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        background: "#36ae9a",
+                        borderColor: "#36ae9a",
+                        marginTop: 8,
+                      }}
                     >
                       Tiếp theo →
                     </Button>
@@ -1633,58 +1945,6 @@ const MedicineInfo = () => {
                     style={{ marginBottom: 16 }}
                   />
                   <Form layout="vertical">
-                    <Form.Item label="Cách sử dụng" required>
-                      <Select
-                        value={multiStepData.usageNote}
-                        onChange={(v) =>
-                          setMultiStepData((d) => ({
-                            ...d,
-                            usageNote: v,
-                          }))
-                        }
-                        placeholder="Chọn cách dùng"
-                      >
-                        <Select.Option value="before-meal">
-                          Uống trước ăn
-                        </Select.Option>
-                        <Select.Option value="after-meal">
-                          Uống sau ăn
-                        </Select.Option>
-                        <Select.Option value="with-food">
-                          Uống cùng thức ăn
-                        </Select.Option>
-                        <Select.Option value="empty-stomach">
-                          Uống lúc đói
-                        </Select.Option>
-                        <Select.Option value="other">Khác</Select.Option>
-                      </Select>
-                    </Form.Item>
-                    {/* Nếu chọn Khác, hiển thị ô nhập chi tiết */}
-                    {multiStepData.usageNote === "other" && (
-                      <Form.Item
-                        label="Nhập cách sử dụng cụ thể *"
-                        required
-                        validateStatus={
-                          multiStepData.usageNoteDetail ? undefined : "error"
-                        }
-                        help={
-                          multiStepData.usageNoteDetail
-                            ? undefined
-                            : "Vui lòng nhập cách sử dụng cụ thể"
-                        }
-                      >
-                        <Input
-                          value={multiStepData.usageNoteDetail || ""}
-                          onChange={(e) =>
-                            setMultiStepData((d) => ({
-                              ...d,
-                              usageNoteDetail: e.target.value,
-                            }))
-                          }
-                          placeholder="Nhập cách sử dụng cụ thể"
-                        />
-                      </Form.Item>
-                    )}
                     <Form.Item label="Hướng dẫn chi tiết">
                       <TextArea
                         value={multiStepData.instructions}
@@ -1699,78 +1959,19 @@ const MedicineInfo = () => {
                         rows={3}
                       />
                     </Form.Item>
-                    <Form.Item label="Lưu ý quan trọng">
-                      <Checkbox.Group
-                        options={[
-                          {
-                            label: "Dừng uống nếu nôn mửa",
-                            value: "stop-if-vomit",
-                          },
-                          {
-                            label: "Báo cô nếu sốt cao",
-                            value: "notify-fever",
-                          },
-                          {
-                            label: "Không uống quá liều",
-                            value: "no-overdose",
-                          },
-                          {
-                            label: "Khác",
-                            value: "other",
-                          },
-                        ]}
-                        value={multiStepData.importantNotes}
-                        onChange={(list) =>
-                          setMultiStepData((d) => ({
-                            ...d,
-                            importantNotes: list,
-                          }))
-                        }
-                      />
-                    </Form.Item>
-                    {/* Nếu tick Khác, hiển thị ô nhập chi tiết */}
-                    {multiStepData.importantNotes &&
-                      multiStepData.importantNotes.includes("other") && (
-                        <Form.Item
-                          label="Nhập lưu ý quan trọng khác *"
-                          required
-                          validateStatus={
-                            multiStepData.importantNotesDetail
-                              ? undefined
-                              : "error"
-                          }
-                          help={
-                            multiStepData.importantNotesDetail
-                              ? undefined
-                              : "Vui lòng nhập lưu ý quan trọng khác"
-                          }
-                        >
-                          <Input
-                            value={multiStepData.importantNotesDetail || ""}
-                            onChange={(e) =>
-                              setMultiStepData((d) => ({
-                                ...d,
-                                importantNotesDetail: e.target.value,
-                              }))
-                            }
-                            placeholder="Nhập lưu ý quan trọng khác"
-                          />
-                        </Form.Item>
-                      )}
                     <Button
                       type="primary"
                       block
                       onClick={handleNextStep3}
-                      disabled={
-                        !(
-                          multiStepData.usageNote &&
-                          (multiStepData.usageNote !== "other" ||
-                            !!multiStepData.usageNoteDetail) &&
-                          (!multiStepData.importantNotes ||
-                            !multiStepData.importantNotes.includes("other") ||
-                            !!multiStepData.importantNotesDetail)
-                        )
-                      }
+                      style={{
+                        height: 40,
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        background: "#36ae9a",
+                        borderColor: "#36ae9a",
+                        marginTop: 8,
+                      }}
                     >
                       Tiếp theo →
                     </Button>
@@ -1921,6 +2122,15 @@ const MedicineInfo = () => {
                           multiStepData.agreeConfirm && multiStepData.agreeTerms
                         )
                       }
+                      style={{
+                        height: 40,
+                        borderRadius: 8,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        background: "#36ae9a",
+                        borderColor: "#36ae9a",
+                        marginTop: 8,
+                      }}
                     >
                       Lưu vào danh sách
                     </Button>
@@ -1941,12 +2151,29 @@ const MedicineInfo = () => {
                   <Button
                     type="primary"
                     block
-                    style={{ margin: "16px 0" }}
+                    style={{
+                      margin: "16px 0",
+                      height: 40,
+                      borderRadius: 8,
+                      fontSize: 14,
+                      fontWeight: 600,
+                      background: "#36ae9a",
+                      borderColor: "#36ae9a",
+                    }}
                     onClick={handleAddAnotherMedicine}
                   >
                     Thêm thuốc khác
                   </Button>
-                  <Button block onClick={resetFormState}>
+                  <Button
+                    block
+                    onClick={resetFormState}
+                    style={{
+                      height: 40,
+                      borderRadius: 8,
+                      fontSize: 14,
+                      fontWeight: 600,
+                    }}
+                  >
                     Về trang chủ
                   </Button>
                 </div>
@@ -1963,6 +2190,14 @@ const MedicineInfo = () => {
               key="close"
               type="primary"
               onClick={() => setDetailModalOpen(false)}
+              style={{
+                height: 40,
+                borderRadius: 8,
+                fontSize: 14,
+                fontWeight: 600,
+                background: "#36ae9a",
+                borderColor: "#36ae9a",
+              }}
             >
               Đóng
             </Button>,

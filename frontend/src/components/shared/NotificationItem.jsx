@@ -70,10 +70,10 @@ const NotificationItem = ({
         const diffDays = now.diff(notificationTime, "days");
 
         if (diffMinutes < 1) return "Vừa xong";
-        if (diffMinutes < 60) return `${diffMinutes} phút trước`;
-        if (diffHours < 24) return `${diffHours} giờ trước`;
-        if (diffDays < 7) return `${diffDays} ngày trước`;
-        return notificationTime.format("DD/MM/YYYY");
+        if (diffMinutes < 60) return `${diffMinutes}p`;
+        if (diffHours < 24) return `${diffHours}h`;
+        if (diffDays < 7) return `${diffDays}d`;
+        return notificationTime.format("DD/MM");
     };
 
     const getIconBgColor = (type) => {
@@ -98,9 +98,9 @@ const NotificationItem = ({
             id={`notification-${notification.id}`}
             style={{
                 display: "flex",
-                alignItems: "flex-start",
-                gap: 14,
-                padding: "10px 16px 8px 16px", // giảm padding
+                alignItems: "center",
+                gap: 8,
+                padding: "6px 12px",
                 backgroundColor:
                     notification.status === "READ" ? "#fafafa" : "#fff",
                 border:
@@ -109,62 +109,65 @@ const NotificationItem = ({
                         : isHovered
                         ? "1px solid #1890ff"
                         : "1px solid #d9d9d9",
-                borderRadius: "12px",
-                marginBottom: "10px",
+                borderRadius: "8px",
+                marginBottom: "6px",
                 cursor: "pointer",
-                transition: "all 0.3s ease",
-                transform: isHovered ? "translateY(-2px)" : "translateY(0)",
+                transition: "all 0.2s ease",
+                transform: isHovered ? "translateY(-1px)" : "translateY(0)",
                 boxShadow: isHovered
-                    ? "0 4px 12px rgba(24, 144, 255, 0.10)"
-                    : "0 2px 8px rgba(0, 0, 0, 0.04)",
+                    ? "0 2px 8px rgba(24, 144, 255, 0.15)"
+                    : "0 1px 3px rgba(0, 0, 0, 0.05)",
                 minWidth: 0,
             }}
             onClick={handleClick}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Icon bên trái */}
+            {/* Icon nhỏ hơn */}
             <div
                 style={{
-                    fontSize: "28px",
-                    minWidth: 40,
-                    minHeight: 40,
+                    fontSize: "16px",
+                    minWidth: 28,
+                    minHeight: 28,
                     opacity: notification.status === "READ" ? 0.7 : 1,
                     background: getIconBgColor(notification.type),
                     color: "#fff",
                     borderRadius: "50%",
-                    boxShadow: "0 4px 16px rgba(0,0,0,0.10)",
-                    width: 40,
-                    height: 40,
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                    width: 28,
+                    height: 28,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    border: "2px solid #fff",
+                    border: "1px solid #fff",
+                    flexShrink: 0,
                 }}
             >
                 {getNotificationIcon(notification.type)}
             </div>
-            {/* Nội dung bên phải */}
+
+            {/* Nội dung chính */}
             <div
                 style={{
                     flex: 1,
                     minWidth: 0,
                     display: "flex",
                     flexDirection: "column",
-                    gap: 2,
+                    gap: 1,
                 }}
             >
                 <Tooltip title={notification.title} placement="topLeft">
                     <div
                         style={{
-                            fontWeight: 600,
-                            fontSize: "14px",
+                            fontWeight:
+                                notification.status !== "READ" ? 600 : 500,
+                            fontSize: "13px",
                             color:
                                 notification.status !== "READ"
                                     ? "#1890ff"
-                                    : "#222",
-                            lineHeight: "1.5",
-                            marginBottom: 2,
+                                    : "#333",
+                            lineHeight: "1.3",
+                            marginBottom: 1,
                             wordBreak: "break-word",
                             whiteSpace: "pre-line",
                             display: "-webkit-box",
@@ -176,66 +179,42 @@ const NotificationItem = ({
                         {notification.title}
                     </div>
                 </Tooltip>
-                <Tooltip title={notification.message} placement="topLeft">
-                    <div
-                        style={{
-                            fontSize: "12px",
-                            color: "#666",
-                            lineHeight: "1.6",
-                            marginBottom: 0,
-                            whiteSpace: "pre-line",
-                            wordBreak: "break-word",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 1, // chỉ 1 dòng
-                            WebkitBoxOrient: "vertical",
-                            overflow: "hidden",
-                        }}
-                    >
-                        {notification.message}
-                    </div>
-                </Tooltip>
+
+                {/* Thông tin phụ gọn gàng */}
                 <div
                     style={{
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "space-between",
-                        marginTop: 6,
+                        fontSize: "11px",
+                        color: "#666",
                     }}
                 >
-                    <Space size={8}>
-                        <Tooltip
-                            title={moment(notification.createdAt).format(
-                                "DD/MM/YYYY HH:mm"
-                            )}
-                        >
-                            <span
-                                style={{
-                                    fontSize: 10,
-                                    color: "#999",
-                                    display: "flex",
-                                    alignItems: "center",
-                                }}
-                            >
-                                <ClockCircleOutlined
-                                    style={{ marginRight: 2, fontSize: 12 }}
-                                />
-                                {getTimeAgo(notification.createdAt)}
-                            </span>
-                        </Tooltip>
-                        <span style={{ fontSize: 10, color: "#b0b0b0" }}>
+                    <Space size={6}>
+                        <span style={{ display: "flex", alignItems: "center" }}>
+                            <ClockCircleOutlined
+                                style={{ marginRight: 2, fontSize: 10 }}
+                            />
+                            {getTimeAgo(notification.createdAt)}
+                        </span>
+                        <span style={{ color: "#999" }}>
                             {getTypeLabel(notification.type)}
-                            {notification.severity &&
-                                ` - ${getSeverityLabel(notification.severity)}`}
                         </span>
                     </Space>
+
                     <Tooltip title="Xóa thông báo">
                         <Button
                             type="text"
                             size="small"
-                            icon={<DeleteOutlined style={{ fontSize: 13 }} />}
+                            icon={<DeleteOutlined style={{ fontSize: 11 }} />}
                             onClick={handleDelete}
                             danger
-                            style={{ border: "none", padding: "2px 6px" }}
+                            style={{
+                                border: "none",
+                                padding: "1px 4px",
+                                height: "auto",
+                                minHeight: "auto",
+                            }}
                             loading={deleting}
                         />
                     </Tooltip>

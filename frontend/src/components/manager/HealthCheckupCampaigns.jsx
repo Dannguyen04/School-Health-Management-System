@@ -1,16 +1,17 @@
 import {
+    CheckCircleTwoTone,
+    ClockCircleTwoTone,
+    CloseCircleTwoTone,
     DeleteOutlined,
     EditOutlined,
+    ExclamationCircleOutlined,
+    NotificationOutlined,
     PlusOutlined,
     SearchOutlined,
-    CheckCircleTwoTone,
-    CloseCircleTwoTone,
-    ClockCircleTwoTone,
     SyncOutlined,
-    NotificationOutlined,
-    ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import {
+    Modal as AntdModal,
     Button,
     Card,
     Col,
@@ -32,7 +33,6 @@ import dayjs from "dayjs";
 import { Formik } from "formik";
 import { useEffect, useState } from "react";
 import * as Yup from "yup";
-import { Modal as AntdModal } from "antd";
 import { useNotifications } from "../../hooks/useNotifications";
 import NotificationToastList from "../shared/NotificationToastList";
 
@@ -226,12 +226,6 @@ const HealthCheckupCampaigns = () => {
     // Table columns
     const columns = [
         {
-            title: "STT",
-            dataIndex: "stt",
-            key: "stt",
-            render: (_, __, idx) => idx + 1,
-        },
-        {
             title: "Tên chiến dịch",
             dataIndex: "name",
             key: "name",
@@ -291,10 +285,8 @@ const HealthCheckupCampaigns = () => {
                         style={{
                             display: "flex",
                             alignItems: "center",
-                            gap: 6,
                         }}
                     >
-                        {getStatusIcon(status)}
                         <Tag
                             color={getStatusColor(status)}
                             style={{ marginLeft: 4 }}
@@ -365,12 +357,6 @@ const HealthCheckupCampaigns = () => {
             const searchName = normalizeString(values.name);
             filtered = filtered.filter((c) =>
                 normalizeString(c.name).includes(searchName)
-            );
-        }
-        if (values.type) {
-            const searchType = normalizeString(values.type);
-            filtered = filtered.filter((c) =>
-                normalizeString(c.type || "").includes(searchType)
             );
         }
         if (values.status) {
@@ -494,27 +480,12 @@ const HealthCheckupCampaigns = () => {
                     layout="vertical"
                 >
                     <Row gutter={16}>
-                        <Col xs={24} sm={8}>
+                        <Col xs={36} sm={12}>
                             <Form.Item name="name" label="Tên chiến dịch">
                                 <Input placeholder="Nhập tên chiến dịch" />
                             </Form.Item>
                         </Col>
-                        <Col xs={24} sm={8}>
-                            <Form.Item name="type" label="Loại khám">
-                                <Select placeholder="Chọn loại khám" allowClear>
-                                    <Select.Option value="Khám tổng quát">
-                                        Khám tổng quát
-                                    </Select.Option>
-                                    <Select.Option value="Khám mắt">
-                                        Khám mắt
-                                    </Select.Option>
-                                    <Select.Option value="Khám răng">
-                                        Khám răng
-                                    </Select.Option>
-                                </Select>
-                            </Form.Item>
-                        </Col>
-                        <Col xs={24} sm={8}>
+                        <Col xs={36} sm={12}>
                             <Form.Item name="status" label="Trạng thái">
                                 <Select
                                     placeholder="Chọn trạng thái"
