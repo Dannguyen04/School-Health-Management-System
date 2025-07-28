@@ -20,6 +20,26 @@ import {
   Tooltip,
   Typography,
   message,
+  Alert,
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Descriptions,
+  Divider,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Table,
+  Tabs,
+  Tag,
+  Tooltip,
+  Typography,
+  message,
 } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
@@ -155,7 +175,13 @@ const Vaccination = () => {
     if (!studentVaccinationHistory || studentVaccinationHistory.length === 0) {
       return Promise.resolve(); // Nếu chưa có lịch sử thì bỏ qua validation
     }
+      return Promise.resolve(); // Nếu chưa có lịch sử thì bỏ qua validation
+    }
 
+    // Kiểm tra xem đã tiêm mũi này chưa (tránh tiêm trùng)
+    const existingDose = studentVaccinationHistory.find(
+      (record) => record.doseOrder === value
+    );
     // Kiểm tra xem đã tiêm mũi này chưa (tránh tiêm trùng)
     const existingDose = studentVaccinationHistory.find(
       (record) => record.doseOrder === value
@@ -181,12 +207,52 @@ const Vaccination = () => {
         );
       }
     }
+    if (existingDose) {
+      // Nếu đã tiêm mũi này rồi
+      if (doseType === "CATCHUP" || doseType === "ADDITIONAL") {
+        // Với CATCHUP/ADDITIONAL, cho phép tiêm lại (có thể là bổ sung)
+        return Promise.resolve();
+      } else {
+        // Với PRIMARY/BOOSTER, không cho phép tiêm trùng
+        return Promise.reject(
+          new Error(
+            `Học sinh đã tiêm mũi ${value} rồi (ngày ${new Date(
+              existingDose.administeredDate
+            ).toLocaleDateString(
+              "vi-VN"
+            )}). Không thể tiêm lại cùng một mũi với loại liều "${getDoseLabel(
+              doseType
+            )}".`
+          )
+        );
+      }
+    }
 
     // Kiểm tra xem có tiêm ngược thứ tự không (ví dụ: muốn tiêm mũi 1 mà đã tiêm mũi 2, 3)
     const higherDoses = studentVaccinationHistory.filter(
       (record) => record.doseOrder > value
     );
+    // Kiểm tra xem có tiêm ngược thứ tự không (ví dụ: muốn tiêm mũi 1 mà đã tiêm mũi 2, 3)
+    const higherDoses = studentVaccinationHistory.filter(
+      (record) => record.doseOrder > value
+    );
 
+    if (
+      higherDoses.length > 0 &&
+      doseType !== "CATCHUP" &&
+      doseType !== "ADDITIONAL"
+    ) {
+      return Promise.reject(
+        new Error(
+          `Không thể tiêm mũi ${value} vì học sinh đã tiêm các mũi cao hơn: ${higherDoses
+            .map((d) => d.doseOrder)
+            .sort()
+            .join(
+              ", "
+            )}. Nếu đây là tiêm bù, vui lòng chọn loại liều "Tiêm bù".`
+        )
+      );
+    }
     if (
       higherDoses.length > 0 &&
       doseType !== "CATCHUP" &&
@@ -209,7 +275,26 @@ const Vaccination = () => {
       const requiredPrevDose = studentVaccinationHistory.find(
         (record) => record.doseOrder === value - 1
       );
+    // Kiểm tra thứ tự mũi tiêm cho PRIMARY và BOOSTER
+    if (value > 1 && doseType !== "CATCHUP" && doseType !== "ADDITIONAL") {
+      const requiredPrevDose = studentVaccinationHistory.find(
+        (record) => record.doseOrder === value - 1
+      );
 
+      if (!requiredPrevDose) {
+        return Promise.reject(
+          new Error(
+            `Phải tiêm mũi ${
+              value - 1
+            } trước khi tiêm mũi ${value}. Nếu học sinh đã tiêm mũi ${
+              value - 1
+            } ở nơi khác, vui lòng chọn loại liều "Tiêm bù" thay vì "${getDoseLabel(
+              doseType
+            )}".`
+          )
+        );
+      }
+    }
       if (!requiredPrevDose) {
         return Promise.reject(
           new Error(
@@ -227,7 +312,14 @@ const Vaccination = () => {
 
     return Promise.resolve();
   };
+    return Promise.resolve();
+  };
 
+  // Custom validation functions
+  const validateBatchNumber = (_, value) => {
+    if (!value || value.trim() === "") {
+      return Promise.reject(new Error("Vui lòng nhập số lô vaccine"));
+    }
   // Custom validation functions
   const validateBatchNumber = (_, value) => {
     if (!value || value.trim() === "") {
@@ -235,7 +327,12 @@ const Vaccination = () => {
     }
 
     const trimmedValue = value.trim();
+    const trimmedValue = value.trim();
 
+    // Kiểm tra độ dài hợp lý (3-50 ký tự)
+    if (trimmedValue.length < 3 || trimmedValue.length > 50) {
+      return Promise.reject(new Error("Số lô phải có từ 3-50 ký tự"));
+    }
     // Kiểm tra độ dài hợp lý (3-50 ký tự)
     if (trimmedValue.length < 3 || trimmedValue.length > 50) {
       return Promise.reject(new Error("Số lô phải có từ 3-50 ký tự"));
@@ -250,7 +347,18 @@ const Vaccination = () => {
         )
       );
     }
+    // Chỉ cho phép chữ cái, số, dấu gạch ngang và gạch dưới
+    const batchPattern = /^[A-Z0-9\-_]+$/i;
+    if (!batchPattern.test(trimmedValue)) {
+      return Promise.reject(
+        new Error(
+          "Số lô chỉ được chứa chữ cái, số, dấu gạch ngang (-) và gạch dưới (_)"
+        )
+      );
+    }
 
+    return Promise.resolve();
+  };
     return Promise.resolve();
   };
 
@@ -258,7 +366,19 @@ const Vaccination = () => {
     if (!value) {
       return Promise.reject(new Error("Vui lòng chọn ngày tiêm"));
     }
+  const validateAdministeredDate = (_, value) => {
+    if (!value) {
+      return Promise.reject(new Error("Vui lòng chọn ngày tiêm"));
+    }
 
+    const selectedDate = value.toDate();
+    const today = new Date();
+    const campaignStart = selectedCampaign?.scheduledDate
+      ? new Date(selectedCampaign.scheduledDate)
+      : null;
+    const campaignEnd = selectedCampaign?.deadline
+      ? new Date(selectedCampaign.deadline)
+      : null;
     const selectedDate = value.toDate();
     const today = new Date();
     const campaignStart = selectedCampaign?.scheduledDate
@@ -282,11 +402,31 @@ const Vaccination = () => {
       59,
       59
     );
+    // Set time to start/end of day for accurate comparison
+    const todayStart = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const todayEnd = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate(),
+      23,
+      59,
+      59
+    );
 
     if (selectedDate < todayStart) {
       return Promise.reject(new Error("Không thể chọn ngày trong quá khứ"));
     }
+    if (selectedDate < todayStart) {
+      return Promise.reject(new Error("Không thể chọn ngày trong quá khứ"));
+    }
 
+    if (selectedDate > todayEnd) {
+      return Promise.reject(new Error("Không thể chọn ngày trong tương lai"));
+    }
     if (selectedDate > todayEnd) {
       return Promise.reject(new Error("Không thể chọn ngày trong tương lai"));
     }
@@ -298,10 +438,23 @@ const Vaccination = () => {
         );
       }
     }
+    if (campaignStart && campaignEnd) {
+      if (selectedDate < campaignStart || selectedDate > campaignEnd) {
+        return Promise.reject(
+          new Error("Ngày tiêm phải nằm trong thời gian chiến dịch")
+        );
+      }
+    }
 
     return Promise.resolve();
   };
+    return Promise.resolve();
+  };
 
+  const validateDoseAmount = (_, value) => {
+    if (!value || value <= 0) {
+      return Promise.reject(new Error("Liều lượng phải lớn hơn 0"));
+    }
   const validateDoseAmount = (_, value) => {
     if (!value || value <= 0) {
       return Promise.reject(new Error("Liều lượng phải lớn hơn 0"));
@@ -310,10 +463,29 @@ const Vaccination = () => {
     if (value > 2) {
       return Promise.reject(new Error("Liều lượng không được vượt quá 2ml"));
     }
+    if (value > 2) {
+      return Promise.reject(new Error("Liều lượng không được vượt quá 2ml"));
+    }
 
     return Promise.resolve();
   };
+    return Promise.resolve();
+  };
 
+  // Fetch active vaccination campaigns
+  const fetchCampaigns = async () => {
+    try {
+      setLoading(true);
+      const response = await nurseAPI.getVaccinationCampaigns();
+      if (response.data.success) {
+        setCampaigns(response.data.data || []);
+      }
+    } catch {
+      message.error("Không thể tải danh sách chiến dịch tiêm chủng");
+    } finally {
+      setLoading(false);
+    }
+  };
   // Fetch active vaccination campaigns
   const fetchCampaigns = async () => {
     try {
@@ -350,7 +522,35 @@ const Vaccination = () => {
       setLoading(false);
     }
   };
+  // Fetch students for a specific campaign
+  const fetchStudentsForCampaign = async (campaignId) => {
+    try {
+      setLoading(true);
+      console.log("Fetching students for campaign:", campaignId); // Debug log
+      const response = await nurseAPI.getStudentsForCampaign(campaignId);
+      console.log("Full response:", response.data); // Debug log
+      if (response.data.success) {
+        // API trả về data.students thay vì data.data
+        const students = response.data.data?.students || [];
+        console.log("Students data:", students); // Debug log
+        setStudents(students);
+        setDisplayedStudents(students);
+      }
+    } catch (error) {
+      console.error("Error fetching students:", error); // Debug log
+      message.error("Không thể tải danh sách học sinh");
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  // Fetch vaccination reports for a specific campaign
+  const fetchVaccinationReports = async (campaignId) => {
+    setReportLoading(true);
+    try {
+      const response = await nurseAPI.getVaccinationReport(campaignId);
+      if (response.data.success) {
+        console.log("Vaccination reports:", response.data.data);
   // Fetch vaccination reports for a specific campaign
   const fetchVaccinationReports = async (campaignId) => {
     setReportLoading(true);
@@ -362,7 +562,27 @@ const Vaccination = () => {
         // The backend returns { reports, vaccine } structure
         const reports = response.data.data?.reports || [];
         setVaccinationReports(reports);
+        // The backend returns { reports, vaccine } structure
+        const reports = response.data.data?.reports || [];
+        setVaccinationReports(reports);
 
+        // Lấy batchNumber đầu tiên có trong report (ưu tiên học sinh đã tiêm)
+        const firstBatch = reports.find((r) => r.batchNumber);
+        if (firstBatch && firstBatch.batchNumber) {
+          setCampaignBatchNumber(firstBatch.batchNumber);
+        } else {
+          setCampaignBatchNumber("");
+        }
+      } else {
+        setVaccinationReports([]);
+        setCampaignBatchNumber("");
+      }
+    } catch {
+      setVaccinationReports([]);
+      setCampaignBatchNumber("");
+    }
+    setReportLoading(false);
+  };
         // Lấy batchNumber đầu tiên có trong report (ưu tiên học sinh đã tiêm)
         const firstBatch = reports.find((r) => r.batchNumber);
         if (firstBatch && firstBatch.batchNumber) {
@@ -389,12 +609,29 @@ const Vaccination = () => {
         message.error("Vui lòng chọn ngày tiêm");
         return;
       }
+  // Perform vaccination
+  const performVaccination = async (values) => {
+    try {
+      // Enhanced validation
+      if (!values.administeredDate) {
+        message.error("Vui lòng chọn ngày tiêm");
+        return;
+      }
 
       if (!values.batchNumber?.trim()) {
         message.error("Vui lòng nhập số lô vaccine");
         return;
       }
+      if (!values.batchNumber?.trim()) {
+        message.error("Vui lòng nhập số lô vaccine");
+        return;
+      }
 
+      // Tự động tính toán doseOrder dựa trên lịch sử tiêm chủng
+      const nextDose = getNextRecommendedDose(
+        selectedCampaign?.vaccine?.doseSchedules || [],
+        studentVaccinationHistory
+      );
       // Tự động tính toán doseOrder dựa trên lịch sử tiêm chủng
       const nextDose = getNextRecommendedDose(
         selectedCampaign?.vaccine?.doseSchedules || [],
@@ -407,7 +644,19 @@ const Vaccination = () => {
         );
         return;
       }
+      if (!nextDose) {
+        message.error(
+          "Không thể xác định mũi tiêm tiếp theo. Vui lòng kiểm tra lại lịch sử tiêm chủng."
+        );
+        return;
+      }
 
+      // Show loading với cancel option
+      const hideLoading = message.loading({
+        content: "Đang thực hiện tiêm chủng...",
+        duration: 0,
+        key: "vaccination-loading",
+      });
       // Show loading với cancel option
       const hideLoading = message.loading({
         content: "Đang thực hiện tiêm chủng...",
@@ -429,11 +678,20 @@ const Vaccination = () => {
       };
 
       console.log("Vaccination payload:", payload);
+      console.log("Vaccination payload:", payload);
 
+      const response = await nurseAPI.performVaccination(payload);
       const response = await nurseAPI.performVaccination(payload);
 
       hideLoading();
+      hideLoading();
 
+      if (response.data.success) {
+        // Enhanced success message với chi tiết
+        const successMsg = `Tiêm chủng thành công cho ${selectedStudent.fullName}!`;
+        const nextDoseInfo = response.data.data?.nextDoseSuggestion
+          ? ` Mũi tiếp theo: ${response.data.data.nextDoseSuggestion.doseOrder} (sau ${response.data.data.nextDoseSuggestion.minInterval} ngày)`
+          : "";
       if (response.data.success) {
         // Enhanced success message với chi tiết
         const successMsg = `Tiêm chủng thành công cho ${selectedStudent.fullName}!`;
@@ -446,12 +704,27 @@ const Vaccination = () => {
           duration: 8,
           key: "vaccination-success",
         });
+        message.success({
+          content: successMsg + nextDoseInfo,
+          duration: 8,
+          key: "vaccination-success",
+        });
 
         setIsModalVisible(false);
         vaccinationForm.resetFields();
         setSelectedStudent(null);
         setStudentVaccinationHistory([]);
+        setIsModalVisible(false);
+        vaccinationForm.resetFields();
+        setSelectedStudent(null);
+        setStudentVaccinationHistory([]);
 
+        // Lưu batchNumber và cập nhật dữ liệu
+        const newBatchNumber =
+          response.data.data?.batchNumber || values.batchNumber;
+        if (newBatchNumber) {
+          setCampaignBatchNumber(newBatchNumber.trim().toUpperCase());
+        }
         // Lưu batchNumber và cập nhật dữ liệu
         const newBatchNumber =
           response.data.data?.batchNumber || values.batchNumber;
@@ -464,10 +737,34 @@ const Vaccination = () => {
     } catch (error) {
       // Enhanced error handling
       message.destroy("vaccination-loading"); // Đảm bảo loading được tắt
+        await refreshCampaignData();
+      }
+    } catch (error) {
+      // Enhanced error handling
+      message.destroy("vaccination-loading"); // Đảm bảo loading được tắt
 
       const errorData = error.response?.data;
       let errorMessage = "Lỗi khi thực hiện tiêm chủng";
+      const errorData = error.response?.data;
+      let errorMessage = "Lỗi khi thực hiện tiêm chủng";
 
+      // Specific error messages based on backend error codes
+      if (errorData?.errorCode) {
+        const errorMessages = {
+          AGE_TOO_YOUNG: `Học sinh chưa đủ tuổi (hiện tại: ${errorData.details?.currentAge} tuổi, yêu cầu: ≥${errorData.details?.requiredAge} tuổi)`,
+          AGE_TOO_OLD: `Học sinh đã quá tuổi (hiện tại: ${errorData.details?.currentAge} tuổi, yêu cầu: ≤${errorData.details?.maxAge} tuổi)`,
+          DOSE_INTERVAL_TOO_SHORT: `Chưa đủ khoảng cách giữa các mũi tiêm (cần tối thiểu ${errorData.details?.requiredInterval} ngày)`,
+          MAX_DOSE_EXCEEDED: `Học sinh đã tiêm đủ ${errorData.details?.maxDoses} mũi cho vaccine này`,
+          INVALID_BATCH:
+            "Số lô vaccine không hợp lệ hoặc không tồn tại trong hệ thống",
+          BATCH_EXPIRED: `Lô vaccine đã hết hạn vào ${errorData.details?.expiryDate}`,
+          DUPLICATE_VACCINATION: "Học sinh đã được tiêm trong chiến dịch này",
+          NO_CONSENT: "Phụ huynh chưa đồng ý cho học sinh tiêm chủng",
+          INVALID_DATE:
+            "Ngày tiêm không hợp lệ (chỉ được tiêm trong ngày hôm nay)",
+          VALIDATION_ERROR:
+            "Dữ liệu nhập vào không hợp lệ, vui lòng kiểm tra lại",
+        };
       // Specific error messages based on backend error codes
       if (errorData?.errorCode) {
         const errorMessages = {
@@ -491,7 +788,17 @@ const Vaccination = () => {
       } else if (errorData?.error) {
         errorMessage = errorData.error;
       }
+        errorMessage =
+          errorMessages[errorData.errorCode] || errorData.error || errorMessage;
+      } else if (errorData?.error) {
+        errorMessage = errorData.error;
+      }
 
+      message.error({
+        content: errorMessage,
+        duration: 10,
+        key: "vaccination-error",
+      });
       message.error({
         content: errorMessage,
         duration: 10,
@@ -501,7 +808,24 @@ const Vaccination = () => {
       console.error("Vaccination error:", error.response?.data || error);
     }
   };
+      console.error("Vaccination error:", error.response?.data || error);
+    }
+  };
 
+  // Thêm hàm chuyển đổi dữ liệu trước khi gửi lên backend
+  const normalizeReportValues = (values) => {
+    return {
+      ...values,
+      administeredDate: values.administeredDate
+        ? values.administeredDate.format()
+        : undefined,
+      followUpRequired:
+        values.followUpRequired === true || values.followUpRequired === "true",
+      followUpDate: values.followUpDate
+        ? values.followUpDate.format()
+        : undefined,
+    };
+  };
   // Thêm hàm chuyển đổi dữ liệu trước khi gửi lên backend
   const normalizeReportValues = (values) => {
     return {
@@ -874,6 +1198,11 @@ const Vaccination = () => {
       ),
     },
   ];
+          Chọn chiến dịch
+        </Button>
+      ),
+    },
+  ];
 
   const studentColumns = [
     { title: "Mã học sinh", dataIndex: "studentCode", key: "studentCode" },
@@ -906,7 +1235,49 @@ const Vaccination = () => {
               : "Chưa xác nhận"}
           </Tag>
         );
+  const studentColumns = [
+    { title: "Mã học sinh", dataIndex: "studentCode", key: "studentCode" },
+    {
+      title: "Tên học sinh",
+      dataIndex: "fullName",
+      key: "studentName",
+      render: (_, record) => record.fullName || record.studentName || "",
+    },
+    { title: "Lớp", dataIndex: "class", key: "class" },
+    {
+      title: "Trạng thái chấp thuận",
+      dataIndex: "consentStatus",
+      key: "consentStatus",
+      render: (consent, record) => {
+        const tag = (
+          <Tag
+            color={
+              consent === true
+                ? "success"
+                : consent === false
+                ? "error"
+                : "warning"
+            }
+          >
+            {consent === true
+              ? "Đã đồng ý"
+              : consent === false
+              ? "Từ chối"
+              : "Chưa xác nhận"}
+          </Tag>
+        );
 
+        // Hiển thị tooltip với lý do từ chối nếu có
+        if (consent === false && record.consentReason) {
+          return (
+            <Tooltip
+              title={`Lý do từ chối: ${record.consentReason}`}
+              placement="top"
+            >
+              {tag}
+            </Tooltip>
+          );
+        }
         // Hiển thị tooltip với lý do từ chối nếu có
         if (consent === false && record.consentReason) {
           return (
@@ -980,7 +1351,217 @@ const Vaccination = () => {
       },
     },
   ];
+        return tag;
+      },
+    },
+    {
+      title: "Trạng thái tiêm",
+      dataIndex: "vaccinationStatus",
+      key: "vaccinationStatus",
+      render: (status) => (
+        <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
+      ),
+    },
+    {
+      title: "Ngày tiêm",
+      dataIndex: "administeredDate",
+      key: "administeredDate",
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "Chưa tiêm"),
+    },
+    {
+      title: "Hành động",
+      key: "actions",
+      render: (_, record) => {
+        // Tìm bản ghi tiêm chủng tương ứng trong vaccinationReports
+        const vaccinationRecord = vaccinationReports.find(
+          (r) => r.studentId === record.id || r.studentId === record.studentId
+        );
+        return (
+          <Space>
+            {record.consentStatus === true &&
+              record.vaccinationStatus !== "COMPLETED" && (
+                <Button
+                  type="primary"
+                  icon={<CheckOutlined />}
+                  onClick={() => handlePerformVaccination(record)}
+                  size="small"
+                >
+                  Thực hiện tiêm
+                </Button>
+              )}
+            {record.vaccinationStatus === "COMPLETED" && vaccinationRecord ? (
+              <>
+                <Button
+                  icon={<EditOutlined />}
+                  onClick={() => handleReportResult(vaccinationRecord)}
+                  size="small"
+                >
+                  Cập nhật báo cáo
+                </Button>
+                <Button
+                  icon={<SearchOutlined />}
+                  onClick={() => handleViewReport(vaccinationRecord)}
+                  size="small"
+                >
+                  Xem báo cáo
+                </Button>
+              </>
+            ) : null}
+          </Space>
+        );
+      },
+    },
+  ];
 
+  const vaccinationReportColumns = [
+    {
+      title: "Mã học sinh",
+      dataIndex: "studentCode",
+      key: "studentCode",
+      align: "center",
+      width: 110,
+    },
+    {
+      title: "Tên học sinh",
+      dataIndex: "studentName",
+      key: "studentName",
+      align: "left",
+      width: 140,
+    },
+    {
+      title: "Lớp",
+      dataIndex: "class",
+      key: "class",
+      align: "center",
+      width: 70,
+    },
+    {
+      title: "Ngày tiêm",
+      dataIndex: "administeredDate",
+      key: "administeredDate",
+      align: "center",
+      width: 120,
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Loại liều",
+      dataIndex: "doseType",
+      key: "doseType",
+      align: "center",
+      width: 120,
+      render: (doseType) => {
+        switch (doseType) {
+          case "PRIMARY":
+            return <Tag color="blue">Liều cơ bản</Tag>;
+          case "BOOSTER":
+            return <Tag color="green">Nhắc lại</Tag>;
+          case "CATCHUP":
+            return <Tag color="purple">Tiêm bù</Tag>;
+          case "ADDITIONAL":
+            return <Tag color="orange">Bổ sung</Tag>;
+          default:
+            return doseType || "-";
+        }
+      },
+    },
+    {
+      title: "Tác dụng phụ",
+      dataIndex: "sideEffects",
+      key: "sideEffects",
+      align: "left",
+      width: 160,
+      render: (val) => val || "-",
+    },
+    {
+      title: "Phản ứng",
+      dataIndex: "reaction",
+      key: "reaction",
+      align: "center",
+      width: 120,
+      render: (reaction) => {
+        switch (reaction) {
+          case "NONE":
+            return <Tag color="green">Không có</Tag>;
+          case "MILD":
+            return <Tag color="gold">Nhẹ</Tag>;
+          case "MODERATE":
+            return <Tag color="orange">Vừa</Tag>;
+          case "SEVERE":
+            return <Tag color="red">Nặng</Tag>;
+          default:
+            return reaction || "-";
+        }
+      },
+    },
+    {
+      title: "Cần theo dõi",
+      dataIndex: "followUpRequired",
+      key: "followUpRequired",
+      align: "center",
+      width: 120,
+      render: (val) =>
+        val ? (
+          <Tag
+            color="gold"
+            style={{
+              fontWeight: 600,
+              fontSize: 14,
+              padding: "2px 12px",
+            }}
+          >
+            Có
+          </Tag>
+        ) : (
+          <Tag
+            color="default"
+            style={{
+              fontWeight: 600,
+              fontSize: 14,
+              padding: "2px 12px",
+            }}
+          >
+            Không
+          </Tag>
+        ),
+    },
+    {
+      title: "Ngày theo dõi",
+      dataIndex: "followUpDate",
+      key: "followUpDate",
+      align: "center",
+      width: 120,
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "additionalNotes",
+      key: "additionalNotes",
+      align: "left",
+      width: 120,
+      render: (val) => val || "-",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      align: "center",
+      width: 110,
+      render: (status) => {
+        switch (status) {
+          case "COMPLETED":
+            return <Tag color="green">Đã tiêm</Tag>;
+          case "SCHEDULED":
+            return <Tag color="blue">Đã lên lịch</Tag>;
+          case "POSTPONED":
+            return <Tag color="orange">Hoãn</Tag>;
+          case "CANCELLED":
+            return <Tag color="red">Hủy</Tag>;
+          default:
+            return status || "-";
+        }
+      },
+    },
+  ];
   const vaccinationReportColumns = [
     {
       title: "Mã học sinh",
@@ -1269,7 +1850,148 @@ const Vaccination = () => {
       ),
     },
   ];
+  // Tabs items
+  const items = [
+    {
+      key: "campaigns",
+      label: "Chiến dịch tiêm chủng",
+      children: (
+        <Card title="Chọn chiến dịch tiêm chủng">
+          <Table
+            dataSource={Array.isArray(campaigns) ? campaigns : []}
+            columns={campaignColumns}
+            rowKey="id"
+            loading={loading}
+            pagination={false}
+          />
+        </Card>
+      ),
+    },
+    {
+      key: "students",
+      label: "Danh sách học sinh",
+      children: selectedCampaign ? (
+        <Card title="Danh sách học sinh">
+          {/* Search Form */}
+          <Form form={searchForm} onFinish={handleSearch} layout="vertical">
+            <Row gutter={16}>
+              <Col xs={24} sm={8}>
+                <Form.Item name="studentCode" label="Mã học sinh">
+                  <Input placeholder="Nhập mã học sinh" />
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item name="grade" label="Lớp">
+                  <Select placeholder="Chọn lớp" allowClear>
+                    <Select.Option value="1">Lớp 1</Select.Option>
+                    <Select.Option value="2">Lớp 2</Select.Option>
+                    <Select.Option value="3">Lớp 3</Select.Option>
+                    <Select.Option value="4">Lớp 4</Select.Option>
+                    <Select.Option value="5">Lớp 5</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Form.Item name="consentStatus" label="Trạng thái chấp thuận">
+                  <Select placeholder="Chọn trạng thái" allowClear>
+                    <Select.Option value={true}>Đã đồng ý</Select.Option>
+                    <Select.Option value={null}>Chưa xác nhận</Select.Option>
+                  </Select>
+                </Form.Item>
+              </Col>
+            </Row>
+            <Row>
+              <Col span={24} className="text-right">
+                <Button
+                  type="primary"
+                  icon={<SearchOutlined />}
+                  htmlType="submit"
+                  style={{ marginRight: 8 }}
+                >
+                  Tìm kiếm
+                </Button>
+                <Button onClick={handleReset}>Xóa bộ lọc</Button>
+              </Col>
+            </Row>
+          </Form>
+          <Divider />
+          <Table
+            dataSource={
+              Array.isArray(displayedStudents) ? displayedStudents : []
+            }
+            columns={studentColumns}
+            rowKey="id"
+            loading={loading}
+            pagination={{ pageSize: 10, showQuickJumper: true }}
+          />
+        </Card>
+      ) : (
+        <Card>
+          <div className="text-center text-gray-500">
+            Vui lòng chọn chiến dịch trước
+          </div>
+        </Card>
+      ),
+    },
+    {
+      key: "reports",
+      label: "Báo cáo tiêm chủng",
+      children: selectedCampaign ? (
+        <Card title="Danh sách báo cáo tiêm chủng">
+          {/* Thêm alert/box cho học sinh cần theo dõi */}
+          {(() => {
+            const followUpCount = vaccinationReports.filter(
+              (r) => r.followUpRequired
+            ).length;
+            return followUpCount > 0 ? (
+              <Row gutter={16} style={{ marginBottom: 16 }}>
+                <Col>
+                  <div
+                    style={{
+                      background: "#fffbe6",
+                      border: "1px solid #ffe58f",
+                      borderRadius: 4,
+                      padding: "8px 16px",
+                      color: "#faad14",
+                      fontWeight: 500,
+                      marginRight: 8,
+                    }}
+                  >
+                    {followUpCount} học sinh cần theo dõi
+                  </div>
+                </Col>
+              </Row>
+            ) : null;
+          })()}
+          <Table
+            dataSource={
+              Array.isArray(vaccinationReports) ? vaccinationReports : []
+            }
+            columns={vaccinationReportColumns}
+            rowKey="id"
+            loading={reportLoading}
+            locale={{
+              emptyText: "Chưa có dữ liệu báo cáo tiêm chủng",
+            }}
+            pagination={{ pageSize: 10, showQuickJumper: true }}
+            size="middle"
+            bordered
+            style={{ borderRadius: 8, overflow: "hidden" }}
+          />
+        </Card>
+      ) : (
+        <Card>
+          <div className="text-center text-gray-500">
+            Vui lòng chọn chiến dịch trước
+          </div>
+        </Card>
+      ),
+    },
+  ];
 
+  useEffect(() => {
+    fetchCampaigns();
+  }, []);
   useEffect(() => {
     fetchCampaigns();
   }, []);
@@ -1279,7 +2001,17 @@ const Vaccination = () => {
     setViewedVaccinationRecord(vaccinationRecord);
     setIsViewReportModalVisible(true);
   };
+  // Hàm mở modal xem báo cáo
+  const handleViewReport = (vaccinationRecord) => {
+    setViewedVaccinationRecord(vaccinationRecord);
+    setIsViewReportModalVisible(true);
+  };
 
+  // Component hiển thị phác đồ mũi tiêm
+  const DoseScheduleDisplay = ({ doseSchedules, studentHistory }) => {
+    const scheduleDisplay = getDoseScheduleDisplay(doseSchedules);
+    const nextDose = getNextRecommendedDose(doseSchedules, studentHistory);
+    const canReceive = canReceiveNextDose(nextDose, studentHistory);
   // Component hiển thị phác đồ mũi tiêm
   const DoseScheduleDisplay = ({ doseSchedules, studentHistory }) => {
     const scheduleDisplay = getDoseScheduleDisplay(doseSchedules);
@@ -1295,7 +2027,42 @@ const Vaccination = () => {
         />
       );
     }
+    if (!scheduleDisplay || scheduleDisplay.length === 0) {
+      return (
+        <Alert
+          message="Không có thông tin phác đồ mũi tiêm"
+          type="warning"
+          showIcon
+        />
+      );
+    }
 
+    return (
+      <div style={{ marginBottom: 16 }}>
+        <div
+          style={{
+            background: "#f6ffed",
+            border: "1px solid #b7eb8f",
+            borderRadius: 6,
+            padding: 12,
+            marginBottom: 12,
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 600,
+              marginBottom: 8,
+              color: "#389e0d",
+            }}
+          >
+            📋 Phác đồ mũi tiêm
+          </div>
+          <div style={{ fontSize: 14, color: "#666" }}>
+            Tổng cộng: {scheduleDisplay.length} mũi | Đã tiêm:{" "}
+            {scheduleDisplay.filter((d) => d.isCompleted).length} mũi | Còn lại:{" "}
+            {scheduleDisplay.filter((d) => !d.isCompleted).length} mũi
+          </div>
+        </div>
     return (
       <div style={{ marginBottom: 16 }}>
         <div
@@ -1379,11 +2146,96 @@ const Vaccination = () => {
                   ? "→"
                   : "○"}
               </div>
+        <div
+          style={{
+            display: "grid",
+            gap: 8,
+            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          }}
+        >
+          {scheduleDisplay.map((dose) => (
+            <div
+              key={dose.doseOrder}
+              style={{
+                border:
+                  dose.isNextDose && canReceive
+                    ? "2px solid #1890ff"
+                    : dose.isCompleted
+                    ? "2px solid #52c41a"
+                    : "2px solid #d9d9d9",
+                borderRadius: 8,
+                padding: 12,
+                background:
+                  dose.isNextDose && canReceive
+                    ? "#e6f7ff"
+                    : dose.isCompleted
+                    ? "#f6ffed"
+                    : "#fafafa",
+                position: "relative",
+              }}
+            >
+              {/* Badge trạng thái */}
+              <div
+                style={{
+                  position: "absolute",
+                  top: -8,
+                  right: -8,
+                  background: dose.isCompleted
+                    ? "#52c41a"
+                    : dose.isNextDose && canReceive
+                    ? "#1890ff"
+                    : "#d9d9d9",
+                  color: "white",
+                  borderRadius: "50%",
+                  width: 24,
+                  height: 24,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 12,
+                  fontWeight: "bold",
+                }}
+              >
+                {dose.isCompleted
+                  ? "✓"
+                  : dose.isNextDose && canReceive
+                  ? "→"
+                  : "○"}
+              </div>
 
               <div style={{ fontWeight: 600, marginBottom: 4 }}>
                 Mũi {dose.doseOrder}
               </div>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                Mũi {dose.doseOrder}
+              </div>
 
+              {dose.isCompleted ? (
+                <div style={{ fontSize: 12, color: "#52c41a" }}>
+                  ✓ Đã tiêm:{" "}
+                  {dose.administeredDate
+                    ? dayjs(dose.administeredDate).format("DD/MM/YYYY")
+                    : "N/A"}
+                </div>
+              ) : dose.isNextDose && canReceive ? (
+                <div
+                  style={{
+                    fontSize: 12,
+                    color: "#1890ff",
+                    fontWeight: 500,
+                  }}
+                >
+                  → Mũi tiếp theo (có thể tiêm)
+                </div>
+              ) : dose.isNextDose && !canReceive ? (
+                <div style={{ fontSize: 12, color: "#faad14" }}>
+                  ⏳ Chưa đủ thời gian (cần {dose.minInterval || 0} ngày)
+                </div>
+              ) : (
+                <div style={{ fontSize: 12, color: "#999" }}>
+                  ○ Chưa đến lượt
+                </div>
+              )}
               {dose.isCompleted ? (
                 <div style={{ fontSize: 12, color: "#52c41a" }}>
                   ✓ Đã tiêm:{" "}
@@ -1423,7 +2275,32 @@ const Vaccination = () => {
                   {dose.recommendedInterval || 0} ngày
                 </div>
               )}
+              {!dose.isCompleted && dose.doseOrder > 1 && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#666",
+                    marginTop: 4,
+                  }}
+                >
+                  Khoảng cách: {dose.minInterval || 0}-
+                  {dose.recommendedInterval || 0} ngày
+                </div>
+              )}
 
+              {dose.description && (
+                <div
+                  style={{
+                    fontSize: 11,
+                    color: "#666",
+                    marginTop: 4,
+                    fontStyle: "italic",
+                  }}
+                >
+                  {dose.description}
+                </div>
+              )}
+            </div>
               {dose.description && (
                 <div
                   style={{
@@ -1665,6 +2542,8 @@ const Vaccination = () => {
               <Select.Option value="BOOSTER">Liều nhắc lại</Select.Option>
               <Select.Option value="CATCHUP">Tiêm bù</Select.Option>
               <Select.Option value="ADDITIONAL">Liều bổ sung</Select.Option>
+              <Select.Option value="CATCHUP">Tiêm bù</Select.Option>
+              <Select.Option value="ADDITIONAL">Liều bổ sung</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item
@@ -1865,7 +2744,212 @@ const Vaccination = () => {
           </Form.Item>
         </Form>
       </Modal>
+            )}
+          </div>
+        )}
+        {selectedStudent && (
+          <div style={{ marginBottom: 12 }}>
+            <Alert
+              message={`Loại liều: ${(() => {
+                switch (selectedStudent.doseType) {
+                  case "PRIMARY":
+                    return "Liều cơ bản";
+                  case "BOOSTER":
+                    return "Liều nhắc lại";
+                  case "CATCHUP":
+                    return "Tiêm bù";
+                  case "ADDITIONAL":
+                    return "Liều bổ sung";
+                  default:
+                    return selectedStudent.doseType || "Không xác định";
+                }
+              })()}`}
+              type="success"
+              showIcon
+            />
+          </div>
+        )}
+        <Form
+          form={reportForm}
+          layout="vertical"
+          onFinish={reportVaccinationResult}
+          onFinishFailed={(err) => {
+            console.log("Form failed:", err);
+            message.error("Vui lòng kiểm tra lại thông tin nhập vào");
+          }}
+        >
+          <Form.Item
+            name="administeredDate"
+            label="Ngày tiêm (không thể thay đổi)"
+          >
+            <DatePicker disabled style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item name="doseType" label="Loại liều (không thể thay đổi)">
+            <Select disabled style={{ width: "100%" }}>
+              <Select.Option value="PRIMARY">Liều cơ bản</Select.Option>
+              <Select.Option value="BOOSTER">Liều nhắc lại</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            name="sideEffects"
+            label="Tác dụng phụ"
+            rules={[
+              {
+                validator: validateSideEffects,
+              },
+            ]}
+          >
+            <TextArea
+              rows={3}
+              placeholder="Mô tả tác dụng phụ (nếu có)"
+              onChange={() => {
+                // Trigger validation for reaction field when side effects change
+                reportForm.validateFields(["reaction"]);
+              }}
+            />
+          </Form.Item>
+          <Form.Item
+            name="reaction"
+            label="Phản ứng sau tiêm"
+            rules={[
+              {
+                validator: validateReaction,
+              },
+            ]}
+          >
+            <Select
+              placeholder="Chọn phản ứng"
+              allowClear
+              onChange={() => {
+                // Trigger validation for side effects field when reaction changes
+                reportForm.validateFields(["sideEffects"]);
+              }}
+            >
+              <Select.Option value="NONE">Không có phản ứng</Select.Option>
+              <Select.Option value="MILD">Phản ứng nhẹ</Select.Option>
+              <Select.Option value="MODERATE">Phản ứng vừa</Select.Option>
+              <Select.Option value="SEVERE">Phản ứng nặng</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="followUpRequired" label="Cần theo dõi">
+            <Select placeholder="Chọn tình trạng theo dõi" allowClear>
+              <Select.Option value={false}>Không cần</Select.Option>
+              <Select.Option value={true}>Cần theo dõi</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item name="followUpDate" label="Ngày theo dõi">
+            <DatePicker style={{ width: "100%" }} />
+          </Form.Item>
+          <Form.Item name="additionalNotes" label="Ghi chú bổ sung">
+            <TextArea
+              rows={3}
+              placeholder="Ghi chú bổ sung về kết quả tiêm chủng"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
 
+      {/* Modal xem báo cáo kết quả tiêm chủng */}
+      <Modal
+        title="Xem báo cáo kết quả tiêm chủng"
+        open={isViewReportModalVisible}
+        onCancel={() => {
+          setIsViewReportModalVisible(false);
+          setViewedVaccinationRecord(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        {viewedVaccinationRecord ? (
+          <Descriptions bordered column={1} size="middle">
+            <Descriptions.Item label="Tên học sinh">
+              {viewedVaccinationRecord.studentName}
+            </Descriptions.Item>
+            <Descriptions.Item label="Mã học sinh">
+              {viewedVaccinationRecord.studentCode}
+            </Descriptions.Item>
+            <Descriptions.Item label="Lớp">
+              {viewedVaccinationRecord.class}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày tiêm">
+              {viewedVaccinationRecord.administeredDate
+                ? dayjs(viewedVaccinationRecord.administeredDate).format(
+                    "DD/MM/YYYY"
+                  )
+                : "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Loại liều">
+              {(() => {
+                switch (viewedVaccinationRecord.doseType) {
+                  case "PRIMARY":
+                    return "Liều cơ bản";
+                  case "BOOSTER":
+                    return "Liều nhắc lại";
+                  case "CATCHUP":
+                    return "Tiêm bù";
+                  case "ADDITIONAL":
+                    return "Liều bổ sung";
+                  default:
+                    return viewedVaccinationRecord.doseType || "-";
+                }
+              })()}
+            </Descriptions.Item>
+            <Descriptions.Item label="Tác dụng phụ">
+              {viewedVaccinationRecord.sideEffects || "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Phản ứng">
+              {(() => {
+                switch (viewedVaccinationRecord.reaction) {
+                  case "NONE":
+                    return "Không có";
+                  case "MILD":
+                    return "Nhẹ";
+                  case "MODERATE":
+                    return "Vừa";
+                  case "SEVERE":
+                    return "Nặng";
+                  default:
+                    return viewedVaccinationRecord.reaction || "-";
+                }
+              })()}
+            </Descriptions.Item>
+            <Descriptions.Item label="Cần theo dõi">
+              {viewedVaccinationRecord.followUpRequired ? "Có" : "Không"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày theo dõi">
+              {viewedVaccinationRecord.followUpDate
+                ? dayjs(viewedVaccinationRecord.followUpDate).format(
+                    "DD/MM/YYYY"
+                  )
+                : "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ghi chú bổ sung">
+              {viewedVaccinationRecord.additionalNotes || "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              {(() => {
+                switch (viewedVaccinationRecord.status) {
+                  case "COMPLETED":
+                    return "Đã tiêm";
+                  case "SCHEDULED":
+                    return "Đã lên lịch";
+                  case "POSTPONED":
+                    return "Hoãn";
+                  case "CANCELLED":
+                    return "Hủy";
+                  default:
+                    return viewedVaccinationRecord.status || "-";
+                }
+              })()}
+            </Descriptions.Item>
+            <Descriptions.Item label="Số lô vaccine">
+              {viewedVaccinationRecord.batchNumber || "-"}
+            </Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Modal>
+    </div>
+  );
       {/* Modal xem báo cáo kết quả tiêm chủng */}
       <Modal
         title="Xem báo cáo kết quả tiêm chủng"
