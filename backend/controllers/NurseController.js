@@ -1694,57 +1694,40 @@ export const performVaccination = async (req, res) => {
             (dose) => dose.doseOrder === doseOrder
         );
         if (existingDose) {
-            // Nếu đã tiêm mũi này rồi
-            if (doseType === "CATCHUP" || doseType === "ADDITIONAL") {
-                // Với CATCHUP/ADDITIONAL, cho phép tiêm lại (có thể là bổ sung)
-                console.log(
-                    `Allowing ${doseType} re-vaccination for dose ${doseOrder}`
-                );
-            } else {
-                // Với PRIMARY/BOOSTER, không cho phép tiêm trùng
-                return res.status(400).json({
-                    success: false,
-                    error: `Học sinh đã tiêm mũi ${doseOrder} rồi (ngày ${new Date(
-                        existingDose.administeredDate
-                    ).toLocaleDateString(
-                        "vi-VN"
-                    )}). Không thể tiêm lại cùng một mũi với loại liều "${doseType}".`,
-                    errorCode: "DUPLICATE_DOSE_ORDER",
-                    details: {
-                        currentDoseOrder: doseOrder,
-                        existingDose: {
-                            id: existingDose.id,
-                            administeredDate: existingDose.administeredDate,
-                            doseType: existingDose.doseType,
-                            batchNumber: existingDose.batchNumber,
-                        },
-                        suggestion:
-                            "Sử dụng doseType 'ADDITIONAL' nếu cần tiêm bổ sung",
-                        completedDoses: previousDoses
-                            .map((d) => d.doseOrder)
-                            .sort(),
+            return res.status(400).json({
+                success: false,
+                error: `Học sinh đã tiêm mũi ${doseOrder} rồi (ngày ${new Date(
+                    existingDose.administeredDate
+                ).toLocaleDateString(
+                    "vi-VN"
+                )}). Không thể tiêm lại cùng một mũi với loại liều "${doseType}".`,
+                errorCode: "DUPLICATE_DOSE_ORDER",
+                details: {
+                    currentDoseOrder: doseOrder,
+                    existingDose: {
+                        id: existingDose.id,
+                        administeredDate: existingDose.administeredDate,
+                        doseType: existingDose.doseType,
+                        batchNumber: existingDose.batchNumber,
                     },
-                });
-            }
+                    completedDoses: previousDoses
+                        .map((d) => d.doseOrder)
+                        .sort(),
+                },
+            });
         }
 
         // Kiểm tra xem có tiêm ngược thứ tự không (ví dụ: muốn tiêm mũi 1 mà đã tiêm mũi 2, 3)
         const higherDoses = previousDoses.filter(
             (dose) => dose.doseOrder > doseOrder
         );
-        if (
-            higherDoses.length > 0 &&
-            doseType !== "CATCHUP" &&
-            doseType !== "ADDITIONAL"
-        ) {
+        if (higherDoses.length > 0) {
             return res.status(400).json({
                 success: false,
                 error: `Không thể tiêm mũi ${doseOrder} vì học sinh đã tiêm các mũi cao hơn: ${higherDoses
                     .map((d) => d.doseOrder)
                     .sort()
-                    .join(
-                        ", "
-                    )}. Nếu đây là tiêm bù, vui lòng chọn loại liều "Tiêm bù".`,
+                    .join(", ")}.`,
                 errorCode: "REVERSE_DOSE_ORDER",
                 details: {
                     requestedDoseOrder: doseOrder,
@@ -1753,8 +1736,6 @@ export const performVaccination = async (req, res) => {
                         administeredDate: d.administeredDate,
                         doseType: d.doseType,
                     })),
-                    suggestion:
-                        "Sử dụng doseType 'CATCHUP' để tiêm bù mũi đã bỏ lỡ",
                     completedDoses: previousDoses
                         .map((d) => d.doseOrder)
                         .sort(),
@@ -1762,67 +1743,45 @@ export const performVaccination = async (req, res) => {
             });
         }
 
-        // Kiểm tra thứ tự mũi tiêm - có 2 cases:
-        // Case 1: Tiêm tuần tự trong hệ thống (strict mode)
-        // Case 2: Tiêm bù/tiếp tục từ mũi đã tiêm bên ngoài (flexible mode)
-        if (doseOrder > 1) {
-            const requiredPrevDose = previousDoses.find(
-                (pr) => pr.doseOrder === doseOrder - 1
-            );
-
-            if (!requiredPrevDose) {
-                // Nếu không tìm thấy mũi trước trong hệ thống
-                // Kiểm tra xem có phải là tiêm bù/tiếp tục không
-                if (doseType === "CATCHUP" || doseType === "ADDITIONAL") {
-                    // Cho phép tiêm bù - không cần kiểm tra thứ tự nghiêm ngặt
-                    console.log(
-                        `Allowing ${doseType} vaccination for dose ${doseOrder} without previous dose validation`
-                    );
-                } else {
-                    // Với PRIMARY và BOOSTER, vẫn yêu cầu thứ tự nghiêm ngặt
-                    return res.status(400).json({
-                        success: false,
-                        error: `Phải tiêm mũi ${
-                            doseOrder - 1
-                        } trước khi tiêm mũi ${doseOrder}. Nếu học sinh đã tiêm mũi ${
-                            doseOrder - 1
-                        } ở nơi khác, vui lòng chọn loại liều "Tiêm bù" thay vì "${doseType}".`,
-                        errorCode: "DOSE_ORDER_VIOLATION",
-                        details: {
-                            currentDoseOrder: doseOrder,
-                            requiredPreviousDose: doseOrder - 1,
-                            completedDoses: previousDoses
-                                .map((d) => d.doseOrder)
-                                .sort(),
-                            suggestion:
-                                "Sử dụng doseType 'Tiêm bù' nếu học sinh đã tiêm mũi trước ở nơi khác",
-                        },
-                    });
-                }
-            }
-        }
-
         // Lấy maxDoseCount và doseSchedules từ vaccine
         const vaccine = await prisma.vaccine.findUnique({
             where: { id: campaign.vaccineId },
         });
-        if (
-            vaccine &&
-            vaccine.maxDoseCount &&
-            (previousDoses.length >= vaccine.maxDoseCount ||
-                doseOrder > vaccine.maxDoseCount)
-        ) {
-            return res.status(400).json({
-                success: false,
-                error: `Học sinh này đã tiêm đủ số liều tối đa (${vaccine.maxDoseCount}) cho vaccine này. Không thể tiêm thêm!`,
-                errorCode: "MAX_DOSE_EXCEEDED",
-                details: {
-                    maxDoses: vaccine.maxDoseCount,
-                    completedDoses: previousDoses.length,
-                    requestedDoseOrder: doseOrder,
-                    vaccineName: vaccine.name,
-                },
-            });
+
+        // Kiểm tra giới hạn số mũi tiêm của vaccine
+        if (vaccine && vaccine.maxDoseCount) {
+            // Kiểm tra nếu doseOrder vượt quá giới hạn cho phép
+            if (doseOrder > vaccine.maxDoseCount) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Mũi số ${doseOrder} vượt quá giới hạn. Vaccine ${vaccine.name} chỉ cho phép tối đa ${vaccine.maxDoseCount} mũi.`,
+                    errorCode: "DOSE_ORDER_EXCEEDS_LIMIT",
+                    details: {
+                        maxDoses: vaccine.maxDoseCount,
+                        requestedDoseOrder: doseOrder,
+                        vaccineName: vaccine.name,
+                        completedDoses: previousDoses.length,
+                    },
+                });
+            }
+
+            // Kiểm tra nếu học sinh đã tiêm đủ số mũi tối đa
+            if (previousDoses.length >= vaccine.maxDoseCount) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Học sinh này đã tiêm đủ ${vaccine.maxDoseCount} mũi cho vaccine ${vaccine.name}. Không thể tiêm thêm!`,
+                    errorCode: "MAX_DOSES_COMPLETED",
+                    details: {
+                        maxDoses: vaccine.maxDoseCount,
+                        completedDoses: previousDoses.length,
+                        requestedDoseOrder: doseOrder,
+                        vaccineName: vaccine.name,
+                        completedDoseOrders: previousDoses
+                            .map((d) => d.doseOrder)
+                            .sort(),
+                    },
+                });
+            }
         }
 
         // --- BẮT ĐẦU: Kiểm tra khoảng cách giữa các mũi dựa trên doseSchedules ---
@@ -1857,8 +1816,8 @@ export const performVaccination = async (req, res) => {
                 details: {
                     currentDoseOrder: doseOrder,
                     previousDoseOrder: doseOrder - 1,
-                    requiredInterval: currentDoseSchedule?.minInterval || 0,
-                    actualInterval: diffDays || 0,
+                    requiredInterval: intervalValidation.requiredInterval || 0,
+                    actualInterval: intervalValidation.actualInterval || 0,
                 },
             });
         }
