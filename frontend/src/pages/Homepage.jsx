@@ -278,7 +278,7 @@ const Homepage = () => {
                     </div>
 
                     {/* Floating elements */}
-                    <div className="absolute top-1/4 right-10 hidden lg:block z-40">
+                    <div className="absolute top-1/4 right-40 hidden lg:block z-40">
                         <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 shadow-lg animate-float">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center">
@@ -296,8 +296,8 @@ const Homepage = () => {
                         </div>
                     </div>
 
-                    <div className="absolute bottom-1/4 left-10 hidden lg:block z-40">
-                        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 shadow-lg animate-float delay-1000">
+                    <div className="absolute bottom-1/4 left-60 hidden lg:block z-40">
+                        <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 shadow-lg animate-float delay-200">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center">
                                     <FaPills className="text-white" />

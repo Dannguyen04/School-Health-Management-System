@@ -9,7 +9,7 @@ export const createImportTemplate = () => {
             "Giới tính": "Nam",
             Khối: "1",
             Lớp: "1A",
-            "Năm học": "2024-2025",
+            "Năm học": "2020-2025",
             "Tên phụ huynh": "Nguyễn Văn B",
             "SĐT phụ huynh": "0912345678", // Cột đã được format thành text
             "Email phụ huynh": "parentA@email.com",

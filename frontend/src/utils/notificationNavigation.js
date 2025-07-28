@@ -59,7 +59,44 @@ export function navigateByNotificationType(
             });
             break;
         case "medical_consultation":
-            navigate("/parent/health-checkup-results");
+            // Xử lý thông báo lịch tư vấn sức khỏe
+            // Tìm studentName và studentCode từ nội dung thông báo
+            const studentNameMatch = notification.message.match(
+                /^([^(]+) \(Mã học sinh: ([^)]+)\) đã có vấn đề về sức khỏe/
+            );
+            if (
+                studentNameMatch &&
+                studentNameMatch[1] &&
+                studentNameMatch[2]
+            ) {
+                const studentName = studentNameMatch[1].trim();
+                const studentCode = studentNameMatch[2].trim();
+                // Điều hướng đến trang health-checkup-results với thông tin học sinh
+                navigate("/parent/health-checkup-results", {
+                    state: {
+                        selectedStudentName: studentName,
+                        selectedStudentCode: studentCode,
+                        scrollToConsultation: true,
+                    },
+                });
+            } else {
+                // Fallback: tìm chỉ tên học sinh nếu không có studentCode
+                const fallbackMatch = notification.message.match(
+                    /^([^đ]+) đã có vấn đề về sức khỏe/
+                );
+                if (fallbackMatch && fallbackMatch[1]) {
+                    const studentName = fallbackMatch[1].trim();
+                    navigate("/parent/health-checkup-results", {
+                        state: {
+                            selectedStudentName: studentName,
+                            scrollToConsultation: true,
+                        },
+                    });
+                } else {
+                    // Fallback: điều hướng đến trang health-checkup-results
+                    navigate("/parent/health-checkup-results");
+                }
+            }
             break;
         case "medical_check_campaign":
             navigate("/nurse/health-checkups");

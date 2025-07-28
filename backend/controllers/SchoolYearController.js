@@ -17,21 +17,16 @@ const getCurrentAcademicYear = () => {
     }
 };
 
-// Xem trước danh sách học sinh sẽ chuyển năm học
+// Xem trước danh sách học sinh sẽ chuyển lớp
 const previewPromotion = async (req, res) => {
     try {
         const allStudents = await prisma.student.findMany({
             where: { status: "active" },
-            include: {
-                user: {
-                    select: {
-                        fullName: true,
-                    },
-                },
-            },
         });
 
+        // Học sinh lớp 5 sẽ tốt nghiệp
         const graduating = allStudents.filter((s) => s.grade === FINAL_GRADE);
+        // Học sinh lớp 1,2,3,4 sẽ lên lớp
         const promoting = allStudents.filter((s) => s.grade !== FINAL_GRADE);
 
         // Lấy năm học hiện tại từ học sinh đầu tiên hoặc tính toán
@@ -66,32 +61,40 @@ function nextClass(currentClass) {
     return newNumber + (match[2] || "");
 }
 
-// Thực hiện chuyển năm học
+// Thực hiện chuyển lớp
 const promoteStudents = async (req, res) => {
     try {
         const { graduateIds, promoteIds } = req.body; // Nhận từ frontend
         const newAcademicYear = getCurrentAcademicYear();
 
-        // 1. Cập nhật học sinh tốt nghiệp
-        await prisma.student.updateMany({
-            where: { id: { in: graduateIds } },
-            data: { status: "graduated" },
-        });
-
-        // 2. Tăng lớp và khối cho học sinh còn lại, cập nhật năm học
-        for (const id of promoteIds) {
-            const student = await prisma.student.findUnique({ where: { id } });
-            await prisma.student.update({
-                where: { id },
-                data: {
-                    grade: nextGrade(student.grade),
-                    class: nextClass(student.class),
-                    academicYear: newAcademicYear,
-                },
+        // 1. Cập nhật học sinh tốt nghiệp (lớp 5)
+        if (graduateIds && graduateIds.length > 0) {
+            await prisma.student.updateMany({
+                where: { id: { in: graduateIds } },
+                data: { status: "graduated" },
             });
         }
 
-        res.json({ message: "Chuyển năm học thành công!", newAcademicYear });
+        // 2. Tăng lớp và khối cho học sinh còn lại (lớp 1,2,3,4), cập nhật năm học
+        if (promoteIds && promoteIds.length > 0) {
+            for (const id of promoteIds) {
+                const student = await prisma.student.findUnique({
+                    where: { id },
+                });
+                if (student) {
+                    await prisma.student.update({
+                        where: { id },
+                        data: {
+                            grade: nextGrade(student.grade),
+                            class: nextClass(student.class),
+                            academicYear: newAcademicYear,
+                        },
+                    });
+                }
+            }
+        }
+
+        res.json({ message: "Chuyển lớp thành công!", newAcademicYear });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
