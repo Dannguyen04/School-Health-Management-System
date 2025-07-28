@@ -321,9 +321,6 @@ const ConfirmedMedicines = () => {
               <Descriptions.Item label="Lớp">
                 {detailData.studentGrade}
               </Descriptions.Item>
-              <Descriptions.Item label="Email học sinh">
-                {detailData.studentEmail}
-              </Descriptions.Item>
               <Descriptions.Item label="Phụ huynh">
                 {detailData.parentName}
               </Descriptions.Item>
@@ -365,9 +362,6 @@ const ConfirmedMedicines = () => {
                     freqMap[detailData.frequency] || detailData.frequency || "-"
                   );
                 })()}
-              </Descriptions.Item>
-              <Descriptions.Item label="Thời gian">
-                {detailData.duration || "-"}
               </Descriptions.Item>
               <Descriptions.Item label="Hướng dẫn">
                 {detailData.instructions || (
