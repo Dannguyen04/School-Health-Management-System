@@ -40,13 +40,13 @@ export const createNotification = async (req, res) => {
         res.status(201).json({
             success: true,
             data: notification,
-            message: "Notification created successfully",
+            message: "Đã tạo thông báo thành công",
         });
     } catch (error) {
         console.error("Error creating notification:", error);
         res.status(500).json({
             success: false,
-            error: "Error creating notification",
+            error: "Lỗi khi tạo thông báo",
         });
     }
 };
@@ -107,7 +107,7 @@ export const getUserNotifications = async (req, res) => {
         console.error("Error fetching notifications:", error);
         res.status(500).json({
             success: false,
-            error: "Error fetching notifications",
+            error: "Lỗi khi lấy danh sách thông báo",
         });
     }
 };
@@ -129,13 +129,13 @@ export const updateNotificationStatus = async (req, res) => {
         res.json({
             success: true,
             data: notification,
-            message: "Notification status updated successfully",
+            message: "Đã cập nhật trạng thái thông báo thành công",
         });
     } catch (error) {
         console.error("Error updating notification status:", error);
         res.status(500).json({
             success: false,
-            error: "Error updating notification status",
+            error: "Lỗi khi cập nhật trạng thái thông báo",
         });
     }
 };
@@ -169,6 +169,22 @@ export const sendMedicalEventNotification = async (req, res) => {
             });
         }
 
+        // Hàm dịch severity sang tiếng Việt
+        const getSeverityLabel = (severity) => {
+            switch (severity?.toLowerCase()) {
+                case "critical":
+                    return "Nguy kịch";
+                case "high":
+                    return "Cao";
+                case "medium":
+                    return "Trung bình";
+                case "low":
+                    return "Thấp";
+                default:
+                    return severity;
+            }
+        };
+
         // Tạo thông báo cho từng phụ huynh
         const notifications = [];
         for (const parentId of parentIds) {
@@ -176,7 +192,13 @@ export const sendMedicalEventNotification = async (req, res) => {
                 data: {
                     userId: parentId,
                     title: `Sự kiện y tế - ${medicalEvent.student.fullName}`,
-                    message: `Học sinh ${medicalEvent.student.fullName} đã có sự kiện y tế: ${medicalEvent.title}. Mức độ: ${medicalEvent.severity}. Vui lòng liên hệ với nhà trường để biết thêm chi tiết.`,
+                    message: `Học sinh ${
+                        medicalEvent.student.fullName
+                    } đã có sự kiện y tế: ${
+                        medicalEvent.title
+                    }. Mức độ: ${getSeverityLabel(
+                        medicalEvent.severity
+                    )}. Vui lòng click vào hoặc liên hệ với nhà trường để biết thêm chi tiết.`,
                     type: "medical_event",
                     status: "SENT",
                     sentAt: new Date(),
@@ -188,13 +210,13 @@ export const sendMedicalEventNotification = async (req, res) => {
         res.json({
             success: true,
             data: notifications,
-            message: `Sent ${notifications.length} notifications successfully`,
+            message: `Đã gửi ${notifications.length} thông báo thành công`,
         });
     } catch (error) {
         console.error("Error sending medical event notifications:", error);
         res.status(500).json({
             success: false,
-            error: "Error sending medical event notifications",
+            error: "Lỗi khi gửi thông báo sự kiện y tế",
         });
     }
 };
@@ -221,7 +243,7 @@ export const getUnreadNotificationCount = async (req, res) => {
         console.error("Error getting unread notification count:", error);
         res.status(500).json({
             success: false,
-            error: "Error getting unread notification count",
+            error: "Lỗi khi lấy số thông báo chưa đọc",
         });
     }
 };
@@ -242,13 +264,13 @@ export const archiveNotification = async (req, res) => {
         res.json({
             success: true,
             data: notification,
-            message: "Notification archived successfully",
+            message: "Đã lưu trữ thông báo thành công",
         });
     } catch (error) {
         console.error("Error archiving notification:", error);
         res.status(500).json({
             success: false,
-            error: "Error archiving notification",
+            error: "Lỗi khi lưu trữ thông báo",
         });
     }
 };
@@ -269,13 +291,13 @@ export const restoreNotification = async (req, res) => {
         res.json({
             success: true,
             data: notification,
-            message: "Notification restored successfully",
+            message: "Đã khôi phục thông báo thành công",
         });
     } catch (error) {
         console.error("Error restoring notification:", error);
         res.status(500).json({
             success: false,
-            error: "Error restoring notification",
+            error: "Lỗi khi khôi phục thông báo",
         });
     }
 };
@@ -324,16 +346,11 @@ export const getNotificationById = async (req, res) => {
                 // Tìm học sinh theo tên
                 const student = await prisma.student.findFirst({
                     where: {
-                        user: {
-                            fullName: studentName,
-                        },
+                        fullName: studentName,
                     },
-                    include: {
-                        user: {
-                            select: {
-                                fullName: true,
-                            },
-                        },
+                    select: {
+                        id: true,
+                        fullName: true,
                     },
                 });
 
@@ -348,12 +365,9 @@ export const getNotificationById = async (req, res) => {
                         },
                         include: {
                             student: {
-                                include: {
-                                    user: {
-                                        select: {
-                                            fullName: true,
-                                        },
-                                    },
+                                select: {
+                                    id: true,
+                                    fullName: true,
                                 },
                             },
                             nurse: {
@@ -404,7 +418,7 @@ export const getNotificationById = async (req, res) => {
         console.error("Error fetching notification:", error);
         res.status(500).json({
             success: false,
-            error: "Error fetching notification",
+            error: "Lỗi khi lấy thông báo",
         });
     }
 };
@@ -426,13 +440,13 @@ export const markAllAsRead = async (req, res) => {
         res.json({
             success: true,
             data: updated,
-            message: "All notifications marked as read",
+            message: "Đã đánh dấu tất cả thông báo là đã đọc",
         });
     } catch (error) {
         console.error("Error marking all notifications as read:", error);
         res.status(500).json({
             success: false,
-            error: "Error marking all notifications as read",
+            error: "Lỗi khi đánh dấu tất cả thông báo là đã đọc",
         });
     }
 };
@@ -448,9 +462,9 @@ export const deleteNotification = async (req, res) => {
             where: { id: notificationId },
         });
         console.log("[deleteNotification] Đã xóa thành công:", deleted);
-        res.json({ success: true, message: "Notification deleted" });
+        res.json({ success: true, message: "Đã xóa thông báo" });
     } catch (error) {
         console.error("[deleteNotification] Lỗi khi xóa notification:", error);
-        res.status(500).json({ error: "Error deleting notification" });
+        res.status(500).json({ error: "Lỗi khi xóa thông báo" });
     }
 };
