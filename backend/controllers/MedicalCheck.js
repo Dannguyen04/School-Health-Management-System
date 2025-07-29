@@ -478,10 +478,12 @@ const createMedicalCheck = async (req, res) => {
         },
       });
     } catch (err) {
-      return res.status(400).json({
-        success: false,
-        error: "Hồ sơ sức khỏe của học sinh chưa được phụ huynh tạo!",
-      });
+      // Không trả lỗi nếu healthProfile chưa tồn tại
+      // Chỉ log để debug
+      console.log(
+        `Health profile not found for student ${studentId}:`,
+        err.message
+      );
     }
     res.status(201).json({
       success: true,
