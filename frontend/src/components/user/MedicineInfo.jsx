@@ -63,10 +63,6 @@ const step1Schema = Yup.object().shape({
                 .min(3, "Loại thuốc phải có ít nhất 3 ký tự"),
         otherwise: (schema) => schema,
     }),
-    stockQuantity: Yup.number()
-        .typeError("Vui lòng nhập số lượng")
-        .min(1, "Số lượng phải lớn hơn 0")
-        .required("Vui lòng nhập số lượng"),
 });
 const step2Schema = Yup.object().shape({
     dosage: Yup.string().required("Vui lòng nhập liều lượng"),
@@ -75,6 +71,10 @@ const step2Schema = Yup.object().shape({
         .min(2, "Tên thuốc phải có ít nhất 2 ký tự")
         .matches(/^[\p{L}\s]+$/u, "Tên chỉ được chứa chữ cái và khoảng trắng"),
     frequency: Yup.string().required("Vui lòng chọn tần suất sử dụng"),
+    stockQuantity: Yup.number()
+        .typeError("Vui lòng nhập số lượng")
+        .required("Vui lòng nhập số lượng thuốc sẽ gửi")
+        .min(1, "Số lượng thuốc phải lớn hơn 0"),
     customTimes: Yup.array().when("frequency", {
         is: (val) => val !== "as-needed",
         then: (schema) =>
@@ -1319,31 +1319,7 @@ const MedicineInfo = () => {
                                                 placeholder="Gợi ý: Thuốc giảm đau, thực phẩm bổ sung,..."
                                             />
                                         </Form.Item>
-                                        <Form.Item
-                                            label="Số lượng thuốc sẽ gửi"
-                                            required
-                                            validateStatus={
-                                                fieldErrors.stockQuantity
-                                                    ? "error"
-                                                    : ""
-                                            }
-                                            help={fieldErrors.stockQuantity}
-                                        >
-                                            <InputNumber
-                                                min={1}
-                                                value={
-                                                    multiStepData.stockQuantity
-                                                }
-                                                onChange={(value) =>
-                                                    setMultiStepData((d) => ({
-                                                        ...d,
-                                                        stockQuantity: value,
-                                                    }))
-                                                }
-                                                placeholder="Nhập số lượng thuốc gửi"
-                                                style={{ width: "100%" }}
-                                            />
-                                        </Form.Item>
+
                                         <Button
                                             type="primary"
                                             block
@@ -2195,6 +2171,85 @@ const MedicineInfo = () => {
                                             </Form.Item>
                                         </div>
 
+                                        {/* Số lượng thuốc sẽ gửi */}
+                                        <div
+                                            style={{
+                                                background: "#f8fffe",
+                                                borderRadius: 12,
+                                                padding: 20,
+                                                marginBottom: 20,
+                                                border: "1px solid #e8f5f2",
+                                            }}
+                                        >
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    marginBottom: 8,
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        background: "#36ae9a",
+                                                        color: "white",
+                                                        width: 20,
+                                                        height: 20,
+                                                        borderRadius: "50%",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        justifyContent:
+                                                            "center",
+                                                        marginRight: 6,
+                                                        fontSize: 10,
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    {multiStepData.frequency ===
+                                                    "as-needed"
+                                                        ? 4
+                                                        : 5}
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        fontSize: 14,
+                                                        fontWeight: 600,
+                                                        color: "#333",
+                                                    }}
+                                                >
+                                                    Số lượng thuốc sẽ gửi
+                                                </div>
+                                            </div>
+
+                                            <Form.Item
+                                                required
+                                                validateStatus={
+                                                    fieldErrors.stockQuantity
+                                                        ? "error"
+                                                        : ""
+                                                }
+                                                help={fieldErrors.stockQuantity}
+                                                style={{ marginBottom: 0 }}
+                                            >
+                                                <InputNumber
+                                                    min={1}
+                                                    value={
+                                                        multiStepData.stockQuantity
+                                                    }
+                                                    onChange={(value) =>
+                                                        setMultiStepData(
+                                                            (d) => ({
+                                                                ...d,
+                                                                stockQuantity:
+                                                                    value,
+                                                            })
+                                                        )
+                                                    }
+                                                    placeholder="Nhập số lượng thuốc gửi"
+                                                    style={{ width: "100%" }}
+                                                />
+                                            </Form.Item>
+                                        </div>
+
                                         <Button
                                             type="primary"
                                             block
@@ -2205,6 +2260,7 @@ const MedicineInfo = () => {
                                                     multiStepData.dosage &&
                                                     multiStepData.unit &&
                                                     multiStepData.frequency &&
+                                                    multiStepData.stockQuantity &&
                                                     multiStepData.startDate &&
                                                     multiStepData.endDate &&
                                                     (multiStepData.frequency ===
