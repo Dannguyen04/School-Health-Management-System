@@ -2391,11 +2391,18 @@ export const approveMedicationRequest = async (req, res) => {
         const medicationRequest = await prisma.studentMedication.findUnique({
             where: { id: requestId },
             include: {
-                student: true,
+                student: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        studentCode: true,
+                    },
+                },
                 parent: {
                     include: {
                         user: {
                             select: {
+                                id: true,
                                 fullName: true,
                                 email: true,
                                 phone: true,
@@ -2403,8 +2410,15 @@ export const approveMedicationRequest = async (req, res) => {
                         },
                     },
                 },
-                // XÓA medication: true
             },
+        });
+
+        console.log("Debug - Found medication request:", {
+            id: medicationRequest?.id,
+            name: medicationRequest?.name,
+            parentId: medicationRequest?.parentId,
+            parent: medicationRequest?.parent,
+            student: medicationRequest?.student,
         });
 
         if (!medicationRequest) {
@@ -2445,39 +2459,132 @@ export const approveMedicationRequest = async (req, res) => {
                 updatedAt: new Date(),
             },
             include: {
-                student: true,
+                student: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        studentCode: true,
+                    },
+                },
                 parent: {
                     include: {
                         user: {
                             select: {
+                                id: true,
                                 fullName: true,
                             },
                         },
                     },
                 },
-                // XÓA medication: true
             },
         });
 
         // Gửi thông báo cho phụ huynh
         try {
+            console.log("Debug - medicationRequest:", {
+                id: medicationRequest.id,
+                name: medicationRequest.name,
+                parentId: medicationRequest.parentId,
+                parent: medicationRequest.parent,
+                student: medicationRequest.student,
+                studentFullName: medicationRequest.student?.fullName,
+            });
+
+            // Lấy thông tin parent user
+            let parentUser = null;
             if (medicationRequest.parent && medicationRequest.parent.user) {
-                await prisma.notification.create({
+                parentUser = medicationRequest.parent.user;
+                console.log(
+                    "Debug - Found parent user from include:",
+                    parentUser.id
+                );
+            } else if (medicationRequest.parentId) {
+                // Thử lấy parent user trực tiếp nếu không có trong include
+                console.log(
+                    "Debug - Trying to fetch parent directly with ID:",
+                    medicationRequest.parentId
+                );
+                const parent = await prisma.parent.findUnique({
+                    where: { id: medicationRequest.parentId },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                });
+                parentUser = parent?.user;
+                console.log(
+                    "Debug - Parent fetched directly:",
+                    parent ? "found" : "not found",
+                    parentUser ? "user found" : "user not found"
+                );
+
+                // Nếu vẫn không tìm thấy, thử lấy user trực tiếp từ userId
+                if (!parentUser && parent?.userId) {
+                    console.log(
+                        "Debug - Trying to fetch user directly with userId:",
+                        parent.userId
+                    );
+                    const user = await prisma.users.findUnique({
+                        where: { id: parent.userId },
+                        select: {
+                            id: true,
+                            fullName: true,
+                            email: true,
+                        },
+                    });
+                    parentUser = user;
+                    console.log(
+                        "Debug - User fetched directly:",
+                        user ? "found" : "not found"
+                    );
+                }
+            } else {
+                console.log("Debug - No parentId found in medication request");
+            }
+
+            if (parentUser) {
+                console.log(
+                    "Debug - Creating notification for parent:",
+                    parentUser.id
+                );
+                console.log(
+                    "Debug - Student info:",
+                    medicationRequest.student?.fullName || "No student name"
+                );
+
+                const notification = await prisma.notification.create({
                     data: {
-                        userId: medicationRequest.parent.user.id,
-                        title: `Yêu cầu thuốc - ${medicationRequest.name}`,
-                        message: `Yêu cầu thuốc ${
-                            medicationRequest.name
-                        } cho học sinh ${
-                            medicationRequest.student.fullName
+                        userId: parentUser.id,
+                        title: `Kết quả xét duyệt thuốc`,
+                        message: `Yêu cầu thuốc ${medicationRequest.name} - ${
+                            medicationRequest.dosage
+                        } ${medicationRequest.unit} cho học sinh ${
+                            medicationRequest.student?.fullName || "học sinh"
                         } đã được ${
                             action === "APPROVE" ? "phê duyệt" : "từ chối"
-                        }. ${notes ? `Ghi chú: ${notes}` : ""}`,
+                        } vào ${new Date().toLocaleString("vi-VN")}.${
+                            notes ? ` Ghi chú: ${notes}` : ""
+                        }`,
                         type: "medication_request",
                         status: "SENT",
                         sentAt: new Date(),
                     },
                 });
+
+                console.log(
+                    "Debug - Notification created successfully:",
+                    notification.id
+                );
+            } else {
+                console.log(
+                    "Debug - No parent user found for medication request:",
+                    medicationRequest.id
+                );
             }
         } catch (notificationError) {
             console.error("Error sending notification:", notificationError);
@@ -2488,7 +2595,7 @@ export const approveMedicationRequest = async (req, res) => {
             data: {
                 id: updatedRequest.id,
                 status: updatedRequest.status,
-                studentName: updatedRequest.student.fullName,
+                studentName: updatedRequest.student?.fullName || "N/A",
                 parentName: updatedRequest.parent?.user?.fullName || "N/A",
                 medicationName: updatedRequest.name,
                 action: action,

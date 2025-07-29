@@ -105,11 +105,57 @@ const BlogManagement = () => {
     const handleSave = async (values) => {
         setSaving(true);
         try {
+            console.log("=== SAVING BLOG ===");
+            console.log("Form values:", values);
+            console.log("Editing blog:", editingBlog);
+
+            // Validate required fields
+            if (!values.title?.trim()) {
+                message.error("Vui lòng nhập tiêu đề");
+                setSaving(false);
+                return;
+            }
+
+            if (!values.content?.trim()) {
+                message.error("Vui lòng nhập nội dung");
+                setSaving(false);
+                return;
+            }
+
+            if (!values.excerpt?.trim()) {
+                message.error("Vui lòng nhập tóm tắt");
+                setSaving(false);
+                return;
+            }
+
+            if (!values.category) {
+                message.error("Vui lòng chọn danh mục");
+                setSaving(false);
+                return;
+            }
+
+            // Validate and prepare data
+            const blogData = {
+                title: values.title.trim(),
+                content: values.content.trim(),
+                excerpt: values.excerpt.trim(),
+                coverImage: values.coverImage || null,
+                category: values.category,
+                tags: Array.isArray(values.tags)
+                    ? values.tags.filter((tag) => tag && tag.trim())
+                    : [],
+                isPublished: Boolean(values.isPublished),
+            };
+
+            console.log("Prepared blog data:", blogData);
+
             if (editingBlog) {
-                await nurseAPI.updateBlog(editingBlog.id, values);
+                console.log("Updating blog with ID:", editingBlog.id);
+                await nurseAPI.updateBlog(editingBlog.id, blogData);
                 message.success("Cập nhật bài viết thành công");
             } else {
-                await nurseAPI.createBlog(values);
+                console.log("Creating new blog");
+                await nurseAPI.createBlog(blogData);
                 message.success("Tạo bài viết thành công");
             }
             setShowEditor(false);
@@ -118,6 +164,8 @@ const BlogManagement = () => {
             setCoverImagePreview(null);
             fetchBlogs();
         } catch (err) {
+            console.error("Error saving blog:", err);
+            console.error("Error response:", err.response?.data);
             message.error("Lỗi khi lưu bài viết");
         } finally {
             setSaving(false);
@@ -247,11 +295,39 @@ const BlogManagement = () => {
                                     <ReactQuill
                                         theme="snow"
                                         style={{ minHeight: 300 }}
-                                        value={form.getFieldValue("content")}
-                                        onChange={(val) =>
-                                            form.setFieldValue("content", val)
+                                        value={
+                                            form.getFieldValue("content") || ""
                                         }
+                                        onChange={(val) => {
+                                            console.log(
+                                                "ReactQuill content changed:",
+                                                val
+                                            );
+                                            form.setFieldValue("content", val);
+                                        }}
                                         placeholder="Nhập nội dung bài viết"
+                                        modules={{
+                                            toolbar: [
+                                                [{ header: [1, 2, 3, false] }],
+                                                [
+                                                    "bold",
+                                                    "italic",
+                                                    "underline",
+                                                    "strike",
+                                                ],
+                                                [
+                                                    { list: "ordered" },
+                                                    { list: "bullet" },
+                                                ],
+                                                [
+                                                    { color: [] },
+                                                    { background: [] },
+                                                ],
+                                                [{ align: [] }],
+                                                ["link", "image"],
+                                                ["clean"],
+                                            ],
+                                        }}
                                     />
                                 </Form.Item>
                                 <Row gutter={16}>
