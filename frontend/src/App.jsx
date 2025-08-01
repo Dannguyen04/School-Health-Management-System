@@ -43,6 +43,7 @@ import NurseLayout from "./layouts/Nurse";
 import User from "./layouts/User";
 import AuthPage from "./pages/AuthPage";
 import Homepage from "./pages/Homepage";
+import MedicalCampaigns from "./pages/MedicalCampaigns";
 import MedicalEvents from "./pages/MedicalEvents";
 import VaccinationHistory from "./pages/VaccinationHistory";
 import PrivateRoutes from "./utils/PrivateRoutes";
@@ -157,6 +158,7 @@ const App = () => {
           <Route path="vaccination-history" element={<VaccinationHistory />} />
           <Route path="profile" element={<UserProfile />} />
           <Route path="medical-events" element={<MedicalEvents />} />
+          <Route path="medical-campaigns" element={<MedicalCampaigns />} />
         </Route>
       </Routes>
     </Router>
