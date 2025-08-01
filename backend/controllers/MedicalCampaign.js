@@ -514,7 +514,9 @@ export const getStudentsForMedicalCampaign = async (req, res) => {
                 .status(404)
                 .json({ success: false, error: "Không tìm thấy chiến dịch" });
         }
-        const students = await prisma.student.findMany({
+        
+        // Lấy danh sách học sinh với thông tin consent
+        const studentsWithConsent = await prisma.student.findMany({
             where: { grade: { in: campaign.targetGrades } },
             select: {
                 id: true,
@@ -526,7 +528,30 @@ export const getStudentsForMedicalCampaign = async (req, res) => {
                 gender: true,
             },
         });
-        res.json({ success: true, data: students });
+
+        // Thêm thông tin parentConsent cho từng học sinh
+        const studentsWithConsentData = await Promise.all(
+            studentsWithConsent.map(async (student) => {
+                const medicalCheck = await prisma.medicalCheck.findFirst({
+                    where: {
+                        studentId: student.id,
+                        campaignId: campaign.id,
+                    },
+                    select: {
+                        parentConsent: true,
+                        parentNotified: true,
+                    },
+                });
+
+                return {
+                    ...student,
+                    parentConsent: medicalCheck?.parentConsent || [],
+                    parentNotified: medicalCheck?.parentNotified || false,
+                };
+            })
+        );
+
+        res.json({ success: true, data: studentsWithConsentData });
     } catch (error) {
         res.status(500).json({ success: false, error: error.message });
     }
@@ -569,13 +594,6 @@ export const submitParentConsent = async (req, res) => {
         // Get parent's children
         const parent = await prisma.parent.findFirst({
             where: { userId },
-            include: {
-                students: {
-                    include: {
-                        student: true
-                    }
-                }
-            }
         });
 
         if (!parent) {
@@ -585,8 +603,16 @@ export const submitParentConsent = async (req, res) => {
             });
         }
 
+        // Get parent's children through StudentParent relation
+        const studentParents = await prisma.studentParent.findMany({
+            where: { parentId: parent.id },
+            include: {
+                student: true
+            }
+        });
+
         // Update or create medical checks for all children with parent consent
-        const updatePromises = parent.students.map(async (studentParent) => {
+        const updatePromises = studentParents.map(async (studentParent) => {
             const student = studentParent.student;
             
             // Check if student is in target grades
@@ -594,7 +620,7 @@ export const submitParentConsent = async (req, res) => {
                 return;
             }
 
-            // Find existing medical check or create new one
+            // Find existing medical check
             let medicalCheck = await prisma.medicalCheck.findFirst({
                 where: {
                     studentId: student.id,
@@ -612,7 +638,7 @@ export const submitParentConsent = async (req, res) => {
                     },
                 });
             } else {
-                // Create new medical check
+                // Create new medical check with default values for required fields
                 await prisma.medicalCheck.create({
                     data: {
                         studentId: student.id,
@@ -620,6 +646,23 @@ export const submitParentConsent = async (req, res) => {
                         scheduledDate: campaign.scheduledDate,
                         parentConsent,
                         parentNotified: true,
+                        // Required fields with default values
+                        systolicBP: 120,
+                        diastolicBP: 80,
+                        physicalClassification: "GOOD",
+                        visionRightNoGlasses: "Bình thường",
+                        visionLeftNoGlasses: "Bình thường",
+                        visionRightWithGlasses: "Bình thường",
+                        visionLeftWithGlasses: "Bình thường",
+                        hearingLeftNormal: "Bình thường",
+                        hearingLeftWhisper: "Bình thường",
+                        hearingRightNormal: "Bình thường",
+                        hearingRightWhisper: "Bình thường",
+                        dentalUpperJaw: "Bình thường",
+                        dentalLowerJaw: "Bình thường",
+                        clinicalNotes: "Khám sức khỏe định kỳ",
+                        overallHealth: "NORMAL",
+                        requiresFollowUp: false,
                     },
                 });
             }

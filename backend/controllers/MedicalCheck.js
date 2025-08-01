@@ -507,6 +507,40 @@ const updateMedicalCheckResults = async (req, res) => {
       followUpDate,
       parentNotified,
       parentResponse,
+      // Thêm các trường khác để có thể update đầy đủ
+      height,
+      weight,
+      pulse,
+      systolicBP,
+      diastolicBP,
+      physicalClassification,
+      visionRightNoGlasses,
+      visionLeftNoGlasses,
+      visionRightWithGlasses,
+      visionLeftWithGlasses,
+      hearingLeftNormal,
+      hearingLeftWhisper,
+      hearingRightNormal,
+      hearingRightWhisper,
+      dentalUpperJaw,
+      dentalLowerJaw,
+      clinicalNotes,
+      // Khám sinh dục
+      maleGenitalPenis,
+      maleGenitalTesticles,
+      malePubertySigns,
+      malePubertyAge,
+      femaleGenitalExternal,
+      femaleGenitalExternalOther,
+      femaleMenstruation,
+      femaleMenstruationAge,
+      femaleMenstrualCycle,
+      femaleMenstrualCycleOther,
+      // Khám tâm lý
+      psychologicalEmotion,
+      psychologicalCommunication,
+      psychologicalBehavior,
+      psychologicalConcentration,
     } = req.body;
     const medicalCheck = await prisma.medicalCheck.findUnique({
       where: { id },
@@ -518,8 +552,10 @@ const updateMedicalCheckResults = async (req, res) => {
         error: "Không tìm thấy báo cáo kiểm tra",
       });
     }
-    // Chỉ cho phép update các trường sau
+    // Cho phép update tất cả các trường
     const updateData = {};
+    
+    // Các trường cơ bản
     if (notes !== undefined) updateData.notes = notes;
     if (overallHealth !== undefined) {
       if (
@@ -545,13 +581,46 @@ const updateMedicalCheckResults = async (req, res) => {
       updateData.parentNotified = parentNotified;
     if (parentResponse !== undefined)
       updateData.parentResponse = parentResponse;
-    // Nếu không có trường nào hợp lệ để update
-    if (Object.keys(updateData).length === 0) {
-      return res.status(400).json({
-        success: false,
-        error: "Không có trường nào hợp lệ để cập nhật",
-      });
-    }
+    
+    // Các trường khám sức khỏe
+    if (height !== undefined) updateData.height = height;
+    if (weight !== undefined) updateData.weight = weight;
+    if (pulse !== undefined) updateData.pulse = pulse;
+    if (systolicBP !== undefined) updateData.systolicBP = systolicBP;
+    if (diastolicBP !== undefined) updateData.diastolicBP = diastolicBP;
+    if (physicalClassification !== undefined) updateData.physicalClassification = physicalClassification;
+    if (visionRightNoGlasses !== undefined) updateData.visionRightNoGlasses = visionRightNoGlasses;
+    if (visionLeftNoGlasses !== undefined) updateData.visionLeftNoGlasses = visionLeftNoGlasses;
+    if (visionRightWithGlasses !== undefined) updateData.visionRightWithGlasses = visionRightWithGlasses;
+    if (visionLeftWithGlasses !== undefined) updateData.visionLeftWithGlasses = visionLeftWithGlasses;
+    if (hearingLeftNormal !== undefined) updateData.hearingLeftNormal = hearingLeftNormal;
+    if (hearingLeftWhisper !== undefined) updateData.hearingLeftWhisper = hearingLeftWhisper;
+    if (hearingRightNormal !== undefined) updateData.hearingRightNormal = hearingRightNormal;
+    if (hearingRightWhisper !== undefined) updateData.hearingRightWhisper = hearingRightWhisper;
+    if (dentalUpperJaw !== undefined) updateData.dentalUpperJaw = dentalUpperJaw;
+    if (dentalLowerJaw !== undefined) updateData.dentalLowerJaw = dentalLowerJaw;
+    if (clinicalNotes !== undefined) updateData.clinicalNotes = clinicalNotes;
+    
+    // Các trường khám sinh dục
+    if (maleGenitalPenis !== undefined) updateData.maleGenitalPenis = maleGenitalPenis;
+    if (maleGenitalTesticles !== undefined) updateData.maleGenitalTesticles = maleGenitalTesticles;
+    if (malePubertySigns !== undefined) updateData.malePubertySigns = malePubertySigns;
+    if (malePubertyAge !== undefined) updateData.malePubertyAge = malePubertyAge;
+    if (femaleGenitalExternal !== undefined) updateData.femaleGenitalExternal = femaleGenitalExternal;
+    if (femaleGenitalExternalOther !== undefined) updateData.femaleGenitalExternalOther = femaleGenitalExternalOther;
+    if (femaleMenstruation !== undefined) updateData.femaleMenstruation = femaleMenstruation;
+    if (femaleMenstruationAge !== undefined) updateData.femaleMenstruationAge = femaleMenstruationAge;
+    if (femaleMenstrualCycle !== undefined) updateData.femaleMenstrualCycle = femaleMenstrualCycle;
+    if (femaleMenstrualCycleOther !== undefined) updateData.femaleMenstrualCycleOther = femaleMenstrualCycleOther;
+    
+    // Các trường khám tâm lý
+    if (psychologicalEmotion !== undefined) updateData.psychologicalEmotion = psychologicalEmotion;
+    if (psychologicalCommunication !== undefined) updateData.psychologicalCommunication = psychologicalCommunication;
+    if (psychologicalBehavior !== undefined) updateData.psychologicalBehavior = psychologicalBehavior;
+    if (psychologicalConcentration !== undefined) updateData.psychologicalConcentration = psychologicalConcentration;
+    
+    // Luôn set status = COMPLETED khi update (vì đã hoàn thành khám)
+    updateData.status = "COMPLETED";
     const updatedCheck = await prisma.medicalCheck.update({
       where: { id },
       data: updateData,

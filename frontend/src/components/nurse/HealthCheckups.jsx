@@ -1,5 +1,6 @@
 import {
   EyeOutlined,
+  EditOutlined,
   MessageOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -733,35 +734,36 @@ const HealthCheckups = () => {
   const [hasCompletedAllSteps, setHasCompletedAllSteps] = useState(false);
   const [searchForm] = Form.useForm();
   const [displayedStudents, setDisplayedStudents] = useState([]);
+  const [editingReport, setEditingReport] = useState(null); // Track báo cáo đang edit
 
   // Function to generate step schemas based on campaign configuration and parent consent
   const getStepSchemas = () => {
     const baseSchemas = [
-      Yup.object({
+    Yup.object({
         studentGender: checkupSchema.fields.studentGender,
-        scheduledDate: checkupSchema.fields.scheduledDate,
-        height: checkupSchema.fields.height,
-        weight: checkupSchema.fields.weight,
-        pulse: checkupSchema.fields.pulse,
-        systolicBP: checkupSchema.fields.systolicBP,
-        diastolicBP: checkupSchema.fields.diastolicBP,
-      }),
-      Yup.object({
-        visionRightNoGlasses: checkupSchema.fields.visionRightNoGlasses,
-        visionLeftNoGlasses: checkupSchema.fields.visionLeftNoGlasses,
-        visionRightWithGlasses: checkupSchema.fields.visionRightWithGlasses,
-        visionLeftWithGlasses: checkupSchema.fields.visionLeftWithGlasses,
-      }),
-      Yup.object({
-        hearingLeftNormal: checkupSchema.fields.hearingLeftNormal,
-        hearingLeftWhisper: checkupSchema.fields.hearingLeftWhisper,
-        hearingRightNormal: checkupSchema.fields.hearingRightNormal,
-        hearingRightWhisper: checkupSchema.fields.hearingRightWhisper,
-      }),
-      Yup.object({
-        dentalUpperJaw: checkupSchema.fields.dentalUpperJaw,
-        dentalLowerJaw: checkupSchema.fields.dentalLowerJaw,
-      }),
+      scheduledDate: checkupSchema.fields.scheduledDate,
+      height: checkupSchema.fields.height,
+      weight: checkupSchema.fields.weight,
+      pulse: checkupSchema.fields.pulse,
+      systolicBP: checkupSchema.fields.systolicBP,
+      diastolicBP: checkupSchema.fields.diastolicBP,
+    }),
+    Yup.object({
+      visionRightNoGlasses: checkupSchema.fields.visionRightNoGlasses,
+      visionLeftNoGlasses: checkupSchema.fields.visionLeftNoGlasses,
+      visionRightWithGlasses: checkupSchema.fields.visionRightWithGlasses,
+      visionLeftWithGlasses: checkupSchema.fields.visionLeftWithGlasses,
+    }),
+    Yup.object({
+      hearingLeftNormal: checkupSchema.fields.hearingLeftNormal,
+      hearingLeftWhisper: checkupSchema.fields.hearingLeftWhisper,
+      hearingRightNormal: checkupSchema.fields.hearingRightNormal,
+      hearingRightWhisper: checkupSchema.fields.hearingRightWhisper,
+    }),
+    Yup.object({
+      dentalUpperJaw: checkupSchema.fields.dentalUpperJaw,
+      dentalLowerJaw: checkupSchema.fields.dentalLowerJaw,
+    }),
     ];
     
     const optionalSchemas = [];
@@ -795,19 +797,19 @@ const HealthCheckups = () => {
     }
     
     const finalSchemas = [
-      Yup.object({
+    Yup.object({
         studentGender: checkupSchema.fields.studentGender,
-        physicalClassification: checkupSchema.fields.physicalClassification,
-        overallHealth: checkupSchema.fields.overallHealth,
-        requiresFollowUp: checkupSchema.fields.requiresFollowUp,
-        followUpDate: checkupSchema.fields.followUpDate,
-        recommendations: checkupSchema.fields.recommendations,
-        clinicalNotes: checkupSchema.fields.clinicalNotes,
-        notes: checkupSchema.fields.notes,
-      }),
-      checkupSchema,
-    ];
-    
+      physicalClassification: checkupSchema.fields.physicalClassification,
+      overallHealth: checkupSchema.fields.overallHealth,
+      requiresFollowUp: checkupSchema.fields.requiresFollowUp,
+      followUpDate: checkupSchema.fields.followUpDate,
+      recommendations: checkupSchema.fields.recommendations,
+      clinicalNotes: checkupSchema.fields.clinicalNotes,
+      notes: checkupSchema.fields.notes,
+    }),
+    checkupSchema,
+  ];
+
     return [...baseSchemas, ...optionalSchemas, ...finalSchemas];
   };
 
@@ -832,10 +834,10 @@ const HealthCheckups = () => {
   // Function to generate step titles based on campaign configuration and parent consent
   const getStepTitles = () => {
     const baseSteps = [
-      "Thông tin cơ bản",
-      "Khám thị lực",
-      "Khám thính lực",
-      "Khám răng hàm mặt",
+    "Thông tin cơ bản",
+    "Khám thị lực",
+    "Khám thính lực",
+    "Khám răng hàm mặt",
     ];
     
     const optionalSteps = [];
@@ -853,9 +855,9 @@ const HealthCheckups = () => {
     }
     
     const finalSteps = [
-      "Kết luận & Khuyến nghị",
-      "Hoàn thành",
-    ];
+    "Kết luận & Khuyến nghị",
+    "Hoàn thành",
+  ];
     
     return [...baseSteps, ...optionalSteps, ...finalSteps];
   };
@@ -926,6 +928,7 @@ const HealthCheckups = () => {
   const handleCreateCheckup = (student) => {
     setCheckupStudent(student);
     setCheckupModal(true);
+    setEditingReport(null); // Không có báo cáo nào đang edit
     checkupForm.resetFields();
     setCurrentStep(0);
     setHasCompletedAllSteps(false);
@@ -935,6 +938,74 @@ const HealthCheckups = () => {
   const handleViewDetail = (report) => {
     setDetailReport(report);
     setDetailModalVisible(true);
+  };
+
+  // Khi bấm tiếp tục khám (mở modal khám đầy đủ với steps)
+  const handleContinueCheckup = (report) => {
+    // Lấy thông tin học sinh từ report
+    const student = students.find(s => s.id === report.studentId);
+    if (student) {
+      setCheckupStudent(student);
+      setCheckupModal(true);
+      setEditingReport(report); // Set báo cáo đang edit
+      
+      // Set initial values từ report hiện có
+      const initialValues = {
+        studentGender: student.gender,
+        scheduledDate: report.scheduledDate ? dayjs(report.scheduledDate) : null,
+        height: report.height || "",
+        weight: report.weight || "",
+        pulse: report.pulse || "",
+        systolicBP: report.systolicBP || "",
+        diastolicBP: report.diastolicBP || "",
+        physicalClassification: report.physicalClassification || "GOOD",
+        visionRightNoGlasses: report.visionRightNoGlasses || "",
+        visionLeftNoGlasses: report.visionLeftNoGlasses || "",
+        visionRightWithGlasses: report.visionRightWithGlasses || "",
+        visionLeftWithGlasses: report.visionLeftWithGlasses || "",
+        hearingLeftNormal: report.hearingLeftNormal || "",
+        hearingLeftWhisper: report.hearingLeftWhisper || "",
+        hearingRightNormal: report.hearingRightNormal || "",
+        hearingRightWhisper: report.hearingRightWhisper || "",
+        dentalUpperJaw: report.dentalUpperJaw || "",
+        dentalLowerJaw: report.dentalLowerJaw || "",
+        // Khám sinh dục - Nam
+        maleGenitalPenis: report.maleGenitalPenis || "",
+        maleGenitalTesticles: report.maleGenitalTesticles || "",
+        malePubertySigns: report.malePubertySigns || "",
+        malePubertyAge: report.malePubertyAge || null,
+        // Khám sinh dục - Nữ
+        femaleGenitalExternal: report.femaleGenitalExternal || "",
+        femaleGenitalExternalOther: report.femaleGenitalExternalOther || "",
+        femaleMenstruation: report.femaleMenstruation || "",
+        femaleMenstruationAge: report.femaleMenstruationAge || null,
+        femaleMenstrualCycle: report.femaleMenstrualCycle || "",
+        femaleMenstrualCycleOther: report.femaleMenstrualCycleOther || "",
+        // Khám tâm lý
+        psychologicalEmotion: report.psychologicalEmotion || "",
+        psychologicalCommunication: report.psychologicalCommunication || "",
+        psychologicalBehavior: report.psychologicalBehavior || "",
+        psychologicalConcentration: report.psychologicalConcentration || "",
+        clinicalNotes: report.clinicalNotes || "Khám sức khỏe định kỳ",
+        overallHealth: report.overallHealth || "NORMAL",
+        recommendations: report.recommendations || "",
+        requiresFollowUp: report.requiresFollowUp || false,
+        followUpDate: report.followUpDate ? dayjs(report.followUpDate) : null,
+        notes: report.notes || "",
+      };
+      
+      checkupForm.setValues(initialValues);
+      
+      // Xác định step hiện tại dựa trên dữ liệu đã có
+      let currentStep = 0;
+      if (report.height && report.weight) currentStep = 1; // Đã khám thể lực
+      if (report.visionRightNoGlasses) currentStep = 2; // Đã khám lâm sàng
+      if (report.maleGenitalPenis || report.femaleGenitalExternal) currentStep = 3; // Đã khám sinh dục
+      if (report.psychologicalEmotion) currentStep = 4; // Đã khám tâm lý
+      
+      setCurrentStep(currentStep);
+      setHasCompletedAllSteps(false);
+    }
   };
 
   // Khi bấm chỉnh sửa báo cáo
@@ -1220,6 +1291,7 @@ const HealthCheckups = () => {
           return <Tag color="green">Đồng ý tất cả</Tag>;
         }
         
+        // Hiển thị chi tiết từng loại khám được đồng ý/từ chối
         return (
           <div>
             {optionalExams.map(exam => (
@@ -1229,6 +1301,7 @@ const HealthCheckups = () => {
                 style={{ marginBottom: 2 }}
               >
                 {exam === "GENITAL" ? "Sinh dục" : "Tâm lý"}
+                {consent.includes(exam) ? " ✓" : " ✗"}
               </Tag>
             ))}
           </div>
@@ -1259,7 +1332,13 @@ const HealthCheckups = () => {
       width: 150,
       render: (_, record) => {
         const report = reports.find((r) => r.studentId === record.id);
-        if (report) {
+        
+        // Kiểm tra xem có cần đồng ý của phụ huynh không
+        const needsParentConsent = selectedCampaign?.optionalExaminations?.length > 0;
+        const hasParentConsent = record.parentConsent && record.parentConsent.length > 0;
+        
+        // Nếu có report và đã khám thực sự (status COMPLETED)
+        if (report && report.status === "COMPLETED") {
           return (
             <Button
               type="default"
@@ -1277,25 +1356,54 @@ const HealthCheckups = () => {
             </Button>
           );
         }
-        // Kiểm tra xem có cần đồng ý của phụ huynh không
-        const needsParentConsent = selectedCampaign?.optionalExaminations?.length > 0;
-        const hasParentConsent = record.parentConsent && record.parentConsent.length > 0;
         
-        if (needsParentConsent && !hasParentConsent) {
+                // Nếu có report nhưng chưa hoàn thành khám (status SCHEDULED hoặc khác)
+        if (report && report.status !== "COMPLETED") {
           return (
-            <Button 
-              type="default" 
-              disabled
-              title="Cần chờ phụ huynh đồng ý khám tùy chọn"
+            <Button
+              type="default"
+              icon={<EditOutlined />}
+              shape="round"
+              size="small"
+              style={{
+                color: "#52c41a",
+                borderColor: "#52c41a",
+                fontWeight: 500,
+              }}
+              onClick={() => handleContinueCheckup(report)}
+              title={
+                needsParentConsent && !hasParentConsent 
+                  ? "Tiếp tục khám cơ bản (phụ huynh chưa đồng ý khám tùy chọn)" 
+                  : "Tiếp tục khám sức khỏe"
+              }
             >
-              Chờ đồng ý
+              {needsParentConsent && !hasParentConsent ? "Tiếp tục khám cơ bản" : "Tiếp tục khám sức khỏe"}
             </Button>
           );
         }
         
+        // Nếu chưa có report hoặc chưa khám, hiển thị nút khám mới
         return (
-          <Button type="primary" onClick={() => handleCreateCheckup(record)}>
-            Khám sức khỏe
+          <Button 
+            type="primary" 
+            onClick={() => {
+              // Kiểm tra lại xem có report nào không
+              const existingReport = reports.find((r) => r.studentId === record.id);
+              if (existingReport) {
+                // Nếu có report thì tiếp tục khám
+                handleContinueCheckup(existingReport);
+              } else {
+                // Nếu chưa có report thì tạo mới
+                handleCreateCheckup(record);
+              }
+            }}
+            title={
+              needsParentConsent && !hasParentConsent 
+                ? "Khám cơ bản (phụ huynh chưa đồng ý khám tùy chọn)" 
+                : "Khám sức khỏe"
+            }
+          >
+            {needsParentConsent && !hasParentConsent ? "Khám cơ bản" : "Khám sức khỏe"}
           </Button>
         );
       },
@@ -1562,7 +1670,8 @@ const HealthCheckups = () => {
         <Card title="Danh sách báo cáo khám sức khỏe">
           {/* Alert cho học sinh cần theo dõi */}
           {(() => {
-            const followUpCount = reports.filter(
+            const completedReports = reports.filter(r => r.status === "COMPLETED");
+            const followUpCount = completedReports.filter(
               (r) => r.requiresFollowUp
             ).length;
             return followUpCount > 0 ? (
@@ -1587,7 +1696,7 @@ const HealthCheckups = () => {
           })()}
           <Table
             columns={reportColumns}
-            dataSource={reports}
+            dataSource={reports.filter(report => report.status === "COMPLETED")}
             rowKey="id"
             loading={loading}
             locale={{
@@ -1796,14 +1905,26 @@ const HealthCheckups = () => {
             // Submit cuối cùng
             if (!selectedCampaign || !checkupStudent) return;
             try {
+              if (editingReport) {
+                // Nếu đang edit báo cáo có sẵn, update nó
+                await nurseAPI.updateMedicalCheckResults(editingReport.id, {
+                  ...values,
+                  studentId: checkupStudent.id,
+                  campaignId: selectedCampaign.id,
+                });
+                message.success("Cập nhật báo cáo khám sức khỏe thành công");
+              } else {
+                // Nếu tạo mới báo cáo
               await nurseAPI.createMedicalCheck({
                 ...values,
                 studentId: checkupStudent.id,
                 campaignId: selectedCampaign.id,
               });
               message.success("Tạo báo cáo khám sức khỏe thành công");
+              }
               setCheckupModal(false);
               setCheckupStudent(null);
+              setEditingReport(null);
               setCurrentStep(0);
               // Refetch lại danh sách báo cáo
               const resReports = await nurseAPI.getMedicalChecksByCampaign(
@@ -1811,6 +1932,9 @@ const HealthCheckups = () => {
               );
               setReports(resReports.data.data || []);
               resetForm();
+              
+              // Tự động chuyển sang tab "Báo cáo khám sức khỏe" sau khi lưu thành công
+              setActiveTab("reports");
             } catch (err) {
               const backendMsg = err.response?.data?.error;
               if (
@@ -1821,8 +1945,13 @@ const HealthCheckups = () => {
               ) {
                 setFieldError("scheduledDate", backendMsg);
                 message.error(backendMsg);
+              } else if (
+                backendMsg &&
+                backendMsg.includes("Học sinh đã có báo cáo kiểm tra cho chiến dịch này")
+              ) {
+                message.error("Học sinh này đã có báo cáo. Vui lòng sử dụng 'Tiếp tục khám' thay vì 'Khám sức khỏe'.");
               } else {
-                message.error(backendMsg || "Tạo báo cáo thất bại");
+                message.error(backendMsg || (editingReport ? "Cập nhật báo cáo thất bại" : "Tạo báo cáo thất bại"));
               }
             }
             setSubmitting(false);
