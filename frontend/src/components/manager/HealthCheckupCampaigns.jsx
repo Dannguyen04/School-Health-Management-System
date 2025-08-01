@@ -27,6 +27,7 @@ import {
     Table,
     Tag,
     Tooltip,
+    Alert,
 } from "antd";
 import axios from "axios";
 import dayjs from "dayjs";
@@ -146,7 +147,7 @@ const HealthCheckupCampaigns = () => {
             if (res.data.success) {
                 message.success("Thêm chiến dịch thành công");
                 fetchCampaigns();
-                return { success: true };
+                return { success: true, campaignId: res.data.data?.id };
             } else {
                 message.error(res.data.error || "Không thể thêm chiến dịch");
                 return { success: false, error: res.data.error };
@@ -276,6 +277,29 @@ const HealthCheckupCampaigns = () => {
             render: (date) => (date ? dayjs(date).format("YYYY-MM-DD") : ""),
         },
         {
+            title: "Khám tùy chọn",
+            dataIndex: "optionalExaminations",
+            key: "optionalExaminations",
+            render: (examinations) => {
+                if (!examinations || examinations.length === 0) {
+                    return <span style={{ color: "#999" }}>Không có</span>;
+                }
+                return (
+                    <div>
+                        {examinations.map(exam => (
+                            <Tag 
+                                key={exam} 
+                                color="blue"
+                                style={{ marginBottom: 2 }}
+                            >
+                                {exam === "GENITAL" ? "Khám sinh dục" : "Khám tâm lý"}
+                            </Tag>
+                        ))}
+                    </div>
+                );
+            },
+        },
+        {
             title: "Trạng thái",
             dataIndex: "status",
             key: "status",
@@ -329,9 +353,10 @@ const HealthCheckupCampaigns = () => {
                     <Button
                         icon={<NotificationOutlined />}
                         onClick={() => handleNotifyClick(record)}
-                        type="dashed"
+                        type={record.optionalExaminations?.length > 0 ? "primary" : "dashed"}
+                        title={record.optionalExaminations?.length > 0 ? "Gửi thông báo khám tùy chọn cho phụ huynh" : "Gửi thông báo"}
                     >
-                        Gửi thông báo
+                        {record.optionalExaminations?.length > 0 ? "Thông báo khám tùy chọn" : "Gửi thông báo"}
                     </Button>
                 </Space>
             ),
@@ -563,6 +588,7 @@ const HealthCheckupCampaigns = () => {
                                   deadline: selectedCampaign.deadline
                                       ? dayjs(selectedCampaign.deadline)
                                       : null,
+                                  optionalExaminations: selectedCampaign.optionalExaminations || [],
                               }
                             : {
                                   name: "",
@@ -570,6 +596,7 @@ const HealthCheckupCampaigns = () => {
                                   targetGrades: [],
                                   scheduledDate: null,
                                   deadline: null,
+                                  optionalExaminations: [],
                               }
                     }
                     enableReinitialize
@@ -600,6 +627,7 @@ const HealthCheckupCampaigns = () => {
                                     );
                                 }
                             ),
+                        optionalExaminations: Yup.array(),
                     })}
                     onSubmit={async (
                         values,
@@ -616,10 +644,23 @@ const HealthCheckupCampaigns = () => {
                                 updateData.targetGrades = values.targetGrades
                                     .map(String)
                                     .sort((a, b) => Number(a) - Number(b)); // Ép kiểu sang chuỗi và sort
+                            if (values.optionalExaminations !== undefined)
+                                updateData.optionalExaminations = values.optionalExaminations;
                             success = await updateCampaign(
                                 selectedCampaign.id,
                                 updateData
                             );
+                            
+                            // Nếu cập nhật thành công và có thêm khám tùy chọn, gửi thông báo cho phụ huynh
+                            if (success && values.optionalExaminations && values.optionalExaminations.length > 0) {
+                                try {
+                                    await doNotifyParents(selectedCampaign.id);
+                                    message.success("Đã gửi thông báo khám tùy chọn cho phụ huynh");
+                                } catch (notifyError) {
+                                    console.error("Lỗi gửi thông báo:", notifyError);
+                                    message.warning("Cập nhật chiến dịch thành công nhưng không thể gửi thông báo cho phụ huynh");
+                                }
+                            }
                         } else {
                             const data = {
                                 name: values.name,
@@ -637,11 +678,23 @@ const HealthCheckupCampaigns = () => {
                                         ? values.deadline
                                         : values.deadline.toISOString()
                                     : "",
+                                optionalExaminations: values.optionalExaminations || [],
                                 status: "ACTIVE",
                             };
                             const result = await createCampaign(data);
                             success = result.success;
                             errorMsg = result.error;
+                            
+                            // Nếu tạo chiến dịch thành công và có khám tùy chọn, gửi thông báo cho phụ huynh
+                            if (success && values.optionalExaminations && values.optionalExaminations.length > 0 && result.campaignId) {
+                                try {
+                                    await doNotifyParents(result.campaignId);
+                                    message.success("Đã gửi thông báo khám tùy chọn cho phụ huynh");
+                                } catch (notifyError) {
+                                    console.error("Lỗi gửi thông báo:", notifyError);
+                                    message.warning("Tạo chiến dịch thành công nhưng không thể gửi thông báo cho phụ huynh");
+                                }
+                            }
                             // Nếu có lỗi về ngày từ backend, setFieldError cho trường liên quan
                             if (!success && errorMsg) {
                                 let matched = false;
@@ -757,30 +810,44 @@ const HealthCheckupCampaigns = () => {
                                     )}
                                 />
                             </Form.Item>
-                            {/* <Form.Item
-                label="Loại khám"
-                help={
-                  touched.checkTypes && errors.checkTypes
-                    ? errors.checkTypes
-                    : undefined
-                }
-                validateStatus={
-                  touched.checkTypes && errors.checkTypes ? "error" : undefined
-                }
-              >
-                <Select
-                  mode="multiple"
-                  value={values.checkTypes}
-                  onChange={(val) => setFieldValue("checkTypes", val)}
-                  onBlur={handleBlur}
-                  options={[
-                    { label: "Khám tổng quát", value: "Khám tổng quát" },
-                    { label: "Khám mắt", value: "Khám mắt" },
-                    { label: "Khám răng", value: "Khám răng" },
-                  ]}
-                  disabled={!!selectedCampaign}
-                />
-              </Form.Item> */}
+                            <Form.Item
+                                label="Khám tùy chọn"
+                                help={
+                                    touched.optionalExaminations && errors.optionalExaminations
+                                        ? errors.optionalExaminations
+                                        : undefined
+                                }
+                                validateStatus={
+                                    touched.optionalExaminations && errors.optionalExaminations
+                                        ? "error"
+                                        : undefined
+                                }
+                            >
+                                <Select
+                                    mode="multiple"
+                                    value={values.optionalExaminations}
+                                    onChange={(val) => setFieldValue("optionalExaminations", val)}
+                                    onBlur={handleBlur}
+                                    placeholder="Chọn các loại khám tùy chọn (phụ huynh sẽ được hỏi ý kiến)"
+                                    options={[
+                                        { label: "Khám sinh dục", value: "GENITAL" },
+                                        { label: "Khám tâm lý", value: "PSYCHOLOGICAL" },
+                                    ]}
+                                    disabled={!!selectedCampaign}
+                                />
+                                                                <div style={{ fontSize: "12px", color: "#666", marginTop: 4 }}>
+                                    * Cả 2 loại khám này sẽ được gửi cho phụ huynh để xin ý kiến đồng ý
+                                </div>
+                                {values.optionalExaminations && values.optionalExaminations.length > 0 && (
+                                    <Alert
+                                        message="Thông báo khám tùy chọn"
+                                        description="Sau khi tạo chiến dịch, hệ thống sẽ tự động gửi thông báo cho phụ huynh để xin ý kiến đồng ý về các loại khám tùy chọn."
+                                        type="info"
+                                        showIcon
+                                        style={{ marginTop: 8 }}
+                                    />
+                                )}
+                            </Form.Item>
                             <Row gutter={16}>
                                 <Col span={12}>
                                     <Form.Item

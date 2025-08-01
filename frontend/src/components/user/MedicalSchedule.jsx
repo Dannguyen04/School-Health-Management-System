@@ -3,7 +3,7 @@ import {
   MedicineBoxOutlined,
   ScheduleOutlined,
 } from "@ant-design/icons";
-import { Select, Space, Spin, Table, Tabs, Tag, Typography } from "antd";
+import { Button, Select, Space, Spin, Table, Tabs, Tag, Typography } from "antd";
 import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
@@ -122,6 +122,29 @@ const MedicalSchedule = () => {
     }
   };
 
+  // Hàm xử lý submit consent cho khám tùy chọn
+  const handleConsentSubmit = async (campaignId, selectedExaminations) => {
+    try {
+      const response = await parentAPI.submitMedicalConsent(campaignId, {
+        parentConsent: selectedExaminations
+      });
+      
+      if (response.data.success) {
+        // Refresh medical campaigns to update consent status
+        const res = await api.get("/medical-campaigns");
+        if (res.data.success) {
+          setMedicalRecords(res.data.data || []);
+        }
+        return true;
+      } else {
+        throw new Error(response.data.error || "Có lỗi xảy ra");
+      }
+    } catch (error) {
+      console.error("Error submitting consent:", error);
+      throw error;
+    }
+  };
+
   // Cột bảng cho lịch tiêm chủng
   const vaccinationColumns = [
     {
@@ -175,21 +198,21 @@ const MedicalSchedule = () => {
         }
       },
     },
-    // {
-    //   title: "Chi tiết",
-    //   key: "action",
-    //   align: "center",
-    //   width: 100,
-    //   render: (record) => (
-    //     <Button
-    //       type="link"
-    //       onClick={() => fetchVaccinationDetail(record.id, selectedChild)}
-    //       style={{ color: "#36ae9a" }}
-    //     >
-    //       Chi tiết
-    //     </Button>
-    //   ),
-    // },
+    {
+      title: "Chi tiết",
+      key: "action",
+      align: "center",
+      width: 100,
+      render: (record) => (
+        <Button
+          type="link"
+          onClick={() => fetchVaccinationDetail(record.id, selectedChild)}
+          style={{ color: "#36ae9a" }}
+        >
+          Chi tiết
+        </Button>
+      ),
+    },
   ];
 
   // Cột bảng cho lịch khám sức khỏe
@@ -218,6 +241,31 @@ const MedicalSchedule = () => {
       render: (date) => (date ? dayjs(date).format("DD/MM/YYYY") : "-"),
     },
     {
+      title: "Khám tùy chọn",
+      dataIndex: "optionalExaminations",
+      key: "optionalExaminations",
+      align: "center",
+      width: 150,
+      render: (examinations) => {
+        if (!examinations || examinations.length === 0) {
+          return <span style={{ color: "#999" }}>Không có</span>;
+        }
+        return (
+          <div>
+            {examinations.map(exam => (
+              <Tag 
+                key={exam} 
+                color="blue"
+                style={{ marginBottom: 2 }}
+              >
+                {exam === "GENITAL" ? "Sinh dục" : "Tâm lý"}
+              </Tag>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -238,21 +286,21 @@ const MedicalSchedule = () => {
         }
       },
     },
-    // {
-    //   title: "Chi tiết",
-    //   key: "action",
-    //   align: "center",
-    //   width: 100,
-    //   render: (record) => (
-    //     <Button
-    //       type="link"
-    //       onClick={() => fetchMedicalCampaignDetail(record.id)}
-    //       style={{ color: "#36ae9a" }}
-    //     >
-    //       Chi tiết
-    //     </Button>
-    //   ),
-    // },
+    {
+      title: "Chi tiết",
+      key: "action",
+      align: "center",
+      width: 100,
+      render: (record) => (
+        <Button
+          type="link"
+          onClick={() => fetchMedicalCampaignDetail(record.id)}
+          style={{ color: "#36ae9a" }}
+        >
+          Chi tiết
+        </Button>
+      ),
+    },
   ];
 
   return (
@@ -414,6 +462,7 @@ const MedicalSchedule = () => {
                       visible={medicalModalVisible}
                       campaign={medicalDetail}
                       onClose={() => setMedicalModalVisible(false)}
+                      onConsentSubmit={handleConsentSubmit}
                     />
                   )}
                 </>

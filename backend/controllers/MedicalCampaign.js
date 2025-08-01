@@ -31,7 +31,7 @@ const getCurrentAcademicYear = () => {
 
 // Tạo campaign mới
 export const createMedicalCampaign = async (req, res) => {
-    const { name, scheduledDate, deadline, description, targetGrades } =
+    const { name, scheduledDate, deadline, description, targetGrades, optionalExaminations } =
         req.body;
     // Validate bắt buộc
     if (!name || !targetGrades || !scheduledDate || !deadline) {
@@ -68,6 +68,23 @@ export const createMedicalCampaign = async (req, res) => {
             error: "Ngày kết thúc phải cách ngày bắt đầu ít nhất 1 tuần.",
         });
     }
+    
+    // Validate optionalExaminations if provided
+    if (optionalExaminations !== undefined) {
+        if (!Array.isArray(optionalExaminations)) {
+            return res.status(400).json({
+                success: false,
+                error: "optionalExaminations phải là mảng",
+            });
+        }
+        const validExaminations = ["GENITAL", "PSYCHOLOGICAL"];
+        if (!optionalExaminations.every(exam => validExaminations.includes(exam))) {
+            return res.status(400).json({
+                success: false,
+                error: "optionalExaminations chỉ được chứa các giá trị: GENITAL, PSYCHOLOGICAL",
+            });
+        }
+    }
     try {
         const existed = await prisma.medicalCheckCampaign.findFirst({
             where: { name },
@@ -83,6 +100,7 @@ export const createMedicalCampaign = async (req, res) => {
                 name: name.trim(),
                 description: description || null,
                 targetGrades,
+                optionalExaminations: optionalExaminations || [],
                 scheduledDate: start,
                 deadline: end,
                 isActive: typeof isActive === "boolean" ? isActive : true,
@@ -188,7 +206,7 @@ export const getMedicalCampaignById = async (req, res) => {
 // Cập nhật campaign
 export const updateMedicalCampaign = async (req, res) => {
     const { id } = req.params;
-    const { name, description, targetGrades, status, scheduledDate, deadline } =
+    const { name, description, targetGrades, optionalExaminations, status, scheduledDate, deadline } =
         req.body;
     console.log("[Update campaign] id:", id, "data:", req.body);
     try {
@@ -274,6 +292,23 @@ export const updateMedicalCampaign = async (req, res) => {
                 });
             }
         }
+        
+        // Validate optionalExaminations if provided
+        if (optionalExaminations !== undefined) {
+            if (!Array.isArray(optionalExaminations)) {
+                return res.status(400).json({
+                    success: false,
+                    error: "optionalExaminations phải là mảng",
+                });
+            }
+            const validExaminations = ["GENITAL", "PSYCHOLOGICAL"];
+            if (!optionalExaminations.every(exam => validExaminations.includes(exam))) {
+                return res.status(400).json({
+                    success: false,
+                    error: "optionalExaminations chỉ được chứa các giá trị: GENITAL, PSYCHOLOGICAL",
+                });
+            }
+        }
         const data = {};
         if (typeof name === "string" && name.trim() !== "")
             data.name = name.trim();
@@ -282,6 +317,8 @@ export const updateMedicalCampaign = async (req, res) => {
             data.targetGrades = targetGrades
                 .map(String)
                 .sort((a, b) => Number(a) - Number(b));
+        if (Array.isArray(optionalExaminations))
+            data.optionalExaminations = optionalExaminations;
         if (status && ["ACTIVE", "FINISHED", "CANCELLED"].includes(status))
             data.status = status;
         if (scheduledDate !== undefined) data.scheduledDate = start;
@@ -491,6 +528,111 @@ export const getStudentsForMedicalCampaign = async (req, res) => {
         });
         res.json({ success: true, data: students });
     } catch (error) {
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
+// Submit parent consent for optional examinations
+export const submitParentConsent = async (req, res) => {
+    const { id } = req.params;
+    const { parentConsent } = req.body;
+    const userId = req.user.id;
+
+    try {
+        // Validate campaign exists
+        const campaign = await prisma.medicalCheckCampaign.findUnique({
+            where: { id },
+        });
+        if (!campaign) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy chiến dịch",
+            });
+        }
+
+        // Validate parentConsent
+        if (!Array.isArray(parentConsent)) {
+            return res.status(400).json({
+                success: false,
+                error: "parentConsent phải là mảng",
+            });
+        }
+
+        const validExaminations = ["GENITAL", "PSYCHOLOGICAL"];
+        if (!parentConsent.every(exam => validExaminations.includes(exam))) {
+            return res.status(400).json({
+                success: false,
+                error: "parentConsent chỉ được chứa các giá trị: GENITAL, PSYCHOLOGICAL",
+            });
+        }
+
+        // Get parent's children
+        const parent = await prisma.parent.findFirst({
+            where: { userId },
+            include: {
+                students: {
+                    include: {
+                        student: true
+                    }
+                }
+            }
+        });
+
+        if (!parent) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy thông tin phụ huynh",
+            });
+        }
+
+        // Update or create medical checks for all children with parent consent
+        const updatePromises = parent.students.map(async (studentParent) => {
+            const student = studentParent.student;
+            
+            // Check if student is in target grades
+            if (!campaign.targetGrades.includes(student.grade)) {
+                return;
+            }
+
+            // Find existing medical check or create new one
+            let medicalCheck = await prisma.medicalCheck.findFirst({
+                where: {
+                    studentId: student.id,
+                    campaignId: campaign.id,
+                },
+            });
+
+            if (medicalCheck) {
+                // Update existing medical check
+                await prisma.medicalCheck.update({
+                    where: { id: medicalCheck.id },
+                    data: {
+                        parentConsent,
+                        parentNotified: true,
+                    },
+                });
+            } else {
+                // Create new medical check
+                await prisma.medicalCheck.create({
+                    data: {
+                        studentId: student.id,
+                        campaignId: campaign.id,
+                        scheduledDate: campaign.scheduledDate,
+                        parentConsent,
+                        parentNotified: true,
+                    },
+                });
+            }
+        });
+
+        await Promise.all(updatePromises);
+
+        res.status(200).json({
+            success: true,
+            message: "Đã gửi ý kiến đồng ý thành công",
+        });
+    } catch (error) {
+        console.error("Submit parent consent error:", error);
         res.status(500).json({ success: false, error: error.message });
     }
 };

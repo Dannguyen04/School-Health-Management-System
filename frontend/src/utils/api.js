@@ -382,6 +382,11 @@ export const parentAPI = {
         api.delete(`/notifications/${notificationId}`),
     markAllNotificationsAsRead: (userId) =>
         api.patch(`/notifications/user/${userId}/read-all`),
+
+    // Medical campaign operations
+    getMedicalCampaigns: () => api.get("/parents/medical-campaigns"),
+    submitMedicalConsent: (campaignId, data) =>
+        api.post(`/medical-campaigns/${campaignId}/consent`, data),
 };
 
 // Auth API functions
