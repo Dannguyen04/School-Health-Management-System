@@ -145,6 +145,7 @@ const NotificationBell = () => {
             case "medical_check_campaign":
                 return "👨‍⚕️";
             case "medication":
+            case "medication_request":
                 return "💊";
             default:
                 return "📢";
@@ -191,6 +192,7 @@ const NotificationBell = () => {
             case "medical_check_campaign":
                 return "Chiến dịch khám sức khỏe";
             case "medication":
+            case "medication_request":
                 return "Thuốc";
             default:
                 return "Thông báo chung";

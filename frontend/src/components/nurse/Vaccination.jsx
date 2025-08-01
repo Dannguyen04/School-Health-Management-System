@@ -95,18 +95,14 @@ const Vaccination = () => {
         return "Mũi cơ bản";
       case "BOOSTER":
         return "Mũi nhắc lại";
-      case "CATCHUP":
-        return "Mũi tiêm bù";
-      case "ADDITIONAL":
-        return "Mũi bổ sung";
       default:
         return "Mũi";
     }
   };
 
-  // Custom validation function for reaction based on side effects
-  const validateReaction = (_, value) => {
-    const sideEffects = vaccinationForm.getFieldValue("sideEffects");
+  // Custom validation function for reaction based on side effects (reportForm)
+  const validateReportReaction = (_, value) => {
+    const sideEffects = reportForm.getFieldValue("sideEffects");
 
     // Nếu có tác dụng phụ nhưng chọn "Không có phản ứng"
     if (sideEffects && sideEffects.trim() !== "" && value === "NONE") {
@@ -129,9 +125,9 @@ const Vaccination = () => {
     return Promise.resolve();
   };
 
-  // Custom validation function for side effects based on reaction
-  const validateSideEffects = (_, value) => {
-    const reaction = vaccinationForm.getFieldValue("reaction");
+  // Custom validation function for side effects based on reaction (reportForm)
+  const validateReportSideEffects = (_, value) => {
+    const reaction = reportForm.getFieldValue("reaction");
 
     // Nếu có mô tả tác dụng phụ nhưng chọn "Không có phản ứng"
     if (value && value.trim() !== "" && reaction === "NONE") {
@@ -149,9 +145,6 @@ const Vaccination = () => {
       return Promise.reject(new Error("Số mũi tiêm phải lớn hơn 0"));
     }
 
-    // Kiểm tra doseType để áp dụng validation khác nhau
-    const doseType = vaccinationForm.getFieldValue("doseType");
-
     if (!studentVaccinationHistory || studentVaccinationHistory.length === 0) {
       return Promise.resolve(); // Nếu chưa có lịch sử thì bỏ qua validation
     }
@@ -162,24 +155,14 @@ const Vaccination = () => {
     );
 
     if (existingDose) {
-      // Nếu đã tiêm mũi này rồi
-      if (doseType === "CATCHUP" || doseType === "ADDITIONAL") {
-        // Với CATCHUP/ADDITIONAL, cho phép tiêm lại (có thể là bổ sung)
-        return Promise.resolve();
-      } else {
-        // Với PRIMARY/BOOSTER, không cho phép tiêm trùng
-        return Promise.reject(
-          new Error(
-            `Học sinh đã tiêm mũi ${value} rồi (ngày ${new Date(
-              existingDose.administeredDate
-            ).toLocaleDateString(
-              "vi-VN"
-            )}). Không thể tiêm lại cùng một mũi với loại liều "${getDoseLabel(
-              doseType
-            )}".`
-          )
-        );
-      }
+      // Không cho phép tiêm trùng với PRIMARY/BOOSTER
+      return Promise.reject(
+        new Error(
+          `Học sinh đã tiêm mũi ${value} rồi (ngày ${new Date(
+            existingDose.administeredDate
+          ).toLocaleDateString("vi-VN")}). Không thể tiêm lại cùng một mũi.`
+        )
+      );
     }
 
     // Kiểm tra xem có tiêm ngược thứ tự không (ví dụ: muốn tiêm mũi 1 mà đã tiêm mũi 2, 3)
@@ -187,42 +170,38 @@ const Vaccination = () => {
       (record) => record.doseOrder > value
     );
 
-    if (
-      higherDoses.length > 0 &&
-      doseType !== "CATCHUP" &&
-      doseType !== "ADDITIONAL"
-    ) {
+    if (higherDoses.length > 0) {
       return Promise.reject(
         new Error(
           `Không thể tiêm mũi ${value} vì học sinh đã tiêm các mũi cao hơn: ${higherDoses
             .map((d) => d.doseOrder)
             .sort()
-            .join(
-              ", "
-            )}. Nếu đây là tiêm bù, vui lòng chọn loại liều "Tiêm bù".`
+            .join(", ")}.`
         )
       );
     }
 
     // Kiểm tra thứ tự mũi tiêm cho PRIMARY và BOOSTER
-    if (value > 1 && doseType !== "CATCHUP" && doseType !== "ADDITIONAL") {
+    if (value > 1) {
       const requiredPrevDose = studentVaccinationHistory.find(
         (record) => record.doseOrder === value - 1
       );
 
       if (!requiredPrevDose) {
         return Promise.reject(
-          new Error(
-            `Phải tiêm mũi ${
-              value - 1
-            } trước khi tiêm mũi ${value}. Nếu học sinh đã tiêm mũi ${
-              value - 1
-            } ở nơi khác, vui lòng chọn loại liều "Tiêm bù" thay vì "${getDoseLabel(
-              doseType
-            )}".`
-          )
+          new Error(`Phải tiêm mũi ${value - 1} trước khi tiêm mũi ${value}.`)
         );
       }
+    }
+
+    // Kiểm tra giới hạn số mũi tối đa của vaccine
+    const maxDoses = selectedCampaign?.vaccine?.maxDoseCount;
+    if (maxDoses && value > maxDoses) {
+      return Promise.reject(
+        new Error(
+          `Vaccine này chỉ cho phép tối đa ${maxDoses} mũi. Không thể tiêm mũi ${value}.`
+        )
+      );
     }
 
     return Promise.resolve();
@@ -401,9 +380,11 @@ const Vaccination = () => {
         studentVaccinationHistory
       );
 
-      if (!nextDose) {
+      // Nếu không tìm thấy mũi tiếp theo trong doseSchedules, cho phép nurse tự nhập
+      // Backend sẽ xử lý validation cuối cùng
+      if (!nextDose && !values.doseOrder) {
         message.error(
-          "Không thể xác định mũi tiêm tiếp theo. Vui lòng kiểm tra lại lịch sử tiêm chủng."
+          "Vui lòng nhập số mũi tiêm thủ công hoặc kiểm tra lại lịch sử tiêm chủng."
         );
         return;
       }
@@ -421,7 +402,7 @@ const Vaccination = () => {
         studentId: selectedStudent.id,
         batchNumber: values.batchNumber.trim().toUpperCase(), // Chuẩn hóa batch number
         doseType: values.doseType,
-        doseOrder: nextDose.doseOrder,
+        doseOrder: values.doseOrder,
         doseLabel: getDoseLabel(values.doseType),
         administeredDate: values.administeredDate
           ? values.administeredDate.format()
@@ -474,7 +455,12 @@ const Vaccination = () => {
           AGE_TOO_YOUNG: `Học sinh chưa đủ tuổi (hiện tại: ${errorData.details?.currentAge} tuổi, yêu cầu: ≥${errorData.details?.requiredAge} tuổi)`,
           AGE_TOO_OLD: `Học sinh đã quá tuổi (hiện tại: ${errorData.details?.currentAge} tuổi, yêu cầu: ≤${errorData.details?.maxAge} tuổi)`,
           DOSE_INTERVAL_TOO_SHORT: `Chưa đủ khoảng cách giữa các mũi tiêm (cần tối thiểu ${errorData.details?.requiredInterval} ngày)`,
+          DOSE_ORDER_EXCEEDS_LIMIT: `Mũi số ${errorData.details?.requestedDoseOrder} vượt quá giới hạn. Vaccine ${errorData.details?.vaccineName} chỉ cho phép tối đa ${errorData.details?.maxDoses} mũi`,
+          MAX_DOSES_COMPLETED: `Học sinh đã tiêm đủ ${errorData.details?.maxDoses} mũi cho vaccine ${errorData.details?.vaccineName}. Không thể tiêm thêm!`,
           MAX_DOSE_EXCEEDED: `Học sinh đã tiêm đủ ${errorData.details?.maxDoses} mũi cho vaccine này`,
+          DUPLICATE_DOSE_ORDER: `Học sinh đã tiêm mũi ${errorData.details?.currentDoseOrder} rồi. Không thể tiêm lại cùng một mũi`,
+          REVERSE_DOSE_ORDER: `Không thể tiêm mũi ${errorData.details?.requestedDoseOrder} vì đã tiêm các mũi cao hơn`,
+          INVALID_DOSE_ORDER: `Mũi tiêm không hợp lệ (tối thiểu là mũi 1)`,
           INVALID_BATCH:
             "Số lô vaccine không hợp lệ hoặc không tồn tại trong hệ thống",
           BATCH_EXPIRED: `Lô vaccine đã hết hạn vào ${errorData.details?.expiryDate}`,
@@ -592,13 +578,28 @@ const Vaccination = () => {
         (record) => record.doseOrder === dose.doseOrder
       );
 
+      // Logic mới: Nếu có record Mũi 2 trở lên, mặc định Mũi 1 đã tiêm
+      let isCompleted = !!studentDoseRecord;
+      let administeredDate = studentDoseRecord?.administeredDate;
+
+      if (dose.doseOrder === 1) {
+        // Kiểm tra xem có record nào có doseOrder >= 2 không
+        const hasHigherDose = studentVaccinationHistory.some(
+          (record) => record.doseOrder >= 2
+        );
+        if (hasHigherDose && !studentDoseRecord) {
+          isCompleted = true; // Mặc định Mũi 1 đã tiêm
+          administeredDate = null; // Không có ngày cụ thể
+        }
+      }
+
       return {
         ...dose,
-        isCompleted: !!studentDoseRecord,
-        administeredDate: studentDoseRecord?.administeredDate,
-        status: studentDoseRecord ? "completed" : "pending",
+        isCompleted: isCompleted,
+        administeredDate: administeredDate,
+        status: isCompleted ? "completed" : "pending",
         isNextDose:
-          !studentDoseRecord &&
+          !isCompleted &&
           (dose.doseOrder === 1 ||
             studentVaccinationHistory.some(
               (record) => record.doseOrder === dose.doseOrder - 1
@@ -613,12 +614,24 @@ const Vaccination = () => {
       return null;
     }
 
-    // Tìm mũi đầu tiên chưa được tiêm
+    // Tìm mũi đầu tiên chưa được tiêm trong doseSchedules
     for (let i = 0; i < doseSchedules.length; i++) {
       const dose = doseSchedules[i];
-      const isCompleted = studentHistory.some(
+
+      // Logic mới: Kiểm tra xem mũi này đã tiêm chưa (bao gồm cả mặc định)
+      let isCompleted = studentHistory.some(
         (record) => record.doseOrder === dose.doseOrder
       );
+
+      // Nếu là Mũi 1 và có record Mũi 2 trở lên, mặc định Mũi 1 đã tiêm
+      if (dose.doseOrder === 1 && !isCompleted) {
+        const hasHigherDose = studentHistory.some(
+          (record) => record.doseOrder >= 2
+        );
+        if (hasHigherDose) {
+          isCompleted = true;
+        }
+      }
 
       if (!isCompleted) {
         return {
@@ -632,6 +645,31 @@ const Vaccination = () => {
               )),
         };
       }
+    }
+
+    // Nếu đã hoàn thành tất cả mũi trong doseSchedules, kiểm tra xem có thể tiêm thêm không
+    if (studentHistory.length > 0) {
+      const maxDoseInHistory = Math.max(
+        ...studentHistory.map((h) => h.doseOrder)
+      );
+      const nextDoseOrder = maxDoseInHistory + 1;
+
+      // Kiểm tra xem mũi tiếp theo có vượt quá giới hạn của vaccine không
+      const maxDoses = selectedCampaign?.vaccine?.maxDoseCount;
+      if (maxDoses && nextDoseOrder > maxDoses) {
+        // Đã đạt giới hạn tối đa, không gợi ý mũi tiếp theo
+        return null;
+      }
+
+      return {
+        doseOrder: nextDoseOrder,
+        doseType: "BOOSTER", // Mũi nhắc lại
+        minInterval: 0,
+        recommendedInterval: 0,
+        description: "Mũi nhắc lại sau khi hoàn thành phác đồ",
+        isFirstDose: false,
+        canAdminister: true,
+      };
     }
 
     return null;
@@ -707,16 +745,35 @@ const Vaccination = () => {
       studentVaccinationHistory
     );
 
+    // Nếu không có nextDose từ doseSchedules, tính toán doseOrder dựa trên history
+    let suggestedDoseOrder =
+      nextDose?.doseOrder ||
+      (studentVaccinationHistory.length > 0
+        ? Math.max(...studentVaccinationHistory.map((h) => h.doseOrder)) + 1
+        : 1);
+
+    // Kiểm tra xem mũi gợi ý có vượt quá giới hạn của vaccine không
+    const maxDoses = selectedCampaign?.vaccine?.maxDoseCount;
+    if (maxDoses && suggestedDoseOrder > maxDoses) {
+      // Nếu vượt quá giới hạn, không gợi ý mũi nào
+      suggestedDoseOrder = 1; // Reset về mũi 1 để nurse tự nhập
+    }
+
+    // Gợi ý doseType dựa trên doseOrder
+    const suggestedDoseType =
+      nextDose?.doseOrder === 1
+        ? "PRIMARY"
+        : nextDose?.doseOrder > 1
+        ? "BOOSTER"
+        : suggestedDoseOrder === 1
+        ? "PRIMARY"
+        : "BOOSTER";
+
     vaccinationForm.setFieldsValue({
       batchNumber: latestBatchNumber || "",
       administeredDate: null,
-      doseOrder: nextDose?.doseOrder || 1,
-      doseType:
-        nextDose?.doseOrder === 1
-          ? "PRIMARY"
-          : nextDose?.doseOrder > 1
-          ? "BOOSTER"
-          : undefined,
+      doseOrder: suggestedDoseOrder,
+      doseType: suggestedDoseType,
       doseAmount: 0.5,
       notes: "",
     });
@@ -1023,10 +1080,6 @@ const Vaccination = () => {
             return <Tag color="blue">Liều cơ bản</Tag>;
           case "BOOSTER":
             return <Tag color="green">Nhắc lại</Tag>;
-          case "CATCHUP":
-            return <Tag color="purple">Tiêm bù</Tag>;
-          case "ADDITIONAL":
-            return <Tag color="orange">Bổ sung</Tag>;
           default:
             return doseType || "-";
         }
@@ -1282,9 +1335,18 @@ const Vaccination = () => {
 
   // Component hiển thị phác đồ mũi tiêm
   const DoseScheduleDisplay = ({ doseSchedules, studentHistory }) => {
+    console.log("=== DoseScheduleDisplay Debug ===");
+    console.log("doseSchedules:", doseSchedules);
+    console.log("studentHistory:", studentHistory);
+    console.log("studentHistory.length:", studentHistory.length);
+
     const scheduleDisplay = getDoseScheduleDisplay(doseSchedules);
     const nextDose = getNextRecommendedDose(doseSchedules, studentHistory);
     const canReceive = canReceiveNextDose(nextDose, studentHistory);
+
+    console.log("scheduleDisplay:", scheduleDisplay);
+    console.log("nextDose:", nextDose);
+    console.log("canReceive:", canReceive);
 
     if (!scheduleDisplay || scheduleDisplay.length === 0) {
       return (
@@ -1551,13 +1613,35 @@ const Vaccination = () => {
         )}
 
         {/* Thông báo về doseOrder tự động */}
-        <Alert
-          message="Thông tin mũi tiêm"
-          description="Số mũi tiêm đã được tự động tính toán dựa trên lịch sử tiêm chủng của học sinh. Bạn có thể chỉnh sửa nếu cần thiết."
-          type="info"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
+        {(() => {
+          const nextDose = getNextRecommendedDose(
+            selectedCampaign?.vaccine?.doseSchedules || [],
+            studentVaccinationHistory
+          );
+
+          if (!nextDose && studentVaccinationHistory.length > 0) {
+            // Học sinh đã hoàn thành phác đồ
+            return (
+              <Alert
+                message="Học sinh đã hoàn thành phác đồ tiêm chủng"
+                description="Học sinh đã tiêm đủ theo phác đồ mũi tiêm. Nếu cần tiêm mũi nhắc lại, vui lòng nhập số mũi tiêm thủ công và chọn loại liều 'Nhắc lại'."
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+            );
+          } else {
+            return (
+              <Alert
+                message="Thông tin mũi tiêm"
+                description="Số mũi tiêm đã được tự động tính toán dựa trên lịch sử tiêm chủng của học sinh. Bạn có thể chỉnh sửa nếu cần thiết."
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+            );
+          }
+        })()}
 
         {/* Nút đổi số lô vaccine */}
         {batchNumberDisabled && (
@@ -1663,8 +1747,6 @@ const Vaccination = () => {
             >
               <Select.Option value="PRIMARY">Liều cơ bản</Select.Option>
               <Select.Option value="BOOSTER">Liều nhắc lại</Select.Option>
-              <Select.Option value="CATCHUP">Tiêm bù</Select.Option>
-              <Select.Option value="ADDITIONAL">Liều bổ sung</Select.Option>
             </Select>
           </Form.Item>
           <Form.Item
@@ -1773,10 +1855,6 @@ const Vaccination = () => {
                     return "Liều cơ bản";
                   case "BOOSTER":
                     return "Liều nhắc lại";
-                  case "CATCHUP":
-                    return "Tiêm bù";
-                  case "ADDITIONAL":
-                    return "Liều bổ sung";
                   default:
                     return selectedStudent.doseType || "Không xác định";
                 }
@@ -1812,7 +1890,7 @@ const Vaccination = () => {
             label="Tác dụng phụ"
             rules={[
               {
-                validator: validateSideEffects,
+                validator: validateReportSideEffects,
               },
             ]}
           >
@@ -1830,7 +1908,7 @@ const Vaccination = () => {
             label="Phản ứng sau tiêm"
             rules={[
               {
-                validator: validateReaction,
+                validator: validateReportReaction,
               },
             ]}
           >
@@ -1902,10 +1980,6 @@ const Vaccination = () => {
                     return "Liều cơ bản";
                   case "BOOSTER":
                     return "Liều nhắc lại";
-                  case "CATCHUP":
-                    return "Tiêm bù";
-                  case "ADDITIONAL":
-                    return "Liều bổ sung";
                   default:
                     return viewedVaccinationRecord.doseType || "-";
                 }

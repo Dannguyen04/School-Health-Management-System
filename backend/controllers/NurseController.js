@@ -1694,57 +1694,40 @@ export const performVaccination = async (req, res) => {
             (dose) => dose.doseOrder === doseOrder
         );
         if (existingDose) {
-            // Nếu đã tiêm mũi này rồi
-            if (doseType === "CATCHUP" || doseType === "ADDITIONAL") {
-                // Với CATCHUP/ADDITIONAL, cho phép tiêm lại (có thể là bổ sung)
-                console.log(
-                    `Allowing ${doseType} re-vaccination for dose ${doseOrder}`
-                );
-            } else {
-                // Với PRIMARY/BOOSTER, không cho phép tiêm trùng
-                return res.status(400).json({
-                    success: false,
-                    error: `Học sinh đã tiêm mũi ${doseOrder} rồi (ngày ${new Date(
-                        existingDose.administeredDate
-                    ).toLocaleDateString(
-                        "vi-VN"
-                    )}). Không thể tiêm lại cùng một mũi với loại liều "${doseType}".`,
-                    errorCode: "DUPLICATE_DOSE_ORDER",
-                    details: {
-                        currentDoseOrder: doseOrder,
-                        existingDose: {
-                            id: existingDose.id,
-                            administeredDate: existingDose.administeredDate,
-                            doseType: existingDose.doseType,
-                            batchNumber: existingDose.batchNumber,
-                        },
-                        suggestion:
-                            "Sử dụng doseType 'ADDITIONAL' nếu cần tiêm bổ sung",
-                        completedDoses: previousDoses
-                            .map((d) => d.doseOrder)
-                            .sort(),
+            return res.status(400).json({
+                success: false,
+                error: `Học sinh đã tiêm mũi ${doseOrder} rồi (ngày ${new Date(
+                    existingDose.administeredDate
+                ).toLocaleDateString(
+                    "vi-VN"
+                )}). Không thể tiêm lại cùng một mũi với loại liều "${doseType}".`,
+                errorCode: "DUPLICATE_DOSE_ORDER",
+                details: {
+                    currentDoseOrder: doseOrder,
+                    existingDose: {
+                        id: existingDose.id,
+                        administeredDate: existingDose.administeredDate,
+                        doseType: existingDose.doseType,
+                        batchNumber: existingDose.batchNumber,
                     },
-                });
-            }
+                    completedDoses: previousDoses
+                        .map((d) => d.doseOrder)
+                        .sort(),
+                },
+            });
         }
 
         // Kiểm tra xem có tiêm ngược thứ tự không (ví dụ: muốn tiêm mũi 1 mà đã tiêm mũi 2, 3)
         const higherDoses = previousDoses.filter(
             (dose) => dose.doseOrder > doseOrder
         );
-        if (
-            higherDoses.length > 0 &&
-            doseType !== "CATCHUP" &&
-            doseType !== "ADDITIONAL"
-        ) {
+        if (higherDoses.length > 0) {
             return res.status(400).json({
                 success: false,
                 error: `Không thể tiêm mũi ${doseOrder} vì học sinh đã tiêm các mũi cao hơn: ${higherDoses
                     .map((d) => d.doseOrder)
                     .sort()
-                    .join(
-                        ", "
-                    )}. Nếu đây là tiêm bù, vui lòng chọn loại liều "Tiêm bù".`,
+                    .join(", ")}.`,
                 errorCode: "REVERSE_DOSE_ORDER",
                 details: {
                     requestedDoseOrder: doseOrder,
@@ -1753,8 +1736,6 @@ export const performVaccination = async (req, res) => {
                         administeredDate: d.administeredDate,
                         doseType: d.doseType,
                     })),
-                    suggestion:
-                        "Sử dụng doseType 'CATCHUP' để tiêm bù mũi đã bỏ lỡ",
                     completedDoses: previousDoses
                         .map((d) => d.doseOrder)
                         .sort(),
@@ -1762,67 +1743,45 @@ export const performVaccination = async (req, res) => {
             });
         }
 
-        // Kiểm tra thứ tự mũi tiêm - có 2 cases:
-        // Case 1: Tiêm tuần tự trong hệ thống (strict mode)
-        // Case 2: Tiêm bù/tiếp tục từ mũi đã tiêm bên ngoài (flexible mode)
-        if (doseOrder > 1) {
-            const requiredPrevDose = previousDoses.find(
-                (pr) => pr.doseOrder === doseOrder - 1
-            );
-
-            if (!requiredPrevDose) {
-                // Nếu không tìm thấy mũi trước trong hệ thống
-                // Kiểm tra xem có phải là tiêm bù/tiếp tục không
-                if (doseType === "CATCHUP" || doseType === "ADDITIONAL") {
-                    // Cho phép tiêm bù - không cần kiểm tra thứ tự nghiêm ngặt
-                    console.log(
-                        `Allowing ${doseType} vaccination for dose ${doseOrder} without previous dose validation`
-                    );
-                } else {
-                    // Với PRIMARY và BOOSTER, vẫn yêu cầu thứ tự nghiêm ngặt
-                    return res.status(400).json({
-                        success: false,
-                        error: `Phải tiêm mũi ${
-                            doseOrder - 1
-                        } trước khi tiêm mũi ${doseOrder}. Nếu học sinh đã tiêm mũi ${
-                            doseOrder - 1
-                        } ở nơi khác, vui lòng chọn loại liều "Tiêm bù" thay vì "${doseType}".`,
-                        errorCode: "DOSE_ORDER_VIOLATION",
-                        details: {
-                            currentDoseOrder: doseOrder,
-                            requiredPreviousDose: doseOrder - 1,
-                            completedDoses: previousDoses
-                                .map((d) => d.doseOrder)
-                                .sort(),
-                            suggestion:
-                                "Sử dụng doseType 'Tiêm bù' nếu học sinh đã tiêm mũi trước ở nơi khác",
-                        },
-                    });
-                }
-            }
-        }
-
         // Lấy maxDoseCount và doseSchedules từ vaccine
         const vaccine = await prisma.vaccine.findUnique({
             where: { id: campaign.vaccineId },
         });
-        if (
-            vaccine &&
-            vaccine.maxDoseCount &&
-            (previousDoses.length >= vaccine.maxDoseCount ||
-                doseOrder > vaccine.maxDoseCount)
-        ) {
-            return res.status(400).json({
-                success: false,
-                error: `Học sinh này đã tiêm đủ số liều tối đa (${vaccine.maxDoseCount}) cho vaccine này. Không thể tiêm thêm!`,
-                errorCode: "MAX_DOSE_EXCEEDED",
-                details: {
-                    maxDoses: vaccine.maxDoseCount,
-                    completedDoses: previousDoses.length,
-                    requestedDoseOrder: doseOrder,
-                    vaccineName: vaccine.name,
-                },
-            });
+
+        // Kiểm tra giới hạn số mũi tiêm của vaccine
+        if (vaccine && vaccine.maxDoseCount) {
+            // Kiểm tra nếu doseOrder vượt quá giới hạn cho phép
+            if (doseOrder > vaccine.maxDoseCount) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Mũi số ${doseOrder} vượt quá giới hạn. Vaccine ${vaccine.name} chỉ cho phép tối đa ${vaccine.maxDoseCount} mũi.`,
+                    errorCode: "DOSE_ORDER_EXCEEDS_LIMIT",
+                    details: {
+                        maxDoses: vaccine.maxDoseCount,
+                        requestedDoseOrder: doseOrder,
+                        vaccineName: vaccine.name,
+                        completedDoses: previousDoses.length,
+                    },
+                });
+            }
+
+            // Kiểm tra nếu học sinh đã tiêm đủ số mũi tối đa
+            if (previousDoses.length >= vaccine.maxDoseCount) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Học sinh này đã tiêm đủ ${vaccine.maxDoseCount} mũi cho vaccine ${vaccine.name}. Không thể tiêm thêm!`,
+                    errorCode: "MAX_DOSES_COMPLETED",
+                    details: {
+                        maxDoses: vaccine.maxDoseCount,
+                        completedDoses: previousDoses.length,
+                        requestedDoseOrder: doseOrder,
+                        vaccineName: vaccine.name,
+                        completedDoseOrders: previousDoses
+                            .map((d) => d.doseOrder)
+                            .sort(),
+                    },
+                });
+            }
         }
 
         // --- BẮT ĐẦU: Kiểm tra khoảng cách giữa các mũi dựa trên doseSchedules ---
@@ -1857,8 +1816,8 @@ export const performVaccination = async (req, res) => {
                 details: {
                     currentDoseOrder: doseOrder,
                     previousDoseOrder: doseOrder - 1,
-                    requiredInterval: currentDoseSchedule?.minInterval || 0,
-                    actualInterval: diffDays || 0,
+                    requiredInterval: intervalValidation.requiredInterval || 0,
+                    actualInterval: intervalValidation.actualInterval || 0,
                 },
             });
         }
@@ -2391,11 +2350,18 @@ export const approveMedicationRequest = async (req, res) => {
         const medicationRequest = await prisma.studentMedication.findUnique({
             where: { id: requestId },
             include: {
-                student: true,
+                student: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        studentCode: true,
+                    },
+                },
                 parent: {
                     include: {
                         user: {
                             select: {
+                                id: true,
                                 fullName: true,
                                 email: true,
                                 phone: true,
@@ -2403,8 +2369,15 @@ export const approveMedicationRequest = async (req, res) => {
                         },
                     },
                 },
-                // XÓA medication: true
             },
+        });
+
+        console.log("Debug - Found medication request:", {
+            id: medicationRequest?.id,
+            name: medicationRequest?.name,
+            parentId: medicationRequest?.parentId,
+            parent: medicationRequest?.parent,
+            student: medicationRequest?.student,
         });
 
         if (!medicationRequest) {
@@ -2445,39 +2418,132 @@ export const approveMedicationRequest = async (req, res) => {
                 updatedAt: new Date(),
             },
             include: {
-                student: true,
+                student: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        studentCode: true,
+                    },
+                },
                 parent: {
                     include: {
                         user: {
                             select: {
+                                id: true,
                                 fullName: true,
                             },
                         },
                     },
                 },
-                // XÓA medication: true
             },
         });
 
         // Gửi thông báo cho phụ huynh
         try {
+            console.log("Debug - medicationRequest:", {
+                id: medicationRequest.id,
+                name: medicationRequest.name,
+                parentId: medicationRequest.parentId,
+                parent: medicationRequest.parent,
+                student: medicationRequest.student,
+                studentFullName: medicationRequest.student?.fullName,
+            });
+
+            // Lấy thông tin parent user
+            let parentUser = null;
             if (medicationRequest.parent && medicationRequest.parent.user) {
-                await prisma.notification.create({
+                parentUser = medicationRequest.parent.user;
+                console.log(
+                    "Debug - Found parent user from include:",
+                    parentUser.id
+                );
+            } else if (medicationRequest.parentId) {
+                // Thử lấy parent user trực tiếp nếu không có trong include
+                console.log(
+                    "Debug - Trying to fetch parent directly with ID:",
+                    medicationRequest.parentId
+                );
+                const parent = await prisma.parent.findUnique({
+                    where: { id: medicationRequest.parentId },
+                    include: {
+                        user: {
+                            select: {
+                                id: true,
+                                fullName: true,
+                                email: true,
+                            },
+                        },
+                    },
+                });
+                parentUser = parent?.user;
+                console.log(
+                    "Debug - Parent fetched directly:",
+                    parent ? "found" : "not found",
+                    parentUser ? "user found" : "user not found"
+                );
+
+                // Nếu vẫn không tìm thấy, thử lấy user trực tiếp từ userId
+                if (!parentUser && parent?.userId) {
+                    console.log(
+                        "Debug - Trying to fetch user directly with userId:",
+                        parent.userId
+                    );
+                    const user = await prisma.users.findUnique({
+                        where: { id: parent.userId },
+                        select: {
+                            id: true,
+                            fullName: true,
+                            email: true,
+                        },
+                    });
+                    parentUser = user;
+                    console.log(
+                        "Debug - User fetched directly:",
+                        user ? "found" : "not found"
+                    );
+                }
+            } else {
+                console.log("Debug - No parentId found in medication request");
+            }
+
+            if (parentUser) {
+                console.log(
+                    "Debug - Creating notification for parent:",
+                    parentUser.id
+                );
+                console.log(
+                    "Debug - Student info:",
+                    medicationRequest.student?.fullName || "No student name"
+                );
+
+                const notification = await prisma.notification.create({
                     data: {
-                        userId: medicationRequest.parent.user.id,
-                        title: `Yêu cầu thuốc - ${medicationRequest.name}`,
-                        message: `Yêu cầu thuốc ${
-                            medicationRequest.name
-                        } cho học sinh ${
-                            medicationRequest.student.fullName
+                        userId: parentUser.id,
+                        title: `Kết quả xét duyệt thuốc`,
+                        message: `Yêu cầu thuốc ${medicationRequest.name} - ${
+                            medicationRequest.dosage
+                        } ${medicationRequest.unit} cho học sinh ${
+                            medicationRequest.student?.fullName || "học sinh"
                         } đã được ${
                             action === "APPROVE" ? "phê duyệt" : "từ chối"
-                        }. ${notes ? `Ghi chú: ${notes}` : ""}`,
+                        } vào ${new Date().toLocaleString("vi-VN")}.${
+                            notes ? ` Ghi chú: ${notes}` : ""
+                        }`,
                         type: "medication_request",
                         status: "SENT",
                         sentAt: new Date(),
                     },
                 });
+
+                console.log(
+                    "Debug - Notification created successfully:",
+                    notification.id
+                );
+            } else {
+                console.log(
+                    "Debug - No parent user found for medication request:",
+                    medicationRequest.id
+                );
             }
         } catch (notificationError) {
             console.error("Error sending notification:", notificationError);
@@ -2488,7 +2554,7 @@ export const approveMedicationRequest = async (req, res) => {
             data: {
                 id: updatedRequest.id,
                 status: updatedRequest.status,
-                studentName: updatedRequest.student.fullName,
+                studentName: updatedRequest.student?.fullName || "N/A",
                 parentName: updatedRequest.parent?.user?.fullName || "N/A",
                 medicationName: updatedRequest.name,
                 action: action,
