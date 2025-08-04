@@ -32,6 +32,7 @@ const createVaccination = async (req, res) => {
   try {
     const {
       name,
+      diseaseName,
       requirement,
       manufacturer,
       origin,
@@ -45,11 +46,11 @@ const createVaccination = async (req, res) => {
       doseSchedules, // mới: mảng phác đồ mũi tiêm
     } = req.body;
 
-    if (!name || !requirement || !manufacturer || !origin || !maxDoseCount) {
+    if (!name || !diseaseName || !requirement || !manufacturer || !origin || !maxDoseCount) {
       return res.status(400).json({
         success: false,
         error:
-          "Thiếu trường dữ liệu cần thiết: tên, yêu cầu, nhà sản xuất, nguồn gốc",
+          "Thiếu trường dữ liệu cần thiết: tên, tên bệnh, yêu cầu, nhà sản xuất, nguồn gốc, số mũi tối đa",
       });
     }
 
@@ -111,6 +112,7 @@ const createVaccination = async (req, res) => {
     const vaccination = await prisma.vaccine.create({
       data: {
         name,
+        diseaseName,
         requirement,
         manufacturer,
         origin,
@@ -254,6 +256,7 @@ const updateVaccination = async (req, res) => {
   const { id } = req.params;
   const {
     name,
+    diseaseName,
     requirement,
     manufacturer,
     origin,
@@ -278,11 +281,11 @@ const updateVaccination = async (req, res) => {
     }
 
     // Validate required fields
-    if (!name || !requirement || !manufacturer || !origin) {
+    if (!name || !diseaseName || !requirement || !manufacturer || !origin) {
       return res.status(400).json({
         success: false,
         error:
-          "Thiếu trường dữ liệu cần thiết: tên, yêu cầu, nhà sản xuất, nguồn gốc",
+          "Thiếu trường dữ liệu cần thiết: tên, tên bệnh, yêu cầu, nhà sản xuất, nguồn gốc",
       });
     }
 
@@ -322,6 +325,7 @@ const updateVaccination = async (req, res) => {
 
     console.log("Final data for updateVaccine:", {
       name,
+      diseaseName,
       requirement,
       manufacturer,
       origin,
@@ -339,6 +343,7 @@ const updateVaccination = async (req, res) => {
       where: { id },
       data: {
         name,
+        diseaseName,
         requirement,
         manufacturer,
         origin,

@@ -260,6 +260,12 @@ const VaccineManagement = () => {
       key: "name",
     },
     {
+      title: "Bệnh phòng chống",
+      dataIndex: "diseaseName",
+      key: "diseaseName",
+      render: (diseaseName) => diseaseName || "Chưa xác định",
+    },
+    {
       title: "Yêu cầu",
       dataIndex: "requirement",
       key: "requirement",
@@ -414,6 +420,11 @@ const VaccineManagement = () => {
             <Col xs={24} sm={8}>
               <Form.Item name="name" label="Tên vaccine">
                 <Input placeholder="Nhập tên vaccine" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} sm={8}>
+              <Form.Item name="diseaseName" label="Bệnh phòng chống">
+                <Input placeholder="Nhập tên bệnh" />
               </Form.Item>
             </Col>
             <Col xs={24} sm={8}>

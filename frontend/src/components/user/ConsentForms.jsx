@@ -53,7 +53,7 @@ const getTimelineColor = (consent, status) => {
     return "orange";
 };
 
-const getTimelineIcon = (consent, status) => {
+const _getTimelineIcon = (consent, status) => {
     if (consent === true) return <CheckCircleOutlined />;
     if (consent === false) return <CloseCircleOutlined />;
     if (status === "ACTIVE") return <ClockCircleOutlined />;
@@ -524,6 +524,36 @@ const ConsentForms = () => {
                                             "-"}
                                     </span>
                                 </Descriptions.Item>
+                                <Descriptions.Item label="Nhà sản xuất">
+                                    {consentModal.campaign.vaccine
+                                        ?.manufacturer || "-"}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Xuất xứ">
+                                    {consentModal.campaign.vaccine?.origin ||
+                                        "-"}
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Loại vaccine">
+                                    <Tag
+                                        color={
+                                            consentModal.campaign.vaccine
+                                                ?.requirement === "REQUIRED"
+                                                ? "red"
+                                                : "blue"
+                                        }
+                                    >
+                                        {consentModal.campaign.vaccine
+                                            ?.requirement === "REQUIRED"
+                                            ? "Bắt buộc"
+                                            : "Không bắt buộc"}
+                                    </Tag>
+                                </Descriptions.Item>
+                                <Descriptions.Item label="Độ tuổi phù hợp">
+                                    {consentModal.campaign.vaccine?.minAge || 0}{" "}
+                                    -{" "}
+                                    {consentModal.campaign.vaccine?.maxAge ||
+                                        "Không giới hạn"}{" "}
+                                    tuổi
+                                </Descriptions.Item>
                                 <Descriptions.Item label="Thời gian">
                                     {new Date(
                                         consentModal.campaign.scheduledDate
@@ -538,7 +568,7 @@ const ConsentForms = () => {
                                         consentModal.campaign.status
                                     )}
                                 </Descriptions.Item>
-                                <Descriptions.Item label="Mô tả">
+                                <Descriptions.Item label="Mô tả chiến dịch">
                                     {consentModal.campaign.description || "-"}
                                 </Descriptions.Item>
                                 <Descriptions.Item label="Số liều tối đa">
@@ -546,6 +576,137 @@ const ConsentForms = () => {
                                         ?.maxDoseCount || "-"}
                                 </Descriptions.Item>
                             </Descriptions>
+
+                            {/* Thông tin chi tiết về vaccine */}
+                            {(consentModal.campaign.vaccine?.description ||
+                                consentModal.campaign.vaccine?.sideEffects ||
+                                consentModal.campaign.vaccine
+                                    ?.contraindications ||
+                                consentModal.campaign.vaccine
+                                    ?.referenceUrl) && (
+                                <div className="mt-4">
+                                    <Divider orientation="left">
+                                        Thông tin chi tiết vaccine
+                                    </Divider>
+                                    <div className="space-y-4">
+                                        {consentModal.campaign.vaccine
+                                            ?.description && (
+                                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                                <div className="flex items-start gap-2">
+                                                    <span className="text-blue-600 text-lg">
+                                                        ℹ️
+                                                    </span>
+                                                    <div>
+                                                        <Text
+                                                            strong
+                                                            className="text-blue-800 text-sm"
+                                                        >
+                                                            Mô tả vaccine:
+                                                        </Text>
+                                                        <Text className="text-blue-700 text-sm block mt-1">
+                                                            {
+                                                                consentModal
+                                                                    .campaign
+                                                                    .vaccine
+                                                                    .description
+                                                            }
+                                                        </Text>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {consentModal.campaign.vaccine
+                                            ?.sideEffects && (
+                                            <div className="p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                                                <div className="flex items-start gap-2">
+                                                    <span className="text-orange-600 text-lg">
+                                                        ⚠️
+                                                    </span>
+                                                    <div>
+                                                        <Text
+                                                            strong
+                                                            className="text-orange-800 text-sm"
+                                                        >
+                                                            Tác dụng phụ có thể
+                                                            xảy ra:
+                                                        </Text>
+                                                        <Text className="text-orange-700 text-sm block mt-1">
+                                                            {
+                                                                consentModal
+                                                                    .campaign
+                                                                    .vaccine
+                                                                    .sideEffects
+                                                            }
+                                                        </Text>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {consentModal.campaign.vaccine
+                                            ?.contraindications && (
+                                            <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                                                <div className="flex items-start gap-2">
+                                                    <span className="text-red-600 text-lg">
+                                                        🚫
+                                                    </span>
+                                                    <div>
+                                                        <Text
+                                                            strong
+                                                            className="text-red-800 text-sm"
+                                                        >
+                                                            Chống chỉ định
+                                                            (không được tiêm):
+                                                        </Text>
+                                                        <Text className="text-red-700 text-sm block mt-1">
+                                                            {
+                                                                consentModal
+                                                                    .campaign
+                                                                    .vaccine
+                                                                    .contraindications
+                                                            }
+                                                        </Text>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {consentModal.campaign.vaccine
+                                            ?.referenceUrl && (
+                                            <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                                <div className="flex items-start gap-2">
+                                                    <span className="text-green-600 text-lg">
+                                                        🔗
+                                                    </span>
+                                                    <div>
+                                                        <Text
+                                                            strong
+                                                            className="text-green-800 text-sm"
+                                                        >
+                                                            Thông tin tham khảo:
+                                                        </Text>
+                                                        <a
+                                                            href={
+                                                                consentModal
+                                                                    .campaign
+                                                                    .vaccine
+                                                                    .referenceUrl
+                                                            }
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="text-green-700 text-sm hover:text-green-900 hover:underline block mt-1"
+                                                        >
+                                                            Xem thông tin chi
+                                                            tiết từ nhà sản xuất
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Thông tin phác đồ mũi tiêm */}
                             {consentModal.campaign.vaccine?.doseSchedules &&

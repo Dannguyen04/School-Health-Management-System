@@ -12,6 +12,7 @@ import {
     getStudentVaccinationCampaigns,
     getStudentHealthCheckups,
     deliverMedication,
+    addVaccinationHistoryByParent,
 } from "../controllers/parentController.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 import {
@@ -97,6 +98,13 @@ router.get(
     "/students/:studentId/health-checkups",
     authenticateToken,
     getStudentHealthCheckups
+);
+
+// Route thêm lịch sử tiêm chủng bên ngoài
+router.post(
+    "/vaccination-history",
+    authenticateToken,
+    addVaccinationHistoryByParent
 );
 
 // Routes for notifications
