@@ -1,15 +1,15 @@
 import {
-    CheckOutlined,
-    CloseOutlined,
-    FileTextOutlined,
-    UserOutlined,
-    ClockCircleOutlined,
-    CheckCircleOutlined,
-    CloseCircleOutlined,
-    ExclamationCircleOutlined,
-    SafetyCertificateOutlined,
     AlertOutlined,
+    CheckCircleOutlined,
+    CheckOutlined,
+    ClockCircleOutlined,
+    CloseCircleOutlined,
+    CloseOutlined,
+    ExclamationCircleOutlined,
+    FileTextOutlined,
     MedicineBoxOutlined,
+    SafetyCertificateOutlined,
+    UserOutlined,
 } from "@ant-design/icons";
 import {
     Avatar,
@@ -24,8 +24,8 @@ import {
     Modal,
     Tabs,
     Tag,
-    Typography,
     Timeline,
+    Typography,
 } from "antd";
 import axios from "axios";
 import { useEffect, useState } from "react";
@@ -760,23 +760,6 @@ const ConsentForms = () => {
                                                                     )}
                                                                 </div>
                                                                 <div className="text-sm text-gray-600 space-y-1">
-                                                                    <div>
-                                                                        <Text type="secondary">
-                                                                            Độ
-                                                                            tuổi:{" "}
-                                                                        </Text>
-                                                                        <Text
-                                                                            strong
-                                                                        >
-                                                                            {
-                                                                                dose.minAge
-                                                                            }{" "}
-                                                                            -{" "}
-                                                                            {dose.maxAge ||
-                                                                                "Không giới hạn"}{" "}
-                                                                            tuổi
-                                                                        </Text>
-                                                                    </div>
                                                                     <div>
                                                                         <Text type="secondary">
                                                                             Khoảng

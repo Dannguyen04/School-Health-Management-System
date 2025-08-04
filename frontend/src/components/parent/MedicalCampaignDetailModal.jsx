@@ -1,6 +1,7 @@
-import { ExclamationCircleTwoTone, ScheduleOutlined } from "@ant-design/icons";
-import { Descriptions, Divider, Modal, Tag } from "antd";
+import { ExclamationCircleTwoTone, ScheduleOutlined, CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
+import { Alert, Button, Checkbox, Descriptions, Divider, Modal, Space, Tag, message } from "antd";
 import dayjs from "dayjs";
+import { useState } from "react";
 
 const getStatusTag = (status) => {
   switch (status) {
@@ -17,7 +18,44 @@ const getStatusTag = (status) => {
   }
 };
 
-const MedicalCampaignDetailModal = ({ visible, campaign, onClose }) => {
+const MedicalCampaignDetailModal = ({ visible, campaign, onClose, onConsentSubmit }) => {
+  const [selectedExaminations, setSelectedExaminations] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Reset selections when modal opens
+  const handleModalOpen = () => {
+    if (campaign?.optionalExaminations?.length > 0) {
+      setSelectedExaminations([]);
+    }
+  };
+
+  const handleConsentSubmit = async () => {
+    // Không cần validate nữa vì có thể chọn 0 hoặc nhiều loại khám
+
+    setIsSubmitting(true);
+    try {
+      await onConsentSubmit(campaign.id, selectedExaminations);
+      message.success("Đã gửi ý kiến đồng ý thành công");
+      onClose();
+    } catch (error) {
+      message.error("Có lỗi xảy ra, vui lòng thử lại");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleRejectAll = async () => {
+    setIsSubmitting(true);
+    try {
+      await onConsentSubmit(campaign.id, []); // Gửi mảng rỗng để từ chối tất cả
+      message.success("Đã từ chối tất cả khám tùy chọn");
+      onClose();
+    } catch (error) {
+      message.error("Có lỗi xảy ra, vui lòng thử lại");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   return (
     <Modal
       title={
@@ -30,6 +68,7 @@ const MedicalCampaignDetailModal = ({ visible, campaign, onClose }) => {
       }
       open={visible}
       onCancel={onClose}
+      onOpenChange={handleModalOpen}
       footer={null}
       width={600}
       style={{ borderRadius: "1rem" }}
@@ -75,6 +114,110 @@ const MedicalCampaignDetailModal = ({ visible, campaign, onClose }) => {
           >
             {campaign.description || "-"}
           </div>
+
+          {/* Khám tùy chọn */}
+          {campaign.optionalExaminations && campaign.optionalExaminations.length > 0 && (
+            <>
+              <Divider orientation="left">Khám tùy chọn</Divider>
+              <Alert
+                message="Xin ý kiến đồng ý"
+                description="Nhà trường xin phép được thực hiện các loại khám tùy chọn sau cho con/em của quý phụ huynh. Vui lòng chọn các loại khám mà quý phụ huynh đồng ý."
+                type="info"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+              
+              <div style={{ marginBottom: 16 }}>
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  {campaign.optionalExaminations.includes("GENITAL") && (
+                    <div style={{ 
+                      border: "1px solid #d9d9d9", 
+                      borderRadius: 8, 
+                      padding: 16,
+                      background: selectedExaminations.includes("GENITAL") ? "#f6ffed" : "#fff"
+                    }}>
+                      <Checkbox
+                        checked={selectedExaminations.includes("GENITAL")}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedExaminations([...selectedExaminations, "GENITAL"]);
+                          } else {
+                            setSelectedExaminations(selectedExaminations.filter(item => item !== "GENITAL"));
+                          }
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: "bold", marginBottom: 4 }}>
+                            <CheckCircleOutlined style={{ color: "#52c41a", marginRight: 8 }} />
+                            Khám sinh dục
+                          </div>
+                          <div style={{ color: "#666", fontSize: "14px" }}>
+                            Kiểm tra bộ phận sinh dục và các vấn đề liên quan của học sinh
+                          </div>
+                        </div>
+                      </Checkbox>
+                    </div>
+                  )}
+
+                  {campaign.optionalExaminations.includes("PSYCHOLOGICAL") && (
+                    <div style={{ 
+                      border: "1px solid #d9d9d9", 
+                      borderRadius: 8, 
+                      padding: 16,
+                      background: selectedExaminations.includes("PSYCHOLOGICAL") ? "#f6ffed" : "#fff"
+                    }}>
+                      <Checkbox
+                        checked={selectedExaminations.includes("PSYCHOLOGICAL")}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedExaminations([...selectedExaminations, "PSYCHOLOGICAL"]);
+                          } else {
+                            setSelectedExaminations(selectedExaminations.filter(item => item !== "PSYCHOLOGICAL"));
+                          }
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: "bold", marginBottom: 4 }}>
+                            <CheckCircleOutlined style={{ color: "#52c41a", marginRight: 8 }} />
+                            Khám tâm lý
+                          </div>
+                          <div style={{ color: "#666", fontSize: "14px" }}>
+                            Đánh giá tình trạng tâm lý, cảm xúc và hành vi của học sinh
+                          </div>
+                        </div>
+                      </Checkbox>
+                    </div>
+                  )}
+                </Space>
+              </div>
+
+              <div style={{ textAlign: "center", marginTop: 24 }}>
+                <Space>
+                  <Button 
+                    type="primary" 
+                    onClick={handleConsentSubmit}
+                    loading={isSubmitting}
+                    icon={<CheckCircleOutlined />}
+                  >
+                    Gửi quyết định
+                  </Button>
+                  <Button 
+                    danger
+                    onClick={handleRejectAll}
+                    loading={isSubmitting}
+                    icon={<CloseCircleOutlined />}
+                  >
+                    Từ chối tất cả
+                  </Button>
+                  <Button 
+                    onClick={onClose}
+                  >
+                    Hủy
+                  </Button>
+                </Space>
+              </div>
+            </>
+          )}
         </>
       )}
     </Modal>

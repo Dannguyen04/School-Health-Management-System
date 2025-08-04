@@ -1,6 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+// Constants cho lịch sử tiêm chủng bên ngoài
+const EXTERNAL_VACCINATION_CONSTANTS = {
+    FAKE_CAMPAIGN_ID: "000000000000000000000000",
+    FAKE_NURSE_ID: "000000000000000000000000",
+    CAMPAIGN_NAME: "Lịch sử tiêm ngoài",
+    NURSE_NAME: "Bên ngoài trường",
+    DEFAULT_NOTE: "Được khai báo bởi phụ huynh",
+};
+
 // Thêm hàm gửi notification nếu thiếu số điện thoại
 async function notifyParentToUpdatePhone(user) {
     if (!user.phone) {
@@ -593,7 +602,9 @@ export const requestMedication = async (req, res) => {
                     data: {
                         userId: nurse.userId,
                         title: "Yêu cầu gửi thuốc mới",
-                        message: `Có yêu cầu gửi thuốc mới cho học sinh ${studentName} từ phụ huynh. Vui lòng kiểm tra và xác nhận!`,
+                        message: `Có yêu cầu gửi thuốc mới cho học sinh ${studentName} từ phụ huynh. Thuốc: ${medicationName}, liều lượng: ${dosage} ${
+                            unit || ""
+                        }. Vui lòng kiểm tra và xác nhận!`,
                         type: "medication",
                         status: "SENT",
                         sentAt: new Date(),
@@ -918,15 +929,11 @@ export const getVaccinationHistory = async (req, res) => {
             vaccine: r.vaccine
                 ? { ...r.vaccine, doseSchedules: r.vaccine.doseSchedules || [] }
                 : null,
-            campaign: r.campaign, // Sẽ là null cho external records
+            campaign: r.campaign,
             dose: r.dose,
-            doseOrder: r.doseOrder,
             status: r.status,
             notes: r.notes,
-            nurse: r.nurse, // Sẽ là null cho external records
-            isExternalRecord: r.isExternalRecord || false,
-            externalLocation: r.externalLocation || null,
-            sideEffects: r.sideEffects,
+            nurse: r.nurse,
         }));
         res.json({ success: true, data: result });
     } catch (error) {
@@ -1053,162 +1060,287 @@ export const deliverMedication = async (req, res) => {
     }
 };
 
-// Thêm lịch sử tiêm chủng bên ngoài cho con em
+// Phụ huynh thêm lịch sử tiêm chủng cho con (có thể thêm nhiều mũi cùng lúc)
 export const addVaccinationHistoryByParent = async (req, res) => {
     try {
-        const {
-            studentId,
-            vaccineId,
-            administeredDate,
-            doseOrder,
-            externalLocation,
-            batchNumber,
-            notes,
-            sideEffects,
-            doseAmount,
-        } = req.body;
+        const { studentId } = req.params;
+        const { vaccinationHistories } = req.body; // Mảng các lịch sử tiêm chủng
 
-        // Kiểm tra quyền phụ huynh
+        // Kiểm tra quyền: chỉ cho phép phụ huynh của học sinh này
         if (!req.user.parentProfile) {
             return res.status(403).json({
                 success: false,
-                error: "Bạn phải là phụ huynh để thực hiện chức năng này",
+                error: "Bạn phải là phụ huynh để thực hiện hành động này.",
             });
         }
 
         const parentId = req.user.parentProfile.id;
-
-        // Validation các field bắt buộc
-        if (!studentId || !vaccineId || !administeredDate || !doseOrder) {
-            return res.status(400).json({
-                success: false,
-                error: "Thiếu thông tin bắt buộc: studentId, vaccineId, administeredDate, doseOrder",
-            });
-        }
-
-        // Kiểm tra quyền của phụ huynh đối với học sinh
         const studentParent = await prisma.studentParent.findFirst({
-            where: { parentId, studentId },
+            where: {
+                studentId: studentId,
+                parentId: parentId,
+            },
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        grade: true,
+                        class: true,
+                    },
+                },
+            },
         });
 
         if (!studentParent) {
             return res.status(403).json({
                 success: false,
-                error: "Bạn không có quyền thêm lịch sử tiêm chủng cho học sinh này",
+                error: "Bạn không có quyền thêm lịch sử tiêm chủng cho học sinh này.",
             });
         }
 
-        // Lấy thông tin học sinh và vaccine
-        const [student, vaccine] = await Promise.all([
-            prisma.student.findUnique({
-                where: { id: studentId },
-            }),
-            prisma.vaccine.findUnique({
-                where: { id: vaccineId },
-            }),
-        ]);
-
-        if (!student) {
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy học sinh",
-            });
-        }
-
-        if (!vaccine) {
-            return res.status(404).json({
-                success: false,
-                error: "Không tìm thấy loại vaccine",
-            });
-        }
-
-        // Validation doseOrder
-        if (doseOrder < 1 || doseOrder > vaccine.maxDoseCount) {
+        // Validate dữ liệu đầu vào
+        if (
+            !Array.isArray(vaccinationHistories) ||
+            vaccinationHistories.length === 0
+        ) {
             return res.status(400).json({
                 success: false,
-                error: `Số thứ tự mũi tiêm phải từ 1 đến ${vaccine.maxDoseCount}`,
+                error: "Cần cung cấp ít nhất một lịch sử tiêm chủng.",
             });
         }
 
-        // Kiểm tra trùng lặp (cùng vaccine, cùng học sinh, cùng doseOrder)
-        const existingRecord = await prisma.vaccinationRecord.findFirst({
-            where: {
-                studentId,
-                vaccineId,
-                doseOrder,
-            },
-        });
+        // Validate từng record
+        for (let i = 0; i < vaccinationHistories.length; i++) {
+            const history = vaccinationHistories[i];
+            if (
+                !history.vaccineId ||
+                !history.administeredDate ||
+                !history.doseOrder ||
+                !history.doseType
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Lịch sử tiêm chủng thứ ${
+                        i + 1
+                    } thiếu thông tin bắt buộc (vaccineId, administeredDate, doseOrder, doseType).`,
+                });
+            }
 
-        if (existingRecord) {
-            return res.status(400).json({
-                success: false,
-                error: `Mũi số ${doseOrder} của vaccine ${vaccine.name} đã được ghi nhận cho học sinh này`,
+            // Validate doseType
+            const validDoseTypes = [
+                "PRIMARY",
+                "BOOSTER",
+                "CATCHUP",
+                "ADDITIONAL",
+            ];
+            if (!validDoseTypes.includes(history.doseType)) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Loại mũi tiêm không hợp lệ ở lịch sử thứ ${
+                        i + 1
+                    }. Phải là: ${validDoseTypes.join(", ")}`,
+                });
+            }
+
+            // Kiểm tra trùng mũi tiêm
+            const existing = await prisma.vaccinationRecord.findFirst({
+                where: {
+                    studentId,
+                    vaccineId: history.vaccineId,
+                    doseOrder: history.doseOrder,
+                },
             });
+
+            if (existing) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Mũi tiêm số ${history.doseOrder} của vaccine này đã được khai báo.`,
+                });
+            }
         }
 
-        // Tạo VaccinationRecord cho external vaccination
-        const vaccinationRecord = await prisma.vaccinationRecord.create({
-            data: {
-                vaccineId,
-                studentId,
-                // Không set campaignId và nurseId vì là external record
-                campaignId: null,
-                nurseId: null,
+        // Sắp xếp theo thứ tự doseOrder để đảm bảo logic
+        vaccinationHistories.sort((a, b) => a.doseOrder - b.doseOrder);
 
-                // Denormalized data
-                vaccineName: vaccine.name,
-                campaignName: null, // Không có campaign
-                studentName: student.fullName,
-                nurseName: null, // Không có y tá trường
-                studentGrade: student.grade,
-                studentClass: student.class,
-
-                // External record specific fields
-                isExternalRecord: true,
-                externalLocation: externalLocation || "Bên ngoài trường",
-
-                // Vaccination details
-                administeredDate: new Date(administeredDate),
-                doseOrder,
-                doseType: doseOrder === 1 ? "PRIMARY" : "BOOSTER",
-                doseAmount: doseAmount || 0.5, // Default 0.5ml
-                batchNumber,
-                notes,
-                sideEffects,
-                status: "COMPLETED",
-            },
-            include: {
-                vaccine: true,
-                student: true,
-            },
+        // Lấy thông tin vaccine để có tên vaccine
+        const vaccineIds = [
+            ...new Set(vaccinationHistories.map((h) => h.vaccineId)),
+        ];
+        const vaccines = await prisma.vaccine.findMany({
+            where: { id: { in: vaccineIds } },
+            select: { id: true, name: true },
         });
 
-        // Tạo thông báo cho phụ huynh xác nhận việc thêm lịch sử
-        await prisma.notification.create({
-            data: {
-                userId: req.user.id,
-                title: "Thêm lịch sử tiêm chủng thành công",
-                message: `Bạn đã thêm thành công lịch sử tiêm chủng ${
-                    vaccine.name
-                } (mũi ${doseOrder}) cho ${student.fullName} tại ${
-                    externalLocation || "bên ngoài trường"
-                }.`,
-                type: "vaccination_history_added",
-                status: "SENT",
-                sentAt: new Date(),
-            },
+        const vaccineMap = new Map(vaccines.map((v) => [v.id, v.name]));
+
+        // Constants cho external vaccination records
+        const EXTERNAL_VACCINATION_CONSTANTS = {
+            FAKE_CAMPAIGN_ID: "000000000000000000000003", // ID của external campaign vừa tạo
+            FAKE_NURSE_ID: "000000000000000000000002", // ID của external nurse vừa tạo
+            CAMPAIGN_NAME: "Tiêm chủng ngoài trường",
+            NURSE_NAME: "Y tá ngoài trường",
+            DEFAULT_NOTE: "Tiêm chủng tại cơ sở y tế bên ngoài trường học",
+        };
+
+        // Tạo các bản ghi lịch sử tiêm chủng trong transaction
+        const results = await prisma.$transaction(async (tx) => {
+            const createdRecords = [];
+
+            for (const history of vaccinationHistories) {
+                const vaccineName =
+                    vaccineMap.get(history.vaccineId) || "Vaccine ngoài";
+
+                const record = await tx.vaccinationRecord.create({
+                    data: {
+                        // References - Sử dụng fake IDs cho các trường bắt buộc
+                        vaccineId: history.vaccineId,
+                        campaignId:
+                            EXTERNAL_VACCINATION_CONSTANTS.FAKE_CAMPAIGN_ID,
+                        studentId,
+                        nurseId: EXTERNAL_VACCINATION_CONSTANTS.FAKE_NURSE_ID,
+
+                        // Denormalized data
+                        vaccineName: vaccineName,
+                        campaignName:
+                            EXTERNAL_VACCINATION_CONSTANTS.CAMPAIGN_NAME,
+                        studentName: studentParent.student.fullName,
+                        nurseName: EXTERNAL_VACCINATION_CONSTANTS.NURSE_NAME,
+                        studentGrade: studentParent.student.grade || "",
+                        studentClass: studentParent.student.class || "",
+
+                        // Vaccination details
+                        administeredDate: new Date(history.administeredDate),
+                        doseOrder: history.doseOrder,
+                        doseType: history.doseType,
+                        doseAmount: history.doseAmount || 0.5,
+                        batchNumber: history.batchNumber || null,
+                        notes:
+                            history.notes ||
+                            EXTERNAL_VACCINATION_CONSTANTS.DEFAULT_NOTE,
+                        status: "COMPLETED",
+                        followUpRequired: false,
+                    },
+                });
+                createdRecords.push(record);
+            }
+
+            return createdRecords;
         });
 
-        res.status(201).json({
+        res.json({
             success: true,
-            data: vaccinationRecord,
-            message: "Thêm lịch sử tiêm chủng bên ngoài thành công",
+            data: results,
+            message: `Đã thêm thành công ${results.length} lịch sử tiêm chủng.`,
         });
     } catch (error) {
-        console.error("Error adding external vaccination history:", error);
+        console.error("Lỗi khi thêm lịch sử tiêm chủng:", error);
         res.status(500).json({
             success: false,
-            error: "Lỗi server khi thêm lịch sử tiêm chủng",
+            error: "Lỗi khi thêm lịch sử tiêm chủng.",
+        });
+    }
+};
+
+// Lấy danh sách chiến dịch khám sức khỏe cho phụ huynh
+export const getMedicalCampaigns = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Lấy thông tin phụ huynh và con cái
+        const parent = await prisma.parent.findFirst({
+            where: { userId },
+            include: {
+                students: {
+                    include: {
+                        student: true,
+                    },
+                },
+            },
+        });
+
+        if (!parent) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy thông tin phụ huynh",
+            });
+        }
+
+        // Lấy tất cả chiến dịch khám sức khỏe
+        const campaigns = await prisma.medicalCheckCampaign.findMany({
+            where: {
+                status: { in: ["ACTIVE", "SCHEDULED"] },
+            },
+            orderBy: {
+                scheduledDate: "desc",
+            },
+        });
+
+        // Lọc chiến dịch phù hợp với khối của con cái
+        const childrenGrades = parent.students.map((sp) => sp.student.grade);
+        const relevantCampaigns = campaigns.filter((campaign) =>
+            campaign.targetGrades.some((grade) =>
+                childrenGrades.includes(grade)
+            )
+        );
+
+        // Thêm thông tin consent cho từng chiến dịch
+        const campaignsWithConsent = await Promise.all(
+            relevantCampaigns.map(async (campaign) => {
+                const consentPromises = parent.students.map(
+                    async (studentParent) => {
+                        const student = studentParent.student;
+
+                        // Chỉ kiểm tra nếu học sinh thuộc khối được nhắm đến
+                        if (!campaign.targetGrades.includes(student.grade)) {
+                            return null;
+                        }
+
+                        const medicalCheck =
+                            await prisma.medicalCheck.findFirst({
+                                where: {
+                                    studentId: student.id,
+                                    campaignId: campaign.id,
+                                },
+                                select: {
+                                    parentConsent: true,
+                                    parentNotified: true,
+                                },
+                            });
+
+                        return {
+                            studentId: student.id,
+                            studentName: student.fullName,
+                            parentConsent: medicalCheck?.parentConsent || [],
+                            parentNotified:
+                                medicalCheck?.parentNotified || false,
+                        };
+                    }
+                );
+
+                const consents = (await Promise.all(consentPromises)).filter(
+                    Boolean
+                );
+
+                return {
+                    ...campaign,
+                    childrenConsent: consents,
+                    hasOptionalExaminations:
+                        campaign.optionalExaminations &&
+                        campaign.optionalExaminations.length > 0,
+                };
+            })
+        );
+
+        res.json({
+            success: true,
+            data: campaignsWithConsent,
+        });
+    } catch (error) {
+        console.error("Error fetching medical campaigns:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi server khi lấy danh sách chiến dịch",
         });
     }
 };

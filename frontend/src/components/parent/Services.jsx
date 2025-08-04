@@ -2,6 +2,7 @@ import { FaFileMedical, FaHeartbeat } from "react-icons/fa";
 import { HiOutlineClock } from "react-icons/hi";
 import { MdHealthAndSafety, MdOutlineMedication } from "react-icons/md";
 import { RiMicroscopeLine } from "react-icons/ri";
+import { ScheduleOutlined } from "@ant-design/icons";
 import { useAuth } from "../../context/authContext";
 import ServicesCard from "../parentlayout/ServicesCard";
 

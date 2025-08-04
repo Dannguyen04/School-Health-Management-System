@@ -8,6 +8,7 @@ import {
     updateProgress,
     notifyParentsAboutCampaign, // thêm hàm mới
     getStudentsForMedicalCampaign,
+    submitParentConsent,
 } from "../controllers/MedicalCampaign.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 
@@ -39,6 +40,13 @@ router.post(
     "/:id/notify-parents",
     authenticateToken,
     notifyParentsAboutCampaign
+);
+
+// Submit parent consent for optional examinations
+router.post(
+    "/:id/consent",
+    authenticateToken,
+    submitParentConsent
 );
 
 export default router;

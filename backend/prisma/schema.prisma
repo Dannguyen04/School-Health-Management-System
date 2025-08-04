@@ -513,16 +513,17 @@ model VaccinationRecord {
 
 // Medical Check Management
 model MedicalCheckCampaign {
-  id            String         @id @default(auto()) @map("_id") @db.ObjectId
-  name          String
-  description   String?
-  targetGrades  String[] // Array of grades
-  scheduledDate DateTime
-  deadline      DateTime
-  isActive      Boolean        @default(true)
-  status        CampaignStatus @default(ACTIVE)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                    String         @id @default(auto()) @map("_id") @db.ObjectId
+  name                  String
+  description           String?
+  targetGrades          String[] // Array of grades
+  optionalExaminations  String[] // Array of optional examination types: "GENITAL", "PSYCHOLOGICAL"
+  scheduledDate         DateTime
+  deadline              DateTime
+  isActive              Boolean        @default(true)
+  status                CampaignStatus @default(ACTIVE)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   // Relations
   medicalChecks MedicalCheck[]
@@ -576,6 +577,7 @@ model MedicalCheck {
 
   parentNotified       Boolean     @default(false)
   parentResponse       String?     // Phản hồi của phụ huynh
+  parentConsent        String[]    // Array of consented examination types: "GENITAL", "PSYCHOLOGICAL"
 
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
