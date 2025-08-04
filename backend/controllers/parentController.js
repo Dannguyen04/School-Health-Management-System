@@ -1241,3 +1241,106 @@ export const addVaccinationHistoryByParent = async (req, res) => {
         });
     }
 };
+
+// Lấy danh sách chiến dịch khám sức khỏe cho phụ huynh
+export const getMedicalCampaigns = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Lấy thông tin phụ huynh và con cái
+        const parent = await prisma.parent.findFirst({
+            where: { userId },
+            include: {
+                students: {
+                    include: {
+                        student: true,
+                    },
+                },
+            },
+        });
+
+        if (!parent) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy thông tin phụ huynh",
+            });
+        }
+
+        // Lấy tất cả chiến dịch khám sức khỏe
+        const campaigns = await prisma.medicalCheckCampaign.findMany({
+            where: {
+                status: { in: ["ACTIVE", "SCHEDULED"] },
+            },
+            orderBy: {
+                scheduledDate: "desc",
+            },
+        });
+
+        // Lọc chiến dịch phù hợp với khối của con cái
+        const childrenGrades = parent.students.map((sp) => sp.student.grade);
+        const relevantCampaigns = campaigns.filter((campaign) =>
+            campaign.targetGrades.some((grade) =>
+                childrenGrades.includes(grade)
+            )
+        );
+
+        // Thêm thông tin consent cho từng chiến dịch
+        const campaignsWithConsent = await Promise.all(
+            relevantCampaigns.map(async (campaign) => {
+                const consentPromises = parent.students.map(
+                    async (studentParent) => {
+                        const student = studentParent.student;
+
+                        // Chỉ kiểm tra nếu học sinh thuộc khối được nhắm đến
+                        if (!campaign.targetGrades.includes(student.grade)) {
+                            return null;
+                        }
+
+                        const medicalCheck =
+                            await prisma.medicalCheck.findFirst({
+                                where: {
+                                    studentId: student.id,
+                                    campaignId: campaign.id,
+                                },
+                                select: {
+                                    parentConsent: true,
+                                    parentNotified: true,
+                                },
+                            });
+
+                        return {
+                            studentId: student.id,
+                            studentName: student.fullName,
+                            parentConsent: medicalCheck?.parentConsent || [],
+                            parentNotified:
+                                medicalCheck?.parentNotified || false,
+                        };
+                    }
+                );
+
+                const consents = (await Promise.all(consentPromises)).filter(
+                    Boolean
+                );
+
+                return {
+                    ...campaign,
+                    childrenConsent: consents,
+                    hasOptionalExaminations:
+                        campaign.optionalExaminations &&
+                        campaign.optionalExaminations.length > 0,
+                };
+            })
+        );
+
+        res.json({
+            success: true,
+            data: campaignsWithConsent,
+        });
+    } catch (error) {
+        console.error("Error fetching medical campaigns:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi server khi lấy danh sách chiến dịch",
+        });
+    }
+};
