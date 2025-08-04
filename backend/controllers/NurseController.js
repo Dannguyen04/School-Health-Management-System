@@ -1629,11 +1629,12 @@ export const performVaccination = async (req, res) => {
             });
         }
 
-        // Kiểm tra đã tiêm trong campaign này chưa
+        // Kiểm tra đã tiêm trong campaign này chưa (chỉ check cho school vaccinations)
         const existingVaccination = await prisma.vaccinationRecord.findFirst({
             where: {
                 campaignId: campaignId,
                 studentId: studentId,
+                isExternalRecord: false, // Chỉ check school records
             },
         });
         if (existingVaccination) {
@@ -1672,6 +1673,7 @@ export const performVaccination = async (req, res) => {
             where: {
                 studentId: studentId,
                 vaccineId: campaign.vaccineId,
+                // Bao gồm cả school và external records để check dose order
             },
             orderBy: { administeredDate: "asc" },
         });
@@ -1689,18 +1691,22 @@ export const performVaccination = async (req, res) => {
             });
         }
 
-        // Kiểm tra xem đã tiêm mũi này chưa (tránh tiêm trùng)
+        // Kiểm tra xem đã tiêm mũi này chưa (tránh tiêm trùng) - check across all records
         const existingDose = previousDoses.find(
             (dose) => dose.doseOrder === doseOrder
         );
         if (existingDose) {
+            const locationInfo = existingDose.isExternalRecord
+                ? `tại ${existingDose.externalLocation}`
+                : "tại trường";
+
             return res.status(400).json({
                 success: false,
                 error: `Học sinh đã tiêm mũi ${doseOrder} rồi (ngày ${new Date(
                     existingDose.administeredDate
                 ).toLocaleDateString(
                     "vi-VN"
-                )}). Không thể tiêm lại cùng một mũi với loại liều "${doseType}".`,
+                )} ${locationInfo}). Không thể tiêm lại cùng một mũi với loại liều "${doseType}".`,
                 errorCode: "DUPLICATE_DOSE_ORDER",
                 details: {
                     currentDoseOrder: doseOrder,
@@ -1709,10 +1715,19 @@ export const performVaccination = async (req, res) => {
                         administeredDate: existingDose.administeredDate,
                         doseType: existingDose.doseType,
                         batchNumber: existingDose.batchNumber,
+                        isExternalRecord: existingDose.isExternalRecord,
+                        location: existingDose.isExternalRecord
+                            ? existingDose.externalLocation
+                            : "Trường học",
                     },
                     completedDoses: previousDoses
-                        .map((d) => d.doseOrder)
-                        .sort(),
+                        .map((d) => ({
+                            doseOrder: d.doseOrder,
+                            location: d.isExternalRecord
+                                ? d.externalLocation
+                                : "Trường học",
+                        }))
+                        .sort((a, b) => a.doseOrder - b.doseOrder),
                 },
             });
         }
@@ -1939,6 +1954,10 @@ export const performVaccination = async (req, res) => {
                     studentGrade: student.grade,
                     studentClass: student.class,
                     nurseName: req.user.fullName,
+
+                    // School vaccination specific fields
+                    isExternalRecord: false, // Đây là school vaccination
+                    externalLocation: null, // Không có vì tiêm tại trường
 
                     // Vaccination details
                     administeredDate: vaccinationDate,
@@ -3376,11 +3395,12 @@ export const getVaccinationStats = async (req, res) => {
         const pendingStudents =
             totalStudents - consentedStudents - refusedStudents;
 
-        // Lấy danh sách học sinh đã tiêm chủng gần đây (5 học sinh cuối)
+        // Lấy danh sách học sinh đã tiêm chủng gần đây (5 học sinh cuối) - chỉ school vaccinations
         const recentVaccinations = await prisma.vaccinationRecord.findMany({
             where: {
                 campaignId: campaignId,
                 status: "COMPLETED",
+                isExternalRecord: false, // Chỉ lấy school vaccinations
             },
             take: 5,
             orderBy: {
@@ -3458,9 +3478,12 @@ export const getVaccinationStats = async (req, res) => {
 export const getVaccinationReport = async (req, res) => {
     try {
         const { campaignId } = req.params;
-        // Lấy tất cả vaccinationRecord của campaign này
+        // Lấy tất cả vaccinationRecord của campaign này - chỉ school vaccinations
         const records = await prisma.vaccinationRecord.findMany({
-            where: { campaignId },
+            where: {
+                campaignId,
+                isExternalRecord: false, // Chỉ lấy school vaccinations
+            },
             include: {
                 student: {
                     select: {

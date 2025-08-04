@@ -435,7 +435,13 @@ const updateProgress = async (req, res) => {
             data: updatedCampaign,
             message: "Cập nhật tiến độ chiến dịch tiểm chủng",
         });
-    } catch (error) {}
+    } catch (error) {
+        console.error("Error updating campaign progress:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi server khi cập nhật tiến độ chiến dịch",
+        });
+    }
 };
 
 // DELETE - Xóa chiến dịch tiêm chủng
@@ -531,6 +537,14 @@ const sendConsentNotification = async (req, res) => {
         const vaccine = await prisma.vaccine.findUnique({
             where: { id: campaign.vaccineId },
         });
+
+        if (!vaccine) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy thông tin vaccine cho chiến dịch này",
+            });
+        }
+
         const minAge = vaccine?.minAge;
         const maxAge = vaccine?.maxAge;
 
@@ -545,12 +559,24 @@ const sendConsentNotification = async (req, res) => {
             where: { grade: { in: selectedGrades } },
             include: {
                 parents: { include: { parent: { include: { user: true } } } },
+                vaccinationRecords: {
+                    where: {
+                        vaccineId: campaign.vaccineId,
+                        status: "COMPLETED",
+                    },
+                    select: {
+                        id: true,
+                        doseOrder: true,
+                        administeredDate: true,
+                        status: true,
+                    },
+                },
             },
         });
 
         // Lọc học sinh theo độ tuổi hợp lệ
         const now = new Date();
-        const eligibleStudents = students.filter((student) => {
+        const ageEligibleStudents = students.filter((student) => {
             if (!student.dateOfBirth) return false;
             const birthDate = new Date(student.dateOfBirth);
             let age = now.getFullYear() - birthDate.getFullYear();
@@ -563,15 +589,50 @@ const sendConsentNotification = async (req, res) => {
             if (maxAge && age > maxAge) return false;
             return true;
         });
-        // Danh sách học sinh không đủ tuổi
-        const ineligibleStudents = students.filter(
-            (student) => !eligibleStudents.includes(student)
+
+        // Lọc tiếp theo lịch sử tiêm chủng - loại bỏ học sinh đã tiêm đủ số mũi
+        const vaccinationEligibleStudents = [];
+        const alreadyVaccinatedStudents = [];
+        const ageIneligibleStudents = students.filter(
+            (student) => !ageEligibleStudents.includes(student)
         );
 
-        // Lấy tất cả userId của phụ huynh (loại trùng)
+        for (const student of ageEligibleStudents) {
+            const completedDoses = student.vaccinationRecords.length;
+            const maxDoses = vaccine?.maxDoseCount || 999; // Nếu không có giới hạn thì mặc định là 999
+
+            if (completedDoses >= maxDoses) {
+                // Học sinh đã tiêm đủ số mũi tối đa
+                alreadyVaccinatedStudents.push({
+                    ...student,
+                    completedDoses,
+                    maxDoses,
+                    reason: "Đã tiêm đủ số mũi tối đa",
+                });
+            } else {
+                // Học sinh vẫn cần tiêm thêm
+                vaccinationEligibleStudents.push({
+                    ...student,
+                    completedDoses,
+                    maxDoses,
+                    remainingDoses: maxDoses - completedDoses,
+                });
+            }
+        }
+
+        // Danh sách tổng hợp học sinh không đủ điều kiện
+        const ineligibleStudents = [
+            ...ageIneligibleStudents.map((s) => ({
+                ...s,
+                reason: "Không đủ độ tuổi",
+            })),
+            ...alreadyVaccinatedStudents,
+        ];
+
+        // Lấy tất cả userId của phụ huynh (loại trùng) - chỉ từ học sinh đủ điều kiện tiêm
         const parentUserIds = Array.from(
             new Set(
-                eligibleStudents.flatMap((student) =>
+                vaccinationEligibleStudents.flatMap((student) =>
                     student.parents.map((sp) => sp.parent.user.id)
                 )
             )
@@ -580,7 +641,15 @@ const sendConsentNotification = async (req, res) => {
         if (parentUserIds.length === 0) {
             return res.status(400).json({
                 success: false,
-                error: "Không tìm thấy phụ huynh nào cho các học sinh đủ điều kiện trong các khối đã chọn",
+                error: "Không tìm thấy phụ huynh nào cho các học sinh đủ điều kiện trong các khối đã chọn. Tất cả học sinh đã tiêm đủ số mũi hoặc không đủ tuổi.",
+                details: {
+                    totalStudents: students.length,
+                    ageEligibleStudents: ageEligibleStudents.length,
+                    vaccinationEligibleStudents:
+                        vaccinationEligibleStudents.length,
+                    alreadyVaccinatedStudents: alreadyVaccinatedStudents.length,
+                    ageIneligibleStudents: ageIneligibleStudents.length,
+                },
             });
         }
 
@@ -607,9 +676,15 @@ const sendConsentNotification = async (req, res) => {
             data: {
                 userId: managerId,
                 title: "Gửi phiếu đồng ý tiêm chủng thành công",
-                message: `Bạn đã gửi phiếu đồng ý tiêm chủng cho các khối: ${selectedGrades.join(
+                message: `Bạn đã gửi ${
+                    notifications.length
+                } phiếu đồng ý tiêm chủng cho các khối: ${selectedGrades.join(
                     ", "
-                )}`,
+                )}. Có ${
+                    alreadyVaccinatedStudents.length
+                } học sinh đã tiêm đủ số mũi và ${
+                    ageIneligibleStudents.length
+                } học sinh không đủ tuổi được bỏ qua.`,
                 type: "info",
                 status: "SENT",
                 sentAt: new Date(),
@@ -628,26 +703,51 @@ const sendConsentNotification = async (req, res) => {
                     deadline: campaign.deadline,
                     targetGrades: campaign.targetGrades,
                 },
+                vaccine: {
+                    id: vaccine.id,
+                    name: vaccine.name,
+                    maxDoseCount: vaccine.maxDoseCount,
+                    minAge: vaccine.minAge,
+                    maxAge: vaccine.maxAge,
+                },
                 sentGrades: selectedGrades,
                 notificationsCount: notifications.length,
-                eligibleStudents: eligibleStudents.map((s) => ({
+                statistics: {
+                    totalStudents: students.length,
+                    ageEligibleStudents: ageEligibleStudents.length,
+                    vaccinationEligibleStudents:
+                        vaccinationEligibleStudents.length,
+                    alreadyVaccinatedStudents: alreadyVaccinatedStudents.length,
+                    ageIneligibleStudents: ageIneligibleStudents.length,
+                },
+                eligibleStudents: vaccinationEligibleStudents.map((s) => ({
                     id: s.id,
                     fullName: s.user?.fullName,
                     grade: s.grade,
                     dateOfBirth: s.dateOfBirth,
+                    completedDoses: s.completedDoses,
+                    maxDoses: s.maxDoses,
+                    remainingDoses: s.remainingDoses,
                 })),
                 ineligibleStudents: ineligibleStudents.map((s) => ({
                     id: s.id,
                     fullName: s.user?.fullName,
                     grade: s.grade,
                     dateOfBirth: s.dateOfBirth,
+                    reason: s.reason,
+                    completedDoses: s.completedDoses || 0,
+                    maxDoses: s.maxDoses || vaccine?.maxDoseCount || 0,
                 })),
             },
             message: `Đã gửi ${
                 notifications.length
             } phiếu đồng ý tiêm chủng cho phụ huynh các khối: ${selectedGrades.join(
                 ", "
-            )}`,
+            )}. Bỏ qua ${
+                alreadyVaccinatedStudents.length
+            } học sinh đã tiêm đủ và ${
+                ageIneligibleStudents.length
+            } học sinh không đủ tuổi.`,
         });
     } catch (error) {
         console.error("Error sending consent notifications:", error);

@@ -280,7 +280,7 @@ const VaccineManagement = () => {
             key: "name",
         },
         {
-            title: "Tên bệnh phòng chống",
+            title: "Bệnh phòng chống",
             dataIndex: "diseaseName",
             key: "diseaseName",
             render: (diseaseName) => (
@@ -394,16 +394,28 @@ const VaccineManagement = () => {
     };
 
     const handleSearch = (values) => {
-        const { name, requirement } = values;
+        const { name, diseaseName, requirement } = values;
         let filtered = vaccines;
+
         if (name) {
             filtered = filtered.filter((v) =>
                 v.name?.trim().toLowerCase().includes(name.trim().toLowerCase())
             );
         }
+
+        if (diseaseName) {
+            filtered = filtered.filter((v) =>
+                v.diseaseName
+                    ?.trim()
+                    .toLowerCase()
+                    .includes(diseaseName.trim().toLowerCase())
+            );
+        }
+
         if (requirement) {
             filtered = filtered.filter((v) => v.requirement === requirement);
         }
+
         setFilteredVaccines(filtered);
     };
 
@@ -450,6 +462,14 @@ const VaccineManagement = () => {
                         <Col xs={24} sm={8}>
                             <Form.Item name="name" label="Tên vaccine">
                                 <Input placeholder="Nhập tên vaccine" />
+                            </Form.Item>
+                        </Col>
+                        <Col xs={24} sm={8}>
+                            <Form.Item
+                                name="diseaseName"
+                                label="Bệnh phòng chống"
+                            >
+                                <Input placeholder="Nhập tên bệnh" />
                             </Form.Item>
                         </Col>
                         <Col xs={24} sm={8}>
@@ -560,7 +580,7 @@ const VaccineManagement = () => {
                             "Vui lòng nhập tên vaccine"
                         ),
                         diseaseName: Yup.string().required(
-                            "Vui lòng nhập tên bệnh phòng chống"
+                            "Vui lòng nhập bệnh phòng chống"
                         ),
                         requirement: Yup.string().required(
                             "Vui lòng chọn yêu cầu"
@@ -769,7 +789,7 @@ const VaccineManagement = () => {
                                     />
                                 </Form.Item>
                                 <Form.Item
-                                    label="Tên bệnh phòng chống"
+                                    label="Bệnh phòng chống"
                                     help={
                                         touched.diseaseName &&
                                         errors.diseaseName
@@ -1389,7 +1409,7 @@ const VaccineManagement = () => {
                         </Divider>
                         <Descriptions column={2} size="small" bordered>
                             <Descriptions.Item
-                                label="Tên bệnh phòng chống"
+                                label="Bệnh phòng chống"
                                 span={2}
                             >
                                 <span

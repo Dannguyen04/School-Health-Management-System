@@ -456,19 +456,23 @@ model VaccinationConsent {
 model VaccinationRecord {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   
-  // References
+  // References - cho phép null cho external records
   vaccineId        String   @db.ObjectId
-  campaignId       String   @db.ObjectId
+  campaignId       String?  @db.ObjectId  // Nullable cho external records
   studentId        String   @db.ObjectId
-  nurseId          String   @db.ObjectId
+  nurseId          String?  @db.ObjectId  // Nullable cho external records
   
   // Denormalized data for faster queries
   vaccineName      String   // Embedded vaccine name
-  campaignName     String   // Embedded campaign name
+  campaignName     String?  // Nullable - chỉ có khi là school vaccination
   studentName      String   // Embedded student name
-  nurseName        String   // Embedded nurse name
+  nurseName        String?  // Nullable - chỉ có khi là school vaccination
   studentGrade     String   // Embedded student grade
   studentClass     String   // Embedded student class
+  
+  // Thêm field để phân biệt loại vaccination
+  isExternalRecord Boolean  @default(false) // true = phụ huynh thêm, false = trường tiêm
+  externalLocation String?  // Nơi tiêm bên ngoài (bệnh viện, phòng khám, etc.)
   
   // Vaccination details
   administeredDate DateTime
@@ -489,11 +493,11 @@ model VaccinationRecord {
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
 
-  // Relations
-  vaccine    Vaccine             @relation(fields: [vaccineId], references: [id], onDelete: Restrict)
-  campaign   VaccinationCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
-  student    Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  nurse      SchoolNurse         @relation(fields: [nurseId], references: [id], onDelete: Restrict)
+  // Relations - cho phép null
+  vaccine    Vaccine              @relation(fields: [vaccineId], references: [id], onDelete: Restrict)
+  campaign   VaccinationCampaign? @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  student    Student              @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  nurse      SchoolNurse?         @relation(fields: [nurseId], references: [id], onDelete: Restrict)
 
   @@map("vaccination_records")
   @@index([vaccineId])

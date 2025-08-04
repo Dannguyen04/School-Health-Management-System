@@ -12,6 +12,7 @@ import {
     getStudentVaccinationCampaigns,
     getStudentHealthCheckups,
     deliverMedication,
+    addVaccinationHistoryByParent,
     getMedicalCampaigns,
 } from "../controllers/parentController.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
@@ -101,10 +102,13 @@ router.get(
 );
 
 // Route lấy danh sách chiến dịch khám sức khỏe cho phụ huynh
-router.get(
-    "/medical-campaigns",
+router.get("/medical-campaigns", authenticateToken, getMedicalCampaigns);
+
+// Route thêm lịch sử tiêm chủng bên ngoài
+router.post(
+    "/vaccination-history",
     authenticateToken,
-    getMedicalCampaigns
+    addVaccinationHistoryByParent
 );
 
 // Routes for notifications
