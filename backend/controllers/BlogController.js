@@ -207,9 +207,6 @@ export const getBlogPostById = async (req, res) => {
 // Update a blog post
 export const updateBlogPost = async (req, res) => {
     try {
-        console.log("Updating blog post with data:", req.body);
-        console.log("User:", req.user);
-
         const { id } = req.params;
         const {
             title,
@@ -221,11 +218,73 @@ export const updateBlogPost = async (req, res) => {
             isPublished,
         } = req.body;
 
+        // Validate required fields
+        if (!title || !content) {
+            return res.status(400).json({
+                success: false,
+                error: "Tiêu đề và nội dung là bắt buộc",
+            });
+        }
+
+        // Validate field types
+        if (typeof title !== "string" || typeof content !== "string") {
+            return res.status(400).json({
+                success: false,
+                error: "Dữ liệu không hợp lệ",
+            });
+        }
+
+        // Validate excerpt if provided
+        if (excerpt && typeof excerpt !== "string") {
+            return res.status(400).json({
+                success: false,
+                error: "Tóm tắt không hợp lệ",
+            });
+        }
+
+        // Validate category if provided
+        if (category && typeof category !== "string") {
+            return res.status(400).json({
+                success: false,
+                error: "Danh mục không hợp lệ",
+            });
+        }
+
+        // Validate tags if provided
+        if (tags && !Array.isArray(tags)) {
+            return res.status(400).json({
+                success: false,
+                error: "Tags không hợp lệ",
+            });
+        }
+
+        // Validate isPublished if provided
+        if (isPublished !== undefined && typeof isPublished !== "boolean") {
+            return res.status(400).json({
+                success: false,
+                error: "Trạng thái xuất bản không hợp lệ",
+            });
+        }
+
+        // Validate ID format
+        if (!id || typeof id !== "string") {
+            return res.status(400).json({
+                success: false,
+                error: "ID bài viết không hợp lệ",
+            });
+        }
+
+        // Validate MongoDB ObjectId format
+        if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+            return res.status(400).json({
+                success: false,
+                error: "ID bài viết không đúng định dạng",
+            });
+        }
+
         const existingPost = await prisma.post.findUnique({
             where: { id },
         });
-
-        console.log("Existing post:", existingPost);
 
         if (!existingPost) {
             return res.status(404).json({
@@ -233,16 +292,6 @@ export const updateBlogPost = async (req, res) => {
                 error: "Không tìm thấy bài viết",
             });
         }
-
-        // Check if user is the author or has admin privileges
-        console.log(
-            "Checking permissions - authorId:",
-            existingPost.authorId,
-            "userId:",
-            req.user.id,
-            "userRole:",
-            req.user.role
-        );
 
         if (
             existingPost.authorId !== req.user.id &&
@@ -254,25 +303,64 @@ export const updateBlogPost = async (req, res) => {
             });
         }
 
+        // Prepare update data with proper validation
         const updateData = {
-            title,
-            content,
-            excerpt,
-            coverImage,
-            category,
-            tags: tags || [],
+            title: title.trim(),
+            content: content.trim(),
+            excerpt: excerpt ? excerpt.trim() : null,
+            coverImage: coverImage || null,
+            category: category || null,
+            tags: Array.isArray(tags)
+                ? tags.filter(
+                      (tag) => tag && typeof tag === "string" && tag.trim()
+                  )
+                : [],
             isPublished:
                 isPublished !== undefined
-                    ? isPublished
+                    ? Boolean(isPublished)
                     : existingPost.isPublished,
         };
 
-        // Set publishedAt if publishing for the first time
-        if (isPublished && !existingPost.isPublished) {
-            updateData.publishedAt = new Date();
+        // Additional validation for data length
+        if (updateData.title.length > 255) {
+            return res.status(400).json({
+                success: false,
+                error: "Tiêu đề quá dài (tối đa 255 ký tự)",
+            });
         }
 
-        console.log("Update data:", updateData);
+        if (updateData.content.length > 10000) {
+            return res.status(400).json({
+                success: false,
+                error: "Nội dung quá dài (tối đa 10000 ký tự)",
+            });
+        }
+
+        if (updateData.excerpt && updateData.excerpt.length > 500) {
+            return res.status(400).json({
+                success: false,
+                error: "Tóm tắt quá dài (tối đa 500 ký tự)",
+            });
+        }
+
+        // Validate coverImage if it's a base64 string
+        if (
+            updateData.coverImage &&
+            typeof updateData.coverImage === "string"
+        ) {
+            if (updateData.coverImage.length > 1000000) {
+                // 1MB limit for base64
+                return res.status(400).json({
+                    success: false,
+                    error: "Ảnh bìa quá lớn (tối đa 1MB)",
+                });
+            }
+        }
+
+        // Set publishedAt if publishing for the first time
+        if (updateData.isPublished && !existingPost.isPublished) {
+            updateData.publishedAt = new Date();
+        }
 
         const updatedPost = await prisma.post.update({
             where: { id },
@@ -288,20 +376,45 @@ export const updateBlogPost = async (req, res) => {
             },
         });
 
-        console.log("Updated post:", updatedPost);
-
         res.json({
             success: true,
             message: "Bài viết đã được cập nhật thành công",
             data: updatedPost,
         });
     } catch (error) {
-        console.error("Error updating blog post:", error);
-        console.error("Error details:", {
-            message: error.message,
-            code: error.code,
-            meta: error.meta,
-        });
+        // Only log error to server, not to client
+        // console.error("Error updating blog post:", error);
+        // console.error("Error details:", {
+        //     message: error.message,
+        //     code: error.code,
+        //     meta: error.meta,
+        //     stack: error.stack,
+        // });
+        // Handle specific Prisma errors
+        if (error.code === "P2025") {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy bài viết để cập nhật",
+            });
+        }
+        if (error.code === "P2002") {
+            return res.status(400).json({
+                success: false,
+                error: "Dữ liệu trùng lặp",
+            });
+        }
+        if (error.code === "P2003") {
+            return res.status(400).json({
+                success: false,
+                error: "Dữ liệu không hợp lệ",
+            });
+        }
+        if (error.code === "P2014") {
+            return res.status(400).json({
+                success: false,
+                error: "ID không hợp lệ",
+            });
+        }
         res.status(500).json({
             success: false,
             error: "Lỗi khi cập nhật bài viết: " + error.message,
