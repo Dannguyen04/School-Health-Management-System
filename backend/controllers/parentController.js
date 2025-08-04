@@ -1,6 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
+// Constants cho lịch sử tiêm chủng bên ngoài
+const EXTERNAL_VACCINATION_CONSTANTS = {
+    FAKE_CAMPAIGN_ID: "000000000000000000000000",
+    FAKE_NURSE_ID: "000000000000000000000000",
+    CAMPAIGN_NAME: "Lịch sử tiêm ngoài",
+    NURSE_NAME: "Bên ngoài trường",
+    DEFAULT_NOTE: "Được khai báo bởi phụ huynh",
+};
+
 // Thêm hàm gửi notification nếu thiếu số điện thoại
 async function notifyParentToUpdatePhone(user) {
     if (!user.phone) {
@@ -1051,95 +1060,287 @@ export const deliverMedication = async (req, res) => {
     }
 };
 
-// Lấy danh sách chiến dịch khám sức khỏe cho phụ huynh
-export const getMedicalCampaigns = async (req, res) => {
-  try {
-    const userId = req.user.id;
+// Phụ huynh thêm lịch sử tiêm chủng cho con (có thể thêm nhiều mũi cùng lúc)
+export const addVaccinationHistoryByParent = async (req, res) => {
+    try {
+        const { studentId } = req.params;
+        const { vaccinationHistories } = req.body; // Mảng các lịch sử tiêm chủng
 
-    // Lấy thông tin phụ huynh và con cái
-    const parent = await prisma.parent.findFirst({
-      where: { userId },
-      include: {
-        students: {
-          include: {
-            student: true
-          }
+        // Kiểm tra quyền: chỉ cho phép phụ huynh của học sinh này
+        if (!req.user.parentProfile) {
+            return res.status(403).json({
+                success: false,
+                error: "Bạn phải là phụ huynh để thực hiện hành động này.",
+            });
         }
-      }
-    });
 
-    if (!parent) {
-      return res.status(404).json({
-        success: false,
-        error: "Không tìm thấy thông tin phụ huynh",
-      });
-    }
-
-    // Lấy tất cả chiến dịch khám sức khỏe
-    const campaigns = await prisma.medicalCheckCampaign.findMany({
-      where: {
-        status: { in: ["ACTIVE", "SCHEDULED"] }
-      },
-      orderBy: {
-        scheduledDate: "desc"
-      }
-    });
-
-    // Lọc chiến dịch phù hợp với khối của con cái
-    const childrenGrades = parent.students.map(sp => sp.student.grade);
-    const relevantCampaigns = campaigns.filter(campaign => 
-      campaign.targetGrades.some(grade => childrenGrades.includes(grade))
-    );
-
-    // Thêm thông tin consent cho từng chiến dịch
-    const campaignsWithConsent = await Promise.all(
-      relevantCampaigns.map(async (campaign) => {
-        const consentPromises = parent.students.map(async (studentParent) => {
-          const student = studentParent.student;
-          
-          // Chỉ kiểm tra nếu học sinh thuộc khối được nhắm đến
-          if (!campaign.targetGrades.includes(student.grade)) {
-            return null;
-          }
-
-          const medicalCheck = await prisma.medicalCheck.findFirst({
+        const parentId = req.user.parentProfile.id;
+        const studentParent = await prisma.studentParent.findFirst({
             where: {
-              studentId: student.id,
-              campaignId: campaign.id,
+                studentId: studentId,
+                parentId: parentId,
             },
-            select: {
-              parentConsent: true,
-              parentNotified: true,
+            include: {
+                student: {
+                    select: {
+                        id: true,
+                        fullName: true,
+                        grade: true,
+                        class: true,
+                    },
+                },
             },
-          });
-
-          return {
-            studentId: student.id,
-            studentName: student.fullName,
-            parentConsent: medicalCheck?.parentConsent || [],
-            parentNotified: medicalCheck?.parentNotified || false,
-          };
         });
 
-        const consents = (await Promise.all(consentPromises)).filter(Boolean);
+        if (!studentParent) {
+            return res.status(403).json({
+                success: false,
+                error: "Bạn không có quyền thêm lịch sử tiêm chủng cho học sinh này.",
+            });
+        }
 
-        return {
-          ...campaign,
-          childrenConsent: consents,
-          hasOptionalExaminations: campaign.optionalExaminations && campaign.optionalExaminations.length > 0,
+        // Validate dữ liệu đầu vào
+        if (
+            !Array.isArray(vaccinationHistories) ||
+            vaccinationHistories.length === 0
+        ) {
+            return res.status(400).json({
+                success: false,
+                error: "Cần cung cấp ít nhất một lịch sử tiêm chủng.",
+            });
+        }
+
+        // Validate từng record
+        for (let i = 0; i < vaccinationHistories.length; i++) {
+            const history = vaccinationHistories[i];
+            if (
+                !history.vaccineId ||
+                !history.administeredDate ||
+                !history.doseOrder ||
+                !history.doseType
+            ) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Lịch sử tiêm chủng thứ ${
+                        i + 1
+                    } thiếu thông tin bắt buộc (vaccineId, administeredDate, doseOrder, doseType).`,
+                });
+            }
+
+            // Validate doseType
+            const validDoseTypes = [
+                "PRIMARY",
+                "BOOSTER",
+                "CATCHUP",
+                "ADDITIONAL",
+            ];
+            if (!validDoseTypes.includes(history.doseType)) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Loại mũi tiêm không hợp lệ ở lịch sử thứ ${
+                        i + 1
+                    }. Phải là: ${validDoseTypes.join(", ")}`,
+                });
+            }
+
+            // Kiểm tra trùng mũi tiêm
+            const existing = await prisma.vaccinationRecord.findFirst({
+                where: {
+                    studentId,
+                    vaccineId: history.vaccineId,
+                    doseOrder: history.doseOrder,
+                },
+            });
+
+            if (existing) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Mũi tiêm số ${history.doseOrder} của vaccine này đã được khai báo.`,
+                });
+            }
+        }
+
+        // Sắp xếp theo thứ tự doseOrder để đảm bảo logic
+        vaccinationHistories.sort((a, b) => a.doseOrder - b.doseOrder);
+
+        // Lấy thông tin vaccine để có tên vaccine
+        const vaccineIds = [
+            ...new Set(vaccinationHistories.map((h) => h.vaccineId)),
+        ];
+        const vaccines = await prisma.vaccine.findMany({
+            where: { id: { in: vaccineIds } },
+            select: { id: true, name: true },
+        });
+
+        const vaccineMap = new Map(vaccines.map((v) => [v.id, v.name]));
+
+        // Constants cho external vaccination records
+        const EXTERNAL_VACCINATION_CONSTANTS = {
+            FAKE_CAMPAIGN_ID: "000000000000000000000003", // ID của external campaign vừa tạo
+            FAKE_NURSE_ID: "000000000000000000000002", // ID của external nurse vừa tạo
+            CAMPAIGN_NAME: "Tiêm chủng ngoài trường",
+            NURSE_NAME: "Y tá ngoài trường",
+            DEFAULT_NOTE: "Tiêm chủng tại cơ sở y tế bên ngoài trường học",
         };
-      })
-    );
 
-    res.json({
-      success: true,
-      data: campaignsWithConsent,
-    });
-  } catch (error) {
-    console.error("Error fetching medical campaigns:", error);
-    res.status(500).json({
-      success: false,
-      error: "Lỗi server khi lấy danh sách chiến dịch",
-    });
-  }
+        // Tạo các bản ghi lịch sử tiêm chủng trong transaction
+        const results = await prisma.$transaction(async (tx) => {
+            const createdRecords = [];
+
+            for (const history of vaccinationHistories) {
+                const vaccineName =
+                    vaccineMap.get(history.vaccineId) || "Vaccine ngoài";
+
+                const record = await tx.vaccinationRecord.create({
+                    data: {
+                        // References - Sử dụng fake IDs cho các trường bắt buộc
+                        vaccineId: history.vaccineId,
+                        campaignId:
+                            EXTERNAL_VACCINATION_CONSTANTS.FAKE_CAMPAIGN_ID,
+                        studentId,
+                        nurseId: EXTERNAL_VACCINATION_CONSTANTS.FAKE_NURSE_ID,
+
+                        // Denormalized data
+                        vaccineName: vaccineName,
+                        campaignName:
+                            EXTERNAL_VACCINATION_CONSTANTS.CAMPAIGN_NAME,
+                        studentName: studentParent.student.fullName,
+                        nurseName: EXTERNAL_VACCINATION_CONSTANTS.NURSE_NAME,
+                        studentGrade: studentParent.student.grade || "",
+                        studentClass: studentParent.student.class || "",
+
+                        // Vaccination details
+                        administeredDate: new Date(history.administeredDate),
+                        doseOrder: history.doseOrder,
+                        doseType: history.doseType,
+                        doseAmount: history.doseAmount || 0.5,
+                        batchNumber: history.batchNumber || null,
+                        notes:
+                            history.notes ||
+                            EXTERNAL_VACCINATION_CONSTANTS.DEFAULT_NOTE,
+                        status: "COMPLETED",
+                        followUpRequired: false,
+                    },
+                });
+                createdRecords.push(record);
+            }
+
+            return createdRecords;
+        });
+
+        res.json({
+            success: true,
+            data: results,
+            message: `Đã thêm thành công ${results.length} lịch sử tiêm chủng.`,
+        });
+    } catch (error) {
+        console.error("Lỗi khi thêm lịch sử tiêm chủng:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi khi thêm lịch sử tiêm chủng.",
+        });
+    }
+};
+
+// Lấy danh sách chiến dịch khám sức khỏe cho phụ huynh
+export const getMedicalCampaigns = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        // Lấy thông tin phụ huynh và con cái
+        const parent = await prisma.parent.findFirst({
+            where: { userId },
+            include: {
+                students: {
+                    include: {
+                        student: true,
+                    },
+                },
+            },
+        });
+
+        if (!parent) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy thông tin phụ huynh",
+            });
+        }
+
+        // Lấy tất cả chiến dịch khám sức khỏe
+        const campaigns = await prisma.medicalCheckCampaign.findMany({
+            where: {
+                status: { in: ["ACTIVE", "SCHEDULED"] },
+            },
+            orderBy: {
+                scheduledDate: "desc",
+            },
+        });
+
+        // Lọc chiến dịch phù hợp với khối của con cái
+        const childrenGrades = parent.students.map((sp) => sp.student.grade);
+        const relevantCampaigns = campaigns.filter((campaign) =>
+            campaign.targetGrades.some((grade) =>
+                childrenGrades.includes(grade)
+            )
+        );
+
+        // Thêm thông tin consent cho từng chiến dịch
+        const campaignsWithConsent = await Promise.all(
+            relevantCampaigns.map(async (campaign) => {
+                const consentPromises = parent.students.map(
+                    async (studentParent) => {
+                        const student = studentParent.student;
+
+                        // Chỉ kiểm tra nếu học sinh thuộc khối được nhắm đến
+                        if (!campaign.targetGrades.includes(student.grade)) {
+                            return null;
+                        }
+
+                        const medicalCheck =
+                            await prisma.medicalCheck.findFirst({
+                                where: {
+                                    studentId: student.id,
+                                    campaignId: campaign.id,
+                                },
+                                select: {
+                                    parentConsent: true,
+                                    parentNotified: true,
+                                },
+                            });
+
+                        return {
+                            studentId: student.id,
+                            studentName: student.fullName,
+                            parentConsent: medicalCheck?.parentConsent || [],
+                            parentNotified:
+                                medicalCheck?.parentNotified || false,
+                        };
+                    }
+                );
+
+                const consents = (await Promise.all(consentPromises)).filter(
+                    Boolean
+                );
+
+                return {
+                    ...campaign,
+                    childrenConsent: consents,
+                    hasOptionalExaminations:
+                        campaign.optionalExaminations &&
+                        campaign.optionalExaminations.length > 0,
+                };
+            })
+        );
+
+        res.json({
+            success: true,
+            data: campaignsWithConsent,
+        });
+    } catch (error) {
+        console.error("Error fetching medical campaigns:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi server khi lấy danh sách chiến dịch",
+        });
+    }
 };
