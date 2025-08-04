@@ -397,6 +397,7 @@ model VaccinationCampaign {
 model Vaccine {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   name             String   @unique
+  diseaseName      String   // Tên bệnh mà vaccine phòng chống
   requirement      VaccineRequirement
   manufacturer     String  
   origin           String  
