@@ -123,6 +123,22 @@ const createMedicalCheck = async (req, res) => {
       notes,
       parentNotified,
       parentResponse,
+      // Khám sinh dục
+      maleGenitalPenis,
+      maleGenitalTesticles,
+      malePubertySigns,
+      malePubertyAge,
+      femaleGenitalExternal,
+      femaleGenitalExternalOther,
+      femaleMenstruation,
+      femaleMenstruationAge,
+      femaleMenstrualCycle,
+      femaleMenstrualCycleOther,
+      // Khám tâm lý
+      psychologicalEmotion,
+      psychologicalCommunication,
+      psychologicalBehavior,
+      psychologicalConcentration,
     } = req.body;
     // Validate bắt buộc
     const requiredFields = [
@@ -389,19 +405,110 @@ const createMedicalCheck = async (req, res) => {
         error: `Học sinh lớp ${student.grade} không thuộc đối tượng kiểm tra của chiến dịch này`,
       });
     }
-    // Kiểm tra trùng lặp
+    // Kiểm tra trùng lặp - nếu có thì cập nhật thay vì báo lỗi
+    console.log("Checking for existing report:", { studentId, campaignId });
     const existingCheck = await prisma.medicalCheck.findFirst({
       where: { studentId, campaignId },
     });
+    console.log("Existing check result:", existingCheck);
     if (existingCheck) {
-      return res.status(400).json({
-        success: false,
-        error: "Học sinh đã có báo cáo kiểm tra cho chiến dịch này",
-        existingCheck: {
-          id: existingCheck.id,
-          status: existingCheck.status,
-          scheduledDate: existingCheck.scheduledDate,
+      // Cập nhật báo cáo cũ thay vì tạo mới
+      const updatedCheck = await prisma.medicalCheck.update({
+        where: { id: existingCheck.id },
+        data: {
+          scheduledDate: new Date(scheduledDate),
+          height,
+          weight,
+          pulse,
+          systolicBP,
+          diastolicBP,
+          physicalClassification,
+          visionRightNoGlasses,
+          visionLeftNoGlasses,
+          visionRightWithGlasses,
+          visionLeftWithGlasses,
+          hearingLeftNormal,
+          hearingLeftWhisper,
+          hearingRightNormal,
+          hearingRightWhisper,
+          dentalUpperJaw,
+          dentalLowerJaw,
+          clinicalNotes,
+          overallHealth,
+          recommendations,
+          requiresFollowUp: requiresFollowUp || false,
+          followUpDate: followUpDate ? new Date(followUpDate) : undefined,
+          notes: notes || "",
+          parentNotified: parentNotified || false,
+          parentResponse: parentResponse || null,
+          // Khám sinh dục
+          maleGenitalPenis: maleGenitalPenis || null,
+          maleGenitalTesticles: maleGenitalTesticles || null,
+          malePubertySigns: malePubertySigns || null,
+          malePubertyAge: malePubertyAge || null,
+          femaleGenitalExternal: femaleGenitalExternal || null,
+          femaleGenitalExternalOther: femaleGenitalExternalOther || null,
+          femaleMenstruation: femaleMenstruation || null,
+          femaleMenstruationAge: femaleMenstruationAge || null,
+          femaleMenstrualCycle: femaleMenstrualCycle || null,
+          femaleMenstrualCycleOther: femaleMenstrualCycleOther || null,
+          // Khám tâm lý
+          psychologicalEmotion: psychologicalEmotion || null,
+          psychologicalCommunication: psychologicalCommunication || null,
+          psychologicalBehavior: psychologicalBehavior || null,
+          psychologicalConcentration: psychologicalConcentration || null,
+          status: "COMPLETED",
         },
+        include: {
+          student: true,
+          campaign: {
+            select: {
+              id: true,
+              name: true,
+              deadline: true,
+            },
+          },
+          nurse: { include: { user: true } },
+        },
+      });
+
+      // Tính trung bình thị lực và thính lực
+      let avgVision = "N/A";
+      let avgHearing = "N/A";
+
+      const visionRightNum = parseFloat(visionRightWithGlasses);
+      const visionLeftNum = parseFloat(visionLeftWithGlasses);
+      const hearingLeftNum = parseFloat(hearingLeftNormal);
+      const hearingRightNum = parseFloat(hearingRightNormal);
+
+      if (!isNaN(visionRightNum) && !isNaN(visionLeftNum)) {
+        avgVision = ((visionRightNum + visionLeftNum) / 2).toFixed(1);
+      }
+
+      if (!isNaN(hearingLeftNum) && !isNaN(hearingRightNum)) {
+        avgHearing = ((hearingLeftNum + hearingRightNum) / 2).toFixed(1);
+      }
+
+      // Cập nhật hồ sơ sức khỏe
+      try {
+        await prisma.healthProfile.update({
+          where: { studentId },
+          data: {
+            height,
+            weight,
+            vision: avgVision,
+            hearing: avgHearing,
+            lastUpdatedBy: nurseId,
+          },
+        });
+      } catch (err) {
+        console.log(`Health profile not found for student ${studentId}:`, err.message);
+      }
+
+      return res.status(200).json({
+        success: true,
+        message: `Đã cập nhật báo cáo kiểm tra cho học sinh ${student.name}`,
+        data: updatedCheck,
       });
     }
     // Tạo mới
@@ -435,6 +542,22 @@ const createMedicalCheck = async (req, res) => {
         notes: notes || "",
         parentNotified: parentNotified || false,
         parentResponse: parentResponse || null,
+        // Khám sinh dục
+        maleGenitalPenis: maleGenitalPenis || null,
+        maleGenitalTesticles: maleGenitalTesticles || null,
+        malePubertySigns: malePubertySigns || null,
+        malePubertyAge: malePubertyAge || null,
+        femaleGenitalExternal: femaleGenitalExternal || null,
+        femaleGenitalExternalOther: femaleGenitalExternalOther || null,
+        femaleMenstruation: femaleMenstruation || null,
+        femaleMenstruationAge: femaleMenstruationAge || null,
+        femaleMenstrualCycle: femaleMenstrualCycle || null,
+        femaleMenstrualCycleOther: femaleMenstrualCycleOther || null,
+        // Khám tâm lý
+        psychologicalEmotion: psychologicalEmotion || null,
+        psychologicalCommunication: psychologicalCommunication || null,
+        psychologicalBehavior: psychologicalBehavior || null,
+        psychologicalConcentration: psychologicalConcentration || null,
         status: "COMPLETED",
       },
       include: {
@@ -507,6 +630,7 @@ const updateMedicalCheckResults = async (req, res) => {
       followUpDate,
       parentNotified,
       parentResponse,
+      scheduledDate,
       // Thêm các trường khác để có thể update đầy đủ
       height,
       weight,
@@ -581,6 +705,8 @@ const updateMedicalCheckResults = async (req, res) => {
       updateData.parentNotified = parentNotified;
     if (parentResponse !== undefined)
       updateData.parentResponse = parentResponse;
+    if (scheduledDate !== undefined)
+      updateData.scheduledDate = scheduledDate ? new Date(scheduledDate) : null;
     
     // Các trường khám sức khỏe
     if (height !== undefined) updateData.height = height;
@@ -779,11 +905,44 @@ const updateParentNotification = async (req, res) => {
   }
 };
 
+// Xóa báo cáo khám sức khỏe
+const deleteMedicalCheck = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Kiểm tra báo cáo có tồn tại không
+    const medicalCheck = await prisma.medicalCheck.findUnique({
+      where: { id },
+      include: { student: true, campaign: true },
+    });
+
+    if (!medicalCheck) {
+      return res.status(404).json({
+        success: false,
+        error: "Không tìm thấy báo cáo kiểm tra",
+      });
+    }
+
+    // Xóa báo cáo
+    await prisma.medicalCheck.delete({
+      where: { id },
+    });
+
+    res.json({
+      success: true,
+      message: `Đã xóa báo cáo kiểm tra cho học sinh ${medicalCheck.student.name}`,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 // Tạo lịch kiểm tra cho từng học sinh (từng cá nhân)
 
 export {
   checkNursePermission,
   createMedicalCheck,
+  deleteMedicalCheck,
   getMedicalCheckDetail,
   getMedicalChecksByCampaign,
   getStudentMedicalChecks,

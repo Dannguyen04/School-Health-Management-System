@@ -558,7 +558,24 @@ model MedicalCheck {
   dentalLowerJaw       String     // Kết quả khám hàm dưới
   clinicalNotes        String     // Ghi chú các bệnh lý từ khám lâm sàng (nhi khoa, tuần hoàn, hô hấp, tiêu hóa, thận-tiết niệu, thần kinh, tâm thần, mắt, tai mũi họng, răng hàm mặt)
 
- 
+  // Khám sinh dục
+  maleGenitalPenis           String?  // Dương vật (NORMAL, LONG_FORESKIN, TIGHT_FORESKIN)
+  maleGenitalTesticles       String?  // Tinh hoàn (NORMAL, UNDESCENDED, SWOLLEN_PAINFUL)
+  malePubertySigns           String?  // Dấu hiệu dậy thì (NOT_STARTED, STARTING)
+  malePubertyAge             Int?     // Tuổi bắt đầu dậy thì
+  femaleGenitalExternal      String?  // Tình trạng cơ quan sinh dục ngoài (NORMAL, RED_INFLAMED, ABNORMAL_DISCHARGE, OTHER)
+  femaleGenitalExternalOther String?  // Mô tả khác cho tình trạng cơ quan sinh dục ngoài
+  femaleMenstruation         String?  // Có kinh nguyệt chưa (YES, NO)
+  femaleMenstruationAge      Int?     // Tuổi có kinh lần đầu
+  femaleMenstrualCycle       String?  // Chu kỳ kinh nguyệt (REGULAR, IRREGULAR, PAINFUL, OTHER)
+  femaleMenstrualCycleOther  String?  // Mô tả khác cho chu kỳ kinh nguyệt
+
+  // Khám tâm lý
+  psychologicalEmotion       String?  // Tình cảm – cảm xúc
+  psychologicalCommunication String?  // Giao tiếp – quan hệ xã hội
+  psychologicalBehavior      String?  // Hành vi – ứng xử
+  psychologicalConcentration String?  // Tập trung – chú ý
+
   // Kết Luận Chung
   overallHealth        OverallHealthStatus  // Sức khỏe bình thường hoặc các vấn đề cần lưu ý
   recommendations      String?     // Khuyến nghị cho phụ huynh

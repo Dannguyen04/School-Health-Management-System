@@ -2,6 +2,7 @@ import express from "express";
 import {
     checkNursePermission,
     createMedicalCheck,
+    deleteMedicalCheck,
     getMedicalCheckDetail,
     getMedicalChecksByCampaign,
     getStudentMedicalChecks,
@@ -44,5 +45,8 @@ router.get("/student/:studentId", authenticateToken, getStudentMedicalChecks);
 
 // Lấy chi tiết một báo cáo kiểm tra
 router.get("/:id", authenticateToken, getMedicalCheckDetail);
+
+// Xóa báo cáo kiểm tra
+router.delete("/:id", authenticateToken, checkNursePermission, deleteMedicalCheck);
 
 export default router;

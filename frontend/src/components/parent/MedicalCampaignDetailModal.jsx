@@ -30,7 +30,11 @@ const MedicalCampaignDetailModal = ({ visible, campaign, onClose, onConsentSubmi
   };
 
   const handleConsentSubmit = async () => {
-    // Không cần validate nữa vì có thể chọn 0 hoặc nhiều loại khám
+    // Validate: Không cho phép gửi quyết định khi không chọn gì
+    if (selectedExaminations.length === 0) {
+      message.error("Vui lòng chọn ít nhất một loại khám tùy chọn hoặc nhấn 'Từ chối tất cả'");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -121,7 +125,7 @@ const MedicalCampaignDetailModal = ({ visible, campaign, onClose, onConsentSubmi
               <Divider orientation="left">Khám tùy chọn</Divider>
               <Alert
                 message="Xin ý kiến đồng ý"
-                description="Nhà trường xin phép được thực hiện các loại khám tùy chọn sau cho con/em của quý phụ huynh. Vui lòng chọn các loại khám mà quý phụ huynh đồng ý."
+                description="Nhà trường xin phép được thực hiện các loại khám tùy chọn sau cho con/em của quý phụ huynh. Vui lòng chọn ít nhất một loại khám mà quý phụ huynh đồng ý, hoặc nhấn 'Từ chối tất cả' nếu không đồng ý."
                 type="info"
                 showIcon
                 style={{ marginBottom: 16 }}
@@ -197,6 +201,7 @@ const MedicalCampaignDetailModal = ({ visible, campaign, onClose, onConsentSubmi
                     type="primary" 
                     onClick={handleConsentSubmit}
                     loading={isSubmitting}
+                    disabled={selectedExaminations.length === 0}
                     icon={<CheckCircleOutlined />}
                   >
                     Gửi quyết định
