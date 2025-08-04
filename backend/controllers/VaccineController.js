@@ -32,7 +32,6 @@ const createVaccination = async (req, res) => {
     try {
         const {
             name,
-            diseaseName, // Thêm trường này
             diseaseName,
             requirement,
             manufacturer,
@@ -50,7 +49,6 @@ const createVaccination = async (req, res) => {
         if (
             !name ||
             !diseaseName ||
-            !diseaseName ||
             !requirement ||
             !manufacturer ||
             !origin ||
@@ -58,7 +56,7 @@ const createVaccination = async (req, res) => {
         ) {
             return res.status(400).json({
                 success: false,
-                error: "Thiếu trường dữ liệu cần thiết: tên, tên bệnh, tên bệnh, yêu cầu, nhà sản xuất, nguồn gốc, số mũi tối đa",
+                error: "Thiếu trường dữ liệu cần thiết: tên, tên bệnh, yêu cầu, nhà sản xuất, nguồn gốc, số mũi tối đa",
             });
         }
 
@@ -124,7 +122,6 @@ const createVaccination = async (req, res) => {
         const vaccination = await prisma.vaccine.create({
             data: {
                 name,
-                diseaseName, // Thêm trường này
                 diseaseName,
                 requirement,
                 manufacturer,
@@ -269,7 +266,6 @@ const updateVaccination = async (req, res) => {
     const { id } = req.params;
     const {
         name,
-        diseaseName, // Thêm trường này
         diseaseName,
         requirement,
         manufacturer,
@@ -295,17 +291,10 @@ const updateVaccination = async (req, res) => {
         }
 
         // Validate required fields
-        if (
-            !name ||
-            !diseaseName ||
-            !diseaseName ||
-            !requirement ||
-            !manufacturer ||
-            !origin
-        ) {
+        if (!name || !diseaseName || !requirement || !manufacturer || !origin) {
             return res.status(400).json({
                 success: false,
-                error: "Thiếu trường dữ liệu cần thiết: tên, tên bệnh, tên bệnh, yêu cầu, nhà sản xuất, nguồn gốc",
+                error: "Thiếu trường dữ liệu cần thiết: tên, tên bệnh, yêu cầu, nhà sản xuất, nguồn gốc",
             });
         }
 
@@ -349,7 +338,6 @@ const updateVaccination = async (req, res) => {
         console.log("Final data for updateVaccine:", {
             name,
             diseaseName,
-            diseaseName,
             requirement,
             manufacturer,
             origin,
@@ -367,7 +355,6 @@ const updateVaccination = async (req, res) => {
             where: { id },
             data: {
                 name,
-                diseaseName, // Thêm trường này
                 diseaseName,
                 requirement,
                 manufacturer,

@@ -524,6 +524,17 @@ const ConsentForms = () => {
                                             "-"}
                                     </span>
                                 </Descriptions.Item>
+                                <Descriptions.Item label="Phòng chống bệnh">
+                                    <span
+                                        style={{
+                                            fontWeight: 500,
+                                            color: "#d4380d",
+                                        }}
+                                    >
+                                        {consentModal.campaign.vaccine
+                                            ?.diseaseName || "-"}
+                                    </span>
+                                </Descriptions.Item>
                                 <Descriptions.Item label="Nhà sản xuất">
                                     {consentModal.campaign.vaccine
                                         ?.manufacturer || "-"}
