@@ -3093,11 +3093,7 @@ export const giveMedicineToStudent = async (req, res) => {
         const studentMedication = await prisma.studentMedication.findUnique({
             where: { id: studentMedicationId },
             include: {
-                student: {
-                    include: {
-                        user: { select: { fullName: true, email: true } },
-                    },
-                },
+                student: true,
                 parent: {
                     include: {
                         user: { select: { fullName: true, email: true } },
