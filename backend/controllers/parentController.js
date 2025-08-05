@@ -1,15 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
-// Constants cho lịch sử tiêm chủng bên ngoài
-const EXTERNAL_VACCINATION_CONSTANTS = {
-    FAKE_CAMPAIGN_ID: "000000000000000000000000",
-    FAKE_NURSE_ID: "000000000000000000000000",
-    CAMPAIGN_NAME: "Lịch sử tiêm ngoài",
-    NURSE_NAME: "Bên ngoài trường",
-    DEFAULT_NOTE: "Được khai báo bởi phụ huynh",
-};
-
 // Thêm hàm gửi notification nếu thiếu số điện thoại
 async function notifyParentToUpdatePhone(user) {
     if (!user.phone) {
@@ -1143,6 +1134,17 @@ export const addVaccinationHistoryByParent = async (req, res) => {
                 });
             }
 
+            // Validate ngày tiêm không được trong tương lai
+            const administeredDate = new Date(history.administeredDate);
+            if (administeredDate > new Date()) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Ngày tiêm ở lịch sử thứ ${
+                        i + 1
+                    } không được là ngày trong tương lai.`,
+                });
+            }
+
             // Kiểm tra trùng mũi tiêm
             const existing = await prisma.vaccinationRecord.findFirst({
                 where: {
@@ -1174,15 +1176,6 @@ export const addVaccinationHistoryByParent = async (req, res) => {
 
         const vaccineMap = new Map(vaccines.map((v) => [v.id, v.name]));
 
-        // Constants cho external vaccination records
-        const EXTERNAL_VACCINATION_CONSTANTS = {
-            FAKE_CAMPAIGN_ID: "000000000000000000000003", // ID của external campaign vừa tạo
-            FAKE_NURSE_ID: "000000000000000000000002", // ID của external nurse vừa tạo
-            CAMPAIGN_NAME: "Tiêm chủng ngoài trường",
-            NURSE_NAME: "Y tá ngoài trường",
-            DEFAULT_NOTE: "Tiêm chủng tại cơ sở y tế bên ngoài trường học",
-        };
-
         // Tạo các bản ghi lịch sử tiêm chủng trong transaction
         const results = await prisma.$transaction(async (tx) => {
             const createdRecords = [];
@@ -1193,21 +1186,24 @@ export const addVaccinationHistoryByParent = async (req, res) => {
 
                 const record = await tx.vaccinationRecord.create({
                     data: {
-                        // References - Sử dụng fake IDs cho các trường bắt buộc
+                        // References - campaignId và nurseId để null cho external records
                         vaccineId: history.vaccineId,
-                        campaignId:
-                            EXTERNAL_VACCINATION_CONSTANTS.FAKE_CAMPAIGN_ID,
+                        campaignId: null, // Null cho tiêm chủng ngoài trường
                         studentId,
-                        nurseId: EXTERNAL_VACCINATION_CONSTANTS.FAKE_NURSE_ID,
+                        nurseId: null, // Null cho tiêm chủng ngoài trường
 
                         // Denormalized data
                         vaccineName: vaccineName,
-                        campaignName:
-                            EXTERNAL_VACCINATION_CONSTANTS.CAMPAIGN_NAME,
+                        campaignName: null, // Null vì không phải chiến dịch trường
                         studentName: studentParent.student.fullName,
-                        nurseName: EXTERNAL_VACCINATION_CONSTANTS.NURSE_NAME,
+                        nurseName: null, // Null vì không phải y tá trường
                         studentGrade: studentParent.student.grade || "",
                         studentClass: studentParent.student.class || "",
+
+                        // Đánh dấu là external record
+                        isExternalRecord: true,
+                        externalLocation:
+                            history.location || "Cơ sở y tế bên ngoài",
 
                         // Vaccination details
                         administeredDate: new Date(history.administeredDate),
@@ -1217,7 +1213,7 @@ export const addVaccinationHistoryByParent = async (req, res) => {
                         batchNumber: history.batchNumber || null,
                         notes:
                             history.notes ||
-                            EXTERNAL_VACCINATION_CONSTANTS.DEFAULT_NOTE,
+                            "Tiêm chủng tại cơ sở y tế bên ngoài trường học",
                         status: "COMPLETED",
                         followUpRequired: false,
                     },
@@ -1341,6 +1337,74 @@ export const getMedicalCampaigns = async (req, res) => {
         res.status(500).json({
             success: false,
             error: "Lỗi server khi lấy danh sách chiến dịch",
+        });
+    }
+};
+
+// Xóa lịch sử tiêm chủng bên ngoài do phụ huynh thêm
+export const deleteVaccinationHistoryByParent = async (req, res) => {
+    try {
+        const { recordId } = req.params;
+
+        // Kiểm tra quyền: chỉ cho phép phụ huynh
+        if (!req.user.parentProfile) {
+            return res.status(403).json({
+                success: false,
+                error: "Bạn phải là phụ huynh để thực hiện hành động này.",
+            });
+        }
+
+        const parentId = req.user.parentProfile.id;
+
+        // Kiểm tra record có tồn tại và thuộc về con của phụ huynh này không
+        const record = await prisma.vaccinationRecord.findFirst({
+            where: {
+                id: recordId,
+                isExternalRecord: true, // Chỉ cho phép xóa record ngoài trường
+            },
+            include: {
+                student: {
+                    include: {
+                        parents: {
+                            where: {
+                                parentId: parentId,
+                            },
+                        },
+                    },
+                },
+            },
+        });
+
+        if (!record) {
+            return res.status(404).json({
+                success: false,
+                error: "Không tìm thấy lịch sử tiêm chủng hoặc bạn không có quyền xóa.",
+            });
+        }
+
+        if (!record.student.parents || record.student.parents.length === 0) {
+            return res.status(403).json({
+                success: false,
+                error: "Bạn không có quyền xóa lịch sử tiêm chủng này.",
+            });
+        }
+
+        // Xóa record
+        await prisma.vaccinationRecord.delete({
+            where: {
+                id: recordId,
+            },
+        });
+
+        res.json({
+            success: true,
+            message: "Đã xóa lịch sử tiêm chủng thành công.",
+        });
+    } catch (error) {
+        console.error("Lỗi khi xóa lịch sử tiêm chủng:", error);
+        res.status(500).json({
+            success: false,
+            error: "Lỗi khi xóa lịch sử tiêm chủng.",
         });
     }
 };

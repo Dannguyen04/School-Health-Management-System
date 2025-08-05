@@ -37,6 +37,7 @@ import HealthCheckupResults from "./components/user/HealthCheckupResults";
 import HealthProfile from "./components/user/HealthProfile";
 import MedicalSchedule from "./components/user/MedicalSchedule";
 import MedicineInfo from "./components/user/MedicineInfo";
+import ExternalVaccinationHistory from "./components/user/VaccinationHistory";
 import AdminLayout from "./layouts/Admin";
 import ManagerLayout from "./layouts/Manager";
 import NurseLayout from "./layouts/Nurse";
@@ -156,6 +157,7 @@ const App = () => {
           />
           <Route path="medical-schedule" element={<MedicalSchedule />} />
           <Route path="vaccination-history" element={<VaccinationHistory />} />
+          <Route path="add-vaccination-history" element={<ExternalVaccinationHistory />} />
           <Route path="profile" element={<UserProfile />} />
           <Route path="medical-events" element={<MedicalEvents />} />
           <Route path="medical-campaigns" element={<MedicalCampaigns />} />

@@ -13,8 +13,10 @@ import {
     getStudentHealthCheckups,
     deliverMedication,
     addVaccinationHistoryByParent,
+    deleteVaccinationHistoryByParent,
     getMedicalCampaigns,
 } from "../controllers/parentController.js";
+import { getVaccinations } from "../controllers/VaccineController.js";
 import { authenticateToken } from "../middleware/authenticateToken.js";
 import {
     uploadMedicineImage,
@@ -104,11 +106,21 @@ router.get(
 // Route lấy danh sách chiến dịch khám sức khỏe cho phụ huynh
 router.get("/medical-campaigns", authenticateToken, getMedicalCampaigns);
 
+// Route lấy danh sách vaccine cho phụ huynh
+router.get("/vaccines", authenticateToken, getVaccinations);
+
 // Route thêm lịch sử tiêm chủng bên ngoài
 router.post(
-    "/vaccination-history",
+    "/vaccination-history/:studentId",
     authenticateToken,
     addVaccinationHistoryByParent
+);
+
+// Route xóa lịch sử tiêm chủng bên ngoài
+router.delete(
+    "/vaccination-history/:recordId",
+    authenticateToken,
+    deleteVaccinationHistoryByParent
 );
 
 // Routes for notifications
