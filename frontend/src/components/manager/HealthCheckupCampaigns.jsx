@@ -292,7 +292,7 @@ const HealthCheckupCampaigns = () => {
                                 color="blue"
                                 style={{ marginBottom: 2 }}
                             >
-                                {exam === "GENITAL" ? "Khám sinh dục" : "Khám tâm lý"}
+                                {exam === "GENITAL" ? "Khám sinh dục" : ""}
                             </Tag>
                         ))}
                     </div>
@@ -831,12 +831,11 @@ const HealthCheckupCampaigns = () => {
                                     placeholder="Chọn các loại khám tùy chọn (phụ huynh sẽ được hỏi ý kiến)"
                                     options={[
                                         { label: "Khám sinh dục", value: "GENITAL" },
-                                        { label: "Khám tâm lý", value: "PSYCHOLOGICAL" },
                                     ]}
                                     disabled={!!selectedCampaign}
                                 />
-                                                                <div style={{ fontSize: "12px", color: "#666", marginTop: 4 }}>
-                                    * Cả 2 loại khám này sẽ được gửi cho phụ huynh để xin ý kiến đồng ý
+                                <div style={{ fontSize: "12px", color: "#666", marginTop: 4 }}>
+                                    * Khám sinh dục sẽ được gửi cho phụ huynh để xin ý kiến đồng ý
                                 </div>
                                 {values.optionalExaminations && values.optionalExaminations.length > 0 && (
                                     <Alert

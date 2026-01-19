@@ -472,6 +472,15 @@ export const notifyParentsAboutCampaign = async (req, res) => {
                 error: "Không tìm thấy phụ huynh để gửi thông báo",
             });
         }
+        // Tạo nội dung thông báo dựa trên khám tùy chọn
+        let optionalExamsText = "";
+        if (campaign.optionalExaminations && campaign.optionalExaminations.length > 0) {
+            const examNames = campaign.optionalExaminations.map(exam => 
+                exam === "GENITAL" ? "khám sinh dục" : "khám tâm lý"
+            );
+            optionalExamsText = `\n\nNgoài ra, chiến dịch còn có các khám tùy chọn: ${examNames.join(" và ")}. Quý phụ huynh có thể chọn cho con tham gia hoặc không tham gia các khám này.`;
+        }
+
         // Gửi thông báo cho từng phụ huynh
         const notifications = [];
         for (const userId of parentUserIds) {
@@ -481,7 +490,7 @@ export const notifyParentsAboutCampaign = async (req, res) => {
                     title: `Thông báo chiến dịch khám sức khỏe: ${campaign.name}`,
                     message: `Nhà trường tổ chức chiến dịch khám sức khỏe "${
                         campaign.name
-                    }" từ ngày ${campaign.scheduledDate.toLocaleDateString()} đến ${campaign.deadline.toLocaleDateString()} cho học sinh các khối. Nội dung khám bao gồm: khám thể lực, khám thị lực, khám thính lực và các chỉ số sức khỏe cơ bản khác. Quý phụ huynh vui lòng phối hợp để học sinh tham gia đầy đủ để đảm bảo theo dõi sức khỏe toàn diện cho các em.`,
+                    }" từ ngày ${campaign.scheduledDate.toLocaleDateString()} đến ${campaign.deadline.toLocaleDateString()} cho học sinh các khối. Nội dung khám bao gồm: khám thể lực, khám thị lực, khám thính lực và các chỉ số sức khỏe cơ bản khác.${optionalExamsText}\n\nQuý phụ huynh vui lòng phối hợp để học sinh tham gia đầy đủ để đảm bảo theo dõi sức khỏe toàn diện cho các em.`,
                     type: "medical_campaign",
                     status: "SENT",
                     sentAt: new Date(),

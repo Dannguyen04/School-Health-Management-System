@@ -215,7 +215,7 @@ const MedicalCampaigns = () => {
                                                 <div className="space-y-1">
                                                     {campaign.optionalExaminations.map((exam) => (
                                                         <Tag key={exam} color="blue">
-                                                            {exam === "GENITAL" ? "Khám sinh dục" : "Khám tâm lý"}
+                                                            {exam === "GENITAL" ? "Khám sinh dục" : ""}
                                                         </Tag>
                                                     ))}
                                                 </div>
@@ -235,7 +235,7 @@ const MedicalCampaigns = () => {
                                                                 key={exam} 
                                                                 color={campaign.parentConsent.includes(exam) ? "green" : "red"}
                                                             >
-                                                                {exam === "GENITAL" ? "Khám sinh dục" : "Khám tâm lý"}: 
+                                                                {exam === "GENITAL" ? "Khám sinh dục" : ""}: 
                                                                 {campaign.parentConsent.includes(exam) ? " Đồng ý" : " Từ chối"}
                                                             </Tag>
                                                         ))}

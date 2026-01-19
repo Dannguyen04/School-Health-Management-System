@@ -258,7 +258,7 @@ const MedicalSchedule = () => {
                 color="blue"
                 style={{ marginBottom: 2 }}
               >
-                {exam === "GENITAL" ? "Sinh dục" : "Tâm lý"}
+                {exam === "GENITAL" ? "Khám sinh dục" : ""}
               </Tag>
             ))}
           </div>

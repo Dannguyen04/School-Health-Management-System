@@ -353,12 +353,19 @@ const HealthCheckupResults = () => {
                     <Space>
                         <Select
                             style={{ width: 320, minWidth: 220 }}
-                            dropdownStyle={{
-                                borderRadius: 18,
-                                boxShadow:
-                                    "0 8px 32px rgba(54, 174, 154, 0.15)",
+                            styles={{
+                                popup: {
+                                    root: {
+                                        borderRadius: 18,
+                                        boxShadow: "0 8px 32px rgba(54, 174, 154, 0.15)",
+                                    }
+                                }
                             }}
-                            dropdownClassName="custom-student-dropdown"
+                            classNames={{
+                                popup: {
+                                    root: "custom-student-dropdown"
+                                }
+                            }}
                             value={selectedStudent}
                             onChange={setSelectedStudent}
                             placeholder="Chọn học sinh"
@@ -421,6 +428,16 @@ const HealthCheckupResults = () => {
             >
                 {selectedCheckup && (
                     <div>
+                        {(() => {
+                            // Debug log khi modal mở
+                            console.log("=== MODAL DEBUG ===");
+                            console.log("selectedCheckup:", selectedCheckup);
+                            console.log("campaign:", selectedCheckup.campaign);
+                            console.log("optionalExaminations:", selectedCheckup.campaign?.optionalExaminations);
+                            console.log("parentConsent:", selectedCheckup.parentConsent);
+                            console.log("student:", selectedCheckup.student);
+                            return null;
+                        })()}
                         <Typography.Title level={4} style={{ marginBottom: 0 }}>
                             {selectedCheckup.studentName || ""}
                         </Typography.Title>
@@ -522,6 +539,126 @@ const HealthCheckupResults = () => {
                                 {selectedCheckup.dentalLowerJaw || "N/A"}
                             </Descriptions.Item>
                         </Descriptions>
+                        {/* Khám sinh dục */}
+                        {(() => {
+                            const hasGenitalExam = selectedCheckup.campaign?.optionalExaminations?.includes("GENITAL") || 
+                                                  selectedCheckup.optionalExaminations?.includes("GENITAL");
+                            const hasGenitalConsent = selectedCheckup.parentConsent?.includes("GENITAL") || 
+                                                     selectedCheckup.student?.parentConsent?.includes("GENITAL") ||
+                                                     selectedCheckup.raw?.parentConsent?.includes("GENITAL");
+                            
+                            console.log("=== GENITAL EXAM CHECK ===");
+                            console.log("hasGenitalExam:", hasGenitalExam);
+                            console.log("hasGenitalConsent:", hasGenitalConsent);
+                            console.log("shouldShowGenital:", hasGenitalExam && hasGenitalConsent);
+                            
+                            return hasGenitalExam && hasGenitalConsent;
+                        })() && (
+                          <>
+                            <Divider orientation="left">Khám sinh dục</Divider>
+                            {(() => {
+                              const hasMaleData = [selectedCheckup.maleGenitalPenis, selectedCheckup.maleGenitalTesticles, selectedCheckup.malePubertySigns, selectedCheckup.malePubertyAge]
+                                .some(val => val !== undefined && val !== null && val !== "");
+                              const hasFemaleData = [selectedCheckup.femaleGenitalExternal, selectedCheckup.femaleMenstruation, selectedCheckup.femaleMenstrualCycle, selectedCheckup.femaleMenstruationAge, selectedCheckup.femaleGenitalExternalOther, selectedCheckup.femaleMenstrualCycleOther]
+                                .some(val => val !== undefined && val !== null && val !== "");
+                              
+                              // Debug log
+                              console.log("=== DEBUG KHÁM SINH DỤC ===");
+                              console.log("selectedCheckup:", selectedCheckup);
+                              console.log("hasMaleData:", hasMaleData);
+                              console.log("hasFemaleData:", hasFemaleData);
+                              console.log("maleGenitalPenis:", selectedCheckup.maleGenitalPenis);
+                              console.log("femaleGenitalExternal:", selectedCheckup.femaleGenitalExternal);
+                              console.log("campaign optionalExaminations:", selectedCheckup.campaign?.optionalExaminations);
+                              console.log("parentConsent:", selectedCheckup.parentConsent);
+                              console.log("student parentConsent:", selectedCheckup.student?.parentConsent);
+                              
+                              if (hasMaleData) {
+                                return (
+                                  <Descriptions column={2} size="small" bordered>
+                                    <Descriptions.Item label="Dương vật">
+                                      {(() => {
+                                        const map = {
+                                          NORMAL: "Bình thường",
+                                          LONG_FORESKIN: "Dài bao quy đầu",
+                                          TIGHT_FORESKIN: "Hẹp bao quy đầu",
+                                        };
+                                        return map[selectedCheckup.maleGenitalPenis] || selectedCheckup.maleGenitalPenis || "-";
+                                      })()}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Tinh hoàn">
+                                      {(() => {
+                                        const map = {
+                                          NORMAL: "Hai bên bình thường",
+                                          UNDESCENDED: "Ẩn tinh hoàn",
+                                          SWOLLEN_PAINFUL: "Sưng/đau",
+                                        };
+                                        return map[selectedCheckup.maleGenitalTesticles] || selectedCheckup.maleGenitalTesticles || "-";
+                                      })()}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Dấu hiệu dậy thì">
+                                      {(() => {
+                                        const map = {
+                                          NOT_STARTED: "Chưa",
+                                          STARTING: "Đang bắt đầu",
+                                        };
+                                        return map[selectedCheckup.malePubertySigns] || selectedCheckup.malePubertySigns || "-";
+                                      })()}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Tuổi bắt đầu dậy thì">
+                                      {selectedCheckup.malePubertyAge ? `${selectedCheckup.malePubertyAge} tuổi` : "-"}
+                                    </Descriptions.Item>
+                                  </Descriptions>
+                                );
+                              } else if (hasFemaleData) {
+                                return (
+                                  <Descriptions column={2} size="small" bordered>
+                                    <Descriptions.Item label="Tình trạng cơ quan sinh dục ngoài">
+                                      {(() => {
+                                        const map = {
+                                          NORMAL: "Bình thường",
+                                          RED_INFLAMED: "Viêm đỏ",
+                                          ABNORMAL_DISCHARGE: "Tiết dịch bất thường",
+                                          OTHER: selectedCheckup.femaleGenitalExternalOther || "Bất thường khác",
+                                        };
+                                        return map[selectedCheckup.femaleGenitalExternal] || selectedCheckup.femaleGenitalExternal || "-";
+                                      })()}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Có kinh nguyệt chưa?">
+                                      {(() => {
+                                        const map = {
+                                          YES: "Có",
+                                          NO: "Chưa",
+                                        };
+                                        return map[selectedCheckup.femaleMenstruation] || selectedCheckup.femaleMenstruation || "-";
+                                      })()}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Tuổi có kinh lần đầu">
+                                      {selectedCheckup.femaleMenstruationAge ? `${selectedCheckup.femaleMenstruationAge} tuổi` : "-"}
+                                    </Descriptions.Item>
+                                    <Descriptions.Item label="Chu kỳ kinh nguyệt">
+                                      {(() => {
+                                        const map = {
+                                          REGULAR: "Đều",
+                                          IRREGULAR: "Không đều",
+                                          PAINFUL: "Có đau bụng kinh",
+                                          OTHER: selectedCheckup.femaleMenstrualCycleOther || "Khác",
+                                        };
+                                        return map[selectedCheckup.femaleMenstrualCycle] || selectedCheckup.femaleMenstrualCycle || "-";
+                                      })()}
+                                    </Descriptions.Item>
+                                  </Descriptions>
+                                );
+                              } else {
+                                return (
+                                  <Descriptions column={2} size="small" bordered>
+                                    <Descriptions.Item label="Chưa có thông tin khám sinh dục">-</Descriptions.Item>
+                                  </Descriptions>
+                                );
+                              }
+                            })()}
+                          </>
+                        )}
                         <Divider orientation="left">Đánh giá tổng thể</Divider>
                         <Descriptions column={2} size="small" bordered>
                             <Descriptions.Item label="Sức khỏe tổng thể">

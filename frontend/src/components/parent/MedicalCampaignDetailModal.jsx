@@ -162,36 +162,6 @@ const MedicalCampaignDetailModal = ({ visible, campaign, onClose, onConsentSubmi
                       </Checkbox>
                     </div>
                   )}
-
-                  {campaign.optionalExaminations.includes("PSYCHOLOGICAL") && (
-                    <div style={{ 
-                      border: "1px solid #d9d9d9", 
-                      borderRadius: 8, 
-                      padding: 16,
-                      background: selectedExaminations.includes("PSYCHOLOGICAL") ? "#f6ffed" : "#fff"
-                    }}>
-                      <Checkbox
-                        checked={selectedExaminations.includes("PSYCHOLOGICAL")}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedExaminations([...selectedExaminations, "PSYCHOLOGICAL"]);
-                          } else {
-                            setSelectedExaminations(selectedExaminations.filter(item => item !== "PSYCHOLOGICAL"));
-                          }
-                        }}
-                      >
-                        <div>
-                          <div style={{ fontWeight: "bold", marginBottom: 4 }}>
-                            <CheckCircleOutlined style={{ color: "#52c41a", marginRight: 8 }} />
-                            Khám tâm lý
-                          </div>
-                          <div style={{ color: "#666", fontSize: "14px" }}>
-                            Đánh giá tình trạng tâm lý, cảm xúc và hành vi của học sinh
-                          </div>
-                        </div>
-                      </Checkbox>
-                    </div>
-                  )}
                 </Space>
               </div>
 
